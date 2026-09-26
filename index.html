@@ -361,9 +361,10 @@
   /* the page shows keyboard hints by default and swaps to touch wording
      once a real touch happens (body.is-touch), so a laptop with a
      touchscreen still starts out reading correctly */
-  .key-touch{ display:none; }
-  body.is-touch .key-desk{ display:none; }
-  body.is-touch .key-touch{ display:block; }
+  /* scoped under .rule so these beat .rule .key{display:block} */
+  .rule .key-touch{ display:none; }
+  body.is-touch .rule .key-desk{ display:none; }
+  body.is-touch .rule .key-touch{ display:block; }
 
   .swipe-hint{
     position:absolute; bottom:18px; left:0; right:0;
