@@ -781,12 +781,30 @@
   }
 
   // מושך את הטבלה המשותפת, ממוינת מהגבוה לנמוך
+  // one row per player. rows must arrive best-first, so the first time a
+  // name appears is that player's best. names compare trimmed and
+  // case-insensitive, so "Gev" and "gev " count as the same player.
+  function bestPerName(rows){
+    var seen = {}, out = [];
+    rows.forEach(function(r){
+      var key = String(r.name || '').trim().toLowerCase();
+      if(!key || seen[key]) return;
+      seen[key] = true;
+      out.push(r);
+    });
+    return out.slice(0, LEADERBOARD_MAX);
+  }
+
+  // every run is stored, so a few active players can fill the top rows many
+  // times over; pull a deep slice and collapse it to each player's best
+  var BOARD_FETCH_ROWS = 1000;
   function fetchBoard(){
     if(!isOnlineBoard) return Promise.resolve(null);
     var url = SUPABASE_URL + '/rest/v1/' + SCORES_TABLE +
-      '?select=name,score&order=score.desc&limit=' + LEADERBOARD_MAX;
+      '?select=name,score&order=score.desc&limit=' + BOARD_FETCH_ROWS;
     return fetch(url, { headers: supabaseHeaders() })
       .then(function(res){ return res.ok ? res.json() : null; })
+      .then(function(rows){ return rows ? bestPerName(rows) : null; })
       .catch(function(){ return null; });
   }
 
@@ -794,7 +812,7 @@
   function recordLocal(name, score){
     leaderboard.push({ name: name, score: score });
     leaderboard.sort(function(a,b){ return b.score - a.score; });
-    leaderboard = leaderboard.slice(0, LEADERBOARD_MAX);
+    leaderboard = bestPerName(leaderboard);
     cacheBoard();
   }
 
@@ -2483,7 +2501,7 @@
   // never while the name field is being typed in. Everything worth keeping
   // (coins, skins, name, league) is in localStorage, so a reload loses nothing.
   // 'dev' = a local or preview copy: the updater stays off entirely.
-  var BUILD_VERSION = '20260926-195326';
+  var BUILD_VERSION = '20260926-195556';
   var UPDATE_CHECK_MS = 60000;
   var UPDATE_TRIED_KEY = 'canyonChaseTriedUpdate';
   var pendingSubmits = 0;
