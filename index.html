@@ -694,8 +694,8 @@
   //  >>> הדבק כאן את שני הערכים מ-Supabase (Project Settings -> API) <<<
   //      בלי שני אלה המשחק עובד רגיל, אבל טבלת השיאים תהיה מקומית בלבד.
   //
-  var SUPABASE_URL = '';   // לדוגמה: 'https://abcdefgh.supabase.co'
-  var SUPABASE_KEY = '';   // ה-anon public key (מפתח ציבורי, מיועד לדפדפן)
+  var SUPABASE_URL = 'https://psyqxrmsxdchvktphvxu.supabase.co';   // לדוגמה: 'https://abcdefgh.supabase.co'
+  var SUPABASE_KEY = 'sb_publishable_Ljk_0HMAGVb8fwb_0usxxw_cOPZ8zWb';   // ה-anon public key (מפתח ציבורי, מיועד לדפדפן)
 
   var SCORES_TABLE = 'scores';
   var LEADERBOARD_MAX = 20;
@@ -718,12 +718,13 @@
     try { localStorage.setItem(LEADERBOARD_CACHE_KEY, JSON.stringify(leaderboard)); } catch(e){}
   }
 
+  // new-style keys (sb_publishable_...) go in apikey only -- they aren't
+  // JWTs, so they must not be sent as a Bearer token. legacy anon keys
+  // (JWTs, start with eyJ) still get the Authorization header too.
   function supabaseHeaders(){
-    return {
-      'apikey': SUPABASE_KEY,
-      'Authorization': 'Bearer ' + SUPABASE_KEY,
-      'Content-Type': 'application/json'
-    };
+    var h = { 'apikey': SUPABASE_KEY, 'Content-Type': 'application/json' };
+    if(SUPABASE_KEY.indexOf('eyJ') === 0) h['Authorization'] = 'Bearer ' + SUPABASE_KEY;
+    return h;
   }
 
   // שולח ניקוד לטבלה המשותפת. נכשל בשקט (המשחק לא נתקע בגלל רשת)
