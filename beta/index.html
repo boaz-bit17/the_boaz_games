@@ -1473,17 +1473,17 @@
   //   1. collect the letters of an English word (they show up on the track
   //      somewhere between 4,000 and 10,000 points)
   //   2. reach 12,000 points in a run
-  //   3. collect the letters of a longer word (between 6,000 and 14,000)
-  //   4. grab 4 treasure chests in a single run
+  //   3. collect the letters of a longer word (between 5,000 and 11,000)
+  //   4. grab 4 treasure chests in a single run (a chest every ~30s meanwhile)
   // Finishing all 4 earns a special chest (maybe the golden skin), and the
   // chain starts over with new words. Collected letters are saved across
   // runs, but it's meant to be hard: a missed letter doesn't come back that
-  // run, each letter sits in the one open lane of a double-block wave, the
-  // score and chest missions count within one run, and chests keep their
-  // normal (rare) rate.
+  // run, each letter sits in the one open lane of a double-block wave, and
+  // the score and chest missions count within one run.
   var MISSIONS_KEY = 'canyonChaseMissionsV1';
   var MISSION_WORDS = [['FAST','CHEST'], ['JUMP','CROWN'], ['GOLD','TIGER'], ['RACE','MAGIC'], ['WIND','STORM']];
-  var LETTER_RANGES = [[4000, 10000], null, [6000, 14000], null];
+  var LETTER_RANGES = [[4000, 10000], null, [5000, 11000], null];
+  var CHEST_MISSION_INTERVAL = 30;   // seconds between chests during mission 4
   var SCORE_MISSION_TARGET = 12000;
   var CHEST_MISSION_TARGET = 4;
   var GOLDEN_SKIN_CHANCE = 0.5;
@@ -1540,7 +1540,7 @@
     if(missionType(idx) === 'letters'){
       return 'האותיות מפוזרות במסלול בין המכשולים. אות שאספת נשמרת גם אם נפלת, אבל אות שפספסת לא חוזרת באותה ריצה';
     }
-    if(missionType(idx) === 'chests') return 'התיבות נדירות -- צריך לשרוד הרבה זמן';
+    if(missionType(idx) === 'chests') return 'כל 4 התיבות צריכות להיאסף באותה ריצה';
     return 'הניקוד של ריצה אחת';
   }
 
@@ -1609,8 +1609,11 @@
     saveMissions();
     runMissionChests = 0;
     planLetters();
+    if(chestMissionActive()) chestTimer = Math.min(chestTimer, CHEST_MISSION_INTERVAL);
     renderMissionBadge();
   }
+
+  function chestMissionActive(){ return missionType(missions.idx) === 'chests'; }
 
   function collectLetter(i){
     if(missions.letters.indexOf(i) !== -1) return;
@@ -1815,7 +1818,7 @@
     spawnGap = 0.95;
     decorTimer = 0;
     powerupTimer = 10 + Math.random()*6;
-    chestTimer = 22 + Math.random()*14;
+    chestTimer = chestMissionActive() ? CHEST_MISSION_INTERVAL : 22 + Math.random()*14;
     pendingChestCount = 0;
     chestOpenBox.hidden = true;
     chestOpenResult.hidden = true;
@@ -1871,10 +1874,12 @@
         return {lane:l, type: rr<0.4 ? 'rock' : (rr<0.8 ? 'beam' : 'barrier')};
       });
       // treasure chest: rare, and only ever placed in the one safe lane of a
-      // hard double-block wave, so reaching it means threading the obstacles first
-      if(chestTimer <= 0 && Math.random() < 0.4){
+      // hard double-block wave, so reaching it means threading the obstacles first.
+      // during the chest mission one comes at the first hard wave every 30s
+      var chestMission = chestMissionActive();
+      if(chestTimer <= 0 && (chestMission || Math.random() < 0.4)){
         pat.push({lane: openLane, type:'chest'});
-        chestTimer = 38 + Math.random()*20;
+        chestTimer = chestMission ? CHEST_MISSION_INTERVAL : 38 + Math.random()*20;
       } else {
         pat.push({lane: openLane, type:'coin-line'});
       }
@@ -3256,7 +3261,7 @@
   // never while the name field is being typed in. Everything worth keeping
   // (coins, skins, name, league) is in localStorage, so a reload loses nothing.
   // 'dev' = a local or preview copy: the updater stays off entirely.
-  var BUILD_VERSION = '20260927-114216';
+  var BUILD_VERSION = '20260927-134741';
   var UPDATE_CHECK_MS = 60000;
   var UPDATE_TRIED_KEY = 'canyonChaseTriedUpdate';
   var pendingSubmits = 0;
