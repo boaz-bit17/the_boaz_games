@@ -316,9 +316,14 @@
     border:1px solid rgba(42,21,15,.18);
     display:flex; flex-direction:column; align-items:center; gap:6px;
   }
+  .skin-card.is-premium{
+    background:linear-gradient(160deg, rgba(255,233,168,.6), rgba(255,207,107,.35));
+    border:1.5px solid #c9962a;
+    box-shadow:0 0 0 1px rgba(255,215,102,.35) inset;
+  }
   .skin-preview{
     display:block;
-    width:64px; height:84px;
+    width:64px; height:92px;
   }
   .skin-name{ font-size:11px; font-weight:700; color:var(--ink); }
   .skin-price{
@@ -699,7 +704,73 @@
       shirt:'#4fc23c', shirtShade:'#1f6a1a', sleeves:'long', hood:'up',
       pants:'#15301a', pantsShade:'#0b1c0e', legs:'long',
       shoes:'#0f2a0f', sole:'#3a7a30',
-      cape:'#144414', capeShade:'#0a2a0a', emblem:{shape:'bolt', color:'#c8ffb0'} }
+      cape:'#144414', capeShade:'#0a2a0a', emblem:{shape:'bolt', color:'#c8ffb0'} },
+
+    // ---- premium tier: 10,000+ coins, each with its own glow and extras ----
+    { id:'thunder',  name:'סערת ברקים',   price:10000,
+      skinTone:'#e8b58e', hair:'#f4f6ff', hairStyle:'spiky',
+      shirt:'#2f6fe0', shirtShade:'#173a8a', sleeves:'long', shine:true,
+      pattern:'stripes', patternColor:'#ffe34a',
+      pants:'#1c2a55', pantsShade:'#101a38', legs:'long',
+      shoes:'#ffe34a', sole:'#b38f00', aura:'#7fd4ff' },
+    { id:'lava',     name:'מלך הלבה',     price:10500,
+      skinTone:'#c98a64', hair:'#1a0f0a', hairStyle:'short',
+      shirt:'#2a1410', shirtShade:'#120806', sleeves:'long',
+      pattern:'stripes', patternColor:'#ff6a1a',
+      pants:'#1a0d09', pantsShade:'#0d0604', legs:'long',
+      shoes:'#ff6a1a', sole:'#7a2a05', horns:'#f4d7b0',
+      cape:'#1a0d09', capeShade:'#c2380a', emblem:{shape:'flame', color:'#ffb347'}, aura:'#ff5a1f' },
+    { id:'frost',    name:'מלכת הקרח',    price:11000,
+      skinTone:'#f3dccb', hair:'#eef7ff', hairStyle:'long',
+      shirt:'#a8dcff', shirtShade:'#5a9fd6', sleeves:'long', shine:true,
+      pants:'#e8f4ff', pantsShade:'#b9d6ee', legs:'long',
+      shoes:'#d8f0ff', sole:'#7fb2d9', crown:'#bfe8ff', aura:'#9fe2ff', sparkle:'#ffffff' },
+    { id:'pharaoh',  name:'פרעה',          price:11500,
+      skinTone:'#c68a5e', hair:'#2f5fc9', hairStyle:'nemes', patternColor:'#f2c14e',
+      shirt:'#f4efe2', shirtShade:'#cfc6ae', sleeves:'none',
+      pants:'#f4efe2', pantsShade:'#d8cfb6', legs:'shorts',
+      shoes:'#c9a24a', sole:'#8a6a20', aura:'#f2c14e' },
+    { id:'cyber',    name:'סייבורג',       price:12000,
+      skinTone:'#d9b392', hair:'#0a0a0a', hairStyle:'short', helmet:'#c9d2dc',
+      shirt:'#9aa6b2', shirtShade:'#4d5763', sleeves:'long', shine:true,
+      pattern:'stripes', patternColor:'#39ff88',
+      pants:'#3a424c', pantsShade:'#22282e', legs:'long',
+      shoes:'#39ff88', sole:'#0f6a36', aura:'#39ff88', sparkle:'#39ff88' },
+    { id:'samurai',  name:'סמוראי',        price:12500,
+      skinTone:'#e0b08a', hair:'#111111', hairStyle:'short', helmet:'#3a1a1a', helmetDark:true,
+      horns:'#d4a93a',
+      shirt:'#8a1c1c', shirtShade:'#4a0c0c', sleeves:'long',
+      pattern:'stripes', patternColor:'#2a0808',
+      pants:'#1f1f24', pantsShade:'#121216', legs:'long',
+      shoes:'#1a1a1a', sole:'#5a4a2a', sword:'#1a1a22', aura:'#c0282d' },
+    { id:'angel',    name:'מלאך',          price:13000,
+      skinTone:'#f5dcc4', hair:'#f3d27a', hairStyle:'long',
+      shirt:'#ffffff', shirtShade:'#d9d6ea', sleeves:'long',
+      pants:'#f7f5ff', pantsShade:'#d6d2e8', legs:'long',
+      shoes:'#f2e7c4', sole:'#c9b27a',
+      halo:'#ffd766', wings:'#ffffff', aura:'#fff2b3', sparkle:'#fff4c2' },
+    { id:'demon',    name:'שד הצללים',    price:13500,
+      skinTone:'#8a4a5a', hair:'#140a18', hairStyle:'spiky',
+      shirt:'#2a0f36', shirtShade:'#12061a', sleeves:'long',
+      pattern:'stripes', patternColor:'#5a1f7a',
+      pants:'#150a1c', pantsShade:'#0a0510', legs:'long',
+      shoes:'#6a1a8a', sole:'#2a0a3a',
+      horns:'#d63a3a', wings:'#3a1450', aura:'#9b3cff' },
+    { id:'galaxy',   name:'גלקסיה',        price:14000,
+      skinTone:'#d8b89a', hair:'#2a1a5a', hairStyle:'short', hood:'up',
+      shirt:'#2a1f6e', shirtShade:'#0f0a33', sleeves:'long',
+      pattern:'stars', patternColor:'#ffffff',
+      pants:'#1a1450', pantsShade:'#0c0a2e', legs:'long',
+      shoes:'#5ad1ff', sole:'#1a3a6a',
+      cape:'#3a1f8a', capeShade:'#0a0a2a', emblem:{shape:'moon', color:'#e8e0ff'},
+      aura:'#7a5cff', sparkle:'#c9b8ff' },
+    { id:'golden',   name:'אגדת הזהב',    price:15000,
+      skinTone:'#e8b58e', hair:'#f2c14e', hairStyle:'short',
+      shirt:'#f2c14e', shirtShade:'#a8781a', sleeves:'long', shine:true,
+      pants:'#d9a93a', pantsShade:'#8a6414', legs:'long',
+      shoes:'#fff0b3', sole:'#a8781a', crown:'#ffd766',
+      cape:'#ffd766', capeShade:'#b8860b', emblem:{shape:'sun', color:'#fff8dc'},
+      wings:'#ffe9a0', aura:'#ffd766', sparkle:'#fff4c2' }
   ];
   var WALLET_KEY = 'canyonChaseWallet';
   var SKINS_KEY = 'canyonChaseOwnedSkins';
@@ -1197,17 +1268,17 @@
     SKINS.forEach(function(skin){
       var owned = ownedSkins.indexOf(skin.id) !== -1;
       var card = document.createElement('div');
-      card.className = 'skin-card';
+      card.className = 'skin-card' + (skin.price >= 10000 ? ' is-premium' : '');
 
       // mini preview of the actual runner in this outfit, mid-stride
       var preview = document.createElement('canvas');
       preview.className = 'skin-preview';
-      var PW = 64, PH = 84, pr = Math.min(2, window.devicePixelRatio || 1);
+      var PW = 64, PH = 92, pr = Math.min(2, window.devicePixelRatio || 1);
       preview.width = PW*pr; preview.height = PH*pr;
       var pg = preview.getContext('2d');
       pg.setTransform(pr,0,0,pr,0,0);
       pg.translate(PW/2, PH - 5);
-      pg.scale(0.6, 0.6);
+      pg.scale(0.58, 0.58);
       pg.fillStyle = 'rgba(42,21,15,0.18)';
       pg.beginPath(); pg.ellipse(0, 3, 22, 5, 0, 0, Math.PI*2); pg.fill();
       drawRunnerFigure(pg, skin, { phase: 1.1, mode: 'run', duck: 0, t: 0 });
@@ -1224,7 +1295,7 @@
       if(!owned){
         var afford = wallet >= skin.price;
         btn.classList.add('is-locked');
-        btn.textContent = '🪙 ' + skin.price;
+        btn.textContent = '🪙 ' + skin.price.toLocaleString('en-US');
         btn.disabled = !afford;
       } else if(skin.id === selectedSkinId){
         btn.classList.add('is-selected');
@@ -2058,6 +2129,21 @@
         g.lineTo(Math.cos(a)*13, Math.sin(a)*13);
         g.stroke();
       }
+    } else if(shape === 'flame'){
+      g.beginPath();
+      g.moveTo(0, 11);
+      g.quadraticCurveTo(-9, 4, -4, -4);
+      g.quadraticCurveTo(-3, 2, 0, 0);
+      g.quadraticCurveTo(-2, -7, 3, -12);
+      g.quadraticCurveTo(2, -4, 7, -1);
+      g.quadraticCurveTo(9, 6, 0, 11);
+      g.closePath(); g.fill();
+    } else if(shape === 'moon'){
+      g.beginPath();
+      g.moveTo(0, -9);
+      g.arc(0, 0, 9, -Math.PI/2, Math.PI/2, true);
+      g.quadraticCurveTo(-6, 0, 0, -9);
+      g.closePath(); g.fill();
     }
   }
 
@@ -2069,10 +2155,32 @@
     g.beginPath(); g.moveTo(ax, ay); g.lineTo(bx, by); g.stroke();
   }
 
+  // '#rrggbb' + alpha -> 'rgba(...)'
+  function hexA(hex, a){
+    var n = parseInt(hex.slice(1), 16);
+    return 'rgba(' + ((n>>16)&255) + ',' + ((n>>8)&255) + ',' + (n&255) + ',' + a + ')';
+  }
+
+  // four-point twinkle
+  function star4(g, x, y, r){
+    g.beginPath();
+    g.moveTo(x, y - r*2);
+    g.quadraticCurveTo(x, y, x + r*2, y);
+    g.quadraticCurveTo(x, y, x, y + r*2);
+    g.quadraticCurveTo(x, y, x - r*2, y);
+    g.quadraticCurveTo(x, y, x, y - r*2);
+    g.fill();
+  }
+
   // The runner, seen from behind (that's how the camera sees them).
   // Local units: feet on y=0, top of the head near y=-127.
   // pose: { phase, mode: 'run'|'jump'|'fly'|'idle', duck: 0..1, t }
   // Takes its own 2D context so the shop can draw previews with it too.
+  //
+  // Premium extras a skin may set: aura (glow color), sparkle (twinkle
+  // color), shine (metallic highlight on shirt/cape), pattern ('stripes' |
+  // 'stars', with patternColor), crown, halo, horns, wings, sword, and
+  // hairStyle 'spiky' | 'nemes' (pharaoh headdress, striped in patternColor).
   function drawRunnerFigure(g, skin, pose){
     var ph = pose.phase || 0;
     var mode = pose.mode || 'run';
@@ -2082,6 +2190,16 @@
     if(pose.duck){
       // crouch: squash down toward the feet (the origin)
       g.scale(1 + 0.08*pose.duck, 1 - 0.34*pose.duck);
+    }
+
+    if(skin.aura){
+      var pulse = 0.88 + Math.sin(t*3)*0.12;
+      var ag = g.createRadialGradient(0, -64, 6, 0, -64, 80*pulse);
+      ag.addColorStop(0, hexA(skin.aura, 0.5));
+      ag.addColorStop(0.6, hexA(skin.aura, 0.18));
+      ag.addColorStop(1, hexA(skin.aura, 0));
+      g.fillStyle = ag;
+      g.beginPath(); g.arc(0, -64, 80*pulse, 0, Math.PI*2); g.fill();
     }
 
     // legs run half a cycle apart; each arm swings with the opposite leg
@@ -2145,6 +2263,35 @@
       g.beginPath(); g.arc(A.hx, A.hy, 3.8, 0, Math.PI*2); g.fill();
     }
 
+    // stripes / stars / metallic sheen, clipped to whatever path was just built
+    function decorate(pathFn, top, bottom, allowPattern){
+      if(!(skin.shine || (allowPattern && skin.pattern))) return;
+      g.save();
+      pathFn(); g.clip();
+      if(allowPattern && skin.pattern === 'stripes'){
+        g.fillStyle = skin.patternColor;
+        for(var y = top + 3; y < bottom; y += 8) g.fillRect(-30, y, 60, 3.2);
+      } else if(allowPattern && skin.pattern === 'stars'){
+        var spots = [[-9,-92],[6,-86],[-3,-76],[10,-68],[-11,-62],[2,-55],[-6,-47],[12,-50],[0,-96]];
+        spots.forEach(function(p, i){
+          var tw = (Math.sin(t*4 + i*1.3) + 1) / 2;
+          g.fillStyle = hexA(skin.patternColor, 0.45 + tw*0.55);
+          star4(g, p[0], p[1], 0.7 + tw*0.8);
+        });
+      }
+      if(skin.shine){
+        var sgd = g.createLinearGradient(-22, top, 22, bottom);
+        sgd.addColorStop(0, 'rgba(255,255,255,0)');
+        sgd.addColorStop(0.42, 'rgba(255,255,255,0.5)');
+        sgd.addColorStop(0.5, 'rgba(255,255,255,0.12)');
+        sgd.addColorStop(0.58, 'rgba(255,255,255,0.4)');
+        sgd.addColorStop(1, 'rgba(255,255,255,0)');
+        g.fillStyle = sgd;
+        g.fillRect(-30, top, 60, bottom - top);
+      }
+      g.restore();
+    }
+
     var legL = legPose(-1), legR = legPose(1);
     var armL = armPose(-1), armR = armPose(1);
 
@@ -2164,19 +2311,23 @@
     armsBehind.forEach(drawArm);
 
     // torso: shoulders wider than the waist, shaded down the back
+    function torsoPath(){
+      g.beginPath();
+      g.moveTo(-12.5, -60);
+      g.quadraticCurveTo(-15, -80, -19, -95);
+      g.quadraticCurveTo(-18, -101, -10, -102);
+      g.lineTo(10, -102);
+      g.quadraticCurveTo(18, -101, 19, -95);
+      g.quadraticCurveTo(15, -80, 12.5, -60);
+      g.closePath();
+    }
     var tg = g.createLinearGradient(-18, -100, 18, -58);
     tg.addColorStop(0, skin.shirt);
     tg.addColorStop(1, skin.shirtShade);
     g.fillStyle = tg;
-    g.beginPath();
-    g.moveTo(-12.5, -60);
-    g.quadraticCurveTo(-15, -80, -19, -95);
-    g.quadraticCurveTo(-18, -101, -10, -102);
-    g.lineTo(10, -102);
-    g.quadraticCurveTo(18, -101, 19, -95);
-    g.quadraticCurveTo(15, -80, 12.5, -60);
-    g.closePath();
-    g.fill();
+    torsoPath(); g.fill();
+    // a cape hides the back, so its pattern goes on the cape instead
+    decorate(torsoPath, -102, -60, !skin.cape);
     g.strokeStyle = 'rgba(0,0,0,0.16)';
     g.lineWidth = 1.4;
     g.beginPath(); g.moveTo(0, -98); g.lineTo(0, -62); g.stroke();          // spine crease
@@ -2209,19 +2360,37 @@
       g.beginPath(); g.moveTo(-8, -80); g.lineTo(8, -80); g.stroke();          // flap
     }
 
+    // katana slung across the back, hilt over the left shoulder
+    if(skin.sword){
+      g.save();
+      g.translate(-1, -82);
+      g.rotate(-0.55);
+      g.fillStyle = skin.sword;                                               // sheath
+      g.beginPath(); g.moveTo(-2.6, -20); g.lineTo(2.6, -20); g.lineTo(2, 26); g.lineTo(-2, 26); g.closePath(); g.fill();
+      g.fillStyle = '#c9a24a'; g.fillRect(-5, -22.5, 10, 2.6);               // guard
+      g.fillStyle = '#1a1a1a'; g.fillRect(-2, -34, 4, 11.5);                 // wrapped hilt
+      g.fillStyle = 'rgba(255,255,255,0.25)';
+      for(var w = -33; w < -24; w += 3) g.fillRect(-2, w, 4, 1);
+      g.restore();
+    }
+
     if(skin.cape){
       var sway = Math.sin(ph) * (mode === 'run' ? 5 : 2) + (mode === 'fly' ? 6 : 0);
       var flare = mode === 'fly' ? 1.25 : 1;
+      var capePath = function(){
+        g.beginPath();
+        g.moveTo(-15, -100);
+        g.quadraticCurveTo(-24*flare + sway*0.4, -70, -20*flare + sway, -40);
+        g.quadraticCurveTo(sway, -34, 20*flare + sway, -40);
+        g.quadraticCurveTo(24*flare + sway*0.4, -70, 15, -100);
+        g.closePath();
+      };
       var cg = g.createLinearGradient(0, -100, 0, -40);
       cg.addColorStop(0, skin.cape);
       cg.addColorStop(1, skin.capeShade || skin.cape);
       g.fillStyle = cg;
-      g.beginPath();
-      g.moveTo(-15, -100);
-      g.quadraticCurveTo(-24*flare + sway*0.4, -70, -20*flare + sway, -40);
-      g.quadraticCurveTo(sway, -34, 20*flare + sway, -40);
-      g.quadraticCurveTo(24*flare + sway*0.4, -70, 15, -100);
-      g.closePath(); g.fill();
+      capePath(); g.fill();
+      decorate(capePath, -100, -36, true);
       g.strokeStyle = 'rgba(0,0,0,0.18)'; g.lineWidth = 1.2;             // folds
       g.beginPath(); g.moveTo(-5 + sway*0.3, -92); g.lineTo(-8 + sway*0.8, -42); g.stroke();
       g.beginPath(); g.moveTo(5 + sway*0.3, -92); g.lineTo(8 + sway*0.8, -42); g.stroke();
@@ -2231,6 +2400,28 @@
     }
 
     armsFront.forEach(drawArm);
+
+    // permanent wings grow from the shoulder blades, facing the camera
+    if(skin.wings){
+      var wflap = mode === 'fly' ? (0.75 + Math.sin(t*16)*0.3) : (0.86 + Math.sin(t*5)*0.08);
+      [-1,1].forEach(function(side){
+        g.save();
+        g.translate(side*6, -90);
+        g.scale(side, 1);
+        g.fillStyle = skin.wings;
+        g.beginPath();
+        g.moveTo(0, 0);
+        g.quadraticCurveTo(20, -18*wflap, 42*wflap, -10*wflap);
+        g.quadraticCurveTo(32, 2, 18, 14);
+        g.quadraticCurveTo(8, 9, 0, 0);
+        g.closePath(); g.fill();
+        g.strokeStyle = 'rgba(0,0,0,0.18)'; g.lineWidth = 1.1;
+        g.stroke();
+        g.beginPath(); g.moveTo(6, 1); g.quadraticCurveTo(20, -6, 34*wflap, -6*wflap); g.stroke();   // feather lines
+        g.beginPath(); g.moveTo(5, 5); g.quadraticCurveTo(16, 2, 26, 6); g.stroke();
+        g.restore();
+      });
+    }
 
     // neck
     g.fillStyle = skin.skinTone;
@@ -2244,9 +2435,19 @@
     g.beginPath(); g.ellipse(hx, hy, 9.5, 11, 0, 0, Math.PI*2); g.fill();
 
     if(skin.helmet){
-      var hg = g.createLinearGradient(-10, hy-12, 10, hy+10);
-      hg.addColorStop(0, '#f4f1ea'); hg.addColorStop(0.5, skin.helmet); hg.addColorStop(1, '#8a857a');
-      g.fillStyle = hg;
+      if(skin.helmetDark){
+        // lacquered dark helmet: solid color plus a highlight and a shadow
+        g.fillStyle = skin.helmet;
+        g.beginPath(); g.ellipse(hx, hy - 1, 11, 12.5, 0, 0, Math.PI*2); g.fill();
+        var dg = g.createLinearGradient(-10, hy-12, 10, hy+10);
+        dg.addColorStop(0, 'rgba(255,255,255,0.35)'); dg.addColorStop(0.45, 'rgba(255,255,255,0)');
+        dg.addColorStop(1, 'rgba(0,0,0,0.35)');
+        g.fillStyle = dg;
+      } else {
+        var hg = g.createLinearGradient(-10, hy-12, 10, hy+10);
+        hg.addColorStop(0, '#f4f1ea'); hg.addColorStop(0.5, skin.helmet); hg.addColorStop(1, '#8a857a');
+        g.fillStyle = hg;
+      }
       g.beginPath(); g.ellipse(hx, hy - 1, 11, 12.5, 0, 0, Math.PI*2); g.fill();
       g.strokeStyle = 'rgba(0,0,0,0.3)'; g.lineWidth = 1.5;
       g.beginPath(); g.moveTo(hx, hy - 13); g.lineTo(hx, hy + 11); g.stroke();                          // crest
@@ -2258,13 +2459,33 @@
       g.beginPath(); g.ellipse(hx, hy - 3, 9.5, 10, 0, 0, Math.PI*2); g.fill();
       g.strokeStyle = 'rgba(0,0,0,0.22)'; g.lineWidth = 1.2;
       g.beginPath(); g.moveTo(hx, hy - 13); g.lineTo(hx, hy + 10); g.stroke();                          // seam
+    } else if(skin.hairStyle === 'nemes'){
+      // pharaoh headdress: striped cloth over the head, flaring to the shoulders
+      var nemesPath = function(){
+        g.beginPath();
+        g.moveTo(hx - 10.5, hy - 5);
+        g.quadraticCurveTo(hx, hy - 17, hx + 10.5, hy - 5);
+        g.lineTo(hx + 16, hy + 18);
+        g.quadraticCurveTo(hx, hy + 21, hx - 16, hy + 18);
+        g.closePath();
+      };
+      g.fillStyle = skin.hair;
+      nemesPath(); g.fill();
+      g.save(); nemesPath(); g.clip();
+      g.fillStyle = skin.patternColor;
+      for(var ny = hy - 15; ny < hy + 22; ny += 5) g.fillRect(hx - 18, ny, 36, 2.2);
+      g.restore();
+      g.fillStyle = skin.patternColor;                                                                  // braid
+      g.fillRect(hx - 2, hy + 16, 4, 12);
+      g.fillStyle = skin.hair;
+      for(var by = hy + 18; by < hy + 28; by += 4) g.fillRect(hx - 2, by, 4, 1.6);
     } else {
       g.fillStyle = skin.hair;
       g.beginPath();
       g.moveTo(hx - 10, hy + 3);
       g.quadraticCurveTo(hx - 11.5, hy - 13, hx, hy - 12.5);
       g.quadraticCurveTo(hx + 11.5, hy - 13, hx + 10, hy + 3);
-      g.quadraticCurveTo(hx, hy + (skin.hairStyle === 'short' ? 6 : 8), hx - 10, hy + 3);
+      g.quadraticCurveTo(hx, hy + (skin.hairStyle === 'short' || skin.hairStyle === 'spiky' ? 6 : 8), hx - 10, hy + 3);
       g.closePath(); g.fill();
       g.strokeStyle = 'rgba(0,0,0,0.18)'; g.lineWidth = 1;                                            // strands
       g.beginPath(); g.moveTo(hx - 4, hy - 11); g.quadraticCurveTo(hx - 5, hy - 3, hx - 4, hy + 5); g.stroke();
@@ -2284,6 +2505,15 @@
         g.quadraticCurveTo(hx - 4 + pSway, hy + 14, hx + pSway*1.4, hy + 22);
         g.quadraticCurveTo(hx + 4 + pSway, hy + 14, hx + 3, hy + 5);
         g.closePath(); g.fill();
+      } else if(skin.hairStyle === 'spiky'){
+        g.fillStyle = skin.hair;
+        g.beginPath();
+        g.moveTo(hx - 10, hy - 5);
+        g.lineTo(hx - 13, hy - 15); g.lineTo(hx - 6, hy - 11);
+        g.lineTo(hx - 4, hy - 21);  g.lineTo(hx, hy - 13);
+        g.lineTo(hx + 4, hy - 22);  g.lineTo(hx + 6, hy - 11);
+        g.lineTo(hx + 13, hy - 16); g.lineTo(hx + 10, hy - 5);
+        g.closePath(); g.fill();
       }
       if(skin.headband){
         g.fillStyle = skin.headband;
@@ -2295,6 +2525,45 @@
         limb(g, hx + 2, hy - 1, hx + 7, hy + 7 + tail, 2.2, skin.headband);
         limb(g, hx + 2, hy - 1, hx + 9, hy + 4 - tail, 2.2, skin.headband);
       }
+    }
+
+    // head extras sit on top of whatever covers the head
+    if(skin.horns){
+      g.fillStyle = skin.horns;
+      [-1,1].forEach(function(s){
+        g.beginPath();
+        g.moveTo(hx + s*4, hy - 9);
+        g.quadraticCurveTo(hx + s*13, hy - 13, hx + s*12, hy - 25);
+        g.quadraticCurveTo(hx + s*9, hy - 15, hx + s*1, hy - 11);
+        g.closePath(); g.fill();
+      });
+    }
+    if(skin.crown){
+      g.fillStyle = skin.crown;
+      g.beginPath();
+      g.moveTo(hx - 8, hy - 9); g.lineTo(hx - 8.5, hy - 17); g.lineTo(hx - 4, hy - 12.5);
+      g.lineTo(hx, hy - 19); g.lineTo(hx + 4, hy - 12.5); g.lineTo(hx + 8.5, hy - 17);
+      g.lineTo(hx + 8, hy - 9); g.closePath(); g.fill();
+      g.strokeStyle = 'rgba(0,0,0,0.25)'; g.lineWidth = 0.8; g.stroke();
+      g.fillStyle = '#e0304a';
+      g.beginPath(); g.arc(hx, hy - 11.5, 1.7, 0, Math.PI*2); g.fill();
+    }
+    if(skin.halo){
+      var bob = Math.sin(t*3) * 1.2;
+      g.strokeStyle = hexA(skin.halo, 0.35); g.lineWidth = 5;
+      g.beginPath(); g.ellipse(hx, hy - 20 + bob, 9.5, 3, 0, 0, Math.PI*2); g.stroke();
+      g.strokeStyle = skin.halo; g.lineWidth = 2.2;
+      g.beginPath(); g.ellipse(hx, hy - 20 + bob, 9.5, 3, 0, 0, Math.PI*2); g.stroke();
+    }
+
+    if(skin.sparkle){
+      var sparks = [[-26,-112],[25,-98],[-23,-58],[28,-48],[1,-142],[-31,-20],[27,-16],[-12,-128]];
+      sparks.forEach(function(p, i){
+        var tw = (Math.sin(t*5 + i*1.7) + 1) / 2;
+        if(tw < 0.3) return;
+        g.fillStyle = hexA(skin.sparkle, 0.35 + tw*0.65);
+        star4(g, p[0], p[1], 1 + tw*1.8);
+      });
     }
 
     g.restore();
@@ -2501,7 +2770,7 @@
   // never while the name field is being typed in. Everything worth keeping
   // (coins, skins, name, league) is in localStorage, so a reload loses nothing.
   // 'dev' = a local or preview copy: the updater stays off entirely.
-  var BUILD_VERSION = '20260926-195556';
+  var BUILD_VERSION = '20260927-101732';
   var UPDATE_CHECK_MS = 60000;
   var UPDATE_TRIED_KEY = 'canyonChaseTriedUpdate';
   var pendingSubmits = 0;
