@@ -2783,38 +2783,38 @@
   giveUpBtn.addEventListener('click', giveUpRun);
 
   // ---------- background music ----------
-  // Generated live with Web Audio -- no sound files to download. A desert
-  // groove in D Phrygian dominant: a low drone, an oud-like plucked melody,
-  // a bass line and a darbuka playing maqsum. Browsers only allow sound after
-  // a tap/click, so the engine wakes on the first gesture. In menus it plays
+  // Generated live with Web Audio -- no sound files to download. An upbeat
+  // runner groove in A minor (Am-F-C-G): a marimba melody, soft pad chords,
+  // a bass line and clean kick/clap/hat. Browsers only allow sound after a
+  // tap/click, so the engine wakes on the first gesture. In menus it plays
   // softly without drums; during a run it's full. Muted choice is remembered.
-  var MUTE_KEY = 'canyonChaseMuted';
+  var MUTE_KEY = 'canyonChaseMutedV2';
   var soundBtn = document.getElementById('soundBtn');
   var musicMuted = false;
   try { musicMuted = localStorage.getItem(MUTE_KEY) === '1'; } catch(e){}
 
   var music = (function(){
-    var BPM = 116;
+    var BPM = 120;
     var STEP = 60 / BPM / 4;          // one 16th note
     var LOOP_STEPS = 128;             // 8 bars
     var LOOKAHEAD = 0.18;
-    var ac = null, master, bus, drums, lead, verb, noiseBuf;
+    var ac = null, master, bus, drums, bassBus, lead, pad, noiseBuf;
     var step = 0, loop = 0, nextTime = 0, timer = null, mode = '';
 
-    // [step in bar, midi, length in 16ths]
+    var CHORDS = [[57,60,64],[53,57,60],[55,60,64],[55,59,62]];   // Am F C G
+    var BASS_ROOT = [45, 41, 48, 43];
+    var BASS_HITS = { 0:0, 3:0, 6:12, 8:0, 11:0, 14:7 };          // step -> interval
+    // [step in bar, midi, length in 16ths]; bars 0-3 the tune, 4-7 the answer
     var MELODY = [
-      [[0,62,2],[2,63,2],[4,66,4],[8,67,2],[10,66,2],[12,63,2],[14,62,2]],
-      [[0,69,6],[6,67,2],[8,66,4],[12,63,2],[14,66,2]],
-      [[0,67,2],[2,66,2],[4,63,2],[6,62,2],[8,60,6],[14,62,2]],
-      [[0,62,10],[12,63,2],[14,66,2]],
-      [[0,74,4],[4,72,2],[6,70,2],[8,69,4],[12,67,2],[14,69,2]],
-      [[0,70,2],[2,69,2],[4,67,2],[6,66,2],[8,67,6],[14,69,2]],
-      [[0,70,4],[4,69,2],[6,67,2],[8,66,2],[10,63,2],[12,66,4]],
-      [[0,62,12]]
+      [[0,69,2],[2,72,2],[4,76,3],[8,74,2],[10,72,2],[12,69,4]],
+      [[0,72,3],[4,74,2],[6,72,2],[8,69,4],[12,67,2],[14,69,2]],
+      [[0,67,2],[2,72,2],[4,76,4],[8,79,3],[12,76,2],[14,74,2]],
+      [[0,74,4],[4,71,2],[6,74,2],[8,79,4],[12,76,2],[14,74,2]],
+      [[0,76,2],[2,74,2],[4,72,2],[6,69,2],[8,72,2],[10,76,2],[12,81,4]],
+      [[0,79,2],[2,77,2],[4,76,4],[8,72,4],[12,74,2],[14,76,2]],
+      [[0,79,3],[4,76,2],[6,72,2],[8,76,2],[10,79,2],[12,84,4]],
+      [[0,83,4],[4,79,2],[6,74,2],[8,71,4],[12,74,2],[14,76,2]]
     ];
-    var BASS_ROOT = [38, 38, 36, 38, 34, 36, 39, 38];
-    var BASS_HITS = { 0:0, 3:0, 6:12, 8:0, 11:7, 14:0 };   // step -> interval
-    var DRUM = { 0:'doum', 2:'tek', 6:'tek', 8:'doum', 12:'tek', 4:'ka', 10:'ka', 14:'ka', 15:'ka' };
 
     function hz(m){ return 440 * Math.pow(2, (m - 69) / 12); }
 
@@ -2823,102 +2823,108 @@
       if(!Ctx) return false;
       ac = new Ctx();
       master = ac.createGain(); master.gain.value = 0;
-      master.connect(ac.destination);
+      var comp = ac.createDynamicsCompressor();
+      comp.threshold.value = -14; comp.ratio.value = 4;
+      master.connect(comp); comp.connect(ac.destination);
       bus = ac.createGain(); bus.gain.value = 0.5; bus.connect(master);
       drums = ac.createGain(); drums.gain.value = 0; drums.connect(bus);
-      lead = ac.createGain(); lead.gain.value = 0.8; lead.connect(bus);
+      bassBus = ac.createGain(); bassBus.gain.value = 0.4; bassBus.connect(bus);
+      pad = ac.createGain(); pad.gain.value = 1; pad.connect(bus);
+      lead = ac.createGain(); lead.gain.value = 1; lead.connect(bus);
 
-      // small hall: decaying noise impulse
-      verb = ac.createConvolver();
-      var len = Math.floor(ac.sampleRate * 1.8);
-      var ir = ac.createBuffer(2, len, ac.sampleRate);
-      for(var ch = 0; ch < 2; ch++){
-        var d = ir.getChannelData(ch);
-        for(var i = 0; i < len; i++) d[i] = (Math.random()*2 - 1) * Math.pow(1 - i/len, 3);
-      }
-      verb.buffer = ir;
-      var wet = ac.createGain(); wet.gain.value = 0.28;
-      verb.connect(wet); wet.connect(bus);
-      lead.connect(verb);
+      // dotted-8th echo on the marimba for space
+      var dly = ac.createDelay(1); dly.delayTime.value = STEP * 3;
+      var fb = ac.createGain(); fb.gain.value = 0.28;
+      var dlyF = ac.createBiquadFilter(); dlyF.type = 'lowpass'; dlyF.frequency.value = 2500;
+      var wet = ac.createGain(); wet.gain.value = 0.22;
+      lead.connect(dly); dly.connect(dlyF); dlyF.connect(fb); fb.connect(dly);
+      dlyF.connect(wet); wet.connect(bus);
 
       noiseBuf = ac.createBuffer(1, Math.floor(ac.sampleRate * 0.3), ac.sampleRate);
       var nd = noiseBuf.getChannelData(0);
       for(var j = 0; j < nd.length; j++) nd[j] = Math.random()*2 - 1;
-
-      // drone: D2 + A2, gently breathing filter
-      var droneF = ac.createBiquadFilter(); droneF.type = 'lowpass'; droneF.frequency.value = 360; droneF.Q.value = 2;
-      var droneG = ac.createGain(); droneG.gain.value = 0.07;
-      droneF.connect(droneG); droneG.connect(bus);
-      [[38,-5],[38,5],[45,0]].forEach(function(n){
-        var o = ac.createOscillator(); o.type = 'sawtooth';
-        o.frequency.value = hz(n[0]); o.detune.value = n[1];
-        o.connect(droneF); o.start();
-      });
-      var lfo = ac.createOscillator(); lfo.frequency.value = 0.07;
-      var lfoAmt = ac.createGain(); lfoAmt.gain.value = 160;
-      lfo.connect(lfoAmt); lfoAmt.connect(droneF.frequency); lfo.start();
       return true;
     }
 
     function env(g, t, peak, decay){
       g.gain.setValueAtTime(0.0001, t);
-      g.gain.exponentialRampToValueAtTime(peak, t + 0.006);
+      g.gain.exponentialRampToValueAtTime(peak, t + 0.005);
       g.gain.exponentialRampToValueAtTime(0.0001, t + decay);
     }
 
-    function pluck(t, midi, len, vol){
-      var o = ac.createOscillator(), o2 = ac.createOscillator();
+    // marimba: round sine body + a quick bright "mallet" overtone
+    function marimba(t, midi, vol){
+      var f = hz(midi);
+      var o = ac.createOscillator(), g = ac.createGain();
+      o.type = 'sine'; o.frequency.value = f;
+      env(g, t, vol, 0.7);
+      o.connect(g); g.connect(lead);
+      var o2 = ac.createOscillator(), g2 = ac.createGain();
+      o2.type = 'sine'; o2.frequency.value = f * 4;
+      env(g2, t, vol * 0.35, 0.08);
+      o2.connect(g2); g2.connect(lead);
+      o.start(t); o.stop(t + 0.75); o2.start(t); o2.stop(t + 0.1);
+    }
+
+    function padChord(t, notes, dur){
       var f = ac.createBiquadFilter(), g = ac.createGain();
-      o.type = 'sawtooth'; o2.type = 'triangle';
-      o.frequency.value = hz(midi); o2.frequency.value = hz(midi) * 1.003;
-      f.type = 'lowpass'; f.Q.value = 3;
-      f.frequency.setValueAtTime(3200, t);
-      f.frequency.exponentialRampToValueAtTime(500, t + 0.35);
-      var dur = Math.max(0.3, len * STEP * 1.4);
-      env(g, t, vol, dur);
-      o.connect(f); o2.connect(f); f.connect(g); g.connect(lead);
-      o.start(t); o2.start(t); o.stop(t + dur + 0.05); o2.stop(t + dur + 0.05);
+      f.type = 'lowpass'; f.frequency.value = 900;
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(0.09, t + 0.25);
+      g.gain.setValueAtTime(0.09, t + dur - 0.2);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + dur + 0.15);
+      f.connect(g); g.connect(pad);
+      notes.forEach(function(m, i){
+        [-6, 6].forEach(function(det){
+          var o = ac.createOscillator();
+          o.type = 'triangle'; o.frequency.value = hz(m); o.detune.value = det + i;
+          o.connect(f); o.start(t); o.stop(t + dur + 0.2);
+        });
+      });
     }
 
     function bass(t, midi){
-      var o = ac.createOscillator(), g = ac.createGain();
-      o.type = 'triangle'; o.frequency.value = hz(midi);
-      env(g, t, 0.38, 0.32);
-      o.connect(g); g.connect(bus);
-      o.start(t); o.stop(t + 0.36);
+      var o = ac.createOscillator(), g = ac.createGain(), f = ac.createBiquadFilter();
+      o.type = 'sawtooth'; o.frequency.value = hz(midi);
+      f.type = 'lowpass'; f.frequency.value = 420; f.Q.value = 1;
+      env(g, t, 0.5, 0.26);
+      o.connect(f); f.connect(g); g.connect(bassBus);
+      o.start(t); o.stop(t + 0.3);
     }
 
-    function hit(t, kind){
-      if(kind === 'doum'){
-        var o = ac.createOscillator(), g = ac.createGain();
-        o.type = 'sine';
-        o.frequency.setValueAtTime(130, t);
-        o.frequency.exponentialRampToValueAtTime(52, t + 0.18);
-        env(g, t, 0.9, 0.34);
-        o.connect(g); g.connect(drums);
-        o.start(t); o.stop(t + 0.38);
-        return;
-      }
-      var n = ac.createBufferSource(), f = ac.createBiquadFilter(), ng = ac.createGain();
+    function kick(t){
+      var o = ac.createOscillator(), g = ac.createGain();
+      o.type = 'sine';
+      o.frequency.setValueAtTime(140, t);
+      o.frequency.exponentialRampToValueAtTime(45, t + 0.12);
+      env(g, t, 0.9, 0.28);
+      o.connect(g); g.connect(drums);
+      o.start(t); o.stop(t + 0.3);
+    }
+
+    function noise(t, type, freq, vol, decay){
+      var n = ac.createBufferSource(), f = ac.createBiquadFilter(), g = ac.createGain();
       n.buffer = noiseBuf;
-      if(kind === 'tek'){ f.type = 'bandpass'; f.frequency.value = 3200; f.Q.value = 1.2; env(ng, t, 0.55, 0.07); }
-      else { f.type = 'highpass'; f.frequency.value = 5200; env(ng, t, 0.16, 0.035); }
-      n.connect(f); f.connect(ng); ng.connect(drums);
-      n.start(t); n.stop(t + 0.1);
+      f.type = type; f.frequency.value = freq;
+      env(g, t, vol, decay);
+      n.connect(f); f.connect(g); g.connect(drums);
+      n.start(t); n.stop(t + decay + 0.02);
     }
 
     function playStep(t){
-      var bar = Math.floor(step / 16), s = step % 16;
-      var root = BASS_ROOT[bar];
-      if(s in BASS_HITS) bass(t, root + BASS_HITS[s]);
-      if(s in DRUM) hit(t, DRUM[s]);
-      // odd loops: sparser -- only the opening note of each bar, held long
+      var bar = Math.floor(step / 16), s = step % 16, chord = bar % 4;
+      if(s === 0) padChord(t, CHORDS[chord], STEP * 16);
+      if(s in BASS_HITS) bass(t, BASS_ROOT[chord] + BASS_HITS[s]);
+      // drums
+      if(s === 0 || s === 8 || (s === 10 && bar % 2 === 1)) kick(t);
+      if(s === 4 || s === 12) noise(t, 'bandpass', 1600, 0.35, 0.13);
+      if(s % 2 === 0) noise(t, 'highpass', 7500, s % 4 === 2 ? 0.1 : 0.05, 0.035);
+      // melody: every other loop rests on the tune's first half so it
+      // doesn't wear thin -- the chords and groove carry those bars
       var notes = MELODY[bar];
+      if(loop % 2 === 1 && bar < 4) return;
       for(var i = 0; i < notes.length; i++){
-        var nt = notes[i];
-        if(nt[0] !== s) continue;
-        if(loop % 2 === 0) pluck(t, nt[1], nt[2], 0.2);
-        else if(i === 0) pluck(t, nt[1] + 12, 8, 0.12);
+        if(notes[i][0] === s) marimba(t, notes[i][1], 0.32);
       }
     }
 
@@ -2940,10 +2946,11 @@
       if(m === mode) return;
       mode = m;
       var t = ac.currentTime;
-      drums.gain.cancelScheduledValues(t);
-      drums.gain.setTargetAtTime(m === 'run' ? 0.9 : 0, t, 0.4);
-      bus.gain.cancelScheduledValues(t);
-      bus.gain.setTargetAtTime(m === 'run' ? 0.55 : 0.4, t, 0.5);
+      [[drums, m === 'run' ? 0.8 : 0], [bassBus, m === 'run' ? 1 : 0.4], [bus, m === 'run' ? 0.55 : 0.4]]
+        .forEach(function(p){
+          p[0].gain.cancelScheduledValues(t);
+          p[0].gain.setTargetAtTime(p[1], t, 0.4);
+        });
     }
 
     function applyMute(){
@@ -3009,7 +3016,7 @@
   // never while the name field is being typed in. Everything worth keeping
   // (coins, skins, name, league) is in localStorage, so a reload loses nothing.
   // 'dev' = a local or preview copy: the updater stays off entirely.
-  var BUILD_VERSION = '20260927-104349';
+  var BUILD_VERSION = '20260927-104923';
   var UPDATE_CHECK_MS = 60000;
   var UPDATE_TRIED_KEY = 'canyonChaseTriedUpdate';
   var pendingSubmits = 0;
