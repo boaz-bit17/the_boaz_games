@@ -1476,8 +1476,10 @@
   //   3. collect the letters of a longer word (between 6,000 and 14,000)
   //   4. grab 4 treasure chests in a single run
   // Finishing all 4 earns a special chest (maybe the golden skin), and the
-  // chain starts over with new words. Collected letters are saved, so a fall
-  // doesn't lose them -- the missing ones come back on the next run.
+  // chain starts over with new words. Meant to be hard: every mission has to
+  // be done within one run (a fall resets the letters), a missed letter
+  // doesn't come back, and each letter sits in the one open lane of a
+  // double-block wave. Chests keep their normal (rare) rate.
   var MISSIONS_KEY = 'canyonChaseMissionsV1';
   var MISSION_WORDS = [['FAST','CHEST'], ['JUMP','CROWN'], ['GOLD','TIGER'], ['RACE','MAGIC'], ['WIND','STORM']];
   var LETTER_RANGES = [[4000, 10000], null, [6000, 14000], null];
@@ -1535,9 +1537,9 @@
   function missionSub(idx){
     if(missionType(idx) === 'letters'){
       var r = LETTER_RANGES[idx];
-      return 'האותיות מופיעות במסלול בין ' + r[0].toLocaleString('en-US') + ' ל-' + r[1].toLocaleString('en-US') + ' נקודות. אות שאספת נשמרת גם אם נפלת';
+      return 'האותיות מופיעות בין ' + r[0].toLocaleString('en-US') + ' ל-' + r[1].toLocaleString('en-US') + ' נקודות, בין המכשולים. צריך את כולן בריצה אחת, ואות שפספסת לא חוזרת';
     }
-    if(missionType(idx) === 'chests') return 'בזמן המשימה הזו התיבות מופיעות קצת יותר';
+    if(missionType(idx) === 'chests') return 'התיבות נדירות -- צריך לשרוד הרבה זמן';
     return 'הניקוד של ריצה אחת';
   }
 
@@ -1606,7 +1608,6 @@
     saveMissions();
     runMissionChests = 0;
     planLetters();
-    if(missionType(missions.idx) === 'chests') chestTimer = Math.min(chestTimer, 10);
     renderMissionBadge();
   }
 
@@ -1635,23 +1636,26 @@
         L.collected = true;
         collectLetter(L.i);
       }
-      if(L.z < -80){
-        // missed it: it comes around again a bit later in the run
-        if(!L.collected){ L.plan.spawned = false; L.plan.at = score + 500; }
-        letterPickups.splice(li, 1);
-      }
+      // a missed letter is gone for this run
+      if(L.z < -80) letterPickups.splice(li, 1);
     }
   }
 
-  // a due letter takes over a whole spawn wave, alone in its lane, so it's
-  // never hidden behind an obstacle
-  function spawnLetterIfDue(){
-    if(!letterQueue.length) return false;
-    var lp = letterQueue.shift();
-    if(missions.letters.indexOf(lp.i) !== -1) return false;
-    letterPickups.push({ lane: Math.floor(Math.random() * 3), z: ZFAR, i: lp.i,
-                         ch: missionWord(missions.idx)[lp.i], plan: lp, collected: false });
-    return true;
+  // a due letter arrives like a chest: in the one open lane of a hard
+  // double-block wave, so grabbing it means threading the obstacles
+  function letterPatternIfDue(){
+    while(letterQueue.length){
+      var lp = letterQueue.shift();
+      if(missions.letters.indexOf(lp.i) !== -1) continue;
+      var open = Math.floor(Math.random() * 3);
+      var pat = [0,1,2].filter(function(l){ return l !== open; }).map(function(l){
+        var rr = Math.random();
+        return { lane: l, type: rr < 0.4 ? 'rock' : (rr < 0.8 ? 'beam' : 'barrier') };
+      });
+      pat.push({ lane: open, type: 'letter', i: lp.i });
+      return pat;
+    }
+    return null;
   }
 
   function missionChestPicked(){
@@ -1661,9 +1665,9 @@
     if(runMissionChests >= CHEST_MISSION_TARGET) completeMission();
     else showToast('🧰 ' + runMissionChests + '/' + CHEST_MISSION_TARGET);
   }
-  function chestMissionActive(){ return missionType(missions.idx) === 'chests'; }
-
   function resetMissionRun(){
+    // letters only count within a single run
+    if(missions.letters.length){ missions.letters = []; saveMissions(); }
     runMissionChests = 0;
     missionsDoneThisRun = [];
     planLetters();
@@ -1679,6 +1683,8 @@
       missionBanner.hidden = true;
     }
     specialFromOverBtn.hidden = !missions.specialPending;
+    // the run is over, and letters only count within one run
+    if(missions.letters.length){ missions.letters = []; saveMissions(); }
   }
 
   function renderMissionList(){
@@ -1812,7 +1818,7 @@
     spawnGap = 0.95;
     decorTimer = 0;
     powerupTimer = 10 + Math.random()*6;
-    chestTimer = chestMissionActive() ? 12 + Math.random()*8 : 22 + Math.random()*14;
+    chestTimer = 22 + Math.random()*14;
     pendingChestCount = 0;
     chestOpenBox.hidden = true;
     chestOpenResult.hidden = true;
@@ -1868,12 +1874,10 @@
         return {lane:l, type: rr<0.4 ? 'rock' : (rr<0.8 ? 'beam' : 'barrier')};
       });
       // treasure chest: rare, and only ever placed in the one safe lane of a
-      // hard double-block wave, so reaching it means threading the obstacles first.
-      // during the "4 chests in one run" mission they turn up about twice as often
-      var chestMission = chestMissionActive();
-      if(chestTimer <= 0 && Math.random() < (chestMission ? 0.6 : 0.3)){
+      // hard double-block wave, so reaching it means threading the obstacles first
+      if(chestTimer <= 0 && Math.random() < 0.3){
         pat.push({lane: openLane, type:'chest'});
-        chestTimer = chestMission ? 18 + Math.random()*10 : 50 + Math.random()*30;
+        chestTimer = 50 + Math.random()*30;
       } else {
         pat.push({lane: openLane, type:'coin-line'});
       }
@@ -1894,10 +1898,12 @@
   }
 
   function spawnWave(){
-    if(spawnLetterIfDue()) return;
-    var items = pickPattern();
+    var items = letterPatternIfDue() || pickPattern();
     items.forEach(function(it){
-      if(it.type === 'coin-line'){
+      if(it.type === 'letter'){
+        letterPickups.push({ lane: it.lane, z: ZFAR, i: it.i,
+                             ch: missionWord(missions.idx)[it.i], collected: false });
+      } else if(it.type === 'coin-line'){
         for(var i=0;i<5;i++){
           coins.push({ lane: it.lane, z: ZFAR + i*46, collected:false });
         }
@@ -3253,7 +3259,7 @@
   // never while the name field is being typed in. Everything worth keeping
   // (coins, skins, name, league) is in localStorage, so a reload loses nothing.
   // 'dev' = a local or preview copy: the updater stays off entirely.
-  var BUILD_VERSION = '20260927-112113';
+  var BUILD_VERSION = '20260927-113112';
   var UPDATE_CHECK_MS = 60000;
   var UPDATE_TRIED_KEY = 'canyonChaseTriedUpdate';
   var pendingSubmits = 0;
