@@ -393,6 +393,99 @@
     .swipe-hint{ display:none; }
   }
 
+  /* ---------- missions ---------- */
+  .mission-badge{
+    display:flex; align-items:center; gap:6px;
+    background:linear-gradient(180deg,var(--parchment),var(--parchment-dark));
+    border:2px solid rgba(42,21,15,.35);
+    border-radius:10px;
+    padding:4px 12px;
+    font-family:'Suez One',serif;
+    font-size:14px;
+    color:var(--ink);
+    box-shadow:0 6px 14px -6px rgba(0,0,0,.4);
+    direction:rtl;
+    font-variant-numeric: tabular-nums;
+  }
+  .mission-letters{ display:inline-flex; gap:3px; direction:ltr; }
+  .mission-letters .ml{
+    display:inline-flex; align-items:center; justify-content:center;
+    width:20px; height:22px;
+    border-radius:5px;
+    font-family:'Rubik',sans-serif; font-weight:800; font-size:13px;
+    background:rgba(42,21,15,.12);
+    color:rgba(42,21,15,.35);
+  }
+  .mission-letters .ml.got{
+    background:linear-gradient(180deg,#b58cff,#6b3fd1);
+    color:#fff;
+    box-shadow:0 0 0 1px rgba(40,10,90,.4) inset;
+  }
+  .mission-toast{
+    margin-top:4px;
+    background:linear-gradient(160deg,#ffe9a8,#ffcf6b);
+    border:2px solid rgba(42,21,15,.45);
+    border-radius:12px;
+    padding:8px 16px;
+    font-family:'Suez One',serif;
+    font-size:16px;
+    color:var(--ink);
+    white-space:nowrap;
+    box-shadow:0 10px 20px -8px rgba(0,0,0,.5);
+    animation:toastIn .25s ease-out;
+  }
+  .mission-toast.is-letter{
+    background:linear-gradient(180deg,#b58cff,#6b3fd1);
+    color:#fff; border-color:rgba(40,10,90,.5);
+  }
+  @keyframes toastIn{ from{ opacity:0; transform:translateY(-8px) scale(.9); } to{ opacity:1; transform:none; } }
+  .mission-list{
+    display:flex; flex-direction:column; gap:8px;
+    margin: 4px 0 14px;
+  }
+  .mission-row{
+    display:flex; align-items:center; gap:10px;
+    background:rgba(255,255,255,.35);
+    border:1px solid rgba(42,21,15,.18);
+    border-radius:12px;
+    padding:10px 12px;
+    text-align:right;
+  }
+  .mission-row.is-current{
+    background:linear-gradient(160deg,#ffe9a8,#ffcf6b);
+    border:2px solid rgba(42,21,15,.4);
+  }
+  .mission-row.is-done{ opacity:.75; }
+  .mission-row.is-locked{ opacity:.5; }
+  .mission-icon{ font-size:20px; flex:none; width:26px; text-align:center; }
+  .mission-body{ flex:1; display:flex; flex-direction:column; gap:4px; }
+  .mission-title{ font-size:13px; font-weight:700; color:var(--ink); }
+  .mission-sub{ font-size:11px; font-weight:600; color:var(--ember-dim); }
+  .mission-row .mission-letters{ align-self:flex-start; }
+  .mission-reward{
+    font-size:12px; font-weight:700; color:var(--ink);
+    background:linear-gradient(160deg, rgba(181,140,255,.35), rgba(107,63,209,.2));
+    border:1.5px solid rgba(107,63,209,.5);
+    border-radius:12px;
+    padding:10px 12px;
+    margin-bottom:6px;
+  }
+  .special-btn{
+    background:linear-gradient(180deg,#9b6bff,#5a2fb8);
+    box-shadow:0 8px 0 0 #3b1d80, 0 12px 18px -6px rgba(0,0,0,.45);
+    margin-bottom:14px;
+    font-size:19px;
+  }
+  .special-btn:active{ box-shadow:0 2px 0 0 #3b1d80, 0 4px 10px -4px rgba(0,0,0,.4); }
+  .chest-click.is-special .chest-base{ background:linear-gradient(180deg,#8d5cf0,#3b1d80); }
+  .chest-click.is-special .chest-lid{ background:linear-gradient(180deg,#ffe38a,#c9962a); }
+  .chest-click.is-special .chest-glow{
+    background:radial-gradient(circle, rgba(255,230,140,.9), rgba(181,140,255,0) 70%);
+  }
+  .special-open{
+    background:linear-gradient(160deg, rgba(181,140,255,.45), rgba(255,207,107,.45));
+  }
+
   .chest-open{
     background:linear-gradient(160deg,#ffe9a8,#ffcf6b);
     border:2px solid rgba(42,21,15,.4);
@@ -490,6 +583,8 @@
       </div>
     </div>
     <div class="fly-badge" id="flyBadge" hidden>🪶 <span id="flyTimeNum">0</span>s</div>
+    <div class="mission-badge" id="missionBadge" hidden></div>
+    <div class="mission-toast" id="missionToast" hidden></div>
   </div>
 
   <div class="overlay" id="startOverlay">
@@ -504,6 +599,7 @@
         <button class="shop-btn" id="shopBtn" type="button">🎨 חנות סקינים</button>
         <button class="shop-btn" id="leaderboardBtn" type="button">🏆 שיאים</button>
         <button class="shop-btn" id="leagueBtn" type="button">🏅 ליגות</button>
+        <button class="shop-btn" id="missionsBtn" type="button">🎯 משימות</button>
       </div>
       <div class="rules">
         <div class="rule"><span class="glyph">⬅️➡️</span><span class="txt">החלף מסלול</span><span class="key key-desk">חצים</span><span class="key key-touch">החלקה הצידה</span></div>
@@ -548,6 +644,8 @@
         <div class="chest-hint" id="chestHint">לחץ על התיבה כדי לפתוח</div>
         <div class="chest-open-result" id="chestOpenResult" hidden></div>
       </div>
+      <div class="league-banner" id="missionBanner" hidden></div>
+      <button class="go-btn special-btn" id="specialFromOverBtn" type="button" hidden>🎁 פתח את התיבה המיוחדת!</button>
       <div class="earn-row">🪙 נוספו <span id="earnedCoins">0</span> מטבעות לארנק</div>
       <button class="go-btn" id="retryBtn">נסה שוב</button>
       <button class="shop-btn" id="shopBtnOver" type="button" style="margin-top:10px; width:100%;">🎨 חנות סקינים</button>
@@ -590,6 +688,35 @@
       <div class="leaderboard-list" id="leagueList"></div>
       <p class="league-goal">בכל עונה 6 סיבובים -- כל ריצה שלך היא סיבוב, וגם ששת היריבים משחקים אותו סיבוב וצוברים ניקוד. הם מתחילים בעדינות ומתחזקים מסיבוב לסיבוב. אחרי סיבוב 6, אם סיימת במקום הראשון בטבלה -- ניצחת את העונה ועלית ליגה. בליגה 1 זה מזכה בפרס אלוף!</p>
       <button class="back-btn" id="closeLeagueBtn" type="button">חזרה</button>
+    </div>
+  </div>
+
+  <div class="overlay" id="missionsOverlay" hidden>
+    <div class="tablet">
+      <h1>משימות</h1>
+      <p class="tagline">השלם את כל 4 המשימות לפי הסדר וזכה בתיבה מיוחדת</p>
+      <button class="go-btn special-btn" id="specialFromMissionsBtn" type="button" hidden>🎁 פתח את התיבה המיוחדת!</button>
+      <div class="mission-list" id="missionList"></div>
+      <div class="mission-reward">🎁 הפרס: תיבה מיוחדת -- ואולי יצא לך ממנה הסקין המוזהב "אגדת הזהב"!</div>
+      <button class="back-btn" id="closeMissionsBtn" type="button">חזרה</button>
+    </div>
+  </div>
+
+  <div class="overlay" id="specialOverlay" hidden>
+    <div class="tablet">
+      <h1>תיבה מיוחדת</h1>
+      <p class="tagline">השלמת את כל המשימות!</p>
+      <div class="chest-open special-open">
+        <button class="chest-click is-special" id="specialChestBtn" type="button" aria-label="פתח תיבה מיוחדת">
+          <span class="chest-glow"></span>
+          <span class="chest-lid"></span>
+          <span class="chest-base"></span>
+          <span class="chest-lock">🔒</span>
+        </button>
+        <div class="chest-hint" id="specialHint">לחץ על התיבה כדי לפתוח</div>
+        <div class="chest-open-result" id="specialResult" hidden></div>
+      </div>
+      <button class="back-btn" id="closeSpecialBtn" type="button" hidden>המשך</button>
     </div>
   </div>
 
@@ -1341,6 +1468,316 @@
   shopBtnOver.addEventListener('click', openShop);
   closeShopBtn.addEventListener('click', closeShop);
 
+  // ---------- missions ----------
+  // A chain of 4 missions, done in order:
+  //   1. collect the letters of an English word (they show up on the track
+  //      somewhere between 4,000 and 10,000 points)
+  //   2. reach 12,000 points in a run
+  //   3. collect the letters of a longer word (between 6,000 and 14,000)
+  //   4. grab 4 treasure chests in a single run
+  // Finishing all 4 earns a special chest (maybe the golden skin), and the
+  // chain starts over with new words. Collected letters are saved, so a fall
+  // doesn't lose them -- the missing ones come back on the next run.
+  var MISSIONS_KEY = 'canyonChaseMissionsV1';
+  var MISSION_WORDS = [['FAST','CHEST'], ['JUMP','CROWN'], ['GOLD','TIGER'], ['RACE','MAGIC'], ['WIND','STORM']];
+  var LETTER_RANGES = [[4000, 10000], null, [6000, 14000], null];
+  var SCORE_MISSION_TARGET = 12000;
+  var CHEST_MISSION_TARGET = 4;
+  var GOLDEN_SKIN_CHANCE = 0.5;
+
+  var missions = { cycle: 0, idx: 0, letters: [], specialPending: false };
+  try {
+    var savedMissions = JSON.parse(localStorage.getItem(MISSIONS_KEY) || 'null');
+    if(savedMissions && typeof savedMissions.idx === 'number'){
+      missions.cycle = savedMissions.cycle || 0;
+      missions.idx = Math.max(0, Math.min(3, savedMissions.idx));
+      missions.letters = Array.isArray(savedMissions.letters) ? savedMissions.letters : [];
+      missions.specialPending = !!savedMissions.specialPending;
+    }
+  } catch(e){}
+  function saveMissions(){
+    try { localStorage.setItem(MISSIONS_KEY, JSON.stringify(missions)); } catch(e){}
+  }
+
+  var missionBadge = document.getElementById('missionBadge');
+  var missionToast = document.getElementById('missionToast');
+  var missionsBtn = document.getElementById('missionsBtn');
+  var missionsOverlay = document.getElementById('missionsOverlay');
+  var missionList = document.getElementById('missionList');
+  var closeMissionsBtn = document.getElementById('closeMissionsBtn');
+  var missionBanner = document.getElementById('missionBanner');
+  var specialFromOverBtn = document.getElementById('specialFromOverBtn');
+  var specialFromMissionsBtn = document.getElementById('specialFromMissionsBtn');
+  var specialOverlay = document.getElementById('specialOverlay');
+  var specialChestBtn = document.getElementById('specialChestBtn');
+  var specialHint = document.getElementById('specialHint');
+  var specialResult = document.getElementById('specialResult');
+  var closeSpecialBtn = document.getElementById('closeSpecialBtn');
+
+  // per-run mission state
+  var letterPlan = [], letterQueue = [], letterPickups = [], runMissionChests = 0, missionsDoneThisRun = [];
+  var toastTimer = null, specialOpening = false, specialReturnTo = null;
+
+  function missionWord(idx){
+    var pair = MISSION_WORDS[missions.cycle % MISSION_WORDS.length];
+    return idx === 0 ? pair[0] : pair[1];
+  }
+  function missionType(idx){
+    return (idx === 0 || idx === 2) ? 'letters' : (idx === 1 ? 'score' : 'chests');
+  }
+  function missionTitle(idx){
+    switch(missionType(idx)){
+      case 'letters': return 'אסוף את האותיות של המילה ' + missionWord(idx);
+      case 'score': return 'הגע ל-' + SCORE_MISSION_TARGET.toLocaleString('en-US') + ' נקודות בריצה אחת';
+      default: return 'אסוף ' + CHEST_MISSION_TARGET + ' תיבות אוצר בריצה אחת';
+    }
+  }
+  function missionSub(idx){
+    if(missionType(idx) === 'letters'){
+      var r = LETTER_RANGES[idx];
+      return 'האותיות מופיעות במסלול בין ' + r[0].toLocaleString('en-US') + ' ל-' + r[1].toLocaleString('en-US') + ' נקודות. אות שאספת נשמרת גם אם נפלת';
+    }
+    if(missionType(idx) === 'chests') return 'בזמן המשימה הזו התיבות מופיעות קצת יותר';
+    return 'הניקוד של ריצה אחת';
+  }
+
+  function lettersHtml(word, got){
+    var html = '<span class="mission-letters">';
+    for(var i = 0; i < word.length; i++){
+      html += '<span class="ml' + (got.indexOf(i) !== -1 ? ' got' : '') + '">' + word[i] + '</span>';
+    }
+    return html + '</span>';
+  }
+
+  function renderMissionBadge(){
+    var idx = missions.idx, type = missionType(idx);
+    if(type === 'letters'){
+      missionBadge.innerHTML = '🎯 ' + lettersHtml(missionWord(idx), missions.letters);
+    } else if(type === 'score'){
+      missionBadge.textContent = '🎯 הגע ל-' + SCORE_MISSION_TARGET.toLocaleString('en-US');
+    } else {
+      missionBadge.textContent = '🎯 🧰 ' + runMissionChests + '/' + CHEST_MISSION_TARGET;
+    }
+  }
+
+  function showToast(text, isLetter){
+    missionToast.textContent = text;
+    missionToast.classList.toggle('is-letter', !!isLetter);
+    // restart the pop-in animation
+    missionToast.hidden = true; void missionToast.offsetWidth; missionToast.hidden = false;
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function(){ missionToast.hidden = true; }, isLetter ? 1200 : 2400);
+  }
+
+  // spread the still-missing letters over the mission's score range, one
+  // per slice, in shuffled order; anything whose slot already passed this
+  // run gets pushed a little ahead of the current score
+  function planLetters(){
+    letterPlan = []; letterQueue = []; letterPickups = [];
+    if(missionType(missions.idx) !== 'letters') return;
+    var word = missionWord(missions.idx), r = LETTER_RANGES[missions.idx];
+    var slots = [];
+    for(var s = 0; s < word.length; s++) slots.push(s);
+    for(var k = slots.length - 1; k > 0; k--){
+      var j = Math.floor(Math.random() * (k + 1)), tmp = slots[k]; slots[k] = slots[j]; slots[j] = tmp;
+    }
+    var seg = (r[1] - r[0]) / word.length, now = currentScore(), bump = 0;
+    for(var i = 0; i < word.length; i++){
+      if(missions.letters.indexOf(i) !== -1) continue;
+      var at = r[0] + seg * slots[i] + seg * (0.15 + Math.random() * 0.7);
+      if(at < now + 300){ at = now + 300 + bump; bump += 400; }
+      letterPlan.push({ i: i, at: at, spawned: false });
+    }
+  }
+
+  function completeMission(){
+    missionsDoneThisRun.push(missionTitle(missions.idx));
+    missions.idx++;
+    missions.letters = [];
+    var finishedAll = missions.idx > 3;
+    if(finishedAll){
+      missions.idx = 0;
+      missions.cycle++;
+      missions.specialPending = true;
+      showToast('🎁 כל המשימות הושלמו! זכית בתיבה מיוחדת');
+    } else {
+      showToast('✅ משימה הושלמה!');
+    }
+    saveMissions();
+    runMissionChests = 0;
+    planLetters();
+    if(missionType(missions.idx) === 'chests') chestTimer = Math.min(chestTimer, 10);
+    renderMissionBadge();
+  }
+
+  function collectLetter(i){
+    if(missions.letters.indexOf(i) !== -1) return;
+    missions.letters.push(i);
+    saveMissions();
+    var word = missionWord(missions.idx);
+    renderMissionBadge();
+    if(missions.letters.length >= word.length) completeMission();
+    else showToast('אות ' + word[i] + '!', true);
+  }
+
+  // called every frame of a run
+  function updateMissions(dt){
+    var type = missionType(missions.idx), score = currentScore();
+    if(type === 'score' && score >= SCORE_MISSION_TARGET) completeMission();
+    for(var p = 0; p < letterPlan.length; p++){
+      var lp = letterPlan[p];
+      if(!lp.spawned && score >= lp.at){ lp.spawned = true; letterQueue.push(lp); }
+    }
+    for(var li = letterPickups.length - 1; li >= 0; li--){
+      var L = letterPickups[li];
+      L.z -= speed * dt;
+      if(!L.collected && L.lane === player.lane && L.z <= COLLIDE_Z + 20 && L.z > -30){
+        L.collected = true;
+        collectLetter(L.i);
+      }
+      if(L.z < -80){
+        // missed it: it comes around again a bit later in the run
+        if(!L.collected){ L.plan.spawned = false; L.plan.at = score + 500; }
+        letterPickups.splice(li, 1);
+      }
+    }
+  }
+
+  // a due letter takes over a whole spawn wave, alone in its lane, so it's
+  // never hidden behind an obstacle
+  function spawnLetterIfDue(){
+    if(!letterQueue.length) return false;
+    var lp = letterQueue.shift();
+    if(missions.letters.indexOf(lp.i) !== -1) return false;
+    letterPickups.push({ lane: Math.floor(Math.random() * 3), z: ZFAR, i: lp.i,
+                         ch: missionWord(missions.idx)[lp.i], plan: lp, collected: false });
+    return true;
+  }
+
+  function missionChestPicked(){
+    if(missionType(missions.idx) !== 'chests') return;
+    runMissionChests++;
+    renderMissionBadge();
+    if(runMissionChests >= CHEST_MISSION_TARGET) completeMission();
+    else showToast('🧰 ' + runMissionChests + '/' + CHEST_MISSION_TARGET);
+  }
+  function chestMissionActive(){ return missionType(missions.idx) === 'chests'; }
+
+  function resetMissionRun(){
+    runMissionChests = 0;
+    missionsDoneThisRun = [];
+    planLetters();
+    renderMissionBadge();
+    missionToast.hidden = true;
+  }
+
+  function showMissionResults(){
+    if(missionsDoneThisRun.length){
+      missionBanner.textContent = '🎯 השלמת ' + (missionsDoneThisRun.length === 1 ? 'משימה' : missionsDoneThisRun.length + ' משימות') + ' בריצה הזו!';
+      missionBanner.hidden = false;
+    } else {
+      missionBanner.hidden = true;
+    }
+    specialFromOverBtn.hidden = !missions.specialPending;
+  }
+
+  function renderMissionList(){
+    missionList.innerHTML = '';
+    for(var idx = 0; idx < 4; idx++){
+      var done = idx < missions.idx, current = idx === missions.idx;
+      var row = document.createElement('div');
+      row.className = 'mission-row ' + (done ? 'is-done' : current ? 'is-current' : 'is-locked');
+      var icon = document.createElement('div');
+      icon.className = 'mission-icon';
+      icon.textContent = done ? '✅' : current ? '🎯' : '🔒';
+      var body = document.createElement('div');
+      body.className = 'mission-body';
+      var title = document.createElement('div');
+      title.className = 'mission-title';
+      title.textContent = (idx + 1) + '. ' + missionTitle(idx);
+      body.appendChild(title);
+      if(current){
+        var sub = document.createElement('div');
+        sub.className = 'mission-sub';
+        sub.textContent = missionSub(idx);
+        body.appendChild(sub);
+      }
+      if(missionType(idx) === 'letters' && !(idx > missions.idx)){
+        var holder = document.createElement('div');
+        var word = missionWord(idx), got = [];
+        for(var g = 0; g < word.length; g++) if(done || missions.letters.indexOf(g) !== -1) got.push(g);
+        holder.innerHTML = lettersHtml(word, got);
+        body.appendChild(holder.firstChild);
+      }
+      row.appendChild(icon);
+      row.appendChild(body);
+      missionList.appendChild(row);
+    }
+    specialFromMissionsBtn.hidden = !missions.specialPending;
+  }
+
+  function openMissions(){
+    renderMissionList();
+    startOverlay.hidden = true;
+    missionsOverlay.hidden = false;
+  }
+  function closeMissions(){
+    missionsOverlay.hidden = true;
+    startOverlay.hidden = false;
+  }
+  missionsBtn.addEventListener('click', openMissions);
+  closeMissionsBtn.addEventListener('click', closeMissions);
+
+  function openSpecial(from){
+    if(!missions.specialPending) return;
+    specialReturnTo = from;
+    from.hidden = true;
+    specialChestBtn.disabled = false;
+    specialChestBtn.classList.remove('is-open');
+    specialHint.hidden = false;
+    specialResult.hidden = true;
+    closeSpecialBtn.hidden = true;
+    specialOverlay.hidden = false;
+  }
+  specialFromOverBtn.addEventListener('click', function(){ openSpecial(overOverlay); });
+  specialFromMissionsBtn.addEventListener('click', function(){ openSpecial(missionsOverlay); });
+
+  specialChestBtn.addEventListener('click', function(){
+    if(specialChestBtn.disabled || !missions.specialPending) return;
+    specialChestBtn.disabled = true;
+    specialOpening = true;
+    specialChestBtn.classList.add('is-open');
+    specialHint.hidden = true;
+    setTimeout(function(){
+      var text;
+      var hasGolden = ownedSkins.indexOf('golden') !== -1;
+      if(!hasGolden && Math.random() < GOLDEN_SKIN_CHANCE){
+        ownedSkins.push('golden');
+        selectedSkinId = 'golden';
+        text = '✨ הסקין המוזהב "אגדת הזהב"! הוא כבר עליך ✨';
+      } else {
+        var coinsWon = 3000 + Math.floor(Math.random() * 3001);
+        wallet += coinsWon;
+        text = '+' + coinsWon.toLocaleString('en-US') + ' 🪙';
+      }
+      missions.specialPending = false;
+      saveMissions();
+      saveProgress();
+      updateWalletDisplays();
+      specialResult.textContent = text;
+      specialResult.hidden = false;
+      closeSpecialBtn.hidden = false;
+      specialOpening = false;
+    }, 520);
+  });
+  closeSpecialBtn.addEventListener('click', function(){
+    specialOverlay.hidden = true;
+    var back = specialReturnTo || startOverlay;
+    if(back === missionsOverlay) renderMissionList();
+    if(back === overOverlay) specialFromOverBtn.hidden = true;
+    back.hidden = false;
+  });
+
   // ---------- game state ----------
   var state = 'start'; // start | playing | over
   var player, obstacles, coins, powerups, chests, decor, dustParticles, elapsed, distance, coinCount, speed, spawnTimer, spawnGap, decorTimer, powerupTimer, chestTimer, pendingChestCount, footPuffs;
@@ -1375,13 +1812,14 @@
     spawnGap = 0.95;
     decorTimer = 0;
     powerupTimer = 10 + Math.random()*6;
-    chestTimer = 22 + Math.random()*14;
+    chestTimer = chestMissionActive() ? 12 + Math.random()*8 : 22 + Math.random()*14;
     pendingChestCount = 0;
     chestOpenBox.hidden = true;
     chestOpenResult.hidden = true;
     chestHint.hidden = false;
     openChestBtn.disabled = false;
     openChestBtn.classList.remove('is-open');
+    resetMissionRun();
   }
 
   function laneMove(dir){
@@ -1430,10 +1868,12 @@
         return {lane:l, type: rr<0.4 ? 'rock' : (rr<0.8 ? 'beam' : 'barrier')};
       });
       // treasure chest: rare, and only ever placed in the one safe lane of a
-      // hard double-block wave, so reaching it means threading the obstacles first
-      if(chestTimer <= 0 && Math.random() < 0.3){
+      // hard double-block wave, so reaching it means threading the obstacles first.
+      // during the "4 chests in one run" mission they turn up about twice as often
+      var chestMission = chestMissionActive();
+      if(chestTimer <= 0 && Math.random() < (chestMission ? 0.6 : 0.3)){
         pat.push({lane: openLane, type:'chest'});
-        chestTimer = 50 + Math.random()*30;
+        chestTimer = chestMission ? 18 + Math.random()*10 : 50 + Math.random()*30;
       } else {
         pat.push({lane: openLane, type:'coin-line'});
       }
@@ -1454,6 +1894,7 @@
   }
 
   function spawnWave(){
+    if(spawnLetterIfDue()) return;
     var items = pickPattern();
     items.forEach(function(it){
       if(it.type === 'coin-line'){
@@ -1548,6 +1989,7 @@
       chestCountNum.textContent = pendingChestCount;
       chestOpenBox.hidden = false;
     }
+    showMissionResults();
     hud.hidden = true;
     overOverlay.hidden = false;
   }
@@ -1668,9 +2110,12 @@
       if(!ch.collected && ch.lane === player.lane && ch.z <= COLLIDE_Z + 20 && ch.z > -30){
         ch.collected = true;
         pendingChestCount++;
+        missionChestPicked();
       }
       if(ch.z < -80) chests.splice(chIdx,1);
     }
+
+    updateMissions(dt);
 
     // dust particles for speed feel
     if(Math.random() < 0.5){
@@ -1980,6 +2425,39 @@
     ctx.fillRect(p.x-w/2, p.y-h+lidH-3*s+bob, w, 5*s);
     ctx.beginPath(); ctx.arc(p.x, p.y-h+lidH+2*s+bob, 6*s, 0, Math.PI*2); ctx.fill();
     ctx.strokeStyle = 'rgba(90,60,10,0.6)'; ctx.lineWidth = Math.max(1,1*s); ctx.stroke();
+  }
+
+  // mission letter: a glowing purple tile with the letter on it, floating
+  // at coin height so it reads as "pick me up"
+  function drawLetter(L){
+    var bob = 50 + Math.sin(elapsed*4 + L.z*0.02)*5;
+    var p = project(LANES[L.lane], L.z, bob);
+    if(p.scale <= 0.02) return;
+    var s = p.sp, half = 17*s;
+
+    var glow = ctx.createRadialGradient(p.x,p.y,0, p.x,p.y,40*s);
+    glow.addColorStop(0,'rgba(190,150,255,0.6)');
+    glow.addColorStop(1,'rgba(190,150,255,0)');
+    ctx.fillStyle = glow;
+    ctx.beginPath(); ctx.arc(p.x,p.y,40*s,0,Math.PI*2); ctx.fill();
+
+    var grd = ctx.createLinearGradient(p.x, p.y-half, p.x, p.y+half);
+    grd.addColorStop(0,'#c7a4ff');
+    grd.addColorStop(1,'#5a2fb8');
+    ctx.fillStyle = grd;
+    ctx.beginPath();
+    if(ctx.roundRect) ctx.roundRect(p.x-half, p.y-half, half*2, half*2, 6*s);
+    else ctx.rect(p.x-half, p.y-half, half*2, half*2);
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(255,255,255,0.8)';
+    ctx.lineWidth = Math.max(1, 2*s);
+    ctx.stroke();
+
+    ctx.fillStyle = '#ffffff';
+    ctx.font = '800 ' + Math.max(6, Math.round(22*s)) + 'px Rubik, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(L.ch, p.x, p.y + 1*s);
   }
 
   function drawObstacle(ob){
@@ -2648,6 +3126,7 @@
     coins.forEach(function(c){ if(!c.collected) entities.push({z:c.z, draw:function(){drawCoin(c);}}); });
     powerups.forEach(function(pu){ if(!pu.collected) entities.push({z:pu.z, draw:function(){drawPowerup(pu);}}); });
     chests.forEach(function(ch){ if(!ch.collected) entities.push({z:ch.z, draw:function(){drawChest(ch);}}); });
+    letterPickups.forEach(function(L){ if(!L.collected) entities.push({z:L.z, draw:function(){drawLetter(L);}}); });
     entities.sort(function(a,b){ return b.z - a.z; });
     entities.forEach(function(e){ e.draw(); });
 
@@ -2753,6 +3232,7 @@
     overOverlay.hidden = true;
     reviveOverlay.hidden = true;
     hud.hidden = false;
+    missionBadge.hidden = false;
     scoreNum.textContent = '0';
     coinNum.textContent = '0';
     bestNum.textContent = best;
@@ -2773,7 +3253,7 @@
   // never while the name field is being typed in. Everything worth keeping
   // (coins, skins, name, league) is in localStorage, so a reload loses nothing.
   // 'dev' = a local or preview copy: the updater stays off entirely.
-  var BUILD_VERSION = '20260927-103513';
+  var BUILD_VERSION = '20260927-111535';
   var UPDATE_CHECK_MS = 60000;
   var UPDATE_TRIED_KEY = 'canyonChaseTriedUpdate';
   var pendingSubmits = 0;
@@ -2783,6 +3263,7 @@
   function isSafeToReload(){
     if(state === 'playing' || state === 'revive') return false;
     if(pendingSubmits > 0) return false;
+    if(specialOpening) return false;
     if(!chestOpenBox.hidden && !openChestBtn.disabled) return false;
     if(document.activeElement === playerNameInput) return false;
     return true;
