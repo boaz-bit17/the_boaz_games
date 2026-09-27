@@ -662,7 +662,7 @@
       <div class="revive-shop">
         <div class="revive-shop-text">
           <strong>💠 אבן תחייה</strong>
-          <span>בבעלותך: <span id="reviveStockNum">0</span>/5 · נהרסת? קום מיד וממשיך</span>
+          <span>בבעלותך: <span id="reviveStockNum">0</span>/2 · נהרסת? קום מיד וממשיך</span>
         </div>
         <button type="button" id="buyReviveBtn">קנה 🪙</button>
       </div>
@@ -907,7 +907,7 @@
   var SKIN_KEY = 'canyonChaseSkin';
   var REVIVE_STOCK_KEY = 'canyonChaseReviveStock';
   var REVIVE_STONE_PRICE = 1200;
-  var MAX_REVIVE_STOCK = 5;
+  var MAX_REVIVE_STOCK = 2;
   var wallet = 0, ownedSkins = ['ember'], selectedSkinId = 'ember', reviveStock = 0;
   try {
     wallet = parseInt(localStorage.getItem(WALLET_KEY) || '0', 10) || 0;
@@ -916,6 +916,8 @@
     var savedSkin = localStorage.getItem(SKIN_KEY);
     if(savedSkin && ownedSkins.indexOf(savedSkin) !== -1) selectedSkinId = savedSkin;
     reviveStock = parseInt(localStorage.getItem(REVIVE_STOCK_KEY) || '0', 10) || 0;
+    // the cap came down (5 -> 2): anyone holding more keeps just the cap
+    reviveStock = Math.min(reviveStock, MAX_REVIVE_STOCK);
   } catch(e){}
 
   function getSkin(id){
@@ -1402,7 +1404,7 @@
   }
   updateWalletDisplays();
 
-  // capped at 7 in your pack at a time -- stops revives from being stockpiled without limit
+  // capped at MAX_REVIVE_STOCK (2) in your pack at a time -- stops revives from being stockpiled without limit
   function buyRevive(){
     if(reviveStock >= MAX_REVIVE_STOCK) return;
     if(wallet < REVIVE_STONE_PRICE) return;
@@ -3448,7 +3450,7 @@
   // never while the name field is being typed in. Everything worth keeping
   // (coins, skins, name, league) is in localStorage, so a reload loses nothing.
   // 'dev' = a local or preview copy: the updater stays off entirely.
-  var BUILD_VERSION = '20260927-171951';
+  var BUILD_VERSION = '20260927-173010';
   var UPDATE_CHECK_MS = 60000;
   var UPDATE_TRIED_KEY = 'canyonChaseTriedUpdate';
   var pendingSubmits = 0;
