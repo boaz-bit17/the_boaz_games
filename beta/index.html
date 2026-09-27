@@ -2783,18 +2783,19 @@
   giveUpBtn.addEventListener('click', giveUpRun);
 
   // ---------- background music ----------
-  // Generated live with Web Audio -- no sound files to download. An upbeat
-  // runner groove in A minor (Am-F-C-G): a marimba melody, soft pad chords,
-  // a bass line and clean kick/clap/hat. Browsers only allow sound after a
+  // Generated live with Web Audio -- no sound files to download. A driving
+  // runner track in A minor (Am-F-C-G) at 140 BPM: a bright synth lead, a
+  // 16th-note arpeggio, pumping octave bass, pad chords that duck on every
+  // kick, four-on-the-floor drums with fills. Browsers only allow sound after a
   // tap/click, so the engine wakes on the first gesture. In menus it plays
   // softly without drums; during a run it's full. Muted choice is remembered.
-  var MUTE_KEY = 'canyonChaseMutedV2';
+  var MUTE_KEY = 'canyonChaseMutedV3';
   var soundBtn = document.getElementById('soundBtn');
   var musicMuted = false;
   try { musicMuted = localStorage.getItem(MUTE_KEY) === '1'; } catch(e){}
 
   var music = (function(){
-    var BPM = 120;
+    var BPM = 140;
     var STEP = 60 / BPM / 4;          // one 16th note
     var LOOP_STEPS = 128;             // 8 bars
     var LOOKAHEAD = 0.18;
@@ -2803,7 +2804,6 @@
 
     var CHORDS = [[57,60,64],[53,57,60],[55,60,64],[55,59,62]];   // Am F C G
     var BASS_ROOT = [45, 41, 48, 43];
-    var BASS_HITS = { 0:0, 3:0, 6:12, 8:0, 11:0, 14:7 };          // step -> interval
     // [step in bar, midi, length in 16ths]; bars 0-3 the tune, 4-7 the answer
     var MELODY = [
       [[0,69,2],[2,72,2],[4,76,3],[8,74,2],[10,72,2],[12,69,4]],
@@ -2852,18 +2852,33 @@
       g.gain.exponentialRampToValueAtTime(0.0001, t + decay);
     }
 
-    // marimba: round sine body + a quick bright "mallet" overtone
-    function marimba(t, midi, vol){
-      var f = hz(midi);
-      var o = ac.createOscillator(), g = ac.createGain();
-      o.type = 'sine'; o.frequency.value = f;
-      env(g, t, vol, 0.7);
-      o.connect(g); g.connect(lead);
-      var o2 = ac.createOscillator(), g2 = ac.createGain();
-      o2.type = 'sine'; o2.frequency.value = f * 4;
-      env(g2, t, vol * 0.35, 0.08);
-      o2.connect(g2); g2.connect(lead);
-      o.start(t); o.stop(t + 0.75); o2.start(t); o2.stop(t + 0.1);
+    // bright synth lead: two detuned saws through a snappy filter
+    function synthLead(t, midi, len, vol){
+      var f = ac.createBiquadFilter(), g = ac.createGain();
+      f.type = 'lowpass'; f.Q.value = 4;
+      f.frequency.setValueAtTime(5200, t);
+      f.frequency.exponentialRampToValueAtTime(1400, t + 0.18);
+      var dur = Math.max(0.16, len * STEP * 1.1);
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(vol, t + 0.008);
+      g.gain.setValueAtTime(vol * 0.7, t + dur * 0.6);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+      f.connect(g); g.connect(lead);
+      [-9, 9].forEach(function(det){
+        var o = ac.createOscillator();
+        o.type = 'sawtooth'; o.frequency.value = hz(midi); o.detune.value = det;
+        o.connect(f); o.start(t); o.stop(t + dur + 0.02);
+      });
+    }
+
+    // short plucky arpeggio note
+    function arpNote(t, midi){
+      var o = ac.createOscillator(), f = ac.createBiquadFilter(), g = ac.createGain();
+      o.type = 'square'; o.frequency.value = hz(midi);
+      f.type = 'lowpass'; f.frequency.value = 2400;
+      env(g, t, 0.07, 0.1);
+      o.connect(f); f.connect(g); g.connect(pad);
+      o.start(t); o.stop(t + 0.12);
     }
 
     function padChord(t, notes, dur){
@@ -2913,18 +2928,28 @@
 
     function playStep(t){
       var bar = Math.floor(step / 16), s = step % 16, chord = bar % 4;
-      if(s === 0) padChord(t, CHORDS[chord], STEP * 16);
-      if(s in BASS_HITS) bass(t, BASS_ROOT[chord] + BASS_HITS[s]);
-      // drums
-      if(s === 0 || s === 8 || (s === 10 && bar % 2 === 1)) kick(t);
-      if(s === 4 || s === 12) noise(t, 'bandpass', 1600, 0.35, 0.13);
-      if(s % 2 === 0) noise(t, 'highpass', 7500, s % 4 === 2 ? 0.1 : 0.05, 0.035);
-      // melody: every other loop rests on the tune's first half so it
-      // doesn't wear thin -- the chords and groove carry those bars
+      var ch = CHORDS[chord], fill = (bar % 4 === 3);
+      if(s === 0) padChord(t, ch, STEP * 16);
+      // arpeggio runs every 16th, climbing through the chord
+      var ARP = [ch[0], ch[1], ch[2], ch[0] + 12, ch[2], ch[1], ch[0] + 12, ch[2]];
+      arpNote(t, ARP[s % 8] + 12);
+      // pumping octave bass on every 8th
+      if(s % 2 === 0) bass(t, BASS_ROOT[chord] + (s % 4 === 2 ? 12 : 0));
+      // drums: kick on every beat, clap on 2 & 4, 16th hats, fill into each phrase
+      if(s % 4 === 0){
+        kick(t);
+        if(mode === 'run'){          // pad ducks under the kick -- the "pump"
+          pad.gain.setValueAtTime(0.35, t);
+          pad.gain.linearRampToValueAtTime(1, t + STEP * 3);
+        }
+      }
+      if((s === 4 || s === 12) && !(fill && s === 12)) noise(t, 'bandpass', 1700, 0.4, 0.13);
+      if(fill && s >= 12) noise(t, 'bandpass', 1500 + (s - 12) * 300, 0.18 + (s - 12) * 0.08, 0.09);
+      noise(t, 'highpass', 8000, s % 4 === 2 ? 0.1 : 0.04, s % 4 === 2 ? 0.07 : 0.03);
+      if(s === 0 && bar % 4 === 0) noise(t, 'highpass', 5000, 0.12, 0.9);   // crash
       var notes = MELODY[bar];
-      if(loop % 2 === 1 && bar < 4) return;
       for(var i = 0; i < notes.length; i++){
-        if(notes[i][0] === s) marimba(t, notes[i][1], 0.32);
+        if(notes[i][0] === s) synthLead(t, notes[i][1], notes[i][2], 0.12);
       }
     }
 
@@ -3016,7 +3041,7 @@
   // never while the name field is being typed in. Everything worth keeping
   // (coins, skins, name, league) is in localStorage, so a reload loses nothing.
   // 'dev' = a local or preview copy: the updater stays off entirely.
-  var BUILD_VERSION = '20260927-104923';
+  var BUILD_VERSION = '20260927-105323';
   var UPDATE_CHECK_MS = 60000;
   var UPDATE_TRIED_KEY = 'canyonChaseTriedUpdate';
   var pendingSubmits = 0;
