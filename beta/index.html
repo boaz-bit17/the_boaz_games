@@ -486,6 +486,62 @@
     background:linear-gradient(160deg, rgba(181,140,255,.45), rgba(255,207,107,.45));
   }
 
+  /* ---------- scratch card ---------- */
+  .scratch-box{
+    background:linear-gradient(160deg,#bfe9ff,#6cc3ea);
+    border:2px solid rgba(12,60,92,.45);
+    border-radius:14px;
+    padding:12px 14px 10px;
+    margin-bottom:16px;
+    text-align:center;
+    /* a scratching drag shouldn't select the card's text */
+    -webkit-user-select:none; user-select:none;
+  }
+  .scratch-card{
+    background:#fffaf0;
+    border:2px dashed rgba(12,60,92,.45);
+    border-radius:12px;
+    padding:8px 10px 10px;
+    margin:6px auto 4px;
+    max-width:280px;
+    box-shadow:0 8px 16px -8px rgba(0,0,0,.45);
+  }
+  .scratch-title{
+    font-family:'Suez One',serif;
+    font-size:16px;
+    color:#0c3c5c;
+    margin-bottom:8px;
+  }
+  .scratch-area{
+    position:relative;
+    height:86px;
+    border-radius:10px;
+    overflow:hidden;
+    background:linear-gradient(160deg,#e9f7ff,#d2eefc);
+  }
+  .scratch-result{
+    position:absolute; inset:0;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    gap:4px;
+    padding:4px 8px;
+    font-size:13px; font-weight:700; color:#0c3c5c;
+    line-height:1.3;
+  }
+  .scratch-result .amt{
+    font-family:'Suez One',serif; font-size:22px;
+    font-variant-numeric: tabular-nums;
+  }
+  .scratch-result.is-bad .amt{ color:#b3261e; }
+  .scratch-result.is-good .amt{ color:#1b7a3a; }
+  .scratch-cover{
+    position:absolute; inset:0;
+    width:100%; height:100%;
+    touch-action:none;
+    cursor:crosshair;
+    transition:opacity .35s ease;
+  }
+  .scratch-cover.is-gone{ opacity:0; pointer-events:none; }
+
   .chest-open{
     background:linear-gradient(160deg,#ffe9a8,#ffcf6b);
     border:2px solid rgba(42,21,15,.4);
@@ -643,6 +699,17 @@
         </button>
         <div class="chest-hint" id="chestHint">לחץ על התיבה כדי לפתוח</div>
         <div class="chest-open-result" id="chestOpenResult" hidden></div>
+      </div>
+      <div class="scratch-box" id="scratchBox" hidden>
+        <div class="chest-open-lead">🎟️ מצאת כרטיס גירוד בדרך!</div>
+        <div class="scratch-card">
+          <div class="scratch-title">הוזמנת לאימון של ים פלישר!</div>
+          <div class="scratch-area">
+            <div class="scratch-result" id="scratchResult"></div>
+            <canvas class="scratch-cover" id="scratchCover"></canvas>
+          </div>
+        </div>
+        <div class="chest-hint" id="scratchHint">גרד עם האצבע כדי לגלות מה יצא לך</div>
       </div>
       <div class="league-banner" id="missionBanner" hidden></div>
       <button class="go-btn special-btn" id="specialFromOverBtn" type="button" hidden>🎁 פתח את התיבה המיוחדת!</button>
@@ -1808,6 +1875,183 @@
     back.hidden = false;
   });
 
+  // ---------- scratch card ----------
+  // A ticket that floats down the track now and then (at most one per run).
+  // Grab it and on the game-over screen you scratch it with your finger:
+  // "invited to Yam Fleisher's training" -- either bad luck, it's a swimming
+  // practice (-400 coins), or there are waves today (+400 coins). Coming
+  // 25-45s into a run, then 30-45s after a miss, it turns up in about every
+  // other decent run: findable, but not a given.
+  var SCRATCH_AMOUNT = 400;
+  var SCRATCH_REVEAL_AT = 0.5;       // share of the coating scratched off before it reveals itself
+  var scratchBox = document.getElementById('scratchBox');
+  var scratchResult = document.getElementById('scratchResult');
+  var scratchCover = document.getElementById('scratchCover');
+  var scratchHint = document.getElementById('scratchHint');
+  var scratchCtx = scratchCover.getContext('2d');
+  var scratchCards = [], scratchTimer = 0, scratchFound = false, scratchGood = false;
+  var scratchRevealed = true, scratchLast = null, scratchChecks = 0;
+
+  function resetScratchRun(){
+    scratchCards = [];
+    scratchTimer = 25 + Math.random()*20;
+    scratchFound = false;
+    scratchBox.hidden = true;
+    scratchRevealed = true;
+  }
+
+  // called every frame of a run
+  function updateScratchCards(dt){
+    if(!scratchFound){
+      scratchTimer -= dt;
+      if(scratchTimer <= 0 && !scratchCards.length){
+        scratchCards.push({ lane: Math.floor(Math.random()*3), z: ZFAR, collected: false });
+        scratchTimer = 30 + Math.random()*15;
+      }
+    }
+    for(var i = scratchCards.length - 1; i >= 0; i--){
+      var sc = scratchCards[i];
+      sc.z -= speed*dt;
+      if(!sc.collected && sc.lane === player.lane && sc.z <= COLLIDE_Z + 20 && sc.z > -30){
+        sc.collected = true;
+        scratchFound = true;
+        showToast('🎟️ כרטיס גירוד!');
+      }
+      if(sc.z < -80) scratchCards.splice(i, 1);
+    }
+  }
+
+  function drawScratchTicket(sc){
+    var p = project(LANES[sc.lane], sc.z, 50 + Math.sin(elapsed*4 + sc.z*0.02)*5);
+    if(p.scale <= 0.02) return;
+    var s = p.sp, w = 40*s, h = 26*s, tilt = Math.sin(elapsed*3 + sc.z*0.01)*0.15;
+    var glow = ctx.createRadialGradient(p.x,p.y,0, p.x,p.y,38*s);
+    glow.addColorStop(0,'rgba(120,210,255,0.55)');
+    glow.addColorStop(1,'rgba(120,210,255,0)');
+    ctx.fillStyle = glow;
+    ctx.beginPath(); ctx.arc(p.x,p.y,38*s,0,Math.PI*2); ctx.fill();
+    ctx.save();
+    ctx.translate(p.x, p.y);
+    ctx.rotate(tilt);
+    var tg = ctx.createLinearGradient(0, -h/2, 0, h/2);
+    tg.addColorStop(0, '#7fd3f7');
+    tg.addColorStop(1, '#1f7fb5');
+    ctx.fillStyle = tg;
+    ctx.fillRect(-w/2, -h/2, w, h);
+    ctx.strokeStyle = '#ffd447'; ctx.lineWidth = Math.max(1, 2*s);
+    ctx.strokeRect(-w/2, -h/2, w, h);
+    // silver scratch patch with a little wave on it
+    ctx.fillStyle = '#d9dde3';
+    ctx.fillRect(-w*0.32, -h*0.22, w*0.64, h*0.44);
+    ctx.strokeStyle = '#1f7fb5'; ctx.lineWidth = Math.max(1, 1.6*s);
+    ctx.beginPath();
+    for(var k = 0; k <= 8; k++){
+      var xx = -w*0.28 + k*(w*0.56/8), yy = Math.sin(k*1.2)*h*0.1;
+      if(k === 0) ctx.moveTo(xx, yy); else ctx.lineTo(xx, yy);
+    }
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  // game over with a card: lay the silver coating over the (already decided)
+  // result, and let the player rub it off
+  function showScratchCard(){
+    scratchGood = Math.random() < 0.5;
+    scratchResult.className = 'scratch-result ' + (scratchGood ? 'is-good' : 'is-bad');
+    scratchResult.innerHTML = '';
+    var line = document.createElement('div');
+    line.textContent = scratchGood ? 'איזה כיף, יש גלים היום! 🏄' : 'איזה ביש מזל! נפלת על אימון שחייה 🏊';
+    var amt = document.createElement('div');
+    amt.className = 'amt';
+    amt.textContent = (scratchGood ? '+' : '−') + SCRATCH_AMOUNT + ' 🪙';
+    scratchResult.appendChild(line);
+    scratchResult.appendChild(amt);
+    scratchRevealed = false;
+    scratchLast = null;
+    scratchChecks = 0;
+    scratchCover.classList.remove('is-gone');
+    scratchHint.hidden = false;
+    scratchHint.textContent = 'גרד עם האצבע כדי לגלות מה יצא לך';
+    scratchBox.hidden = false;
+    // size the coating once the panel is laid out
+    requestAnimationFrame(paintScratchCover);
+  }
+
+  function paintScratchCover(){
+    var rect = scratchCover.getBoundingClientRect();
+    var dpr = Math.min(2, window.devicePixelRatio || 1);
+    scratchCover.width = Math.max(1, Math.round(rect.width * dpr));
+    scratchCover.height = Math.max(1, Math.round(rect.height * dpr));
+    scratchCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    scratchCtx.globalCompositeOperation = 'source-over';
+    var g = scratchCtx.createLinearGradient(0, 0, rect.width, rect.height);
+    g.addColorStop(0, '#c9ced6');
+    g.addColorStop(0.5, '#eef1f5');
+    g.addColorStop(1, '#aab1bb');
+    scratchCtx.fillStyle = g;
+    scratchCtx.fillRect(0, 0, rect.width, rect.height);
+    // speckle so it reads as foil
+    scratchCtx.fillStyle = 'rgba(255,255,255,0.5)';
+    for(var i = 0; i < 70; i++){
+      scratchCtx.fillRect(Math.random()*rect.width, Math.random()*rect.height, 2, 2);
+    }
+    scratchCtx.fillStyle = '#5a6270';
+    scratchCtx.font = '700 15px Rubik, sans-serif';
+    scratchCtx.textAlign = 'center';
+    scratchCtx.textBaseline = 'middle';
+    scratchCtx.fillText('גרד כאן 🌊', rect.width/2, rect.height/2);
+  }
+
+  function scratchAt(e){
+    var rect = scratchCover.getBoundingClientRect();
+    var x = e.clientX - rect.left, y = e.clientY - rect.top;
+    scratchCtx.globalCompositeOperation = 'destination-out';
+    scratchCtx.lineWidth = 30;
+    scratchCtx.lineCap = 'round';
+    scratchCtx.beginPath();
+    if(scratchLast) scratchCtx.moveTo(scratchLast.x, scratchLast.y); else scratchCtx.moveTo(x - 0.1, y);
+    scratchCtx.lineTo(x, y);
+    scratchCtx.stroke();
+    scratchLast = { x: x, y: y };
+    if(++scratchChecks % 6 === 0 && scratchedShare() >= SCRATCH_REVEAL_AT) revealScratch();
+  }
+
+  function scratchedShare(){
+    var data = scratchCtx.getImageData(0, 0, scratchCover.width, scratchCover.height).data;
+    var clear = 0, total = 0;
+    for(var i = 3; i < data.length; i += 4*8){ total++; if(data[i] < 128) clear++; }
+    return total ? clear / total : 1;
+  }
+
+  function revealScratch(){
+    if(scratchRevealed) return;
+    scratchRevealed = true;
+    scratchCover.classList.add('is-gone');
+    scratchHint.hidden = true;
+    wallet = Math.max(0, wallet + (scratchGood ? SCRATCH_AMOUNT : -SCRATCH_AMOUNT));
+    saveProgress();
+    updateWalletDisplays();
+  }
+
+  scratchCover.addEventListener('pointerdown', function(e){
+    if(scratchRevealed) return;
+    e.preventDefault();
+    try { scratchCover.setPointerCapture(e.pointerId); } catch(err){}
+    scratchLast = null;
+    scratchAt(e);
+  });
+  scratchCover.addEventListener('pointermove', function(e){
+    if(scratchRevealed || !(e.buttons & 1) && e.pointerType === 'mouse') return;
+    if(e.pointerType !== 'mouse' && !scratchCover.hasPointerCapture(e.pointerId)) return;
+    scratchAt(e);
+  });
+  ['pointerup', 'pointercancel'].forEach(function(ev){
+    scratchCover.addEventListener(ev, function(){
+      scratchLast = null;
+      if(!scratchRevealed && scratchedShare() >= SCRATCH_REVEAL_AT) revealScratch();
+    });
+  });
+
   // ---------- game state ----------
   var state = 'start'; // start | playing | over
   var player, obstacles, coins, powerups, chests, decor, dustParticles, elapsed, distance, coinCount, speed, spawnTimer, spawnGap, decorTimer, powerupTimer, chestTimer, pendingChestCount, footPuffs;
@@ -1874,6 +2118,7 @@
     openChestBtn.disabled = false;
     openChestBtn.classList.remove('is-open');
     resetMissionRun();
+    resetScratchRun();
   }
 
   function laneMove(dir){
@@ -2072,6 +2317,7 @@
       chestOpenBox.hidden = false;
     }
     showMissionResults();
+    if(scratchFound) showScratchCard();
     hud.hidden = true;
     overOverlay.hidden = false;
   }
@@ -2212,6 +2458,7 @@
     while(raw * SCORE_SCALE >= (milestones + 1) * MILESTONE_POINTS) reachMilestone();
 
     updateMissions(dt);
+    updateScratchCards(dt);
 
     // dust particles for speed feel
     if(Math.random() < 0.5){
@@ -3324,6 +3571,7 @@
     powerups.forEach(function(pu){ if(!pu.collected) entities.push({z:pu.z, draw:function(){drawPowerup(pu);}}); });
     chests.forEach(function(ch){ if(!ch.collected) entities.push({z:ch.z, draw:function(){drawChest(ch);}}); });
     letterPickups.forEach(function(L){ if(!L.collected) entities.push({z:L.z, draw:function(){drawLetter(L);}}); });
+    scratchCards.forEach(function(sc){ if(!sc.collected) entities.push({z:sc.z, draw:function(){drawScratchTicket(sc);}}); });
     entities.sort(function(a,b){ return b.z - a.z; });
     entities.forEach(function(e){ e.draw(); });
 
@@ -3450,7 +3698,7 @@
   // never while the name field is being typed in. Everything worth keeping
   // (coins, skins, name, league) is in localStorage, so a reload loses nothing.
   // 'dev' = a local or preview copy: the updater stays off entirely.
-  var BUILD_VERSION = '20260927-173010';
+  var BUILD_VERSION = '20260928-111813';
   var UPDATE_CHECK_MS = 60000;
   var UPDATE_TRIED_KEY = 'canyonChaseTriedUpdate';
   var pendingSubmits = 0;
@@ -3461,6 +3709,7 @@
     if(state === 'playing' || state === 'revive') return false;
     if(pendingSubmits > 0) return false;
     if(specialOpening) return false;
+    if(!scratchBox.hidden && !scratchRevealed) return false;
     if(!chestOpenBox.hidden && !openChestBtn.disabled) return false;
     if(document.activeElement === playerNameInput) return false;
     return true;
