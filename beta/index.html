@@ -202,7 +202,6 @@
   .final-lbl{ font-size:12px; font-weight:700; letter-spacing:.08em; color:var(--ember-dim); margin-bottom:14px; }
   .best-row{
     display:flex; justify-content:center; gap:8px; align-items:baseline;
-    flex-wrap:wrap;   /* the "new personal best" tag is long -- let it drop to its own line on phones */
     font-size:14px; font-weight:600; color:var(--ink); margin-bottom:22px;
   }
   .best-row .best-num{ font-family:'Suez One',serif; font-size:18px; font-variant-numeric: tabular-nums; }
@@ -210,6 +209,11 @@
     display:inline-block; margin-right:8px; font-size:11px; font-weight:700;
     color:#fff5e6; background:var(--ember); border-radius:8px; padding:2px 8px;
     letter-spacing:.03em;
+  }
+  /* "you broke your personal best" gets its own centered line above the best score */
+  .new-best-line{
+    display:table; margin:0 auto 10px;
+    font-size:13px; padding:4px 12px;
   }
   [hidden]{ display:none !important; }
 
@@ -785,8 +789,8 @@
       <h1>נפלת בקניון</h1>
       <div class="final-lbl">הניקוד שלך</div>
       <div class="final-score" id="finalScore">0</div>
+      <span class="new-best new-best-line" id="newBestTag" hidden>שברת את השיא האישי שלך!</span>
       <div class="best-row">
-        <span class="new-best" id="newBestTag" hidden>שברת את השיא האישי שלך!</span>
         <span>השיא הטוב ביותר:</span>
         <span class="best-num" id="finalBest">0</span>
       </div>
@@ -4508,7 +4512,7 @@
   // never while the name field is being typed in. Everything worth keeping
   // (coins, skins, name, league) is in localStorage, so a reload loses nothing.
   // 'dev' = a local or preview copy: the updater stays off entirely.
-  var BUILD_VERSION = '20260928-153013';
+  var BUILD_VERSION = '20260928-153148';
   var UPDATE_CHECK_MS = 60000;
   var UPDATE_TRIED_KEY = 'canyonChaseTriedUpdate';
   var pendingSubmits = 0;
