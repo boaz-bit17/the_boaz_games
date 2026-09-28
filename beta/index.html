@@ -852,6 +852,8 @@
   // by id. Optional extras: hood ('down' | 'up'), helmet, backpack,
   // headband, cape + emblem (the emblem sits on the cape, since that's the
   // side facing the camera).
+  // `exclusive` skins can't be bought -- they only come from somewhere else
+  // (the surfer: the scratch card's "tube day").
   var SKINS = [
     { id:'ember',    name:'הרפתקן',      price:0,
       skinTone:'#dba27a', hair:'#4a2a17', hairStyle:'short',
@@ -967,7 +969,13 @@
       pants:'#d9a93a', pantsShade:'#8a6414', legs:'long',
       shoes:'#fff0b3', sole:'#a8781a', crown:'#ffd766',
       cape:'#ffd766', capeShade:'#b8860b', emblem:{shape:'sun', color:'#fff8dc'},
-      wings:'#ffe9a0', aura:'#ffd766', sparkle:'#fff4c2' }
+      wings:'#ffe9a0', aura:'#ffd766', sparkle:'#fff4c2' },
+    { id:'surfer',   name:'גולש צינורות', price:0, exclusive:'scratch',
+      skinTone:'#c98b5e', hair:'#ecc766', hairStyle:'spiky',
+      shirt:'#1fa3b8', shirtShade:'#127486', sleeves:'short',
+      pants:'#ff7a3d', pantsShade:'#c9551f', legs:'shorts',
+      shoes:'#c98b5e', sole:'#a8714a',                                 // barefoot
+      surfboard:'#fff4d6', boardStripe:'#ff7a3d' }
   ];
   var WALLET_KEY = 'canyonChaseWallet';
   var SKINS_KEY = 'canyonChaseOwnedSkins';
@@ -1511,7 +1519,11 @@
       var btn = document.createElement('button');
       btn.type = 'button';
       btn.className = 'skin-btn';
-      if(!owned){
+      if(!owned && skin.exclusive){
+        btn.classList.add('is-locked');
+        btn.textContent = '🎟️ רק מכרטיס גירוד';
+        btn.disabled = true;
+      } else if(!owned){
         var afford = wallet >= skin.price;
         btn.classList.add('is-locked');
         btn.textContent = '🪙 ' + skin.price.toLocaleString('en-US');
@@ -1533,6 +1545,7 @@
   function buyOrSelectSkin(id){
     var skin = getSkin(id);
     if(ownedSkins.indexOf(id) === -1){
+      if(skin.exclusive) return;
       if(wallet < skin.price) return;
       wallet -= skin.price;
       ownedSkins.push(id);
@@ -1878,18 +1891,22 @@
   // ---------- scratch card ----------
   // A ticket that floats down the track now and then (at most one per run).
   // Grab it and on the game-over screen you scratch it with your finger:
-  // "invited to Yam Fleisher's training" -- either bad luck, it's a swimming
-  // practice (-400 coins), or there are waves today (+400 coins). Coming
+  // "invited to Yam Fleisher's training" -- 20%: it's a tube day, you win the
+  // surfer skin (only while you don't have it yet); otherwise half-half bad
+  // luck, it's a swimming practice (-400 coins), or there are waves today
+  // (+400 coins). Coming
   // 25-45s into a run, then 30-45s after a miss, it turns up in about every
   // other decent run: findable, but not a given.
   var SCRATCH_AMOUNT = 400;
+  var SCRATCH_SKIN_CHANCE = 0.2;
+  var SCRATCH_SKIN_ID = 'surfer';
   var SCRATCH_REVEAL_AT = 0.5;       // share of the coating scratched off before it reveals itself
   var scratchBox = document.getElementById('scratchBox');
   var scratchResult = document.getElementById('scratchResult');
   var scratchCover = document.getElementById('scratchCover');
   var scratchHint = document.getElementById('scratchHint');
   var scratchCtx = scratchCover.getContext('2d');
-  var scratchCards = [], scratchTimer = 0, scratchFound = false, scratchGood = false;
+  var scratchCards = [], scratchTimer = 0, scratchFound = false, scratchOutcome = 'good';   // 'skin' | 'good' | 'bad'
   var scratchRevealed = true, scratchLast = null, scratchChecks = 0;
 
   function resetScratchRun(){
@@ -1956,14 +1973,24 @@
   // game over with a card: lay the silver coating over the (already decided)
   // result, and let the player rub it off
   function showScratchCard(){
-    scratchGood = Math.random() < 0.5;
-    scratchResult.className = 'scratch-result ' + (scratchGood ? 'is-good' : 'is-bad');
+    var canWinSkin = ownedSkins.indexOf(SCRATCH_SKIN_ID) === -1;
+    if(canWinSkin && Math.random() < SCRATCH_SKIN_CHANCE) scratchOutcome = 'skin';
+    else scratchOutcome = Math.random() < 0.5 ? 'good' : 'bad';
+    scratchResult.className = 'scratch-result ' + (scratchOutcome === 'bad' ? 'is-bad' : 'is-good');
     scratchResult.innerHTML = '';
     var line = document.createElement('div');
-    line.textContent = scratchGood ? 'איזה כיף, יש גלים היום! 🏄' : 'איזה ביש מזל! נפלת על אימון שחייה 🏊';
     var amt = document.createElement('div');
     amt.className = 'amt';
-    amt.textContent = (scratchGood ? '+' : '−') + SCRATCH_AMOUNT + ' 🪙';
+    if(scratchOutcome === 'skin'){
+      line.textContent = 'איזה כיף! נפלת על יום צינורות 🌊';
+      amt.textContent = 'קיבלת סקין של גולש! 🏄';
+    } else if(scratchOutcome === 'good'){
+      line.textContent = 'איזה כיף, יש גלים היום! 🏄';
+      amt.textContent = '+' + SCRATCH_AMOUNT + ' 🪙';
+    } else {
+      line.textContent = 'איזה ביש מזל! נפלת על אימון שחייה 🏊';
+      amt.textContent = '−' + SCRATCH_AMOUNT + ' 🪙';
+    }
     scratchResult.appendChild(line);
     scratchResult.appendChild(amt);
     scratchRevealed = false;
@@ -2028,7 +2055,14 @@
     scratchRevealed = true;
     scratchCover.classList.add('is-gone');
     scratchHint.hidden = true;
-    wallet = Math.max(0, wallet + (scratchGood ? SCRATCH_AMOUNT : -SCRATCH_AMOUNT));
+    if(scratchOutcome === 'skin'){
+      if(ownedSkins.indexOf(SCRATCH_SKIN_ID) === -1) ownedSkins.push(SCRATCH_SKIN_ID);
+      selectedSkinId = SCRATCH_SKIN_ID;
+      scratchHint.textContent = 'הסקין כבר עליך!';
+      scratchHint.hidden = false;
+    } else {
+      wallet = Math.max(0, wallet + (scratchOutcome === 'good' ? SCRATCH_AMOUNT : -SCRATCH_AMOUNT));
+    }
     saveProgress();
     updateWalletDisplays();
   }
@@ -3299,6 +3333,33 @@
       g.restore();
     }
 
+    // surfboard slung diagonally across the back, nose up over the right shoulder
+    if(skin.surfboard){
+      g.save();
+      g.translate(0, -80);
+      g.rotate(0.42);
+      var boardPath = function(){
+        g.beginPath();
+        g.moveTo(0, -46);
+        g.quadraticCurveTo(9, -30, 8.5, 6);
+        g.quadraticCurveTo(8, 30, 0, 38);
+        g.quadraticCurveTo(-8, 30, -8.5, 6);
+        g.quadraticCurveTo(-9, -30, 0, -46);
+        g.closePath();
+      };
+      g.fillStyle = skin.surfboard;
+      boardPath(); g.fill();
+      g.save(); boardPath(); g.clip();
+      g.fillStyle = skin.boardStripe;                                        // racing stripe
+      g.fillRect(-2.2, -46, 4.4, 84);
+      g.fillStyle = 'rgba(255,255,255,0.35)';                                // gloss
+      g.fillRect(-7, -30, 2.4, 40);
+      g.restore();
+      g.strokeStyle = 'rgba(0,0,0,0.3)'; g.lineWidth = 1.2;
+      boardPath(); g.stroke();
+      g.restore();
+    }
+
     if(skin.cape){
       var sway = Math.sin(ph) * (mode === 'run' ? 5 : 2) + (mode === 'fly' ? 6 : 0);
       var flare = mode === 'fly' ? 1.25 : 1;
@@ -3698,7 +3759,7 @@
   // never while the name field is being typed in. Everything worth keeping
   // (coins, skins, name, league) is in localStorage, so a reload loses nothing.
   // 'dev' = a local or preview copy: the updater stays off entirely.
-  var BUILD_VERSION = '20260928-111813';
+  var BUILD_VERSION = '20260928-114804';
   var UPDATE_CHECK_MS = 60000;
   var UPDATE_TRIED_KEY = 'canyonChaseTriedUpdate';
   var pendingSubmits = 0;
