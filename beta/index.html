@@ -202,6 +202,7 @@
   .final-lbl{ font-size:12px; font-weight:700; letter-spacing:.08em; color:var(--ember-dim); margin-bottom:14px; }
   .best-row{
     display:flex; justify-content:center; gap:8px; align-items:baseline;
+    flex-wrap:wrap;   /* the "new personal best" tag is long -- let it drop to its own line on phones */
     font-size:14px; font-weight:600; color:var(--ink); margin-bottom:22px;
   }
   .best-row .best-num{ font-family:'Suez One',serif; font-size:18px; font-variant-numeric: tabular-nums; }
@@ -785,7 +786,7 @@
       <div class="final-lbl">הניקוד שלך</div>
       <div class="final-score" id="finalScore">0</div>
       <div class="best-row">
-        <span class="new-best" id="newBestTag" hidden>שיא חדש!</span>
+        <span class="new-best" id="newBestTag" hidden>שברת את השיא האישי שלך!</span>
         <span>השיא הטוב ביותר:</span>
         <span class="best-num" id="finalBest">0</span>
       </div>
@@ -4507,7 +4508,7 @@
   // never while the name field is being typed in. Everything worth keeping
   // (coins, skins, name, league) is in localStorage, so a reload loses nothing.
   // 'dev' = a local or preview copy: the updater stays off entirely.
-  var BUILD_VERSION = '20260928-143603';
+  var BUILD_VERSION = '20260928-153013';
   var UPDATE_CHECK_MS = 60000;
   var UPDATE_TRIED_KEY = 'canyonChaseTriedUpdate';
   var pendingSubmits = 0;
