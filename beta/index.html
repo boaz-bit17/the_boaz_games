@@ -551,6 +551,24 @@
   .tourney-join-btns .regular{ background:linear-gradient(180deg,#3aa8ef,#0b6fb8); }
   .tourney-join-btns .goofy{ background:linear-gradient(180deg,#ff9a5c,#d9571e); }
   .tourney-join-err{ color:#b3261e; margin-top:6px; }
+  .tourney-roster{ margin-bottom:12px; }
+  .tourney-roster-cols{ display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:6px; }
+  .tourney-roster-col{
+    background:rgba(255,255,255,.35);
+    border:2px solid rgba(42,21,15,.2);
+    border-radius:10px;
+    padding:6px 8px;
+    max-height:220px; overflow-y:auto;
+  }
+  .tourney-roster-col.regular{ border-color:#1f8fd6; }
+  .tourney-roster-col.goofy{ border-color:#ff7a3d; }
+  .tourney-roster-head{ font-family:'Suez One',serif; font-size:14px; color:var(--ink); margin-bottom:4px; }
+  .tourney-roster-name{
+    font-size:12px; font-weight:700; color:var(--ink);
+    padding:2px 0;
+    overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  }
+  .tourney-roster-name.is-you{ color:var(--ember); }
   .tourney-top{ margin-bottom:12px; }
   .tourney-top .leaderboard-list{ max-height:none; margin:4px 0 0; }
   .tourney-tag{ font-size:10px; font-weight:800; border-radius:6px; padding:1px 6px; color:#fff; flex:none; }
@@ -875,6 +893,13 @@
       </div>
       <div class="tourney-bar"><div class="r" id="tourneyBarR" style="width:50%"></div><div class="g" id="tourneyBarG" style="width:50%"></div></div>
       <div class="tourney-join" id="tourneyJoin"></div>
+      <div class="tourney-roster" id="tourneyRosterBox" hidden>
+        <div class="mission-title">מי איתך ומי נגדך</div>
+        <div class="tourney-roster-cols">
+          <div class="tourney-roster-col regular"><div class="tourney-roster-head">🏄 רגולר</div><div id="rosterRegular"></div></div>
+          <div class="tourney-roster-col goofy"><div class="tourney-roster-head">🏄 גופי</div><div id="rosterGoofy"></div></div>
+        </div>
+      </div>
       <div class="tourney-top" id="tourneyTopBox" hidden>
         <div class="mission-title">הגולשים המובילים</div>
         <div class="leaderboard-list" id="tourneyTopList"></div>
@@ -2484,6 +2509,30 @@
         return c;
       });
   }
+  // who's on which team -- the server only opens this once the tournament
+  // has started (the tournament_roster view is empty for one that hasn't),
+  // and the game only shows it to players who signed up themselves
+  function fetchRoster(season){
+    return sbGet('tournament_roster?select=name,team&season=eq.' + encodeURIComponent(season) + '&order=name.asc');
+  }
+
+  function renderRoster(rows, myName){
+    var box = document.getElementById('tourneyRosterBox');
+    if(!rows || !rows.length){ box.hidden = true; return; }
+    ['regular', 'goofy'].forEach(function(team){
+      var col = document.getElementById(team === 'regular' ? 'rosterRegular' : 'rosterGoofy');
+      col.innerHTML = '';
+      rows.filter(function(r){ return r.team === team; }).forEach(function(r){
+        var el = document.createElement('div');
+        var you = sameName(r.name, myName);
+        el.className = 'tourney-roster-name' + (you ? ' is-you' : '');
+        el.textContent = r.name + (you ? ' (אתה)' : '');
+        col.appendChild(el);
+      });
+    });
+    box.hidden = false;
+  }
+
   function fetchTop(season){
     return sbGet('tournament_top?select=name,team,total&season=eq.' + encodeURIComponent(season) + '&order=total.desc&limit=5');
   }
@@ -2595,6 +2644,10 @@
       fetchSignupCounts(t.id).then(function(counts){ renderTeams(totals, counts); });
     });
     fetchTop(t.id).then(renderTop);
+    // the team lists: only once it's running, and only for signed-up players
+    var myReg = tourney.reg[t.id];
+    document.getElementById('tourneyRosterBox').hidden = true;
+    if(n.current && myReg) fetchRoster(t.id).then(function(rows){ renderRoster(rows, myReg.name); });
 
     // the result of the last tournament, for a while after it ended
     tourneyResult.hidden = true;
@@ -4454,7 +4507,7 @@
   // never while the name field is being typed in. Everything worth keeping
   // (coins, skins, name, league) is in localStorage, so a reload loses nothing.
   // 'dev' = a local or preview copy: the updater stays off entirely.
-  var BUILD_VERSION = '20260928-143223';
+  var BUILD_VERSION = '20260928-143603';
   var UPDATE_CHECK_MS = 60000;
   var UPDATE_TRIED_KEY = 'canyonChaseTriedUpdate';
   var pendingSubmits = 0;
