@@ -486,6 +486,88 @@
     background:linear-gradient(160deg, rgba(181,140,255,.45), rgba(255,207,107,.45));
   }
 
+  /* ---------- regular vs goofy tournament ---------- */
+  .tourney-banner{
+    display:block; width:100%;
+    margin:0 0 12px;
+    font-family:'Rubik',sans-serif; font-weight:800; font-size:14px;
+    color:#fff;
+    background:linear-gradient(135deg,#1f8fd6,#0b4f8a);
+    border:2px solid rgba(8,40,70,.5);
+    border-radius:12px;
+    padding:10px 12px;
+    cursor:pointer;
+    box-shadow:0 6px 14px -6px rgba(0,0,0,.45);
+    line-height:1.35;
+  }
+  .tourney-banner:active{ transform:translateY(1px); }
+  .tourney-status{
+    font-size:13px; font-weight:700; color:#0c3c5c;
+    background:rgba(255,255,255,.45);
+    border:1px solid rgba(12,60,92,.25);
+    border-radius:10px;
+    padding:8px 10px;
+    margin-bottom:12px;
+  }
+  .tourney-teams{
+    display:grid; grid-template-columns:1fr 1fr; gap:10px;
+    margin-bottom:8px;
+  }
+  .tourney-team{
+    border-radius:12px;
+    padding:10px 6px;
+    border:2px solid rgba(42,21,15,.25);
+    background:rgba(255,255,255,.35);
+  }
+  .tourney-team.regular{ border-color:#1f8fd6; }
+  .tourney-team.goofy{ border-color:#ff7a3d; }
+  .tourney-team.is-leading{ background:linear-gradient(160deg,#ffe9a8,#ffcf6b); }
+  .tourney-team-name{ font-family:'Suez One',serif; font-size:18px; color:var(--ink); }
+  .tourney-team-sub{ font-size:10.5px; font-weight:600; color:var(--ember-dim); margin-bottom:4px; }
+  .tourney-team-total{ font-family:'Suez One',serif; font-size:20px; color:var(--ink); font-variant-numeric: tabular-nums; }
+  .tourney-team-players{ font-size:11px; font-weight:700; color:var(--ember-dim); }
+  .tourney-bar{
+    display:flex; height:12px; border-radius:6px; overflow:hidden;
+    background:rgba(42,21,15,.15);
+    margin-bottom:12px;
+  }
+  .tourney-bar .r{ background:#1f8fd6; }
+  .tourney-bar .g{ background:#ff7a3d; }
+  .tourney-join{
+    background:rgba(255,255,255,.35);
+    border:1px solid rgba(42,21,15,.18);
+    border-radius:12px;
+    padding:10px 12px;
+    margin-bottom:12px;
+    font-size:12.5px; font-weight:700; color:var(--ink);
+  }
+  .tourney-join .name-row{ margin:8px 0; }
+  .tourney-join-btns{ display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:8px; }
+  .tourney-join-btns button{
+    font-family:'Suez One',serif; font-size:16px; color:#fff;
+    border:none; border-radius:10px; padding:10px 6px; cursor:pointer;
+  }
+  .tourney-join-btns button:disabled{ opacity:.5; cursor:default; }
+  .tourney-join-btns .regular{ background:linear-gradient(180deg,#3aa8ef,#0b6fb8); }
+  .tourney-join-btns .goofy{ background:linear-gradient(180deg,#ff9a5c,#d9571e); }
+  .tourney-join-err{ color:#b3261e; margin-top:6px; }
+  .tourney-top{ margin-bottom:12px; }
+  .tourney-top .leaderboard-list{ max-height:none; margin:4px 0 0; }
+  .tourney-tag{ font-size:10px; font-weight:800; border-radius:6px; padding:1px 6px; color:#fff; flex:none; }
+  .tourney-tag.regular{ background:#1f8fd6; }
+  .tourney-tag.goofy{ background:#ff7a3d; }
+  .tourney-prize{
+    display:flex; align-items:center; gap:10px;
+    background:linear-gradient(160deg, rgba(57,198,255,.25), rgba(255,212,71,.3));
+    border:1.5px solid rgba(12,60,92,.35);
+    border-radius:12px;
+    padding:8px 10px;
+    margin-bottom:6px;
+    text-align:right;
+    font-size:12px; font-weight:700; color:var(--ink);
+  }
+  .tourney-prize canvas{ width:56px; height:80px; flex:none; }
+
   /* ---------- scratch card ---------- */
   .scratch-box{
     background:linear-gradient(160deg,#bfe9ff,#6cc3ea);
@@ -650,6 +732,7 @@
       <div class="name-row">
         <input type="text" id="playerNameInput" maxlength="14" placeholder="השם שלך" autocomplete="off">
       </div>
+      <button class="tourney-banner" id="tourneyBanner" type="button" hidden></button>
       <div class="wallet-row">
         <span class="wallet-amt"><span class="coin-dot"></span><span id="walletNum">0</span></span>
         <button class="shop-btn" id="shopBtn" type="button">🎨 חנות סקינים</button>
@@ -712,6 +795,7 @@
         <div class="chest-hint" id="scratchHint">גרד עם האצבע כדי לגלות מה יצא לך</div>
       </div>
       <div class="league-banner" id="missionBanner" hidden></div>
+      <div class="league-banner" id="tourneyRunBanner" hidden></div>
       <button class="go-btn special-btn" id="specialFromOverBtn" type="button" hidden>🎁 פתח את התיבה המיוחדת!</button>
       <div class="earn-row">🪙 נוספו <span id="earnedCoins">0</span> מטבעות לארנק</div>
       <button class="go-btn" id="retryBtn">נסה שוב</button>
@@ -766,6 +850,40 @@
       <div class="mission-list" id="missionList"></div>
       <div class="mission-reward">🎁 הפרס: תיבה מיוחדת — ואולי יצא לך ממנה הסקין המוזהב "אגדת הזהב"!</div>
       <button class="back-btn" id="closeMissionsBtn" type="button">חזרה</button>
+    </div>
+  </div>
+
+  <div class="overlay" id="tourneyOverlay" hidden>
+    <div class="tablet">
+      <h1>רגולר נגד גופי</h1>
+      <p class="tagline">טורניר קבוצות: 10 ימים, פעם בחודש</p>
+      <div class="tourney-status" id="tourneyStatus"></div>
+      <div class="league-banner" id="tourneyResult" hidden></div>
+      <div class="tourney-teams">
+        <div class="tourney-team regular" id="teamRegularBox">
+          <div class="tourney-team-name">🏄 רגולר</div>
+          <div class="tourney-team-sub">רגל שמאל מקדימה</div>
+          <div class="tourney-team-total" id="teamRegularTotal">0</div>
+          <div class="tourney-team-players" id="teamRegularPlayers"></div>
+        </div>
+        <div class="tourney-team goofy" id="teamGoofyBox">
+          <div class="tourney-team-name">🏄 גופי</div>
+          <div class="tourney-team-sub">רגל ימין מקדימה</div>
+          <div class="tourney-team-total" id="teamGoofyTotal">0</div>
+          <div class="tourney-team-players" id="teamGoofyPlayers"></div>
+        </div>
+      </div>
+      <div class="tourney-bar"><div class="r" id="tourneyBarR" style="width:50%"></div><div class="g" id="tourneyBarG" style="width:50%"></div></div>
+      <div class="tourney-join" id="tourneyJoin"></div>
+      <div class="tourney-top" id="tourneyTopBox" hidden>
+        <div class="mission-title">הגולשים המובילים</div>
+        <div class="leaderboard-list" id="tourneyTopList"></div>
+      </div>
+      <div class="tourney-prize">
+        <canvas id="tourneyPrizeCanvas" width="112" height="160"></canvas>
+        <div><span id="tourneyPrizeText"></span><br><span class="mission-sub">ניקוד הקבוצה = סכום כל הריצות של כל חברי הקבוצה בזמן הטורניר</span></div>
+      </div>
+      <button class="back-btn" id="closeTourneyBtn" type="button">חזרה</button>
     </div>
   </div>
 
@@ -975,7 +1093,114 @@
       shirt:'#1fa3b8', shirtShade:'#127486', sleeves:'short',
       pants:'#ff7a3d', pantsShade:'#c9551f', legs:'shorts',
       shoes:'#c98b5e', sole:'#a8714a',                                 // barefoot
-      surfboard:'#fff4d6', boardStripe:'#ff7a3d' }
+      surfboard:'#fff4d6', boardStripe:'#ff7a3d' },
+    // ---- regular-vs-goofy tournament prizes: a new surf skin every month,
+    // in order (Sept 2026 first). Only the current one shows in the shop
+    // until you've won it.
+    { id:'wavelord', name:'מלך הגלים',      price:0, exclusive:'tournament',
+      skinTone:'#c98b5e', hair:'#7fe3ff', hairStyle:'spiky',
+      shirt:'#0a6cff', shirtShade:'#053a8c', sleeves:'long',
+      pattern:'stripes', patternColor:'rgba(127,227,255,0.55)',
+      pants:'#053a8c', pantsShade:'#021f4d', legs:'long',
+      shoes:'#7fe3ff', sole:'#ffffff', crown:'#ffd766',
+      surfboard:'#ffd447', boardStripe:'#ff3dbb',
+      aura:'#39c6ff', sparkle:'#bff3ff',
+      splash:'#39c6ff', boardGlow:'#ff3dbb' },
+    { id:'reefshark', name:'כריש השונית',   price:0, exclusive:'tournament',
+      skinTone:'#e0a882', hair:'#2b2b33', hairStyle:'short',
+      shirt:'#8c9aa8', shirtShade:'#55626f', sleeves:'long',
+      pattern:'stripes', patternColor:'rgba(255,255,255,0.35)',
+      pants:'#2e3b48', pantsShade:'#1b242d', legs:'long',
+      shoes:'#e8eef3', sole:'#8c9aa8', headband:'#e8eef3',
+      surfboard:'#e8eef3', boardStripe:'#2e3b48',
+      aura:'#9fb4c7', sparkle:'#e8eef3',
+      splash:'#bfe9ff', boardGlow:'#bfe9ff' },
+    { id:'stormrider', name:'רוכב הסערה',   price:0, exclusive:'tournament',
+      skinTone:'#d8b089', hair:'#1b1030', hairStyle:'long',
+      shirt:'#4b2a8a', shirtShade:'#261451', sleeves:'long',
+      pattern:'stars', patternColor:'#ffe45c',
+      pants:'#1d1336', pantsShade:'#0e0920', legs:'long',
+      shoes:'#ffe45c', sole:'#4b2a8a',
+      surfboard:'#1d1336', boardStripe:'#ffe45c',
+      aura:'#8a5cff', sparkle:'#ffe45c',
+      splash:'#8a5cff', boardGlow:'#ffe45c' },
+    { id:'icewave', name:'גל הקרח',         price:0, exclusive:'tournament',
+      skinTone:'#f2d3bb', hair:'#e9f6ff', hairStyle:'pony',
+      shirt:'#dff3ff', shirtShade:'#9cc8e6', sleeves:'long', shine:true,
+      pants:'#b8def5', pantsShade:'#7fb3d6', legs:'long',
+      shoes:'#ffffff', sole:'#9cc8e6', halo:'#e9f6ff',
+      surfboard:'#ffffff', boardStripe:'#6ec6ff',
+      aura:'#bfe9ff', sparkle:'#ffffff',
+      splash:'#bfe9ff', boardGlow:'#6ec6ff' },
+    { id:'sunsetpro', name:'מקצוען השקיעה', price:0, exclusive:'tournament',
+      skinTone:'#b87a50', hair:'#3a2012', hairStyle:'short',
+      shirt:'#ff7a3d', shirtShade:'#d93b6a', sleeves:'short',
+      pants:'#6a1f5c', pantsShade:'#44123b', legs:'shorts',
+      shoes:'#b87a50', sole:'#8a5530', headband:'#ffd447',
+      surfboard:'#ffb347', boardStripe:'#d93b6a',
+      aura:'#ff9a5c', sparkle:'#ffd9a0',
+      splash:'#ff9a5c', boardGlow:'#d93b6a' },
+    { id:'coralqueen', name:'מלכת האלמוגים', price:0, exclusive:'tournament',
+      skinTone:'#e8b58e', hair:'#ff6f91', hairStyle:'long',
+      shirt:'#ff8a8a', shirtShade:'#d9536b', sleeves:'none',
+      pattern:'stars', patternColor:'#fff0f3',
+      pants:'#2aa7a0', pantsShade:'#1a7a75', legs:'shorts',
+      shoes:'#e8b58e', sole:'#c48a64', crown:'#ffd766',
+      surfboard:'#fff0f3', boardStripe:'#2aa7a0',
+      aura:'#ff9eb5', sparkle:'#fff0f3',
+      splash:'#ff9eb5', boardGlow:'#2aa7a0' },
+    { id:'tsunami', name:'צונאמי',          price:0, exclusive:'tournament',
+      skinTone:'#c68a5e', hair:'#0b3d4d', hairStyle:'spiky',
+      shirt:'#0f6e7a', shirtShade:'#083f47', sleeves:'long',
+      pattern:'stripes', patternColor:'rgba(255,255,255,0.45)',
+      pants:'#083f47', pantsShade:'#042328', legs:'long',
+      shoes:'#ffffff', sole:'#0f6e7a', wings:'#bff3ff',
+      surfboard:'#ffffff', boardStripe:'#0f6e7a',
+      aura:'#1fc4d6', sparkle:'#bff3ff',
+      splash:'#1fc4d6', boardGlow:'#0f6e7a' },
+    { id:'lavasurf', name:'גולש הלבה',      price:0, exclusive:'tournament',
+      skinTone:'#b8764e', hair:'#1a0a06', hairStyle:'spiky',
+      shirt:'#2a0f0a', shirtShade:'#120503', sleeves:'long',
+      pattern:'stripes', patternColor:'rgba(255,90,20,0.7)',
+      pants:'#1a0805', pantsShade:'#0a0302', legs:'long',
+      shoes:'#ff5a14', sole:'#2a0f0a', horns:'#ff7a2e',
+      surfboard:'#2a0f0a', boardStripe:'#ff5a14',
+      aura:'#ff4a14', sparkle:'#ffb347',
+      splash:'#ff4a14', boardGlow:'#ff5a14' },
+    { id:'goldbarrel', name:'הצינור המוזהב', price:0, exclusive:'tournament',
+      skinTone:'#d9a07a', hair:'#f2c14e', hairStyle:'long',
+      shirt:'#f2c14e', shirtShade:'#a8781a', sleeves:'short', shine:true,
+      pants:'#ffffff', pantsShade:'#e0d6c0', legs:'shorts',
+      shoes:'#d9a07a', sole:'#b07a52', crown:'#fff0b3',
+      surfboard:'#fff4c2', boardStripe:'#d4a017',
+      aura:'#ffd766', sparkle:'#fff4c2',
+      splash:'#ffd766', boardGlow:'#d4a017' },
+    { id:'neonnight', name:'גולש הניאון',   price:0, exclusive:'tournament',
+      skinTone:'#a86f4a', hair:'#39ff88', hairStyle:'spiky',
+      shirt:'#111418', shirtShade:'#050608', sleeves:'long',
+      pattern:'stripes', patternColor:'rgba(57,255,136,0.75)',
+      pants:'#111418', pantsShade:'#050608', legs:'long',
+      shoes:'#39ff88', sole:'#111418',
+      surfboard:'#111418', boardStripe:'#39ff88',
+      aura:'#39ff88', sparkle:'#c8ffe0',
+      splash:'#39ff88', boardGlow:'#39ff88' },
+    { id:'dolphin', name:'רוכב הדולפינים',  price:0, exclusive:'tournament',
+      skinTone:'#e0a882', hair:'#5a3a22', hairStyle:'pony',
+      shirt:'#6fa8c7', shirtShade:'#3f7593', sleeves:'short',
+      pants:'#e8eef3', pantsShade:'#b5c3cf', legs:'shorts',
+      shoes:'#e0a882', sole:'#b8805a', headband:'#6fa8c7',
+      surfboard:'#bfe3f2', boardStripe:'#3f7593',
+      aura:'#8fd1f0', sparkle:'#e8f8ff',
+      splash:'#8fd1f0', boardGlow:'#3f7593' },
+    { id:'rainbowrider', name:'רוכב הקשת',  price:0, exclusive:'tournament',
+      skinTone:'#d8a57e', hair:'#ff5ab4', hairStyle:'spiky',
+      shirt:'#7a3fff', shirtShade:'#3b1d99', sleeves:'long',
+      pattern:'stars', patternColor:'#7fffd4',
+      pants:'#ff5ab4', pantsShade:'#b83480', legs:'long',
+      shoes:'#ffe45c', sole:'#7a3fff', halo:'#ffe45c',
+      surfboard:'#7fffd4', boardStripe:'#ff5ab4',
+      aura:'#ff5ab4', sparkle:'#fff4c2',
+      splash:'#ff5ab4', boardGlow:'#ff5ab4' }
   ];
   var WALLET_KEY = 'canyonChaseWallet';
   var SKINS_KEY = 'canyonChaseOwnedSkins';
@@ -1047,14 +1272,23 @@
   }
 
   // שולח ניקוד לטבלה המשותפת. נכשל בשקט (המשחק לא נתקע בגלל רשת)
-  function submitScore(name, score){
+  // `extra` = tournament tag {team, season} when the run counts for a team.
+  // If the database doesn't have those columns yet, the run is sent again
+  // without them, so a missing migration never costs anyone their score.
+  function submitScore(name, score, extra){
     if(!isOnlineBoard) return Promise.resolve(false);
     pendingSubmits++;   // the auto-updater won't reload while this is in flight
-    return fetch(SUPABASE_URL + '/rest/v1/' + SCORES_TABLE, {
-      method: 'POST',
-      headers: supabaseHeaders(),
-      body: JSON.stringify({ name: name.slice(0,14), score: score })
-    }).then(function(res){ return res.ok; }).catch(function(){ return false; })
+    function post(withExtra){
+      var row = { name: name.slice(0,14), score: score };
+      if(withExtra){ row.team = extra.team; row.season = extra.season; }
+      return fetch(SUPABASE_URL + '/rest/v1/' + SCORES_TABLE, {
+        method: 'POST',
+        headers: supabaseHeaders(),
+        body: JSON.stringify(row)
+      }).then(function(res){ return res.ok; }).catch(function(){ return false; });
+    }
+    return post(!!extra)
+      .then(function(ok){ return (ok || !extra) ? ok : post(false); })
       .then(function(ok){ pendingSubmits--; return ok; });
   }
 
@@ -1094,9 +1328,12 @@
     cacheBoard();
   }
 
+  // returns the tournament tag when the run counted for a team, else null
   function recordScore(name, score){
     recordLocal(name, score);
-    submitScore(name, score);
+    var tag = tourneyTagForRun(name);
+    submitScore(name, score, tag);
+    return tag;
   }
 
   // ---------- score scale & multiplier ----------
@@ -1492,10 +1729,13 @@
 
   function renderShop(){
     skinGrid.innerHTML = '';
+    var focusPrize = (tourneyFocus() || {}).prizeId;
     SKINS.forEach(function(skin){
       var owned = ownedSkins.indexOf(skin.id) !== -1;
+      // tournament prizes: only this tournament's (and ones you've won) show
+      if(skin.exclusive === 'tournament' && !owned && skin.id !== focusPrize) return;
       var card = document.createElement('div');
-      card.className = 'skin-card' + (skin.price >= 10000 ? ' is-premium' : '');
+      card.className = 'skin-card' + (skin.price >= 10000 || skin.exclusive === 'tournament' ? ' is-premium' : '');
 
       // mini preview of the actual runner in this outfit, mid-stride
       var preview = document.createElement('canvas');
@@ -1521,7 +1761,7 @@
       btn.className = 'skin-btn';
       if(!owned && skin.exclusive){
         btn.classList.add('is-locked');
-        btn.textContent = '🎟️ רק מכרטיס גירוד';
+        btn.textContent = skin.exclusive === 'tournament' ? '🏆 רק מהטורניר' : '🎟️ רק מכרטיס גירוד';
         btn.disabled = true;
       } else if(!owned){
         var afford = wallet >= skin.price;
@@ -2092,6 +2332,423 @@
     });
   });
 
+  // ---------- regular vs goofy tournament ----------
+  // Once a month, 10 days from the 29th at 00:00 Israel time (or the month's
+  // last day when it's shorter). Players sign up for a team -- regular (left
+  // foot forward) or goofy (right foot forward) -- and every run they make
+  // during the tournament, under the name they signed up with, is added to
+  // their team's total. Everyone on the winning team who played at least one
+  // run gets that month's prize skin (a different one every month); if they
+  // somehow already own it, 5,000 coins instead.
+  // Server side (Supabase, see SETUP.md): scores carry team + season, a
+  // tournament_players table holds sign-ups (one team per name per
+  // tournament), and the tournament_totals / tournament_top views sum it up.
+  var TOURNEY_DAY = 29;
+  var TOURNEY_DAYS = 10;
+  var TOURNEY_FIRST = { y: 2026, m: 8 };          // September 2026 (months are 0-based)
+  var TOURNEY_REPEAT_COINS = 5000;
+  var TOURNEY_KEY = 'canyonChaseTourneyV1';
+  var TEAM_NAMES = { regular: 'רגולר', goofy: 'גופי' };
+  var TOURNEY_SKIN_IDS = SKINS.filter(function(s){ return s.exclusive === 'tournament'; }).map(function(s){ return s.id; });
+
+  var tourneyBanner = document.getElementById('tourneyBanner');
+  var tourneyOverlay = document.getElementById('tourneyOverlay');
+  var tourneyStatus = document.getElementById('tourneyStatus');
+  var tourneyResult = document.getElementById('tourneyResult');
+  var tourneyJoin = document.getElementById('tourneyJoin');
+  var tourneyTopBox = document.getElementById('tourneyTopBox');
+  var tourneyTopList = document.getElementById('tourneyTopList');
+  var tourneyRunBanner = document.getElementById('tourneyRunBanner');
+  var closeTourneyBtn = document.getElementById('closeTourneyBtn');
+  var tourneyPrizeCanvas = document.getElementById('tourneyPrizeCanvas');
+
+  // per-browser: which team you signed up for, whether you played, whether
+  // the prize was already handed out -- all per tournament
+  var tourney = { reg: {}, played: {}, claimed: {} };
+  try {
+    var savedT = JSON.parse(localStorage.getItem(TOURNEY_KEY) || 'null');
+    if(savedT && savedT.reg){
+      tourney.reg = savedT.reg || {}; tourney.played = savedT.played || {}; tourney.claimed = savedT.claimed || {};
+    }
+  } catch(e){}
+  function saveTourney(){
+    try { localStorage.setItem(TOURNEY_KEY, JSON.stringify(tourney)); } catch(e){}
+  }
+
+  // minutes Israel is ahead of UTC at a given moment (DST-aware)
+  function jerusalemOffsetMin(ms){
+    try {
+      var parts = new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Jerusalem', hour12: false,
+        year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }).formatToParts(new Date(ms));
+      var o = {};
+      parts.forEach(function(p){ o[p.type] = p.value; });
+      var asUTC = Date.UTC(+o.year, +o.month - 1, +o.day, (+o.hour) % 24, +o.minute);
+      return Math.round((asUTC - ms) / 60000);
+    } catch(e){ return 180; }
+  }
+  function israelMidnight(y, m, d){
+    var guess = Date.UTC(y, m, d) - 180*60000;
+    return Date.UTC(y, m, d) - jerusalemOffsetMin(guess) * 60000;
+  }
+  function pad2(n){ return (n < 10 ? '0' : '') + n; }
+
+  // the tournament that starts in month (y, m)
+  function tourneyFor(y, m){
+    while(m < 0){ m += 12; y--; }
+    while(m > 11){ m -= 12; y++; }
+    var dim = new Date(Date.UTC(y, m + 1, 0)).getUTCDate();
+    var d = Math.min(TOURNEY_DAY, dim);
+    var start = israelMidnight(y, m, d);
+    var endDay = new Date(Date.UTC(y, m, d + TOURNEY_DAYS));
+    var end = israelMidnight(endDay.getUTCFullYear(), endDay.getUTCMonth(), endDay.getUTCDate());
+    var index = (y - TOURNEY_FIRST.y) * 12 + (m - TOURNEY_FIRST.m);
+    return {
+      id: y + '-' + pad2(m + 1),
+      index: index,
+      start: start, end: end,
+      label: d + '.' + (m + 1) + '–' + new Date(end - 1).getUTCDate() + '.' + (new Date(end - 1).getUTCMonth() + 1),
+      prizeId: TOURNEY_SKIN_IDS[((index % TOURNEY_SKIN_IDS.length) + TOURNEY_SKIN_IDS.length) % TOURNEY_SKIN_IDS.length]
+    };
+  }
+
+  // { current, next, last }: the one running now (if any), the next one to
+  // start, and the most recent one that already ended
+  function tourneyNow(){
+    var now = Date.now(), d = new Date(now);
+    var y = d.getUTCFullYear(), m = d.getUTCMonth();
+    var list = [-2, -1, 0, 1, 2].map(function(k){ return tourneyFor(y, m + k); })
+      .filter(function(t){ return t.index >= 0; });
+    var cur = null, next = null, last = null;
+    list.forEach(function(t){
+      if(t.start <= now && now < t.end) cur = t;
+      else if(t.start > now && !next) next = t;
+      else if(t.end <= now) last = t;
+    });
+    return { current: cur, next: next, last: last };
+  }
+
+  function sameName(a, b){ return String(a || '').trim().toLowerCase() === String(b || '').trim().toLowerCase(); }
+
+  // the tag a finished run carries -- only while a tournament is running and
+  // only under the name you signed up with
+  function tourneyTagForRun(name){
+    var t = tourneyNow().current;
+    if(!t) return null;
+    var reg = tourney.reg[t.id];
+    if(!reg || !sameName(reg.name, name)) return null;
+    tourney.played[t.id] = true;
+    saveTourney();
+    return { team: reg.team, season: t.id };
+  }
+
+  function sbGet(path){
+    if(!isOnlineBoard) return Promise.resolve(null);
+    return fetch(SUPABASE_URL + '/rest/v1/' + path, { headers: supabaseHeaders() })
+      .then(function(res){ return res.ok ? res.json() : null; })
+      .catch(function(){ return null; });
+  }
+
+  // { regular: {total, runs, players}, goofy: {...} } for one tournament
+  var tourneyCache = {};
+  function fetchTotals(season){
+    return sbGet('tournament_totals?select=team,total,runs,players&season=eq.' + encodeURIComponent(season))
+      .then(function(rows){
+        if(!rows) return tourneyCache[season] || null;
+        var out = { regular: { total: 0, runs: 0, players: 0 }, goofy: { total: 0, runs: 0, players: 0 } };
+        rows.forEach(function(r){ if(out[r.team]) out[r.team] = { total: +r.total || 0, runs: +r.runs || 0, players: +r.players || 0 }; });
+        tourneyCache[season] = out;
+        return out;
+      });
+  }
+  function fetchSignupCounts(season){
+    return sbGet('tournament_players?select=team&season=eq.' + encodeURIComponent(season))
+      .then(function(rows){
+        if(!rows) return null;
+        var c = { regular: 0, goofy: 0 };
+        rows.forEach(function(r){ if(c[r.team] !== undefined) c[r.team]++; });
+        return c;
+      });
+  }
+  function fetchTop(season){
+    return sbGet('tournament_top?select=name,team,total&season=eq.' + encodeURIComponent(season) + '&order=total.desc&limit=5');
+  }
+
+  function winnerOf(totals){
+    if(!totals) return null;
+    if(totals.regular.total === totals.goofy.total) return 'tie';
+    return totals.regular.total > totals.goofy.total ? 'regular' : 'goofy';
+  }
+
+  function fmtShort(n){
+    if(n >= 1e9) return (n / 1e9).toFixed(1).replace(/\.0$/, '') + 'B';
+    if(n >= 1e6) return (n / 1e6).toFixed(1).replace(/\.0$/, '') + 'M';
+    if(n >= 1e4) return Math.round(n / 1e3) + 'K';
+    return fmtScore(n);
+  }
+
+  function timeLeft(ms){
+    var h = Math.max(0, Math.floor(ms / 3600000)), dd = Math.floor(h / 24);
+    if(dd >= 1) return dd + (dd === 1 ? ' יום' : ' ימים') + (h % 24 ? ' ו-' + (h % 24) + ' שעות' : '');
+    if(h >= 1) return h + ' שעות';
+    return Math.max(1, Math.ceil(ms / 60000)) + ' דקות';
+  }
+
+  // the tournament people can act on right now: the running one, else the next
+  function tourneyFocus(){
+    var n = tourneyNow();
+    return n.current || n.next;
+  }
+
+  // ---- prize: after a tournament ends, winners (who played) get its skin ----
+  function checkTourneyPrize(){
+    var last = tourneyNow().last;
+    if(!last || tourney.claimed[last.id]) return Promise.resolve(null);
+    var reg = tourney.reg[last.id];
+    if(!reg || !tourney.played[last.id]) return Promise.resolve(null);
+    return fetchTotals(last.id).then(function(totals){
+      if(!totals) return null;
+      var w = winnerOf(totals);
+      tourney.claimed[last.id] = true;
+      var message;
+      if(w === reg.team || w === 'tie'){
+        if(ownedSkins.indexOf(last.prizeId) === -1){
+          ownedSkins.push(last.prizeId);
+          selectedSkinId = last.prizeId;
+          message = '🏆 הקבוצה שלך ניצחה בטורניר! קיבלת את הסקין "' + getSkin(last.prizeId).name + '" והוא כבר עליך';
+        } else {
+          wallet += TOURNEY_REPEAT_COINS;
+          message = '🏆 הקבוצה שלך ניצחה בטורניר! +' + TOURNEY_REPEAT_COINS.toLocaleString('en-US') + ' 🪙';
+        }
+        saveProgress();
+        updateWalletDisplays();
+      }
+      saveTourney();
+      return message || null;
+    });
+  }
+
+  // ---- start-screen banner: the obvious "sign up here" / live score ----
+  function renderTourneyBanner(){
+    if(!isOnlineBoard){ tourneyBanner.hidden = true; return; }
+    var n = tourneyNow(), t = n.current || n.next;
+    if(!t){ tourneyBanner.hidden = true; return; }
+    var reg = tourney.reg[t.id];
+    tourneyBanner.hidden = false;
+    if(!n.current){
+      tourneyBanner.textContent = reg
+        ? '🏄 רשום לקבוצת ' + TEAM_NAMES[reg.team] + ' · הטורניר מתחיל בעוד ' + timeLeft(t.start - Date.now())
+        : '🏄 טורניר רגולר נגד גופי מתחיל ב-' + t.label.split('–')[0] + '! לחץ כאן להרשמה';
+      return;
+    }
+    if(!reg){
+      tourneyBanner.textContent = '🏄 טורניר רגולר נגד גופי פתוח עכשיו! לחץ כאן להרשמה';
+      return;
+    }
+    var totals = tourneyCache[t.id];
+    tourneyBanner.textContent = '🏄 אתה ב' + TEAM_NAMES[reg.team] +
+      (totals ? ' · רגולר ' + fmtShort(totals.regular.total) + ' – גופי ' + fmtShort(totals.goofy.total) : ' · לחץ לראות מי מוביל');
+  }
+  function refreshTourneyBanner(){
+    renderTourneyBanner();
+    var t = tourneyNow().current;
+    if(t && tourney.reg[t.id]) fetchTotals(t.id).then(renderTourneyBanner);
+  }
+
+  // ---- the tournament screen ----
+  var joinBusy = false, joinError = '';
+  function renderTourneyScreen(){
+    var n = tourneyNow(), t = n.current || n.next, now = Date.now();
+    if(!t){ tourneyStatus.textContent = 'אין טורניר קרוב'; return; }
+    tourneyStatus.textContent = n.current
+      ? '🟢 הטורניר פעיל (' + t.label + ') · נגמר בעוד ' + timeLeft(t.end - now)
+      : '⏳ הטורניר הבא: ' + t.label + ' · מתחיל בעוד ' + timeLeft(t.start - now) + ' · אפשר כבר להירשם!';
+
+    // prize preview: this tournament's skin
+    var pg = tourneyPrizeCanvas.getContext('2d');
+    pg.setTransform(1,0,0,1,0,0);
+    pg.clearRect(0, 0, tourneyPrizeCanvas.width, tourneyPrizeCanvas.height);
+    pg.setTransform(2,0,0,2,0,0);
+    pg.translate(28, 74);
+    pg.scale(0.5, 0.5);
+    drawRunnerFigure(pg, getSkin(t.prizeId), { phase: 1.1, mode: 'run', duck: 0, t: 0 });
+    document.getElementById('tourneyPrizeText').textContent =
+      '🏆 הפרס הפעם: הסקין "' + getSkin(t.prizeId).name + '" — לכל מי ששיחק בקבוצה המנצחת! בכל טורניר סקין חדש (מי שכבר יש לו מקבל 5,000 🪙)';
+
+    renderJoin(t);
+    renderTeams(null, null);
+    fetchTotals(t.id).then(function(totals){
+      fetchSignupCounts(t.id).then(function(counts){ renderTeams(totals, counts); });
+    });
+    fetchTop(t.id).then(renderTop);
+
+    // the result of the last tournament, for a while after it ended
+    tourneyResult.hidden = true;
+    if(n.last && now - n.last.end < 14*24*3600000){
+      fetchTotals(n.last.id).then(function(totals){
+        var w = winnerOf(totals);
+        if(!w || (!totals.regular.total && !totals.goofy.total)) return;
+        tourneyResult.textContent = w === 'tie'
+          ? '🤝 הטורניר הקודם (' + n.last.label + ') נגמר בתיקו!'
+          : '🏆 הטורניר הקודם (' + n.last.label + '): ' + TEAM_NAMES[w] + ' ניצחו!';
+        tourneyResult.hidden = false;
+      });
+    }
+  }
+
+  function renderTeams(totals, counts){
+    var r = totals ? totals.regular.total : 0, g = totals ? totals.goofy.total : 0;
+    document.getElementById('teamRegularTotal').textContent = fmtScore(r);
+    document.getElementById('teamGoofyTotal').textContent = fmtScore(g);
+    var rp = counts ? counts.regular : (totals ? totals.regular.players : 0);
+    var gp = counts ? counts.goofy : (totals ? totals.goofy.players : 0);
+    document.getElementById('teamRegularPlayers').textContent = rp + ' נרשמו';
+    document.getElementById('teamGoofyPlayers').textContent = gp + ' נרשמו';
+    document.getElementById('teamRegularBox').classList.toggle('is-leading', r > g);
+    document.getElementById('teamGoofyBox').classList.toggle('is-leading', g > r);
+    var share = (r + g) ? r / (r + g) * 100 : 50;
+    document.getElementById('tourneyBarR').style.width = share + '%';
+    document.getElementById('tourneyBarG').style.width = (100 - share) + '%';
+  }
+
+  function renderTop(rows){
+    tourneyTopList.innerHTML = '';
+    if(!rows || !rows.length){ tourneyTopBox.hidden = true; return; }
+    tourneyTopBox.hidden = false;
+    rows.forEach(function(r, i){
+      var row = document.createElement('div');
+      row.className = 'leaderboard-row' + (i === 0 ? ' is-top' : '');
+      var rank = document.createElement('div'); rank.className = 'leaderboard-rank'; rank.textContent = i + 1;
+      var name = document.createElement('div'); name.className = 'leaderboard-name'; name.textContent = r.name;
+      var tag = document.createElement('span'); tag.className = 'tourney-tag ' + r.team; tag.textContent = TEAM_NAMES[r.team] || '';
+      var score = document.createElement('div'); score.className = 'leaderboard-score'; score.textContent = fmtScore(+r.total || 0);
+      row.appendChild(rank); row.appendChild(name); row.appendChild(tag); row.appendChild(score);
+      tourneyTopList.appendChild(row);
+    });
+  }
+
+  function renderJoin(t){
+    tourneyJoin.innerHTML = '';
+    var reg = tourney.reg[t.id];
+    if(reg){
+      var ok = document.createElement('div');
+      ok.textContent = '✅ אתה בקבוצת ' + TEAM_NAMES[reg.team] + ' (בשם "' + reg.name + '"). כל ריצה שלך בזמן הטורניר נספרת לקבוצה!';
+      tourneyJoin.appendChild(ok);
+      if(!sameName(reg.name, playerName)){
+        var warn = document.createElement('div');
+        warn.className = 'tourney-join-err';
+        warn.textContent = 'שים לב: השם שלך עכשיו הוא "' + (playerName.trim() || '—') + '". רק ריצות בשם "' + reg.name + '" נספרות לקבוצה.';
+        tourneyJoin.appendChild(warn);
+      }
+      return;
+    }
+    var lead = document.createElement('div');
+    lead.textContent = 'הירשם לטורניר: כתוב את השם שלך ובחר אם אתה רגולר או גופי. הבחירה סופית לכל הטורניר.';
+    tourneyJoin.appendChild(lead);
+    var nameRow = document.createElement('div');
+    nameRow.className = 'name-row';
+    var input = document.createElement('input');
+    input.type = 'text'; input.maxLength = 14; input.placeholder = 'השם שלך'; input.autocomplete = 'off';
+    input.value = playerName;
+    input.addEventListener('input', function(){
+      playerName = input.value.slice(0, 14);
+      playerNameInput.value = playerName;
+      saveName();
+    });
+    nameRow.appendChild(input);
+    tourneyJoin.appendChild(nameRow);
+    var btns = document.createElement('div');
+    btns.className = 'tourney-join-btns';
+    ['regular', 'goofy'].forEach(function(team){
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.className = team;
+      b.textContent = 'אני ' + TEAM_NAMES[team];
+      b.disabled = joinBusy;
+      b.addEventListener('click', function(){ joinTeam(t, team); });
+      btns.appendChild(b);
+    });
+    tourneyJoin.appendChild(btns);
+    if(joinError){
+      var err = document.createElement('div');
+      err.className = 'tourney-join-err';
+      err.textContent = joinError;
+      tourneyJoin.appendChild(err);
+    }
+  }
+
+  function joinTeam(t, team){
+    var name = playerName.trim().slice(0, 14);
+    if(!name){ joinError = 'קודם כתוב שם 🙂'; renderJoin(t); return; }
+    joinBusy = true; joinError = ''; renderJoin(t);
+    fetch(SUPABASE_URL + '/rest/v1/tournament_players', {
+      method: 'POST',
+      headers: supabaseHeaders(),
+      body: JSON.stringify({ season: t.id, name: name, team: team })
+    }).then(function(res){
+      if(res.ok) return 'ok';
+      if(res.status === 409) return 'taken';
+      return 'error';
+    }).catch(function(){ return 'error'; }).then(function(result){
+      if(result === 'taken'){
+        // the name is already signed up -- if it's on the same team, that's
+        // (presumably) you on another device; otherwise pick another name
+        return sbGet('tournament_players?select=team&season=eq.' + encodeURIComponent(t.id) +
+                     '&name=ilike.' + encodeURIComponent(name.replace(/[%_*]/g, '')))
+          .then(function(rows){
+            var existing = rows && rows[0] && rows[0].team;
+            if(existing === team) return 'ok';
+            joinError = existing
+              ? 'השם "' + name + '" כבר רשום לקבוצת ' + TEAM_NAMES[existing] + '. בחר שם אחר, או הצטרף ל' + TEAM_NAMES[existing] + '.'
+              : 'השם הזה כבר תפוס. נסה שם אחר.';
+            return 'fail';
+          });
+      }
+      if(result === 'error'){ joinError = 'ההרשמה לא הצליחה. בדוק חיבור לאינטרנט ונסה שוב.'; return 'fail'; }
+      return result;
+    }).then(function(result){
+      joinBusy = false;
+      if(result === 'ok'){
+        tourney.reg[t.id] = { team: team, name: name };
+        saveTourney();
+      }
+      renderTourneyScreen();
+      renderTourneyBanner();
+    });
+  }
+
+  function openTourney(){
+    joinError = '';
+    renderTourneyScreen();
+    startOverlay.hidden = true;
+    tourneyOverlay.hidden = false;
+  }
+  function closeTourney(){
+    tourneyOverlay.hidden = true;
+    startOverlay.hidden = false;
+    refreshTourneyBanner();
+  }
+  tourneyBanner.addEventListener('click', openTourney);
+  closeTourneyBtn.addEventListener('click', closeTourney);
+
+  // game-over line: did this run count for the team?
+  function showTourneyRunResult(counted, score){
+    if(!counted){ tourneyRunBanner.hidden = true; return; }
+    tourneyRunBanner.textContent = '🏄 הריצה נספרה לקבוצת ' + TEAM_NAMES[counted.team] + '! +' + fmtScore(score);
+    tourneyRunBanner.hidden = false;
+  }
+
+  // on load: hand out any prize from a finished tournament, then show the banner
+  checkTourneyPrize().then(function(message){
+    if(message){
+      tourneyRunBanner.textContent = message;
+      tourneyBanner.hidden = false;
+      tourneyBanner.textContent = message;
+    }
+    if(!message) refreshTourneyBanner();
+  });
+  // keep the live score on the start screen fresh
+  setInterval(function(){ if(!startOverlay.hidden && !document.hidden) refreshTourneyBanner(); }, 60000);
+
   // ---------- game state ----------
   var state = 'start'; // start | playing | over
   var player, obstacles, coins, powerups, chests, decor, dustParticles, elapsed, distance, coinCount, speed, spawnTimer, spawnGap, decorTimer, powerupTimer, chestTimer, pendingChestCount, footPuffs;
@@ -2346,7 +3003,7 @@
     wallet += totalEarned;
     saveProgress();
     updateWalletDisplays();
-    recordScore(playerName.trim() || 'שחקן', scoreVal);
+    showTourneyRunResult(recordScore(playerName.trim() || 'שחקן', scoreVal), scoreVal);
     checkLeaguePromotion(scoreVal);
     earnedCoins.textContent = totalEarned;
     finalScore.textContent = fmtScore(scoreVal);
@@ -3167,6 +3824,25 @@
       g.beginPath(); g.arc(0, -64, 80*pulse, 0, Math.PI*2); g.fill();
     }
 
+    // tournament surfers run on water: a foam curl at the feet and spray
+    // flying off both sides
+    if(skin.splash){
+      g.strokeStyle = hexA(skin.splash, 0.55);
+      g.lineWidth = 3;
+      g.beginPath(); g.ellipse(0, 2, 21 + Math.sin(t*6)*2, 6, 0, Math.PI, Math.PI*2); g.stroke();
+      g.strokeStyle = hexA('#ffffff', 0.7);
+      g.lineWidth = 1.5;
+      g.beginPath(); g.ellipse(0, 3, 16 + Math.sin(t*6 + 1)*2, 4, 0, Math.PI, Math.PI*2); g.stroke();
+      for(var sp = 0; sp < 12; sp++){
+        var life = ((t*1.6 + sp*0.083) % 1 + 1) % 1;
+        var side = sp % 2 ? 1 : -1;
+        var dx = side * (10 + life*26 + (sp % 3)*4);
+        var dy = -2 - Math.sin(life*Math.PI) * (16 + (sp % 4)*7);
+        g.fillStyle = hexA(sp % 3 ? skin.splash : '#ffffff', 0.9*(1 - life));
+        g.beginPath(); g.arc(dx, dy, 2.6*(1 - life*0.5), 0, Math.PI*2); g.fill();
+      }
+    }
+
     // legs run half a cycle apart; each arm swings with the opposite leg
     function legPose(side){
       var s = Math.sin(ph + (side < 0 ? 0 : Math.PI));
@@ -3353,8 +4029,14 @@
         g.quadraticCurveTo(-9, -30, 0, -46);
         g.closePath();
       };
+      if(skin.boardGlow){
+        // neon edge glow around the board
+        g.shadowColor = skin.boardGlow;
+        g.shadowBlur = 14;
+      }
       g.fillStyle = skin.surfboard;
       boardPath(); g.fill();
+      g.shadowBlur = 0;
       g.save(); boardPath(); g.clip();
       g.fillStyle = skin.boardStripe;                                        // racing stripe
       g.fillRect(-2.2, -46, 4.4, 84);
@@ -3765,7 +4447,7 @@
   // never while the name field is being typed in. Everything worth keeping
   // (coins, skins, name, league) is in localStorage, so a reload loses nothing.
   // 'dev' = a local or preview copy: the updater stays off entirely.
-  var BUILD_VERSION = '20260928-120157';
+  var BUILD_VERSION = '20260928-140708';
   var UPDATE_CHECK_MS = 60000;
   var UPDATE_TRIED_KEY = 'canyonChaseTriedUpdate';
   var pendingSubmits = 0;
