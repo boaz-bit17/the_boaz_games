@@ -2469,7 +2469,10 @@
     return { current: cur, next: next, last: last };
   }
 
-  function sameName(a, b){ return String(a || '').trim().toLowerCase() === String(b || '').trim().toLowerCase(); }
+  // spaces and case don't matter: someone signed up as "יואבשטוב" who plays
+  // as "יואב שטוב" is still the same player
+  function nameKey(s){ return String(s || '').replace(/\s+/g, '').toLowerCase(); }
+  function sameName(a, b){ return nameKey(a) === nameKey(b); }
 
   // the tag a finished run carries -- only while a tournament is running and
   // only under the name you signed up with
@@ -2818,7 +2821,19 @@
 
   // game-over line: did this run count for the team?
   function showTourneyRunResult(counted, score){
-    if(!counted){ tourneyRunBanner.hidden = true; return; }
+    if(!counted){
+      // signed up, tournament running, but playing under another name:
+      // say so right here, where the player looks after every run
+      var t = tourneyNow().current, reg = t && tourney.reg[t.id];
+      if(reg){
+        tourneyRunBanner.textContent = '⚠️ הריצה לא נספרה לטורניר: נרשמת בשם "' + reg.name +
+          '" ועכשיו אתה משחק בשם "' + (playerName.trim() || 'שחקן') + '". תחזיר את השם "' + reg.name + '" כדי שהריצות ייספרו.';
+        tourneyRunBanner.hidden = false;
+      } else {
+        tourneyRunBanner.hidden = true;
+      }
+      return;
+    }
     tourneyRunBanner.textContent = '🏄 הריצה נספרה לקבוצת ' + TEAM_NAMES[counted.team] + '! +' + fmtScore(score);
     tourneyRunBanner.hidden = false;
   }
@@ -4533,7 +4548,7 @@
   // never while the name field is being typed in. Everything worth keeping
   // (coins, skins, name, league) is in localStorage, so a reload loses nothing.
   // 'dev' = a local or preview copy: the updater stays off entirely.
-  var BUILD_VERSION = '20260929-103042-b';
+  var BUILD_VERSION = '20260929-153634';
   var UPDATE_CHECK_MS = 60000;
   var UPDATE_TRIED_KEY = 'canyonChaseTriedUpdate';
   var pendingSubmits = 0;
