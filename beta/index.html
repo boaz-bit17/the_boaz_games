@@ -4199,8 +4199,25 @@
       limb(g, sx, sy, ex, ey, 8.5, upper);
       if(skin.sleeves === 'short') limb(g, sx, sy, sx + (ex-sx)*0.45, sy + (ey-sy)*0.45, 10, skin.shirt);
       limb(g, ex, ey, hx, hy, 7, fore);
+      drawHand(hx, hy, Math.atan2(hy - ey, hx - ex));
+    }
+    function drawHand(x, y, ang){
+      g.save();
+      g.translate(x, y);
+      g.rotate(ang);
       g.fillStyle = skin.skinTone;
-      g.beginPath(); g.arc(hx, hy, 3.8, 0, Math.PI*2); g.fill();
+      g.strokeStyle = hexA('#000000', 0.18);
+      g.lineWidth = 0.8;
+      g.beginPath(); g.ellipse(2.5, 0, 4.2, 3.4, 0, 0, Math.PI*2); g.fill(); g.stroke();   // palm
+      g.lineCap = 'round';
+      [-2.4, -0.8, 0.8, 2.4].forEach(function(dy, i){                                    // fingers
+        var len = i === 0 || i === 3 ? 3.6 : 4.4;
+        g.strokeStyle = skin.skinTone; g.lineWidth = 1.7;
+        g.beginPath(); g.moveTo(5.5, dy * 0.9); g.lineTo(5.5 + len, dy * 1.1); g.stroke();
+      });
+      g.strokeStyle = skin.skinTone; g.lineWidth = 1.9;                                  // thumb
+      g.beginPath(); g.moveTo(2.5, -3); g.lineTo(5.5, -5.8); g.stroke();
+      g.restore();
     }
 
     // front leg first (further away), then the back leg nearer the camera
@@ -4240,29 +4257,25 @@
 
     // neck and head in profile: face toward the chest side, hair behind
     g.fillStyle = skin.skinTone;
-    g.fillRect(f*0.5, -96, 7, 9);
-    var hx = f*5, hy = -104;
+    g.fillRect(f*0.5 - 3.5, -96, 7, 9);
+    var hx = f*3, hy = -104;
+    g.beginPath(); g.ellipse(hx - 9.5, hy + 1, 2.6, 4, 0, 0, Math.PI*2); g.fill();          // ears
+    g.beginPath(); g.ellipse(hx + 9.5, hy + 1, 2.6, 4, 0, 0, Math.PI*2); g.fill();
     g.beginPath(); g.ellipse(hx, hy, 9.5, 11, 0, 0, Math.PI*2); g.fill();
-    g.beginPath();                                                  // nose
-    g.moveTo(hx + f*8.5, hy - 2); g.lineTo(hx + f*12.5, hy + 2); g.lineTo(hx + f*8.5, hy + 4);
-    g.closePath(); g.fill();
-    g.fillStyle = '#1a1a1a';                                        // eye
-    g.beginPath(); g.arc(hx + f*5.5, hy - 1.5, 1.4, 0, Math.PI*2); g.fill();
-    g.fillStyle = hexA('#000000', 0.15);                             // ear
-    g.beginPath(); g.ellipse(hx - f*1.5, hy + 1, 2.2, 3.4, 0, 0, Math.PI*2); g.fill();
-    g.fillStyle = skin.hair;                                         // hair: top and back of the head
-    g.beginPath(); g.ellipse(hx - f*1, hy - 4, 10, 8, 0, Math.PI, Math.PI*2); g.fill();
-    g.beginPath(); g.ellipse(hx - f*5.5, hy - 1, 5, 9, 0, 0, Math.PI*2); g.fill();
+    g.fillStyle = skin.hair;                                         // back of the head, skin at the nape
+    g.beginPath(); g.ellipse(hx, hy - 2, 10, 9.5, 0, 0, Math.PI*2); g.fill();
     if(skin.hairStyle === 'spiky'){
-      for(var sp = 0; sp < 4; sp++){
-        var bx = hx - f*7 + f*sp*4.5;
-        g.beginPath(); g.moveTo(bx - 2.5, hy - 9); g.lineTo(bx - f*3, hy - 17 - (sp % 2)*3); g.lineTo(bx + 2.5, hy - 10); g.closePath(); g.fill();
+      for(var sp = 0; sp < 5; sp++){
+        var bx = hx - 8 + sp*4;
+        g.beginPath(); g.moveTo(bx - 2.5, hy - 8); g.lineTo(bx + (sp - 2)*1.2, hy - 17 - (sp % 2)*3); g.lineTo(bx + 2.5, hy - 8); g.closePath(); g.fill();
       }
     }
     if(skin.headband){
       g.fillStyle = skin.headband;
-      g.beginPath(); g.ellipse(hx, hy - 5, 10, 2.4, 0, 0, Math.PI*2); g.fill();
-      g.fillRect(hx - f*10, hy - 5, -f*6, 2.2);                      // the knot's tails
+      g.fillRect(hx - 10, hy - 6, 20, 3.4);
+      g.strokeStyle = skin.headband; g.lineWidth = 2; g.lineCap = 'round';   // the knot's two short tails
+      g.beginPath(); g.moveTo(hx + 1, hy - 4); g.lineTo(hx - f*3, hy + 2); g.stroke();
+      g.beginPath(); g.moveTo(hx + 1, hy - 4); g.lineTo(hx - f*7, hy); g.stroke();
     }
     if(skin.horns){
       g.fillStyle = skin.horns;
@@ -4973,7 +4986,7 @@
   // never while the name field is being typed in. Everything worth keeping
   // (coins, skins, name, league) is in localStorage, so a reload loses nothing.
   // 'dev' = a local or preview copy: the updater stays off entirely.
-  var BUILD_VERSION = '20260929-191616';
+  var BUILD_VERSION = '20260929-192128';
   var UPDATE_CHECK_MS = 60000;
   var UPDATE_TRIED_KEY = 'canyonChaseTriedUpdate';
   var pendingSubmits = 0;
