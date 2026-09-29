@@ -2516,6 +2516,20 @@
     return sbGet('tournament_roster?select=name,team&season=eq.' + encodeURIComponent(season) + '&order=name.asc');
   }
 
+  // the server's team list is the truth: if the owner moved you to the other
+  // team (or took you off the list) in Supabase, this browser follows along,
+  // so your next runs count for the right team. Only once the tournament has
+  // started -- before that the list is private and comes back empty.
+  function syncRegFromRoster(t, rows){
+    var reg = tourney.reg[t.id];
+    if(!reg || !rows || !rows.length) return false;
+    var mine = null;
+    rows.forEach(function(r){ if(sameName(r.name, reg.name)) mine = r; });
+    if(!mine){ delete tourney.reg[t.id]; saveTourney(); return true; }
+    if(mine.team !== reg.team && TEAM_NAMES[mine.team]){ reg.team = mine.team; saveTourney(); return true; }
+    return false;
+  }
+
   function renderRoster(rows, myName){
     var box = document.getElementById('tourneyRosterBox');
     if(!rows || !rows.length){ box.hidden = true; return; }
@@ -2615,7 +2629,11 @@
   function refreshTourneyBanner(){
     renderTourneyBanner();
     var t = tourneyNow().current;
-    if(t && tourney.reg[t.id]) fetchTotals(t.id).then(renderTourneyBanner);
+    if(t && tourney.reg[t.id]){
+      fetchRoster(t.id).then(function(rows){ syncRegFromRoster(t, rows); })
+        .then(function(){ return fetchTotals(t.id); })
+        .then(renderTourneyBanner);
+    }
   }
 
   // ---- the tournament screen ----
@@ -2647,7 +2665,10 @@
     // the team lists: only once it's running, and only for signed-up players
     var myReg = tourney.reg[t.id];
     document.getElementById('tourneyRosterBox').hidden = true;
-    if(n.current && myReg) fetchRoster(t.id).then(function(rows){ renderRoster(rows, myReg.name); });
+    if(n.current && myReg) fetchRoster(t.id).then(function(rows){
+      if(syncRegFromRoster(t, rows)){ renderJoin(t); renderTourneyBanner(); }
+      if(tourney.reg[t.id]) renderRoster(rows, myReg.name);
+    });
 
     // the result of the last tournament, for a while after it ended
     tourneyResult.hidden = true;
@@ -4507,7 +4528,7 @@
   // never while the name field is being typed in. Everything worth keeping
   // (coins, skins, name, league) is in localStorage, so a reload loses nothing.
   // 'dev' = a local or preview copy: the updater stays off entirely.
-  var BUILD_VERSION = '20260928-143603';
+  var BUILD_VERSION = '20260929-103042-m';
   var UPDATE_CHECK_MS = 60000;
   var UPDATE_TRIED_KEY = 'canyonChaseTriedUpdate';
   var pendingSubmits = 0;
