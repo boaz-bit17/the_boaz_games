@@ -879,7 +879,7 @@
   <div class="overlay" id="tourneyOverlay" hidden>
     <div class="tablet">
       <h1>רגולר נגד גופי</h1>
-      <p class="tagline">טורניר קבוצות: 6 ימים, פעם בחודש</p>
+      <p class="tagline">טורניר קבוצות: 6 ימים, כל 20 יום</p>
       <div class="tourney-status" id="tourneyStatus"></div>
       <div class="league-banner" id="tourneyResult" hidden></div>
       <div class="tourney-teams">
@@ -2375,8 +2375,8 @@
   });
 
   // ---------- regular vs goofy tournament ----------
-  // Once a month, 6 days from the 29th at 00:00 Israel time (or the month's
-  // last day when it's shorter). Players sign up for a team -- regular (left
+  // Every 20 days, for 6 days, starting at 00:00 Israel time (the first one
+  // on 29.9.2026). Players sign up for a team -- regular (left
   // foot forward) or goofy (right foot forward) -- and every run they make
   // during the tournament, under the name they signed up with, is added to
   // their team's total. Everyone on the winning team who played at least one
@@ -2385,9 +2385,9 @@
   // Server side (Supabase, see SETUP.md): scores carry team + season, a
   // tournament_players table holds sign-ups (one team per name per
   // tournament), and the tournament_totals / tournament_top views sum it up.
-  var TOURNEY_DAY = 29;
-  var TOURNEY_DAYS = 6;
-  var TOURNEY_FIRST = { y: 2026, m: 8 };          // September 2026 (months are 0-based)
+  var TOURNEY_DAYS = 6;                           // each tournament lasts 6 days
+  var TOURNEY_EVERY = 20;                         // a new one starts every 20 days
+  var TOURNEY_FIRST = { y: 2026, m: 8, d: 29 };   // the first: 29.9.2026 (months are 0-based)
   var TOURNEY_REPEAT_COINS = 5000;
   var TOURNEY_KEY = 'canyonChaseTourneyV1';
   var TEAM_NAMES = { regular: 'רגולר', goofy: 'גופי' };
@@ -2434,32 +2434,33 @@
   }
   function pad2(n){ return (n < 10 ? '0' : '') + n; }
 
-  // the tournament that starts in month (y, m)
-  function tourneyFor(y, m){
-    while(m < 0){ m += 12; y--; }
-    while(m > 11){ m -= 12; y++; }
-    var dim = new Date(Date.UTC(y, m + 1, 0)).getUTCDate();
-    var d = Math.min(TOURNEY_DAY, dim);
-    var start = israelMidnight(y, m, d);
-    var endDay = new Date(Date.UTC(y, m, d + TOURNEY_DAYS));
-    var end = israelMidnight(endDay.getUTCFullYear(), endDay.getUTCMonth(), endDay.getUTCDate());
-    var index = (y - TOURNEY_FIRST.y) * 12 + (m - TOURNEY_FIRST.m);
+  // tournament number k (0 = the first, 29.9.2026): starts k*20 days after
+  // the first, at 00:00 Israel time. Its id is what the server stores in
+  // scores.season / tournament_players.season -- the first one keeps its
+  // original id "2026-09", later ones are "t1", "t2", ... (the column allows
+  // 7 characters). The tournament_roster view in SQL uses the same rule.
+  function tourneyByIndex(k){
+    var a = TOURNEY_FIRST;
+    var sd = new Date(Date.UTC(a.y, a.m, a.d + k * TOURNEY_EVERY));
+    var ed = new Date(Date.UTC(a.y, a.m, a.d + k * TOURNEY_EVERY + TOURNEY_DAYS));
+    var ld = new Date(Date.UTC(a.y, a.m, a.d + k * TOURNEY_EVERY + TOURNEY_DAYS - 1));
     return {
-      id: y + '-' + pad2(m + 1),
-      index: index,
-      start: start, end: end,
-      label: d + '.' + (m + 1) + '–' + new Date(end - 1).getUTCDate() + '.' + (new Date(end - 1).getUTCMonth() + 1),
-      prizeId: TOURNEY_SKIN_IDS[((index % TOURNEY_SKIN_IDS.length) + TOURNEY_SKIN_IDS.length) % TOURNEY_SKIN_IDS.length]
+      id: k === 0 ? '2026-09' : 't' + k,
+      index: k,
+      start: israelMidnight(sd.getUTCFullYear(), sd.getUTCMonth(), sd.getUTCDate()),
+      end: israelMidnight(ed.getUTCFullYear(), ed.getUTCMonth(), ed.getUTCDate()),
+      label: sd.getUTCDate() + '.' + (sd.getUTCMonth() + 1) + '–' + ld.getUTCDate() + '.' + (ld.getUTCMonth() + 1),
+      prizeId: TOURNEY_SKIN_IDS[k % TOURNEY_SKIN_IDS.length]
     };
   }
 
   // { current, next, last }: the one running now (if any), the next one to
   // start, and the most recent one that already ended
   function tourneyNow(){
-    var now = Date.now(), d = new Date(now);
-    var y = d.getUTCFullYear(), m = d.getUTCMonth();
-    var list = [-2, -1, 0, 1, 2].map(function(k){ return tourneyFor(y, m + k); })
-      .filter(function(t){ return t.index >= 0; });
+    var now = Date.now();
+    var first = tourneyByIndex(0).start;
+    var k0 = Math.floor((now - first) / (TOURNEY_EVERY * 24 * 3600000));
+    var list = [k0 - 1, k0, k0 + 1, k0 + 2].filter(function(k){ return k >= 0; }).map(tourneyByIndex);
     var cur = null, next = null, last = null;
     list.forEach(function(t){
       if(t.start <= now && now < t.end) cur = t;
@@ -4548,7 +4549,7 @@
   // never while the name field is being typed in. Everything worth keeping
   // (coins, skins, name, league) is in localStorage, so a reload loses nothing.
   // 'dev' = a local or preview copy: the updater stays off entirely.
-  var BUILD_VERSION = '20260929-154422';
+  var BUILD_VERSION = '20260929-155057';
   var UPDATE_CHECK_MS = 60000;
   var UPDATE_TRIED_KEY = 'canyonChaseTriedUpdate';
   var pendingSubmits = 0;
