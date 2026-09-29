@@ -2977,6 +2977,14 @@
   }
   function isBossDay(){ return israelDay().weekday === 'Thu'; }
 
+  // which foot forward on a board: your tournament team (regular = left foot,
+  // goofy = right foot); regular if you haven't signed up
+  function playerStance(){
+    var t = tourneyFocus();
+    var reg = t && tourney.reg[t.id];
+    return reg && reg.team === 'goofy' ? 'goofy' : 'regular';
+  }
+
   function renderDiamonds(){
     Array.prototype.forEach.call(document.querySelectorAll('.diamond-amt'), function(el){
       el.hidden = diamonds <= 0;
@@ -3049,7 +3057,7 @@
     ctx.closePath(); ctx.fill();
     ctx.scale(sc, sc);
     ctx.rotate(Math.sin(elapsed * 0.9 + 0.6) * 0.08);
-    drawRunnerFigure(ctx, BOSS_FIG, { phase: 0, mode: 'run', duck: 0, t: elapsed });
+    drawRunnerFigure(ctx, BOSS_FIG, { phase: 0, mode: 'run', duck: 0, t: elapsed, stance: 'goofy' });
     if(bossThrow > 0){
       // a red burst at his hand as he throws the next wave of obstacles
       var a = Math.min(1, bossThrow / 0.35);
@@ -4167,6 +4175,111 @@
   // color), shine (metallic highlight on shirt/cape), pattern ('stripes' |
   // 'stars', with patternColor), crown, halo, horns, wings, sword, and
   // hairStyle 'spiky' | 'nemes' (pharaoh headdress, striped in patternColor).
+  // A board rider in a real surf stance, as the camera behind sees it: the
+  // body turned sideways, one foot ahead of the other along the board (the
+  // front foot further up the track), knees bent, leading arm reaching
+  // forward and trailing arm back. f = +1 for regular (left foot forward,
+  // chest turned to the right of the screen), -1 for goofy (mirrored).
+  // Drawn on top of the board, which drawRunnerFigure has already put down.
+  function drawSideRider(g, skin, t, f){
+    var sway = Math.sin(t*3) * 2;
+    var shinColor = skin.legs === 'shorts' ? skin.skinTone : skin.pantsShade;
+    function leg(hipX, hipY, kneeX, kneeY, footX, footY){
+      limb(g, hipX, hipY, kneeX, kneeY, 12, skin.pants);
+      limb(g, kneeX, kneeY, footX, footY, 9.5, shinColor);
+      if(skin.legs === 'shorts') limb(g, hipX, hipY, hipX + (kneeX-hipX)*0.55, hipY + (kneeY-hipY)*0.55, 13, skin.pants);
+      g.fillStyle = skin.shoes;                                   // foot across the board
+      g.beginPath(); g.ellipse(footX, footY, 7.5, 3.8, 0, 0, Math.PI*2); g.fill();
+      g.fillStyle = skin.sole;
+      g.fillRect(footX - 7, footY + 2.6, 14, 1.6);
+    }
+    function arm(sx, sy, ex, ey, hx, hy){
+      var upper = skin.sleeves === 'none' ? skin.skinTone : skin.shirtShade;
+      var fore = skin.sleeves === 'long' ? skin.shirtShade : skin.skinTone;
+      limb(g, sx, sy, ex, ey, 8.5, upper);
+      if(skin.sleeves === 'short') limb(g, sx, sy, sx + (ex-sx)*0.45, sy + (ey-sy)*0.45, 10, skin.shirt);
+      limb(g, ex, ey, hx, hy, 7, fore);
+      g.fillStyle = skin.skinTone;
+      g.beginPath(); g.arc(hx, hy, 3.8, 0, Math.PI*2); g.fill();
+    }
+
+    // front leg first (further away), then the back leg nearer the camera
+    leg(f*3, -44, f*15, -40, f*2, -34);
+    leg(-f*3, -42, f*12, -18, -f*1, 0);
+
+    // hips
+    g.fillStyle = skin.pants;
+    g.beginPath(); g.ellipse(0, -44, 9.5, 6.5, 0, 0, Math.PI*2); g.fill();
+
+    // leading arm reaches forward along the board (away from the camera)
+    arm(f*4, -84, f*16, -86 + sway*0.5, f*27, -80 + sway);
+
+    // torso in profile, leaning a little over the front foot
+    function torso(){
+      g.beginPath();
+      g.moveTo(-f*8, -45);
+      g.lineTo(f*8, -45);
+      g.quadraticCurveTo(f*14, -66, f*10, -88);
+      g.lineTo(-f*6, -90);
+      g.quadraticCurveTo(-f*11, -68, -f*8, -45);
+      g.closePath();
+    }
+    var tg = g.createLinearGradient(-f*10, -90, f*12, -45);
+    tg.addColorStop(0, skin.shirtShade);
+    tg.addColorStop(1, skin.shirt);
+    g.fillStyle = tg;
+    torso(); g.fill();
+    if(skin.pattern === 'stripes' && skin.patternColor){
+      g.save(); torso(); g.clip();
+      g.fillStyle = skin.patternColor;
+      for(var y = -87; y < -46; y += 8) g.fillRect(-16, y, 32, 3.2);
+      g.restore();
+    }
+    g.strokeStyle = 'rgba(0,0,0,0.18)'; g.lineWidth = 1.2;
+    torso(); g.stroke();
+
+    // neck and head in profile: face toward the chest side, hair behind
+    g.fillStyle = skin.skinTone;
+    g.fillRect(f*0.5, -96, 7, 9);
+    var hx = f*5, hy = -104;
+    g.beginPath(); g.ellipse(hx, hy, 9.5, 11, 0, 0, Math.PI*2); g.fill();
+    g.beginPath();                                                  // nose
+    g.moveTo(hx + f*8.5, hy - 2); g.lineTo(hx + f*12.5, hy + 2); g.lineTo(hx + f*8.5, hy + 4);
+    g.closePath(); g.fill();
+    g.fillStyle = '#1a1a1a';                                        // eye
+    g.beginPath(); g.arc(hx + f*5.5, hy - 1.5, 1.4, 0, Math.PI*2); g.fill();
+    g.fillStyle = hexA('#000000', 0.15);                             // ear
+    g.beginPath(); g.ellipse(hx - f*1.5, hy + 1, 2.2, 3.4, 0, 0, Math.PI*2); g.fill();
+    g.fillStyle = skin.hair;                                         // hair: top and back of the head
+    g.beginPath(); g.ellipse(hx - f*1, hy - 4, 10, 8, 0, Math.PI, Math.PI*2); g.fill();
+    g.beginPath(); g.ellipse(hx - f*5.5, hy - 1, 5, 9, 0, 0, Math.PI*2); g.fill();
+    if(skin.hairStyle === 'spiky'){
+      for(var sp = 0; sp < 4; sp++){
+        var bx = hx - f*7 + f*sp*4.5;
+        g.beginPath(); g.moveTo(bx - 2.5, hy - 9); g.lineTo(bx - f*3, hy - 17 - (sp % 2)*3); g.lineTo(bx + 2.5, hy - 10); g.closePath(); g.fill();
+      }
+    }
+    if(skin.headband){
+      g.fillStyle = skin.headband;
+      g.beginPath(); g.ellipse(hx, hy - 5, 10, 2.4, 0, 0, Math.PI*2); g.fill();
+      g.fillRect(hx - f*10, hy - 5, -f*6, 2.2);                      // the knot's tails
+    }
+    if(skin.horns){
+      g.fillStyle = skin.horns;
+      [-1, 1].forEach(function(s){
+        var x0 = hx + s*4;
+        g.beginPath(); g.moveTo(x0 - 2.5, hy - 9); g.quadraticCurveTo(x0 + s*3, hy - 17, x0 + s*1, hy - 23); g.lineTo(x0 + 2.5, hy - 9); g.closePath(); g.fill();
+      });
+    }
+    if(skin.halo){
+      g.strokeStyle = skin.halo; g.lineWidth = 2.2;
+      g.beginPath(); g.ellipse(hx, hy - 17, 9, 2.8, 0, 0, Math.PI*2); g.stroke();
+    }
+
+    // trailing arm back toward the camera, low, for balance
+    arm(-f*3, -83, -f*14, -72 - sway*0.5, -f*23, -62 - sway);
+  }
+
   function drawRunnerFigure(g, skin, pose){
     var ph = pose.phase || 0;
     var mode = pose.mode || 'run';
@@ -4192,11 +4305,11 @@
       }
       var boardPath2 = function(){
         g.beginPath();
-        g.moveTo(-15, 8 + bob);
-        g.quadraticCurveTo(-13, -8 + bob, -4, -22 + bob);
-        g.quadraticCurveTo(0, -27 + bob, 4, -22 + bob);
-        g.quadraticCurveTo(13, -8 + bob, 15, 8 + bob);
-        g.quadraticCurveTo(0, 13 + bob, -15, 8 + bob);
+        g.moveTo(-14, 12 + bob);
+        g.quadraticCurveTo(-14, -20 + bob, -4, -52 + bob);
+        g.quadraticCurveTo(0, -60 + bob, 4, -52 + bob);
+        g.quadraticCurveTo(14, -20 + bob, 14, 12 + bob);
+        g.quadraticCurveTo(0, 17 + bob, -14, 12 + bob);
         g.closePath();
       };
       if(skin.boardGlow){ g.shadowColor = skin.boardGlow; g.shadowBlur = 14; }
@@ -4205,7 +4318,7 @@
       g.shadowBlur = 0;
       g.save(); boardPath2(); g.clip();
       g.fillStyle = skin.rideStripe || '#ff7a3d';
-      g.fillRect(-2.5, -28 + bob, 5, 42);
+      g.fillRect(-2.2, -60 + bob, 4.4, 78);
       g.restore();
       g.strokeStyle = 'rgba(0,0,0,0.3)'; g.lineWidth = 1.2;
       boardPath2(); g.stroke();
@@ -4241,13 +4354,14 @@
       }
     }
 
+    if(riding){
+      drawSideRider(g, skin, t, pose.stance === 'goofy' ? -1 : 1);
+      g.restore();
+      return;
+    }
+
     // legs run half a cycle apart; each arm swings with the opposite leg
     function legPose(side){
-      if(riding){
-        // wide surf stance, knees bent, feet planted on the deck
-        var rhX = side*6.5, rhY = -58;
-        return { hipX: rhX, hipY: rhY, kneeX: side*13, kneeY: -32, footX: side*11, footY: 0, back: 0, fwd: 0 };
-      }
       var s = Math.sin(ph + (side < 0 ? 0 : Math.PI));
       var fwd = Math.max(0, s), back = Math.max(0, -s);
       if(mode === 'jump'){ fwd = 0.75; back = 0.15; }
@@ -4262,11 +4376,6 @@
       return {hipX:hipX, hipY:hipY, kneeX:kneeX, kneeY:kneeY, footX:footX, footY:footY, back:back, fwd:fwd};
     }
     function armPose(side){
-      if(riding){
-        // arms out to the sides for balance, rocking gently
-        var rock = Math.sin(t*3) * 4 * side;
-        return { sx: side*17, sy: -97, ex: side*29, ey: -88 + rock*0.5, hx: side*40, hy: -84 + rock, fwd: 0, back: 1 };
-      }
       var s = Math.sin(ph + (side < 0 ? Math.PI : 0));
       var fwd = Math.max(0, s), back = Math.max(0, -s);
       if(mode === 'jump'){ fwd = 0.25; back = 0; }
@@ -4688,7 +4797,7 @@
     }
 
     var mode = player.flying ? 'fly' : (player.jumping ? 'jump' : (state === 'playing' ? 'run' : 'idle'));
-    drawRunnerFigure(ctx, skin, { phase: player.legPhase, mode: mode, duck: player.ducking ? 1 : 0, t: elapsed });
+    drawRunnerFigure(ctx, skin, { phase: player.legPhase, mode: mode, duck: player.ducking ? 1 : 0, t: elapsed, stance: playerStance() });
 
     // wings grow out of the back, which faces the camera -> on top
     if(player.flying){
@@ -4864,7 +4973,7 @@
   // never while the name field is being typed in. Everything worth keeping
   // (coins, skins, name, league) is in localStorage, so a reload loses nothing.
   // 'dev' = a local or preview copy: the updater stays off entirely.
-  var BUILD_VERSION = '20260929-164154';
+  var BUILD_VERSION = '20260929-191616';
   var UPDATE_CHECK_MS = 60000;
   var UPDATE_TRIED_KEY = 'canyonChaseTriedUpdate';
   var pendingSubmits = 0;
