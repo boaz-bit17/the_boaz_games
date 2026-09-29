@@ -491,6 +491,38 @@
     background:linear-gradient(160deg, rgba(181,140,255,.45), rgba(255,207,107,.45));
   }
 
+  /* ---------- thursday boss ---------- */
+  .boss-banner{
+    display:block; width:100%;
+    margin:0 0 12px;
+    font-family:'Suez One',serif; font-size:16px;
+    color:#fff;
+    background:linear-gradient(135deg,#c0182a,#4a0a2e);
+    border:2px solid rgba(40,0,10,.6);
+    border-radius:12px;
+    padding:10px 12px;
+    cursor:pointer;
+    box-shadow:0 6px 16px -6px rgba(120,0,20,.7);
+    animation:bossPulse 1.6s ease-in-out infinite;
+  }
+  .boss-banner.is-done{ animation:none; background:linear-gradient(135deg,#5a4a52,#2e2328); }
+  @keyframes bossPulse{ 0%,100%{ box-shadow:0 6px 16px -6px rgba(120,0,20,.7); } 50%{ box-shadow:0 6px 22px -2px rgba(255,40,60,.75); } }
+  .boss-hp{
+    display:flex; align-items:center; gap:8px;
+    background:rgba(30,5,10,.8);
+    border:2px solid #ff3c3c;
+    border-radius:10px;
+    padding:4px 10px;
+    font-family:'Suez One',serif; font-size:13px; color:#fff;
+    min-width:200px;
+  }
+  .boss-hp-bar{ flex:1; height:10px; border-radius:5px; background:rgba(255,255,255,.2); overflow:hidden; }
+  .boss-hp-fill{ height:100%; width:100%; background:linear-gradient(90deg,#ff3c3c,#ffb347); transition:width .2s linear; }
+  .boss-result{ background:linear-gradient(160deg,#ff9a9a,#ffd447); }
+  .boss-rules{ text-align:right; font-size:13px; font-weight:600; color:var(--ink); line-height:1.6; margin:0 0 14px; padding:0 4px; }
+  .boss-go{ background:linear-gradient(180deg,#e0243a,#7a0c22); box-shadow:0 8px 0 0 #4a0714, 0 12px 18px -6px rgba(0,0,0,.45); }
+  .boss-go:active{ box-shadow:0 2px 0 0 #4a0714, 0 4px 10px -4px rgba(0,0,0,.4); }
+
   /* ---------- regular vs goofy tournament ---------- */
   .tourney-banner{
     display:block; width:100%;
@@ -744,6 +776,7 @@
       </div>
     </div>
     <div class="fly-badge" id="flyBadge" hidden>🪶 <span id="flyTimeNum">0</span>s</div>
+    <div class="boss-hp" id="bossHp" hidden>☠️ בוס <div class="boss-hp-bar"><div class="boss-hp-fill" id="bossHpFill"></div></div><span id="bossHpPct">100%</span></div>
     <div class="mission-badge" id="missionBadge" hidden></div>
     <div class="mission-toast" id="missionToast" hidden></div>
   </div>
@@ -755,9 +788,11 @@
       <div class="name-row">
         <input type="text" id="playerNameInput" maxlength="14" placeholder="השם שלך" autocomplete="off">
       </div>
+      <button class="boss-banner" id="bossBtn" type="button" hidden></button>
       <button class="tourney-banner" id="tourneyBanner" type="button" hidden></button>
       <div class="wallet-row">
         <span class="wallet-amt"><span class="coin-dot"></span><span id="walletNum">0</span></span>
+        <span class="wallet-amt diamond-amt" hidden>💎 <span class="diamondNum">0</span></span>
         <button class="shop-btn" id="shopBtn" type="button">🎨 חנות סקינים</button>
         <button class="shop-btn" id="leaderboardBtn" type="button">🏆 שיאים</button>
         <button class="shop-btn" id="leagueBtn" type="button">🏅 ליגות</button>
@@ -786,7 +821,7 @@
 
   <div class="overlay" id="overOverlay" hidden>
     <div class="tablet">
-      <h1>נפלת בקניון</h1>
+      <h1 id="overTitle">נפלת בקניון</h1>
       <div class="final-lbl">הניקוד שלך</div>
       <div class="final-score" id="finalScore">0</div>
       <span class="new-best new-best-line" id="newBestTag" hidden>שברת את השיא האישי שלך!</span>
@@ -817,6 +852,7 @@
         </div>
         <div class="chest-hint" id="scratchHint">גרד עם האצבע כדי לגלות מה יצא לך</div>
       </div>
+      <div class="league-banner boss-result" id="bossBanner" hidden></div>
       <div class="league-banner" id="missionBanner" hidden></div>
       <div class="league-banner" id="tourneyRunBanner" hidden></div>
       <button class="go-btn special-btn" id="specialFromOverBtn" type="button" hidden>🎁 פתח את התיבה המיוחדת!</button>
@@ -832,6 +868,7 @@
       <p class="tagline">קנה מראות חדשים לדמות עם המטבעות שאספת בריצות</p>
       <div class="wallet-row">
         <span class="wallet-amt"><span class="coin-dot"></span><span id="shopWalletNum">0</span></span>
+        <span class="wallet-amt diamond-amt" hidden>💎 <span class="diamondNum">0</span></span>
       </div>
       <div class="revive-shop">
         <div class="revive-shop-text">
@@ -873,6 +910,25 @@
       <div class="mission-list" id="missionList"></div>
       <div class="mission-reward">🎁 הפרס: תיבה מיוחדת — ואולי יצא לך ממנה הסקין המוזהב "אגדת הזהב"!</div>
       <button class="back-btn" id="closeMissionsBtn" type="button">חזרה</button>
+    </div>
+  </div>
+
+  <div class="overlay" id="bossOverlay" hidden>
+    <div class="tablet">
+      <h1>☠️ שלב בוס</h1>
+      <p class="tagline">רק בימי חמישי!</p>
+      <div class="boss-rules">
+        🏄 גולש ענק רוכב בקצה המסלול ושולח עליך מחסומים.<br>
+        ⚠️ פי 2 מכשולים, ומהירות גבוהה יותר. אין נוצות תעופה.<br>
+        💥 כדי להרוג אותו צריך להגיע ל-<b>1,000,000</b> נקודות בריצה אחת.<br>
+        💎 פרס: 4 יהלומים (פעם בכל חמישי), ובניצחון הראשון גם הסקין <b>קוטל הבוס</b> — גולש שרוכב על הגלשן שלו!
+      </div>
+      <div class="tourney-prize">
+        <canvas id="bossPrizeCanvas" width="112" height="160"></canvas>
+        <div id="bossPrizeText"></div>
+      </div>
+      <button class="go-btn boss-go" id="bossFightBtn" type="button">הילחם בבוס!</button>
+      <button class="back-btn" id="closeBossBtn" type="button">חזרה</button>
     </div>
   </div>
 
@@ -1230,7 +1286,16 @@
       shoes:'#ffe45c', sole:'#7a3fff', halo:'#ffe45c',
       surfboard:'#7fffd4', boardStripe:'#ff5ab4',
       aura:'#ff5ab4', sparkle:'#fff4c2',
-      splash:'#ff5ab4', boardGlow:'#ff5ab4' }
+      splash:'#ff5ab4', boardGlow:'#ff5ab4' },
+    // the Thursday boss prize: rides its board instead of running
+    { id:'bossslayer', name:'קוטל הבוס',   price:0, exclusive:'boss', rides:true,
+      skinTone:'#c98b5e', hair:'#ffffff', hairStyle:'spiky',
+      shirt:'#1a1a1f', shirtShade:'#0a0a0d', sleeves:'long',
+      pattern:'stripes', patternColor:'rgba(255,60,60,0.6)',
+      pants:'#1a1a1f', pantsShade:'#0a0a0d', legs:'long',
+      shoes:'#ff3c3c', sole:'#1a1a1f', headband:'#ff3c3c',
+      rideBoard:'#ffd447', rideStripe:'#ff3c3c', boardGlow:'#ff3c3c',
+      aura:'#ff3c3c', sparkle:'#ffd0c0', splash:'#7fe3ff' }
   ];
   var WALLET_KEY = 'canyonChaseWallet';
   var SKINS_KEY = 'canyonChaseOwnedSkins';
@@ -1777,7 +1842,7 @@
       // tournament prizes: only this tournament's (and ones you've won) show
       if(skin.exclusive === 'tournament' && !owned && skin.id !== focusPrize) return;
       var card = document.createElement('div');
-      card.className = 'skin-card' + (skin.price >= 10000 || skin.exclusive === 'tournament' ? ' is-premium' : '');
+      card.className = 'skin-card' + (skin.price >= 10000 || skin.exclusive === 'tournament' || skin.exclusive === 'boss' ? ' is-premium' : '');
 
       // mini preview of the actual runner in this outfit, mid-stride
       var preview = document.createElement('canvas');
@@ -1803,7 +1868,8 @@
       btn.className = 'skin-btn';
       if(!owned && skin.exclusive){
         btn.classList.add('is-locked');
-        btn.textContent = skin.exclusive === 'tournament' ? '🏆 רק מהטורניר' : '🎟️ רק מכרטיס גירוד';
+        btn.textContent = skin.exclusive === 'tournament' ? '🏆 רק מהטורניר'
+          : skin.exclusive === 'boss' ? '☠️ רק מניצחון על הבוס' : '🎟️ רק מכרטיס גירוד';
         btn.disabled = true;
       } else if(!owned){
         var afford = wallet >= skin.price;
@@ -2851,6 +2917,185 @@
   // keep the live score on the start screen fresh
   setInterval(function(){ if(!startOverlay.hidden && !document.hidden) refreshTourneyBanner(); }, 60000);
 
+  // ---------- thursday boss ----------
+  // Thursdays only (Israel time): a giant surfer rides at the far end of the
+  // track and throws the obstacles at you. Meant to be really hard: twice as
+  // many obstacles, faster, no feathers. Reaching 1,000,000 points in one
+  // boss run kills him. Prize: 4 diamonds -- a new currency, for things to
+  // come -- once per Thursday, plus the "קוטל הבוס" rider skin on the first win.
+  var BOSS_TARGET = 1000000;
+  var BOSS_DIAMONDS = 4;
+  var BOSS_SKIN_ID = 'bossslayer';
+  var BOSS_SPEED_MULT = 1.25, BOSS_SPEED_MAX = 1100;
+  var BOSS_GAP_MULT = 0.5, BOSS_GAP_MIN = 0.3;          // obstacles twice as often
+  var DIAMONDS_KEY = 'canyonChaseDiamonds';
+  var BOSS_KEY = 'canyonChaseBossV1';                   // { lastWin: 'YYYY-MM-DD' (Israel date) }
+  // the boss himself: a hulking dark rider on a black board
+  var BOSS_FIG = { rides:true,
+    skinTone:'#6b4a3a', hair:'#1a0a0a', hairStyle:'spiky',
+    shirt:'#3a0f4a', shirtShade:'#1a0624', sleeves:'long',
+    pattern:'stars', patternColor:'#ff3c3c',
+    pants:'#1a0624', pantsShade:'#0a0212', legs:'long',
+    shoes:'#ff3c3c', sole:'#1a0624', horns:'#ff3c3c',
+    rideBoard:'#16161c', rideStripe:'#ff3c3c', boardGlow:'#ff3c3c',
+    aura:'#ff2040', sparkle:'#ffb0b0', splash:'#9fe7ff' };
+
+  var diamonds = 0, bossState = { lastWin: '' };
+  try {
+    diamonds = parseInt(localStorage.getItem(DIAMONDS_KEY) || '0', 10) || 0;
+    var savedBoss = JSON.parse(localStorage.getItem(BOSS_KEY) || 'null');
+    if(savedBoss && typeof savedBoss.lastWin === 'string') bossState.lastWin = savedBoss.lastWin;
+  } catch(e){}
+  function saveBoss(){
+    try {
+      localStorage.setItem(DIAMONDS_KEY, String(diamonds));
+      localStorage.setItem(BOSS_KEY, JSON.stringify(bossState));
+    } catch(e){}
+  }
+
+  var bossMode = false, lastRunBoss = false, bossWonThisRun = false, bossRunDay = '', bossThrow = 0;
+  var bossBtn = document.getElementById('bossBtn');
+  var bossOverlay = document.getElementById('bossOverlay');
+  var bossFightBtn = document.getElementById('bossFightBtn');
+  var closeBossBtn = document.getElementById('closeBossBtn');
+  var bossHp = document.getElementById('bossHp');
+  var bossHpFill = document.getElementById('bossHpFill');
+  var bossHpPct = document.getElementById('bossHpPct');
+  var bossBanner = document.getElementById('bossBanner');
+
+  // today's date and weekday in Israel
+  function israelDay(){
+    var d = new Date(Date.now());
+    try {
+      var o = {};
+      new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Jerusalem', year: 'numeric', month: '2-digit', day: '2-digit', weekday: 'short' })
+        .formatToParts(d).forEach(function(p){ o[p.type] = p.value; });
+      return { key: o.year + '-' + o.month + '-' + o.day, weekday: o.weekday };
+    } catch(e){
+      return { key: d.toISOString().slice(0, 10), weekday: ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][d.getDay()] };
+    }
+  }
+  function isBossDay(){ return israelDay().weekday === 'Thu'; }
+
+  function renderDiamonds(){
+    Array.prototype.forEach.call(document.querySelectorAll('.diamond-amt'), function(el){
+      el.hidden = diamonds <= 0;
+      el.querySelector('.diamondNum').textContent = diamonds;
+    });
+  }
+
+  function renderBossBtn(){
+    if(!isBossDay()){ bossBtn.hidden = true; return; }
+    var won = bossState.lastWin === israelDay().key;
+    bossBtn.hidden = false;
+    bossBtn.classList.toggle('is-done', won);
+    bossBtn.textContent = won
+      ? '☠️ ניצחת את הבוס היום! אפשר להילחם שוב (בלי פרס)'
+      : '☠️ שלב בוס! רק היום — לחץ כדי להילחם בגולש הענק';
+  }
+
+  function openBoss(){
+    var owns = ownedSkins.indexOf(BOSS_SKIN_ID) !== -1;
+    var won = bossState.lastWin === israelDay().key;
+    var c = document.getElementById('bossPrizeCanvas'), pg = c.getContext('2d');
+    pg.setTransform(1,0,0,1,0,0); pg.clearRect(0, 0, c.width, c.height);
+    pg.setTransform(2,0,0,2,0,0); pg.translate(28, 70); pg.scale(0.48, 0.48);
+    drawRunnerFigure(pg, getSkin(BOSS_SKIN_ID), { phase: 0, mode: 'run', duck: 0, t: 0 });
+    document.getElementById('bossPrizeText').textContent = won
+      ? '✅ כבר ניצחת את הבוס היום. אפשר להילחם שוב בשביל הכבוד — הפרס הבא ביום חמישי הבא.'
+      : (owns ? '💎 הפרס היום: 4 יהלומים (את הסקין "קוטל הבוס" כבר יש לך)'
+              : '💎 הפרס היום: 4 יהלומים + הסקין "קוטל הבוס"');
+    startOverlay.hidden = true;
+    bossOverlay.hidden = false;
+  }
+  function closeBoss(){
+    bossOverlay.hidden = true;
+    startOverlay.hidden = false;
+    renderBossBtn();
+  }
+  bossBtn.addEventListener('click', openBoss);
+  closeBossBtn.addEventListener('click', closeBoss);
+  bossFightBtn.addEventListener('click', function(){
+    if(!isBossDay()){ closeBoss(); return; }   // Thursday ended while the screen was open
+    bossOverlay.hidden = true;
+    beginRun(true);
+  });
+
+  // HUD bar: the boss's life drains as your score climbs toward a million
+  function renderBossHp(){
+    if(!bossMode) return;
+    var left = Math.max(0, 1 - currentScore() / BOSS_TARGET);
+    bossHpFill.style.width = (left * 100) + '%';
+    bossHpPct.textContent = Math.ceil(left * 100) + '%';
+  }
+
+  // the giant rider at the end of the track, riding away and hurling
+  // obstacles back over his shoulder
+  function drawBoss(){
+    var sway = Math.sin(elapsed * 0.9) * LANE_GAP * 0.8;
+    var p = project(sway, ZFAR * 1.02, 0);
+    var sc = (H * 0.3) / 130;
+    ctx.save();
+    ctx.translate(p.x, p.y);
+    // the swell he rides on
+    var wg = ctx.createLinearGradient(0, -40*sc, 0, 10*sc);
+    wg.addColorStop(0, 'rgba(120,210,255,0.0)');
+    wg.addColorStop(1, 'rgba(60,150,220,0.55)');
+    ctx.fillStyle = wg;
+    ctx.beginPath();
+    ctx.moveTo(-90*sc, 10*sc);
+    ctx.quadraticCurveTo(-40*sc, -30*sc + Math.sin(elapsed*2)*4*sc, 0, -18*sc);
+    ctx.quadraticCurveTo(40*sc, -30*sc + Math.cos(elapsed*2)*4*sc, 90*sc, 10*sc);
+    ctx.closePath(); ctx.fill();
+    ctx.scale(sc, sc);
+    ctx.rotate(Math.sin(elapsed * 0.9 + 0.6) * 0.08);
+    drawRunnerFigure(ctx, BOSS_FIG, { phase: 0, mode: 'run', duck: 0, t: elapsed });
+    if(bossThrow > 0){
+      // a red burst at his hand as he throws the next wave of obstacles
+      var a = Math.min(1, bossThrow / 0.35);
+      var fx = ctx.createRadialGradient(40, -84, 0, 40, -84, 34);
+      fx.addColorStop(0, 'rgba(255,90,60,' + (0.85*a) + ')');
+      fx.addColorStop(1, 'rgba(255,90,60,0)');
+      ctx.fillStyle = fx;
+      ctx.beginPath(); ctx.arc(40, -84, 34, 0, Math.PI*2); ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  // game over after a boss run: the prize, or how close you got
+  function showBossResult(){
+    bossHp.hidden = true;
+    document.getElementById('overTitle').textContent = bossWonThisRun ? '☠️ ניצחת את הבוס!' : 'נפלת בקניון';
+    if(!lastRunBoss){ bossBanner.hidden = true; return; }
+    if(bossWonThisRun){
+      var lines = [];
+      if(bossState.lastWin !== bossRunDay){
+        bossState.lastWin = bossRunDay;
+        diamonds += BOSS_DIAMONDS;
+        lines.push('💎 +' + BOSS_DIAMONDS + ' יהלומים! היהלומים ישמשו אותך בהמשך');
+        if(ownedSkins.indexOf(BOSS_SKIN_ID) === -1){
+          ownedSkins.push(BOSS_SKIN_ID);
+          selectedSkinId = BOSS_SKIN_ID;
+          lines.push('🏄 קיבלת את הסקין "קוטל הבוס" — והוא כבר עליך');
+        }
+        saveBoss();
+        saveProgress();
+        renderDiamonds();
+      } else {
+        lines.push('(את הפרס של היום כבר קיבלת — נתראה בחמישי הבא)');
+      }
+      bossBanner.textContent = lines.join(' · ');
+    } else {
+      var pct = Math.min(99, Math.floor(currentScore() / BOSS_TARGET * 100));
+      bossBanner.textContent = '☠️ הבוס ניצח הפעם... הגעת ל-' + pct + '% מהדרך. נסה שוב!';
+    }
+    bossBanner.hidden = false;
+  }
+
+  renderDiamonds();
+  renderBossBtn();
+  setInterval(function(){ if(!startOverlay.hidden && !document.hidden) renderBossBtn(); }, 60000);
+
   // ---------- game state ----------
   var state = 'start'; // start | playing | over
   var player, obstacles, coins, powerups, chests, decor, dustParticles, elapsed, distance, coinCount, speed, spawnTimer, spawnGap, decorTimer, powerupTimer, chestTimer, pendingChestCount, footPuffs;
@@ -2878,6 +3123,8 @@
   }
 
   function resetGame(){
+    bossMode = false;          // beginRun(true) turns it back on for a boss run
+    bossThrow = 0;
     player = {
       lane: 1,
       x: LANES[1],
@@ -3116,6 +3363,7 @@
       chestOpenBox.hidden = false;
     }
     showMissionResults();
+    showBossResult();
     if(scratchFound) showScratchCard();
     hud.hidden = true;
     overOverlay.hidden = false;
@@ -3147,6 +3395,7 @@
     // speed keeps climbing with score, well past where it used to plateau,
     // so the run keeps getting harder deep into a long game instead of leveling off
     speed = Math.min(900, 480 + difficultyProgress()*0.17);
+    if(bossMode) speed = Math.min(BOSS_SPEED_MAX, speed * BOSS_SPEED_MULT);
     distance += speed*dt;
 
     // lane interpolation
@@ -3188,6 +3437,7 @@
     if(spawnTimer <= 0){
       spawnWave();
       spawnGap = Math.max(0.42 - Math.min(MAX_DENSITY_STEPS, milestones)*0.01, 0.95 - difficultyProgress()*0.00021);
+      if(bossMode){ spawnGap = Math.max(BOSS_GAP_MIN, spawnGap * BOSS_GAP_MULT); bossThrow = 0.35; }
       spawnTimer = spawnGap;
     }
 
@@ -3219,7 +3469,8 @@
     // feather power-up: rare pickup that grants a few seconds of invincible flight
     powerupTimer -= dt;
     if(powerupTimer <= 0){
-      powerups.push({ lane: Math.floor(Math.random()*3), z: ZFAR, collected:false });
+      // the boss gives no feathers -- no invincible flight to hide in
+      if(!bossMode) powerups.push({ lane: Math.floor(Math.random()*3), z: ZFAR, collected:false });
       powerupTimer = 20 + Math.random()*10;
     }
     for(var pIdx=powerups.length-1; pIdx>=0; pIdx--){
@@ -3255,6 +3506,17 @@
     runScore += (raw - lastRawScore) * SCORE_SCALE * scoreMult;
     lastRawScore = raw;
     while(raw * SCORE_SCALE >= (milestones + 1) * MILESTONE_POINTS) reachMilestone();
+
+    // a million points in a boss run: the boss is dead, the run ends in victory
+    if(bossMode){
+      bossThrow -= dt;
+      renderBossHp();
+      if(!bossWonThisRun && currentScore() >= BOSS_TARGET){
+        bossWonThisRun = true;
+        gameOver();
+        return;
+      }
+    }
 
     updateMissions(dt);
     updateScratchCards(dt);
@@ -3909,11 +4171,45 @@
     var ph = pose.phase || 0;
     var mode = pose.mode || 'run';
     var t = pose.t || 0;
+    // `rides` skins don't run: they stand on a surfboard, knees bent, arms
+    // out for balance (feather flight still spreads the arms as usual)
+    var riding = !!skin.rides && mode !== 'fly';
 
     g.save();
     if(pose.duck){
       // crouch: squash down toward the feet (the origin)
       g.scale(1 + 0.08*pose.duck, 1 - 0.34*pose.duck);
+    }
+
+    if(riding){
+      // the board under the feet, pointing away from the camera: wide at the
+      // tail, narrowing toward the nose up the track
+      var bob = Math.sin(t*4) * 1.5;
+      g.fillStyle = hexA('#ffffff', 0.45);                                     // wake off the tail
+      for(var wk = 0; wk < 7; wk++){
+        var wl = ((t*2 + wk/7) % 1);
+        g.beginPath(); g.arc((wk % 2 ? 1 : -1) * (14 + wl*22), 8 + wl*6, 3*(1 - wl), 0, Math.PI*2); g.fill();
+      }
+      var boardPath2 = function(){
+        g.beginPath();
+        g.moveTo(-15, 8 + bob);
+        g.quadraticCurveTo(-13, -8 + bob, -4, -22 + bob);
+        g.quadraticCurveTo(0, -27 + bob, 4, -22 + bob);
+        g.quadraticCurveTo(13, -8 + bob, 15, 8 + bob);
+        g.quadraticCurveTo(0, 13 + bob, -15, 8 + bob);
+        g.closePath();
+      };
+      if(skin.boardGlow){ g.shadowColor = skin.boardGlow; g.shadowBlur = 14; }
+      g.fillStyle = skin.rideBoard || '#fff4d6';
+      boardPath2(); g.fill();
+      g.shadowBlur = 0;
+      g.save(); boardPath2(); g.clip();
+      g.fillStyle = skin.rideStripe || '#ff7a3d';
+      g.fillRect(-2.5, -28 + bob, 5, 42);
+      g.restore();
+      g.strokeStyle = 'rgba(0,0,0,0.3)'; g.lineWidth = 1.2;
+      boardPath2(); g.stroke();
+      g.translate(0, bob - 4);   // the rider stands on the deck
     }
 
     if(skin.aura){
@@ -3947,6 +4243,11 @@
 
     // legs run half a cycle apart; each arm swings with the opposite leg
     function legPose(side){
+      if(riding){
+        // wide surf stance, knees bent, feet planted on the deck
+        var rhX = side*6.5, rhY = -58;
+        return { hipX: rhX, hipY: rhY, kneeX: side*13, kneeY: -32, footX: side*11, footY: 0, back: 0, fwd: 0 };
+      }
       var s = Math.sin(ph + (side < 0 ? 0 : Math.PI));
       var fwd = Math.max(0, s), back = Math.max(0, -s);
       if(mode === 'jump'){ fwd = 0.75; back = 0.15; }
@@ -3961,6 +4262,11 @@
       return {hipX:hipX, hipY:hipY, kneeX:kneeX, kneeY:kneeY, footX:footX, footY:footY, back:back, fwd:fwd};
     }
     function armPose(side){
+      if(riding){
+        // arms out to the sides for balance, rocking gently
+        var rock = Math.sin(t*3) * 4 * side;
+        return { sx: side*17, sy: -97, ex: side*29, ey: -88 + rock*0.5, hx: side*40, hy: -84 + rock, fwd: 0, back: 1 };
+      }
       var s = Math.sin(ph + (side < 0 ? Math.PI : 0));
       var fwd = Math.max(0, s), back = Math.max(0, -s);
       if(mode === 'jump'){ fwd = 0.25; back = 0; }
@@ -4347,7 +4653,8 @@
 
   function drawPlayer(){
     var skin = getSkin(selectedSkinId);
-    var running = !player.jumping && !player.flying;
+    // a board rider glides: no stride push or running bounce
+    var running = !player.jumping && !player.flying && !skin.rides;
     var stridePush = running ? Math.sin(player.legPhase)*18 : 0;
     var runBounce = running ? Math.abs(Math.sin(player.legPhase))*8 : 0;
     var p = project(player.x, stridePush, player.y + runBounce);
@@ -4414,6 +4721,7 @@
     drawCanyon();
     drawGround();
     drawDust();
+    if(bossMode && state !== 'start') drawBoss();
 
     var entities = [];
     decor.forEach(function(dc){ entities.push({z:dc.z, draw:function(){drawDecor(dc);}}); });
@@ -4521,8 +4829,14 @@
 
   function hideHint(){ swipeHint.style.display='none'; }
 
-  function beginRun(){
+  function beginRun(boss){
     resetGame();
+    bossMode = !!boss;
+    lastRunBoss = bossMode;
+    bossWonThisRun = false;
+    bossRunDay = israelDay().key;
+    bossHp.hidden = !bossMode;
+    renderBossHp();
     state = 'playing';
     startOverlay.hidden = true;
     overOverlay.hidden = true;
@@ -4535,8 +4849,9 @@
     hideHint();
   }
 
-  startBtn.addEventListener('click', beginRun);
-  retryBtn.addEventListener('click', beginRun);
+  startBtn.addEventListener('click', function(){ beginRun(false); });
+  // "try again" after a boss run fights the boss again -- while it's still Thursday
+  retryBtn.addEventListener('click', function(){ beginRun(lastRunBoss && isBossDay()); });
   continueBtn.addEventListener('click', continueRun);
   giveUpBtn.addEventListener('click', giveUpRun);
 
@@ -4549,7 +4864,7 @@
   // never while the name field is being typed in. Everything worth keeping
   // (coins, skins, name, league) is in localStorage, so a reload loses nothing.
   // 'dev' = a local or preview copy: the updater stays off entirely.
-  var BUILD_VERSION = '20260929-155057';
+  var BUILD_VERSION = '20260929-164154';
   var UPDATE_CHECK_MS = 60000;
   var UPDATE_TRIED_KEY = 'canyonChaseTriedUpdate';
   var pendingSubmits = 0;
