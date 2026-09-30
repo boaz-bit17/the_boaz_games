@@ -491,6 +491,13 @@
     background:linear-gradient(160deg, rgba(181,140,255,.45), rgba(255,207,107,.45));
   }
 
+  /* ---------- thursday chest & pets ---------- */
+  .thu-chest-btn{ background:linear-gradient(135deg,#8d5cf0,#3b1d80); border-color:rgba(20,5,50,.6); animation:none; }
+  .thu-chest-btn:disabled{ opacity:.6; cursor:default; }
+  .pet-section{ margin-top:14px; }
+  .pet-section .mission-sub{ margin:2px 0 8px; }
+  .pet-preview{ display:block; width:64px; height:64px; }
+
   /* ---------- waiting-room chat ---------- */
   .chat-online{
     font-size:12px; font-weight:700; color:#0c3c5c;
@@ -845,6 +852,7 @@
         <input type="text" id="playerNameInput" maxlength="14" placeholder="השם שלך" autocomplete="off">
       </div>
       <button class="boss-banner" id="bossBtn" type="button" hidden></button>
+      <button class="boss-banner thu-chest-btn" id="thuChestBtn" type="button" hidden></button>
       <button class="tourney-banner" id="tourneyBanner" type="button" hidden></button>
       <div class="wallet-row">
         <span class="wallet-amt"><span class="coin-dot"></span><span id="walletNum">0</span></span>
@@ -935,6 +943,11 @@
         <button type="button" id="buyReviveBtn">קנה 🪙</button>
       </div>
       <div class="skin-grid" id="skinGrid"></div>
+      <div class="pet-section">
+        <div class="mission-title">🐾 חיות מחמד</div>
+        <div class="mission-sub">החיה רצה במסלול לידך ואוספת בשבילך את המטבעות שם. משיגים אותן בתיבת חמישי.</div>
+        <div class="skin-grid" id="petGrid"></div>
+      </div>
       <button class="back-btn" id="closeShopBtn" type="button">חזרה</button>
     </div>
   </div>
@@ -988,6 +1001,27 @@
     </div>
   </div>
 
+  <div class="overlay" id="thuChestOverlay" hidden>
+    <div class="tablet">
+      <h1>🎁 תיבת חמישי</h1>
+      <p class="tagline">רק בימי חמישי · 2 💎 לתיבה</p>
+      <div class="wallet-row"><span class="wallet-amt">💎 <span id="thuChestDiamonds">0</span></span></div>
+      <div class="chest-open special-open">
+        <button class="chest-click is-special" id="thuChestBox" type="button" aria-label="פתח תיבה">
+          <span class="chest-glow"></span>
+          <span class="chest-lid"></span>
+          <span class="chest-base"></span>
+          <span class="chest-lock">💎</span>
+        </button>
+        <div class="chest-hint" id="thuChestHint"></div>
+        <div class="chest-open-result" id="thuChestResult" hidden></div>
+      </div>
+      <div class="mission-sub" style="margin-bottom:10px">מה יכול לצאת: 🪙 5,000 מטבעות (35%) · 🎨 סקין מהחנות שאין לך (30%) · 🐾 חיית מחמד (20%) · 💥 הורדת 2,000,000 נקודות לקבוצה השנייה בטורניר (15%)</div>
+      <button class="go-btn special-btn" id="thuChestOpenBtn" type="button">פתח ב-2 💎</button>
+      <button class="back-btn" id="closeThuChestBtn" type="button">חזרה</button>
+    </div>
+  </div>
+
   <div class="overlay" id="bossOverlay" hidden>
     <div class="tablet">
       <h1>☠️ שלב בוס</h1>
@@ -1029,6 +1063,11 @@
       </div>
       <div class="tourney-bar"><div class="r" id="tourneyBarR" style="width:50%"></div><div class="g" id="tourneyBarG" style="width:50%"></div></div>
       <div class="tourney-join" id="tourneyJoin"></div>
+      <div class="tourney-join" id="tourneyHitBox" hidden></div>
+      <div class="tourney-top" id="tourneyHitsBox" hidden>
+        <div class="mission-title">💥 הורדות נקודות</div>
+        <div class="leaderboard-list" id="tourneyHitsList"></div>
+      </div>
       <div class="tourney-roster" id="tourneyRosterBox" hidden>
         <div class="mission-title">מי איתך ומי נגדך</div>
         <div class="tourney-roster-cols">
@@ -1981,6 +2020,7 @@
 
   function openShop(){
     renderShop();
+    renderPets();
     startOverlay.hidden = true;
     overOverlay.hidden = true;
     shopOverlay.hidden = false;
@@ -2807,6 +2847,8 @@
       '🏆 הפרס הפעם: הסקין "' + getSkin(t.prizeId).name + '" — לכל מי ששיחק בקבוצה המנצחת! בכל טורניר סקין חדש (מי שכבר יש לו מקבל 5,000 🪙)';
 
     renderJoin(t);
+    renderHitBox(n, t);
+    fetchHits(t.id).then(renderHits);
     renderTeams(null, null);
     fetchTotals(t.id).then(function(totals){
       fetchSignupCounts(t.id).then(function(counts){ renderTeams(totals, counts); });
@@ -2832,6 +2874,77 @@
         tourneyResult.hidden = false;
       });
     }
+  }
+
+  // ---- hits: 2,000,000 off the other team (won in the Thursday chest) ----
+  var hitBusy = false, hitNote = '';
+  function otherTeam(team){ return team === 'regular' ? 'goofy' : 'regular'; }
+  function fetchHits(season){
+    return sbGet('tournament_hits?select=name,team,amount&season=eq.' + encodeURIComponent(season) + '&order=id.desc&limit=20');
+  }
+  function renderHits(rows){
+    var box = document.getElementById('tourneyHitsBox'), list = document.getElementById('tourneyHitsList');
+    list.innerHTML = '';
+    if(!rows || !rows.length){ box.hidden = true; return; }
+    rows.forEach(function(r){
+      var row = document.createElement('div');
+      row.className = 'leaderboard-row';
+      var txt = document.createElement('div');
+      txt.className = 'leaderboard-name';
+      txt.textContent = '💥 ' + r.name + ' הוריד ל' + (TEAM_NAMES[r.team] || r.team) + ' ' + fmtScore(+r.amount || 0);
+      row.appendChild(txt);
+      list.appendChild(row);
+    });
+    box.hidden = false;
+  }
+  function renderHitBox(n, t){
+    var box = document.getElementById('tourneyHitBox');
+    box.innerHTML = '';
+    if(hitsHeld <= 0){ box.hidden = true; return; }
+    box.hidden = false;
+    var reg = tourney.reg[t.id];
+    var line = document.createElement('div');
+    if(!n.current || !reg){
+      line.textContent = '💥 יש לך ' + hitsHeld + ' הורדות של ' + fmtScore(HIT_AMOUNT) + ' נקודות. ' +
+        (!reg ? 'הירשם לקבוצה כדי להשתמש בהן' : 'אפשר להשתמש בהן כשהטורניר מתחיל') + '.';
+      box.appendChild(line);
+      return;
+    }
+    var target = otherTeam(reg.team);
+    line.textContent = '💥 יש לך ' + hitsHeld + ' הורדות. כל אחת מורידה לקבוצת ' + TEAM_NAMES[target] + ' ' + fmtScore(HIT_AMOUNT) + ' נקודות.';
+    box.appendChild(line);
+    var btns = document.createElement('div');
+    btns.className = 'tourney-join-btns';
+    btns.style.gridTemplateColumns = '1fr';
+    var b = document.createElement('button');
+    b.type = 'button';
+    b.className = target;
+    b.textContent = '💥 הורד ל' + TEAM_NAMES[target] + ' ' + fmtScore(HIT_AMOUNT);
+    b.disabled = hitBusy;
+    b.addEventListener('click', function(){ useHit(t, reg, target); });
+    btns.appendChild(b);
+    box.appendChild(btns);
+    if(hitNote){
+      var note = document.createElement('div');
+      note.className = 'tourney-join-err';
+      note.textContent = hitNote;
+      box.appendChild(note);
+    }
+  }
+  function useHit(t, reg, target){
+    if(hitBusy || hitsHeld <= 0) return;
+    hitBusy = true; hitNote = '';
+    renderHitBox(tourneyNow(), t);
+    fetch(SUPABASE_URL + '/rest/v1/tournament_hits', {
+      method: 'POST', headers: supabaseHeaders(),
+      body: JSON.stringify({ season: t.id, name: reg.name, team: target, amount: HIT_AMOUNT })
+    }).then(function(res){ return res.ok; }).catch(function(){ return false; }).then(function(ok){
+      hitBusy = false;
+      if(ok){ hitsHeld--; saveHits(); }
+      else hitNote = 'ההורדה לא נשלחה. בדוק חיבור ונסה שוב.';
+      renderTourneyScreen();
+      refreshTourneyBanner();
+    });
   }
 
   function renderTeams(totals, counts){
@@ -3177,7 +3290,250 @@
 
   renderDiamonds();
   renderBossBtn();
-  setInterval(function(){ if(!startOverlay.hidden && !document.hidden) renderBossBtn(); }, 60000);
+  setInterval(function(){ if(!startOverlay.hidden && !document.hidden){ renderBossBtn(); renderThuChestBtn(); } }, 60000);
+
+  // ---------- pets & the thursday chest ----------
+  // A pet runs in the lane beside you and grabs the coins there for you.
+  // Pets come only from the Thursday chest: 2 diamonds a chest, open as many
+  // as your diamonds allow. Odds: 35% 5,000 coins, 30% a shop skin you don't
+  // own yet, 20% a pet you don't have yet (either of those falls back to the
+  // coins when there's nothing left to get), 15% a 'hit' -- take 2,000,000
+  // points off the other team in a tournament. Hits are kept until used, in
+  // the tournament screen, while one is running and you're signed up. A new
+  // pet or skin is put on right away.
+  var PETS = [
+    { id: 'dog',    name: 'כלב' },
+    { id: 'cat',    name: 'חתול' },
+    { id: 'fox',    name: 'שועל' },
+    { id: 'turtle', name: 'צב ים' }
+  ];
+  var PETS_KEY = 'canyonChasePetsV1';        // { owned: [...], selected: id|null }
+  var THU_CHEST_COST = 2, THU_CHEST_COINS = 5000;
+  var THU_CHEST_ODDS = [['coins', 35], ['skin', 30], ['pet', 20], ['hit', 15]];
+  var HIT_AMOUNT = 2000000;                  // a 'hit' takes this off the other team in a tournament
+  var HITS_KEY = 'canyonChaseHitsV1';        // how many unused hits you're holding
+  var hitsHeld = 0;
+  try { hitsHeld = parseInt(localStorage.getItem(HITS_KEY) || '0', 10) || 0; } catch(e){}
+  function saveHits(){ try { localStorage.setItem(HITS_KEY, String(hitsHeld)); } catch(e){} }
+  var pets = { owned: [], selected: null };
+  try {
+    var savedPets = JSON.parse(localStorage.getItem(PETS_KEY) || 'null');
+    if(savedPets && Array.isArray(savedPets.owned)){
+      pets.owned = savedPets.owned;
+      pets.selected = pets.owned.indexOf(savedPets.selected) !== -1 ? savedPets.selected : null;
+    }
+  } catch(e){}
+  function savePets(){ try { localStorage.setItem(PETS_KEY, JSON.stringify(pets)); } catch(e){} }
+  function getPet(id){ for(var i = 0; i < PETS.length; i++) if(PETS[i].id === id) return PETS[i]; return null; }
+
+  // pets from behind, running: feet on y=0, about 34 units tall
+  function drawPetFigure(g, id, t){
+    var bob = Math.abs(Math.sin(t * 12)) * 3, leg = Math.sin(t * 12) * 4;
+    g.save();
+    g.translate(0, -bob);
+    g.fillStyle = 'rgba(0,0,0,0.2)';
+    g.beginPath(); g.ellipse(0, bob + 1, 13, 3.5, 0, 0, Math.PI*2); g.fill();
+    if(id === 'turtle'){
+      g.fillStyle = '#6fbf73';                                               // flippers
+      [-1, 1].forEach(function(s){ g.beginPath(); g.ellipse(s*13, -5 + s*leg*0.4, 6, 3, s*0.5, 0, Math.PI*2); g.fill(); });
+      g.beginPath(); g.ellipse(0, -2, 4, 3, 0, 0, Math.PI*2); g.fill();      // tail
+      var sg = g.createRadialGradient(-3, -16, 2, 0, -12, 16);
+      sg.addColorStop(0, '#8fd18a'); sg.addColorStop(1, '#2f7d4a');
+      g.fillStyle = sg;
+      g.beginPath(); g.ellipse(0, -12, 13, 10, 0, 0, Math.PI*2); g.fill();  // shell
+      g.strokeStyle = 'rgba(20,60,30,0.6)'; g.lineWidth = 1.2;
+      g.beginPath(); g.moveTo(0, -21); g.lineTo(0, -3); g.moveTo(-10, -12); g.lineTo(10, -12); g.stroke();
+      g.fillStyle = '#6fbf73';
+      g.beginPath(); g.ellipse(0, -23, 5, 4.5, 0, 0, Math.PI*2); g.fill();  // head peeking over
+      g.restore();
+      return;
+    }
+    var fur = id === 'dog' ? '#a0672f' : id === 'cat' ? '#8c8c96' : '#e8742a';
+    var dark = id === 'dog' ? '#6e4520' : id === 'cat' ? '#5e5e68' : '#b8531a';
+    // legs
+    g.strokeStyle = dark; g.lineWidth = 3.4; g.lineCap = 'round';
+    g.beginPath(); g.moveTo(-5, -9); g.lineTo(-6, -1 + leg*0.3); g.moveTo(5, -9); g.lineTo(6, -1 - leg*0.3); g.stroke();
+    // tail: wagging (dog), up (cat), big and bushy with a white tip (fox)
+    var wag = Math.sin(t * (id === 'dog' ? 18 : 6)) * (id === 'dog' ? 0.6 : 0.25);
+    g.save(); g.translate(0, -12); g.rotate(wag);
+    g.fillStyle = fur;
+    if(id === 'fox'){
+      g.beginPath(); g.ellipse(0, 6, 5.5, 9, 0, 0, Math.PI*2); g.fill();
+      g.fillStyle = '#ffffff'; g.beginPath(); g.ellipse(0, 12, 3.4, 3.4, 0, 0, Math.PI*2); g.fill();
+    } else if(id === 'cat'){
+      g.strokeStyle = fur; g.lineWidth = 3;
+      g.beginPath(); g.moveTo(0, 0); g.quadraticCurveTo(6, -10, 2, -18); g.stroke();
+    } else {
+      g.strokeStyle = fur; g.lineWidth = 3.4;
+      g.beginPath(); g.moveTo(0, 0); g.quadraticCurveTo(-4, -8, 0, -13); g.stroke();
+    }
+    g.restore();
+    // body (seen from behind) and head
+    g.fillStyle = fur;
+    g.beginPath(); g.ellipse(0, -13, 9, 7.5, 0, 0, Math.PI*2); g.fill();
+    g.beginPath(); g.ellipse(0, -23, 7.5, 6.5, 0, 0, Math.PI*2); g.fill();
+    // ears
+    if(id === 'dog'){
+      g.fillStyle = dark;
+      [-1, 1].forEach(function(s){ g.beginPath(); g.ellipse(s*7, -22 + Math.abs(leg)*0.2, 2.8, 5.5, s*0.3, 0, Math.PI*2); g.fill(); });
+    } else {
+      [-1, 1].forEach(function(s){
+        g.fillStyle = fur;
+        g.beginPath(); g.moveTo(s*2, -28); g.lineTo(s*7.5, -35); g.lineTo(s*7, -25); g.closePath(); g.fill();
+        g.fillStyle = id === 'fox' ? '#2a1a12' : '#e8a0a8';
+        g.beginPath(); g.moveTo(s*4, -28); g.lineTo(s*7, -32.5); g.lineTo(s*6.6, -27); g.closePath(); g.fill();
+      });
+    }
+    g.restore();
+  }
+
+  // ---- the pet in the run: its lane, and grabbing coins there ----
+  var petX = 0;
+  function petLane(){ return player.lane === 2 ? 1 : player.lane + 1; }
+  function petActive(){ return !!pets.selected; }
+  function drawPet(){
+    if(!petActive() || state === 'start') return;
+    var target = LANES[petLane()];
+    petX += (target - petX) * 0.12;
+    var p = project(petX, 10, 0);
+    if(p.scale <= 0) return;
+    ctx.save();
+    ctx.translate(p.x, p.y);
+    ctx.scale(p.sp * 0.95, p.sp * 0.95);
+    drawPetFigure(ctx, pets.selected, state === 'playing' ? elapsed : 0);
+    ctx.restore();
+  }
+
+  // ---- shop: choose which pet runs with you ----
+  var petGrid = document.getElementById('petGrid');
+  function renderPets(){
+    petGrid.innerHTML = '';
+    PETS.forEach(function(pet){
+      var owned = pets.owned.indexOf(pet.id) !== -1;
+      var card = document.createElement('div');
+      card.className = 'skin-card';
+      var cv = document.createElement('canvas');
+      cv.className = 'pet-preview';
+      var pr = Math.min(2, window.devicePixelRatio || 1);
+      cv.width = 64 * pr; cv.height = 64 * pr;
+      var pg = cv.getContext('2d');
+      pg.setTransform(pr, 0, 0, pr, 0, 0);
+      pg.translate(32, 56);
+      pg.scale(1.3, 1.3);
+      if(!owned) pg.globalAlpha = 0.35;
+      drawPetFigure(pg, pet.id, 0.1);
+      card.appendChild(cv);
+      var name = document.createElement('div'); name.className = 'skin-name'; name.textContent = pet.name;
+      card.appendChild(name);
+      var btn = document.createElement('button');
+      btn.type = 'button'; btn.className = 'skin-btn';
+      if(!owned){ btn.classList.add('is-locked'); btn.textContent = '🎁 רק מתיבת חמישי'; btn.disabled = true; }
+      else if(pets.selected === pet.id){ btn.classList.add('is-selected'); btn.textContent = 'רץ איתך · הסר'; }
+      else { btn.textContent = 'בחר'; }
+      btn.addEventListener('click', function(){
+        if(!owned) return;
+        pets.selected = pets.selected === pet.id ? null : pet.id;   // tap the chosen one again to run alone
+        savePets();
+        renderPets();
+      });
+      card.appendChild(btn);
+      petGrid.appendChild(card);
+    });
+  }
+
+  // ---- the thursday chest ----
+  var thuChestBtn = document.getElementById('thuChestBtn');
+  var thuChestOverlay = document.getElementById('thuChestOverlay');
+  var thuChestBox = document.getElementById('thuChestBox');
+  var thuChestHint = document.getElementById('thuChestHint');
+  var thuChestResult = document.getElementById('thuChestResult');
+  var thuChestOpenBtn = document.getElementById('thuChestOpenBtn');
+  var closeThuChestBtn = document.getElementById('closeThuChestBtn');
+  var thuChestOpening = false;
+
+  function renderThuChestBtn(){
+    if(!isBossDay()){ thuChestBtn.hidden = true; return; }
+    thuChestBtn.hidden = false;
+    thuChestBtn.textContent = '🎁 תיבת חמישי — 2 💎 · יש לך ' + diamonds + ' 💎';
+  }
+
+  function renderThuChest(){
+    document.getElementById('thuChestDiamonds').textContent = diamonds;
+    var can = diamonds >= THU_CHEST_COST && isBossDay() && !thuChestOpening;
+    thuChestOpenBtn.disabled = !can;
+    thuChestOpenBtn.textContent = diamonds >= THU_CHEST_COST ? 'פתח ב-2 💎' : 'אין מספיק 💎 (צריך 2)';
+    thuChestHint.textContent = diamonds >= THU_CHEST_COST ? '' : 'יהלומים מקבלים מניצחון על הבוס ביום חמישי';
+  }
+
+  function openThuChestScreen(){
+    thuChestBox.classList.remove('is-open');
+    thuChestResult.hidden = true;
+    renderThuChest();
+    startOverlay.hidden = true;
+    thuChestOverlay.hidden = false;
+  }
+  function closeThuChestScreen(){
+    thuChestOverlay.hidden = true;
+    startOverlay.hidden = false;
+    renderThuChestBtn();
+    renderBossBtn();
+  }
+
+  function rollThuChest(){
+    var r = Math.random() * 100, acc = 0, kind = 'coins';
+    for(var i = 0; i < THU_CHEST_ODDS.length; i++){
+      acc += THU_CHEST_ODDS[i][1];
+      if(r < acc){ kind = THU_CHEST_ODDS[i][0]; break; }
+    }
+    if(kind === 'skin'){
+      var skinsLeft = SKINS.filter(function(s){ return !s.exclusive && s.price > 0 && ownedSkins.indexOf(s.id) === -1; });
+      if(skinsLeft.length){
+        var s = skinsLeft[Math.floor(Math.random() * skinsLeft.length)];
+        ownedSkins.push(s.id); selectedSkinId = s.id;
+        return '🎨 סקין חדש: "' + s.name + '"! הוא כבר עליך';
+      }
+    }
+    if(kind === 'pet'){
+      var petsLeft = PETS.filter(function(p){ return pets.owned.indexOf(p.id) === -1; });
+      if(petsLeft.length){
+        var p = petsLeft[Math.floor(Math.random() * petsLeft.length)];
+        pets.owned.push(p.id); pets.selected = p.id; savePets();
+        return '🐾 חיית מחמד: ' + p.name + '! היא כבר רצה איתך ואוספת מטבעות';
+      }
+    }
+    if(kind === 'hit'){
+      hitsHeld++; saveHits();
+      return '💥 הורדת ' + fmtScore(HIT_AMOUNT) + ' נקודות לקבוצה השנייה! מפעילים אותה במסך הטורניר (יש לך ' + hitsHeld + ')';
+    }
+    wallet += THU_CHEST_COINS;
+    return '🪙 +' + THU_CHEST_COINS.toLocaleString('en-US') + ' מטבעות';
+  }
+
+  function openThuChest(){
+    if(thuChestOpening || diamonds < THU_CHEST_COST || !isBossDay()) return;
+    thuChestOpening = true;
+    diamonds -= THU_CHEST_COST;
+    saveBoss();
+    renderDiamonds();
+    thuChestResult.hidden = true;
+    thuChestBox.classList.remove('is-open');
+    void thuChestBox.offsetWidth;                 // restart the lid animation for the next chest
+    thuChestBox.classList.add('is-open');
+    renderThuChest();
+    setTimeout(function(){
+      thuChestResult.textContent = rollThuChest();
+      thuChestResult.hidden = false;
+      saveProgress();
+      updateWalletDisplays();
+      thuChestOpening = false;
+      renderThuChest();
+    }, 520);
+  }
+  thuChestBtn.addEventListener('click', openThuChestScreen);
+  thuChestBox.addEventListener('click', openThuChest);
+  thuChestOpenBtn.addEventListener('click', openThuChest);
+  closeThuChestBtn.addEventListener('click', closeThuChestScreen);
+  renderThuChestBtn();
 
   // ---------- waiting-room chat ----------
   // One shared room for everyone who has the game open. Messages live in
@@ -3412,6 +3768,7 @@
     openChestBtn.classList.remove('is-open');
     resetMissionRun();
     resetScratchRun();
+    petX = LANES[petLane()];
   }
 
   function laneMove(dir){
@@ -3706,7 +4063,9 @@
     for(var j=coins.length-1;j>=0;j--){
       var c = coins[j];
       c.z -= speed*dt;
-      if(!c.collected && c.lane === player.lane && c.z <= COLLIDE_Z + 20 && c.z > -30){
+      // your pet grabs the coins in the lane beside you
+      var inReach = c.lane === player.lane || (petActive() && c.lane === petLane());
+      if(!c.collected && inReach && c.z <= COLLIDE_Z + 20 && c.z > -30){
         c.collected = true;
         coinCount++;
       }
@@ -5096,6 +5455,7 @@
     entities.forEach(function(e){ e.draw(); });
 
     drawFootPuffs();
+    drawPet();
     drawPlayer();
 
     // vignette
@@ -5228,7 +5588,7 @@
   // never while the name field is being typed in. Everything worth keeping
   // (coins, skins, name, league) is in localStorage, so a reload loses nothing.
   // 'dev' = a local or preview copy: the updater stays off entirely.
-  var BUILD_VERSION = '20260930-170947';
+  var BUILD_VERSION = '20260930-172740';
   var UPDATE_CHECK_MS = 60000;
   var UPDATE_TRIED_KEY = 'canyonChaseTriedUpdate';
   var pendingSubmits = 0;
