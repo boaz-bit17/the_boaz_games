@@ -491,6 +491,62 @@
     background:linear-gradient(160deg, rgba(181,140,255,.45), rgba(255,207,107,.45));
   }
 
+  /* ---------- waiting-room chat ---------- */
+  .chat-online{
+    font-size:12px; font-weight:700; color:#0c3c5c;
+    background:rgba(255,255,255,.45);
+    border:1px solid rgba(12,60,92,.25);
+    border-radius:10px;
+    padding:6px 10px;
+    margin-bottom:10px;
+    text-align:right;
+  }
+  .chat-online .dot{ display:inline-block; width:8px; height:8px; border-radius:50%; background:#2fbf5a; margin-left:5px; }
+  .chat-list{
+    height:min(46vh, 340px);
+    overflow-y:auto;
+    background:rgba(255,255,255,.35);
+    border:1px solid rgba(42,21,15,.18);
+    border-radius:12px;
+    padding:8px;
+    display:flex; flex-direction:column; gap:6px;
+    text-align:right;
+    margin-bottom:10px;
+  }
+  .chat-msg{
+    align-self:flex-start;
+    max-width:85%;
+    background:#fff8ea;
+    border:1px solid rgba(42,21,15,.15);
+    border-radius:12px 12px 12px 4px;
+    padding:5px 9px;
+    font-size:13.5px; color:var(--ink);
+    word-wrap:break-word; overflow-wrap:anywhere;
+  }
+  .chat-msg.is-mine{
+    align-self:flex-end;
+    background:linear-gradient(160deg,#ffe0c2,#ffc999);
+    border-radius:12px 12px 4px 12px;
+  }
+  .chat-msg .who{ font-size:11px; font-weight:800; color:var(--ember-dim); margin-left:6px; }
+  .chat-msg .when{ font-size:10px; font-weight:600; color:rgba(42,21,15,.45); margin-right:6px; }
+  .chat-empty{ font-size:13px; font-weight:600; color:var(--ember-dim); text-align:center; margin:auto; }
+  .chat-send{ display:flex; gap:8px; }
+  .chat-send input{
+    flex:1; min-width:0;
+    font-family:'Rubik',sans-serif; font-size:16px; font-weight:600;
+    color:var(--ink); background:rgba(255,255,255,.6);
+    border:1px solid rgba(42,21,15,.3); border-radius:10px;
+    padding:9px 12px;
+  }
+  .chat-send button{
+    font-family:'Suez One',serif; font-size:16px; color:#fff;
+    background:linear-gradient(180deg,var(--ember),var(--ember-dim));
+    border:none; border-radius:10px; padding:0 16px; cursor:pointer;
+  }
+  .chat-send button:disabled{ opacity:.5; cursor:default; }
+  .chat-note{ font-size:11.5px; font-weight:700; color:#b3261e; min-height:14px; margin-top:6px; }
+
   /* ---------- thursday boss ---------- */
   .boss-banner{
     display:block; width:100%;
@@ -797,6 +853,7 @@
         <button class="shop-btn" id="leaderboardBtn" type="button">🏆 שיאים</button>
         <button class="shop-btn" id="leagueBtn" type="button">🏅 ליגות</button>
         <button class="shop-btn" id="missionsBtn" type="button">🎯 משימות</button>
+        <button class="shop-btn" id="chatBtn" type="button" hidden>💬 חדר המתנה</button>
       </div>
       <div class="rules">
         <div class="rule"><span class="glyph">⬅️➡️</span><span class="txt">החלף מסלול</span><span class="key key-desk">חצים</span><span class="key key-touch">החלקה הצידה</span></div>
@@ -910,6 +967,24 @@
       <div class="mission-list" id="missionList"></div>
       <div class="mission-reward">🎁 הפרס: תיבה מיוחדת — ואולי יצא לך ממנה הסקין המוזהב "אגדת הזהב"!</div>
       <button class="back-btn" id="closeMissionsBtn" type="button">חזרה</button>
+    </div>
+  </div>
+
+  <div class="overlay" id="chatOverlay" hidden>
+    <div class="tablet">
+      <h1>💬 חדר המתנה</h1>
+      <p class="tagline">מדברים לפני שיוצאים לגלוש</p>
+      <div class="chat-online" id="chatOnline"></div>
+      <div class="chat-list" id="chatList"></div>
+      <div class="name-row" id="chatNameRow" hidden>
+        <input type="text" id="chatNameInput" maxlength="14" placeholder="קודם כתוב את השם שלך" autocomplete="off">
+      </div>
+      <div class="chat-send">
+        <input type="text" id="chatInput" maxlength="200" placeholder="כתוב הודעה..." autocomplete="off" enterkeyhint="send">
+        <button type="button" id="chatSendBtn">שלח</button>
+      </div>
+      <div class="chat-note" id="chatNote"></div>
+      <button class="back-btn" id="closeChatBtn" type="button">חזרה</button>
     </div>
   </div>
 
@@ -3104,6 +3179,170 @@
   renderBossBtn();
   setInterval(function(){ if(!startOverlay.hidden && !document.hidden) renderBossBtn(); }, 60000);
 
+  // ---------- waiting-room chat ----------
+  // One shared room for everyone who has the game open. Messages live in
+  // the chat_messages table; who's "in the room" comes from chat_pings --
+  // each open chat screen adds a ping every 20s, and anyone who pinged in the
+  // last 45s counts as here. While the screen is open it polls for new
+  // messages every 3s. Free text (the owner chose no filter), 200 characters
+  // max, one message per 2 seconds. Always rendered as text, never HTML.
+  // The owner can delete messages in Supabase (Table Editor -> chat_messages).
+  var CHAT_POLL_MS = 3000, CHAT_PING_MS = 20000, CHAT_ONLINE_MS = 45000;
+  var CHAT_HISTORY = 50, CHAT_MAX_LEN = 200, CHAT_COOLDOWN_MS = 2000;
+  var chatBtn = document.getElementById('chatBtn');
+  var chatOverlay = document.getElementById('chatOverlay');
+  var chatOnline = document.getElementById('chatOnline');
+  var chatList = document.getElementById('chatList');
+  var chatNameRow = document.getElementById('chatNameRow');
+  var chatNameInput = document.getElementById('chatNameInput');
+  var chatInput = document.getElementById('chatInput');
+  var chatSendBtn = document.getElementById('chatSendBtn');
+  var chatNote = document.getElementById('chatNote');
+  var closeChatBtn = document.getElementById('closeChatBtn');
+  var chatLastId = 0, chatPollTimer = null, chatPingTimer = null, chatLastSent = 0, chatSending = false;
+
+  chatBtn.hidden = !isOnlineBoard;
+
+  function chatName(){ return playerName.trim().slice(0, 14); }
+
+  function chatTime(iso){
+    try {
+      return new Intl.DateTimeFormat('he-IL', { timeZone: 'Asia/Jerusalem', hour: '2-digit', minute: '2-digit' }).format(new Date(iso));
+    } catch(e){ return ''; }
+  }
+
+  function addChatMessages(rows){
+    if(!rows || !rows.length) return;
+    var nearBottom = chatList.scrollHeight - chatList.scrollTop - chatList.clientHeight < 60;
+    var empty = chatList.querySelector('.chat-empty');
+    if(empty) empty.remove();
+    var me = chatName();
+    rows.forEach(function(r){
+      if(r.id <= chatLastId) return;
+      chatLastId = r.id;
+      var el = document.createElement('div');
+      el.className = 'chat-msg' + (me && sameName(r.name, me) ? ' is-mine' : '');
+      var who = document.createElement('span'); who.className = 'who'; who.textContent = r.name;
+      var body = document.createElement('span'); body.textContent = r.body;
+      var when = document.createElement('span'); when.className = 'when'; when.textContent = chatTime(r.created_at);
+      el.appendChild(who); el.appendChild(body); el.appendChild(when);
+      chatList.appendChild(el);
+    });
+    // keep the room light: only the latest messages stay on screen
+    while(chatList.children.length > CHAT_HISTORY * 2) chatList.removeChild(chatList.firstChild);
+    if(nearBottom || rows.length === chatList.children.length) chatList.scrollTop = chatList.scrollHeight;
+  }
+
+  function loadChat(){
+    var q = chatLastId
+      ? 'chat_messages?select=id,name,body,created_at&id=gt.' + chatLastId + '&order=id.asc&limit=' + CHAT_HISTORY
+      : 'chat_messages?select=id,name,body,created_at&order=id.desc&limit=' + CHAT_HISTORY;
+    return sbGet(q).then(function(rows){
+      if(!rows){ if(!chatLastId) chatOnline.textContent = 'הצ\'אט עוד לא מוכן. נסה שוב מאוחר יותר.'; return; }
+      if(!chatLastId) rows.reverse();
+      if(!chatLastId && !rows.length && !chatList.children.length){
+        chatList.innerHTML = '<div class="chat-empty">עוד אין הודעות. תהיה הראשון לכתוב! 👋</div>';
+      }
+      addChatMessages(rows);
+    });
+  }
+
+  function pingChat(){
+    var name = chatName();
+    if(!name) return Promise.resolve();
+    return fetch(SUPABASE_URL + '/rest/v1/chat_pings', {
+      method: 'POST', headers: supabaseHeaders(), body: JSON.stringify({ name: name })
+    }).catch(function(){});
+  }
+
+  function loadOnline(){
+    var since = new Date(Date.now() - CHAT_ONLINE_MS).toISOString();
+    return sbGet('chat_pings?select=name&created_at=gte.' + encodeURIComponent(since) + '&order=created_at.desc&limit=200')
+      .then(function(rows){
+        if(!rows) return;
+        var seen = {}, names = [];
+        rows.forEach(function(r){ var k = nameKey(r.name); if(k && !seen[k]){ seen[k] = true; names.push(r.name); } });
+        chatOnline.innerHTML = '';
+        var dot = document.createElement('span'); dot.className = 'dot';
+        chatOnline.appendChild(dot);
+        chatOnline.appendChild(document.createTextNode(names.length
+          ? 'עכשיו בחדר (' + names.length + '): ' + names.join(', ')
+          : 'אין עכשיו אף אחד בחדר'));
+      });
+  }
+
+  function renderChatName(){
+    var need = !chatName();
+    chatNameRow.hidden = !need;
+    chatInput.disabled = need;
+    chatSendBtn.disabled = need || chatSending;
+    if(need) chatNameInput.value = playerName;
+  }
+  chatNameInput.addEventListener('input', function(){
+    playerName = chatNameInput.value.slice(0, 14);
+    playerNameInput.value = playerName;
+    saveName();
+    chatInput.disabled = !chatName();
+    chatSendBtn.disabled = !chatName() || chatSending;
+  });
+  chatNameInput.addEventListener('change', function(){ renderChatName(); pingChat().then(loadOnline); });
+
+  function sendChat(){
+    var name = chatName(), text = chatInput.value.trim().slice(0, CHAT_MAX_LEN);
+    if(!name || !text || chatSending) return;
+    var wait = CHAT_COOLDOWN_MS - (Date.now() - chatLastSent);
+    if(wait > 0){ chatNote.textContent = 'רגע... אפשר לשלוח הודעה כל 2 שניות'; return; }
+    chatSending = true; chatSendBtn.disabled = true; chatNote.textContent = '';
+    fetch(SUPABASE_URL + '/rest/v1/chat_messages', {
+      method: 'POST', headers: supabaseHeaders(), body: JSON.stringify({ name: name, body: text })
+    }).then(function(res){ return res.ok; }).catch(function(){ return false; }).then(function(ok){
+      chatSending = false;
+      renderChatName();
+      if(!ok){ chatNote.textContent = 'ההודעה לא נשלחה. בדוק חיבור ונסה שוב.'; return; }
+      chatLastSent = Date.now();
+      chatInput.value = '';
+      chatInput.focus();
+      loadChat();
+    });
+  }
+  chatSendBtn.addEventListener('click', sendChat);
+  chatInput.addEventListener('keydown', function(e){
+    if(e.key === 'Enter'){ e.preventDefault(); sendChat(); }
+  });
+
+  function stopChatTimers(){
+    clearInterval(chatPollTimer); clearInterval(chatPingTimer);
+    chatPollTimer = chatPingTimer = null;
+  }
+  function startChatTimers(){
+    stopChatTimers();
+    chatPollTimer = setInterval(function(){ loadChat(); loadOnline(); }, CHAT_POLL_MS);
+    chatPingTimer = setInterval(pingChat, CHAT_PING_MS);
+  }
+
+  function openChat(){
+    startOverlay.hidden = true;
+    chatOverlay.hidden = false;
+    chatNote.textContent = '';
+    renderChatName();
+    loadChat().then(function(){ chatList.scrollTop = chatList.scrollHeight; });
+    pingChat().then(loadOnline);
+    startChatTimers();
+  }
+  function closeChat(){
+    stopChatTimers();
+    chatOverlay.hidden = true;
+    startOverlay.hidden = false;
+  }
+  chatBtn.addEventListener('click', openChat);
+  closeChatBtn.addEventListener('click', closeChat);
+  // no polling in the background: pause while the app is hidden
+  document.addEventListener('visibilitychange', function(){
+    if(chatOverlay.hidden) return;
+    if(document.hidden) stopChatTimers();
+    else { loadChat(); pingChat().then(loadOnline); startChatTimers(); }
+  });
+
   // ---------- game state ----------
   var state = 'start'; // start | playing | over
   var player, obstacles, coins, powerups, chests, decor, dustParticles, elapsed, distance, coinCount, speed, spawnTimer, spawnGap, decorTimer, powerupTimer, chestTimer, pendingChestCount, footPuffs;
@@ -4884,6 +5123,9 @@
 
   // ---------- input ----------
   window.addEventListener('keydown', function(e){
+    // typing in a text box (name, chat): the keys belong to the text, not the runner
+    var tag = e.target && e.target.tagName;
+    if(tag === 'INPUT' || tag === 'TEXTAREA') return;
     switch(e.key){
       case 'ArrowLeft': case 'a': case 'A': laneMove(-1); e.preventDefault(); break;
       case 'ArrowRight': case 'd': case 'D': laneMove(1); e.preventDefault(); break;
@@ -4986,7 +5228,7 @@
   // never while the name field is being typed in. Everything worth keeping
   // (coins, skins, name, league) is in localStorage, so a reload loses nothing.
   // 'dev' = a local or preview copy: the updater stays off entirely.
-  var BUILD_VERSION = '20260929-192128';
+  var BUILD_VERSION = '20260930-170947';
   var UPDATE_CHECK_MS = 60000;
   var UPDATE_TRIED_KEY = 'canyonChaseTriedUpdate';
   var pendingSubmits = 0;
@@ -4997,6 +5239,7 @@
     if(state === 'playing' || state === 'revive') return false;
     if(pendingSubmits > 0) return false;
     if(specialOpening) return false;
+    if(!chatOverlay.hidden) return false;       // mid-conversation
     if(!scratchBox.hidden && !scratchRevealed) return false;
     if(!chestOpenBox.hidden && !openChestBtn.disabled) return false;
     if(document.activeElement === playerNameInput) return false;
