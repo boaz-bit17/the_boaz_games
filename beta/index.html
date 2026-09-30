@@ -4199,25 +4199,142 @@
   }
 
   // ---------- drawing ----------
-  function drawSky(){
-    var g = ctx.createLinearGradient(0,0,0,H*HORIZON_Y_FRAC*1.05);
-    g.addColorStop(0, '#241531');
-    g.addColorStop(0.55, '#7a3b52');
-    g.addColorStop(1, '#e8824a');
-    ctx.fillStyle = g;
-    ctx.fillRect(0,0,W,H*HORIZON_Y_FRAC*1.05);
+  // ---------- day & night, by score ----------
+  // A 4,000,000-point cycle (the score shown, repeating): up to 300K the
+  // sunset as it always was; 300K-800K the sun goes down and night falls;
+  // the moon is up by 800K; a meteor crosses at 900K; the moon sinks until
+  // 1.5M; around 1.5M a strong sun comes up into a bright day; from 3.7M it
+  // eases back into the sunset, reached at 4M -- and round again.
+  var SKY_CYCLE = 4000000;
+  var SKY_DUSK  = ['#241531', '#7a3b52', '#e8824a'];
+  var SKY_NIGHT = ['#04050d', '#0c1630', '#1d2a4d'];
+  var SKY_DAY   = ['#2a86d4', '#76c1ee', '#d6f0ff'];
+  var METEOR_AT = 900000, METEOR_SECS = 2.4;
+  var skyLastPhase = 0, meteorT0 = -99;
+  var STARS = [];
+  (function(){ var s = 7; function r(){ s = (s * 16807) % 2147483647; return s / 2147483647; }
+    for(var i = 0; i < 70; i++) STARS.push({ x: r(), y: r() * 0.9, size: 0.6 + r() * 1.4, tw: r() * 6 }); })();
 
-    // sun
-    var sunY = H*HORIZON_Y_FRAC*0.62;
-    var sunR = Math.min(W,H)*0.11;
-    var sg = ctx.createRadialGradient(W/2,sunY,0, W/2,sunY,sunR*2.2);
-    sg.addColorStop(0,'rgba(255,210,122,0.9)');
-    sg.addColorStop(0.5,'rgba(255,170,90,0.35)');
-    sg.addColorStop(1,'rgba(255,170,90,0)');
-    ctx.fillStyle = sg;
-    ctx.beginPath(); ctx.arc(W/2,sunY,sunR*2.2,0,Math.PI*2); ctx.fill();
-    ctx.fillStyle = '#ffd27a';
-    ctx.beginPath(); ctx.arc(W/2,sunY,sunR,0,Math.PI*2); ctx.fill();
+  function smooth01(a, b, x){ var t = Math.max(0, Math.min(1, (x - a) / (b - a))); return t * t * (3 - 2 * t); }
+  function mixHex(a, b, t){
+    var pa = parseInt(a.slice(1), 16), pb = parseInt(b.slice(1), 16);
+    var r = Math.round(((pa >> 16) & 255) + (((pb >> 16) & 255) - ((pa >> 16) & 255)) * t);
+    var g = Math.round(((pa >> 8) & 255) + (((pb >> 8) & 255) - ((pa >> 8) & 255)) * t);
+    var bl = Math.round((pa & 255) + ((pb & 255) - (pa & 255)) * t);
+    return 'rgb(' + r + ',' + g + ',' + bl + ')';
+  }
+  function mixRgbHex(rgb, hex, t){
+    var m = rgb.match(/\d+/g), pb = parseInt(hex.slice(1), 16);
+    var r = Math.round(+m[0] + (((pb >> 16) & 255) - m[0]) * t);
+    var g = Math.round(+m[1] + (((pb >> 8) & 255) - m[1]) * t);
+    var bl = Math.round(+m[2] + ((pb & 255) - m[2]) * t);
+    return 'rgb(' + r + ',' + g + ',' + bl + ')';
+  }
+
+  // where we are in the cycle: sun (0 = sunset as always, 1 = set, -1 = high),
+  // night / day strength 0..1, moon height 0..1
+  function skyState(){
+    var p = ((currentScore() % SKY_CYCLE) + SKY_CYCLE) % SKY_CYCLE, K = 1000;
+    var setting = smooth01(300*K, 800*K, p);
+    var dawn = smooth01(1400*K, 1600*K, p);
+    var dusk = smooth01(3700*K, 4000*K, p);
+    var night = setting * (1 - dawn);
+    var day = dawn * (1 - dusk);
+    var sun = p < 1400*K ? setting : (p < 3700*K ? 1 - 2 * dawn : -1 + dusk);
+    var moon = smooth01(700*K, 800*K, p) * (1 - smooth01(1000*K, 1500*K, p));
+    return { p: p, sun: sun, night: night, day: day, moon: moon };
+  }
+
+  function drawSky(){
+    var sky = skyState();
+    var hY = H*HORIZON_Y_FRAC;
+    if(skyLastPhase < METEOR_AT && sky.p >= METEOR_AT && state === 'playing') meteorT0 = elapsed;
+    skyLastPhase = sky.p;
+
+    var g = ctx.createLinearGradient(0,0,0,hY*1.05);
+    [0, 0.55, 1].forEach(function(stop, i){
+      g.addColorStop(stop, mixRgbHex(mixHex(SKY_DUSK[i], SKY_NIGHT[i], sky.night), SKY_DAY[i], sky.day));
+    });
+    ctx.fillStyle = g;
+    ctx.fillRect(0,0,W,hY*1.05);
+
+    // stars come out with the night
+    if(sky.night > 0.05){
+      STARS.forEach(function(s){
+        ctx.globalAlpha = sky.night * (0.55 + 0.45 * Math.sin(elapsed * 2 + s.tw));
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(s.x * W, s.y * hY * 0.95, s.size, s.size);
+      });
+      ctx.globalAlpha = 1;
+    }
+
+    // the meteor: a bright streak with a fading tail, across the night sky
+    var mt = (elapsed - meteorT0) / METEOR_SECS;
+    if(mt >= 0 && mt <= 1 && state === 'playing'){
+      var mx = W * (0.08 + 0.84 * mt), my = hY * (0.12 + 0.35 * mt);
+      var tail = ctx.createLinearGradient(mx, my, mx - W*0.22, my - hY*0.1);
+      tail.addColorStop(0, 'rgba(255,240,200,0.95)');
+      tail.addColorStop(1, 'rgba(255,160,80,0)');
+      ctx.strokeStyle = tail; ctx.lineWidth = 4; ctx.lineCap = 'round';
+      ctx.beginPath(); ctx.moveTo(mx, my); ctx.lineTo(mx - W*0.22, my - hY*0.1); ctx.stroke();
+      var mg = ctx.createRadialGradient(mx, my, 0, mx, my, 14);
+      mg.addColorStop(0, 'rgba(255,255,230,1)'); mg.addColorStop(1, 'rgba(255,200,120,0)');
+      ctx.fillStyle = mg;
+      ctx.beginPath(); ctx.arc(mx, my, 14, 0, Math.PI*2); ctx.fill();
+    }
+
+    // the moon rises on the right and sinks back behind the horizon
+    if(sky.moon > 0){
+      var moonR = Math.min(W,H)*0.06;
+      var moonX = W*0.74, moonY = hY + moonR - sky.moon * hY * 0.72;
+      var mgl = ctx.createRadialGradient(moonX, moonY, 0, moonX, moonY, moonR*2.6);
+      mgl.addColorStop(0, 'rgba(220,230,255,0.45)'); mgl.addColorStop(1, 'rgba(220,230,255,0)');
+      ctx.fillStyle = mgl;
+      ctx.beginPath(); ctx.arc(moonX, moonY, moonR*2.6, 0, Math.PI*2); ctx.fill();
+      ctx.fillStyle = '#eef1f8';
+      ctx.beginPath(); ctx.arc(moonX, moonY, moonR, 0, Math.PI*2); ctx.fill();
+      ctx.fillStyle = 'rgba(160,170,190,0.45)';                            // craters
+      [[-0.3,-0.2,0.22],[0.25,0.15,0.16],[0.05,0.4,0.12]].forEach(function(c){
+        ctx.beginPath(); ctx.arc(moonX + c[0]*moonR, moonY + c[1]*moonR, c[2]*moonR, 0, Math.PI*2); ctx.fill();
+      });
+    }
+
+    // the sun: sits low as it always did, sinks below the horizon at night,
+    // and climbs high and white-hot for the strong-sun day
+    var baseY = hY*0.62, sunR = Math.min(W,H)*0.11;
+    var sunY = sky.sun >= 0 ? baseY + sky.sun * (hY - baseY + sunR*1.3) : baseY + sky.sun * (baseY - hY*0.22);
+    if(sunY - sunR < hY){
+      var hot = Math.max(0, -sky.sun);
+      var glowR = sunR * (2.2 + hot * 1.2);
+      var sg = ctx.createRadialGradient(W/2,sunY,0, W/2,sunY,glowR);
+      sg.addColorStop(0, hot > 0.5 ? 'rgba(255,250,215,0.95)' : 'rgba(255,210,122,0.9)');
+      sg.addColorStop(0.5, hot > 0.5 ? 'rgba(255,240,170,0.4)' : 'rgba(255,170,90,0.35)');
+      sg.addColorStop(1, 'rgba(255,170,90,0)');
+      ctx.save();
+      ctx.beginPath(); ctx.rect(0, 0, W, hY); ctx.clip();                 // nothing of it below the horizon
+      ctx.fillStyle = sg;
+      ctx.beginPath(); ctx.arc(W/2,sunY,glowR,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle = mixHex('#ffd27a', '#fff8d8', hot);
+      ctx.beginPath(); ctx.arc(W/2,sunY,sunR,0,Math.PI*2); ctx.fill();
+      ctx.restore();
+    }
+  }
+
+  // night dims the whole canyon; the strong sun warms it up a little
+  function drawDaylight(){
+    var sky = skyState();
+    if(sky.night > 0.01){
+      var top = H*HORIZON_Y_FRAC*0.5;
+      var ng = ctx.createLinearGradient(0, top, 0, top + H*0.12);
+      ng.addColorStop(0, 'rgba(6,10,32,0)');
+      ng.addColorStop(1, 'rgba(6,10,32,' + (0.5 * sky.night) + ')');
+      ctx.fillStyle = ng;
+      ctx.fillRect(0, top, W, H - top);
+    }
+    if(sky.day > 0.01){
+      ctx.fillStyle = 'rgba(255,244,210,' + (0.1 * sky.day) + ')';
+      ctx.fillRect(0, 0, W, H);
+    }
   }
 
   function drawCanyon(){
@@ -5440,6 +5557,7 @@
     drawSky();
     drawCanyon();
     drawGround();
+    drawDaylight();
     drawDust();
     if(bossMode && state !== 'start') drawBoss();
 
@@ -5588,7 +5706,7 @@
   // never while the name field is being typed in. Everything worth keeping
   // (coins, skins, name, league) is in localStorage, so a reload loses nothing.
   // 'dev' = a local or preview copy: the updater stays off entirely.
-  var BUILD_VERSION = '20260930-172740';
+  var BUILD_VERSION = '20260930-182254';
   var UPDATE_CHECK_MS = 60000;
   var UPDATE_TRIED_KEY = 'canyonChaseTriedUpdate';
   var pendingSubmits = 0;
