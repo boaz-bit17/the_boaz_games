@@ -1028,7 +1028,7 @@
       <p class="tagline">רק בימי חמישי!</p>
       <div class="boss-rules">
         🏄 גולש ענק רוכב בקצה המסלול ושולח עליך מחסומים.<br>
-        ⚠️ פי 2 מכשולים, ומהירות גבוהה יותר. אין נוצות תעופה.<br>
+        ⚠️ אין נוצות תעופה — אין איפה להתחבא.<br>
         💥 כדי להרוג אותו צריך להגיע ל-<b>1,000,000</b> נקודות בריצה אחת.<br>
         💎 פרס: 4 יהלומים (פעם בכל חמישי), ובניצחון הראשון גם הסקין <b>קוטל הבוס</b> — גולש שרוכב על הגלשן שלו!
       </div>
@@ -3107,15 +3107,17 @@
 
   // ---------- thursday boss ----------
   // Thursdays only (Israel time): a giant surfer rides at the far end of the
-  // track and throws the obstacles at you. Meant to be really hard: twice as
-  // many obstacles, faster, no feathers. Reaching 1,000,000 points in one
+  // track and throws the obstacles at you. Normal speed and obstacles, but no
+  // feathers. Reaching 1,000,000 points in one
   // boss run kills him. Prize: 4 diamonds -- a new currency, for things to
   // come -- once per Thursday, plus the "קוטל הבוס" rider skin on the first win.
   var BOSS_TARGET = 1000000;
   var BOSS_DIAMONDS = 4;
   var BOSS_SKIN_ID = 'bossslayer';
-  var BOSS_SPEED_MULT = 1.25, BOSS_SPEED_MAX = 1100;
-  var BOSS_GAP_MULT = 0.5, BOSS_GAP_MIN = 0.3;          // obstacles twice as often
+  // normal speed and obstacles (the double difficulty was taken out); the boss
+  // is still hard: a million points, and no feathers to hide in
+  var BOSS_SPEED_MULT = 1, BOSS_SPEED_MAX = 900;
+  var BOSS_GAP_MULT = 1, BOSS_GAP_MIN = 0.3;
   var DIAMONDS_KEY = 'canyonChaseDiamonds';
   var BOSS_KEY = 'canyonChaseBossV1';                   // { lastWin: 'YYYY-MM-DD' (Israel date) }
   // the boss himself: a hulking dark rider on a black board
@@ -5706,7 +5708,7 @@
   // never while the name field is being typed in. Everything worth keeping
   // (coins, skins, name, league) is in localStorage, so a reload loses nothing.
   // 'dev' = a local or preview copy: the updater stays off entirely.
-  var BUILD_VERSION = '20260930-182254';
+  var BUILD_VERSION = '20261001-161812';
   var UPDATE_CHECK_MS = 60000;
   var UPDATE_TRIED_KEY = 'canyonChaseTriedUpdate';
   var pendingSubmits = 0;
