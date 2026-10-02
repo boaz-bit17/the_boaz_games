@@ -498,6 +498,43 @@
   .pet-section .mission-sub{ margin:2px 0 8px; }
   .pet-preview{ display:block; width:64px; height:64px; }
 
+  /* ---------- battle pass ---------- */
+  .pass-btn{ background:linear-gradient(135deg,#ffd447,#ff9a3c); border-color:rgba(120,60,0,.4); }
+  .pass-btn.has-claim{ box-shadow:0 0 0 3px rgba(255,90,40,.55); }
+  .pass-progress{ display:flex; align-items:center; gap:10px; margin:0 0 14px; }
+  .pass-tier{
+    flex:none; width:44px; height:44px; border-radius:50%;
+    display:flex; align-items:center; justify-content:center;
+    font-family:'Suez One',serif; font-size:20px; color:#fff;
+    background:linear-gradient(160deg,#ffb347,#e0601a);
+    border:2px solid rgba(80,30,0,.4);
+  }
+  .pass-bar{ flex:1; height:14px; border-radius:7px; background:rgba(42,21,15,.15); overflow:hidden; }
+  .pass-fill{ height:100%; width:0; background:linear-gradient(90deg,#ffd447,#ff7a3d); transition:width .3s; }
+  .pass-xp{ flex:none; font-size:12px; font-weight:800; color:var(--ember-dim); font-variant-numeric: tabular-nums; }
+  .pass-quest .bar{ height:7px; border-radius:4px; background:rgba(42,21,15,.15); overflow:hidden; margin-top:3px; }
+  .pass-quest .bar > div{ height:100%; background:#2fbf5a; }
+  .pass-quest .xp{ flex:none; font-family:'Suez One',serif; font-size:13px; color:var(--ember-dim); }
+  .pass-tiers{ display:flex; flex-direction:column; gap:6px; max-height:300px; overflow-y:auto; margin-bottom:8px; }
+  .pass-row{
+    display:flex; align-items:center; gap:10px;
+    background:rgba(255,255,255,.35); border:1px solid rgba(42,21,15,.18);
+    border-radius:10px; padding:6px 10px; text-align:right;
+  }
+  .pass-row.is-ready{ background:linear-gradient(160deg,#ffe9a8,#ffcf6b); border:2px solid rgba(160,90,0,.5); }
+  .pass-row.is-locked{ opacity:.55; }
+  .pass-row .num{ flex:none; width:26px; font-family:'Suez One',serif; font-size:15px; color:var(--ember-dim); text-align:center; }
+  .pass-row .what{ flex:1; font-size:13px; font-weight:700; color:var(--ink); }
+  .pass-row canvas{ width:40px; height:56px; flex:none; }
+  .pass-row button{
+    flex:none; font-family:'Rubik',sans-serif; font-weight:800; font-size:12px;
+    color:#fff; background:linear-gradient(180deg,var(--ember),var(--ember-dim));
+    border:none; border-radius:8px; padding:6px 12px; cursor:pointer;
+  }
+  .pass-row .state{ flex:none; font-size:13px; font-weight:800; color:var(--ember-dim); }
+  .pass-claim-result{ font-size:16px; margin:2px 0 6px; }
+  .pass-gain{ background:linear-gradient(160deg,#fff1b8,#ffd27a); }
+
   /* ---------- waiting-room chat ---------- */
   .chat-online{
     font-size:12px; font-weight:700; color:#0c3c5c;
@@ -862,6 +899,7 @@
         <button class="shop-btn" id="leagueBtn" type="button">🏅 ליגות</button>
         <button class="shop-btn" id="missionsBtn" type="button">🎯 משימות</button>
         <button class="shop-btn" id="chatBtn" type="button" hidden>💬 חדר המתנה</button>
+        <button class="shop-btn pass-btn" id="passBtn" type="button">🎫 באטל פס</button>
       </div>
       <div class="rules">
         <div class="rule"><span class="glyph">⬅️➡️</span><span class="txt">החלף מסלול</span><span class="key key-desk">חצים</span><span class="key key-touch">החלקה הצידה</span></div>
@@ -919,6 +957,7 @@
       </div>
       <div class="league-banner boss-result" id="bossBanner" hidden></div>
       <div class="league-banner" id="missionBanner" hidden></div>
+      <div class="league-banner pass-gain" id="passBanner" hidden></div>
       <div class="league-banner" id="tourneyRunBanner" hidden></div>
       <button class="go-btn special-btn" id="specialFromOverBtn" type="button" hidden>🎁 פתח את התיבה המיוחדת!</button>
       <div class="earn-row">🪙 נוספו <span id="earnedCoins">0</span> מטבעות לארנק</div>
@@ -980,6 +1019,25 @@
       <div class="mission-list" id="missionList"></div>
       <div class="mission-reward">🎁 הפרס: תיבה מיוחדת — ואולי יצא לך ממנה הסקין המוזהב "אגדת הזהב"!</div>
       <button class="back-btn" id="closeMissionsBtn" type="button">חזרה</button>
+    </div>
+  </div>
+
+  <div class="overlay" id="passOverlay" hidden>
+    <div class="tablet">
+      <h1>🎫 באטל פס</h1>
+      <p class="tagline" id="passSeasonLine"></p>
+      <div class="pass-progress">
+        <div class="pass-tier" id="passTierNum">1</div>
+        <div class="pass-bar"><div class="pass-fill" id="passFill"></div></div>
+        <div class="pass-xp" id="passXp"></div>
+      </div>
+      <div class="mission-title">📅 משימות יומיות</div>
+      <div class="mission-list" id="passQuests"></div>
+      <div class="mission-sub" style="margin:-6px 0 12px">וגם כל ריצה נותנת נקודות פס — ככל שמגיעים רחוק יותר.</div>
+      <div class="mission-title">🏁 30 שלבים</div>
+      <div class="pass-tiers" id="passTiers"></div>
+      <div class="chest-open-result pass-claim-result" id="passClaimResult" hidden></div>
+      <button class="back-btn" id="closePassBtn" type="button">חזרה</button>
     </div>
   </div>
 
@@ -1409,7 +1467,28 @@
       pants:'#1a1a1f', pantsShade:'#0a0a0d', legs:'long',
       shoes:'#ff3c3c', sole:'#1a1a1f', headband:'#ff3c3c',
       rideBoard:'#ffd447', rideStripe:'#ff3c3c', boardGlow:'#ff3c3c',
-      aura:'#ff3c3c', sparkle:'#ffd0c0', splash:'#7fe3ff' }
+      aura:'#ff3c3c', sparkle:'#ffd0c0', splash:'#7fe3ff' },
+    // ---- battle pass: the tier-30 skin, a different one each monthly season
+    { id:'canyondragon', name:'דרקון הקניון', price:0, exclusive:'pass',
+      skinTone:'#5a8a3a', hair:'#1f3d14', hairStyle:'spiky',
+      shirt:'#2f6b2a', shirtShade:'#173a14', sleeves:'long',
+      pattern:'stars', patternColor:'#ffd447',
+      pants:'#173a14', pantsShade:'#0b1f09', legs:'long',
+      shoes:'#ffd447', sole:'#173a14', horns:'#ffd447',
+      wings:'#7fd36a', aura:'#7fd36a', sparkle:'#ffe9a0',
+      cape:'#2f6b2a', capeShade:'#0b1f09', emblem:{shape:'flame', color:'#ffd447'} },
+    { id:'phoenix', name:'עוף החול',         price:0, exclusive:'pass',
+      skinTone:'#e8b58e', hair:'#ff5a14', hairStyle:'spiky',
+      shirt:'#ff7a1a', shirtShade:'#b8320a', sleeves:'long', shine:true,
+      pants:'#8a1a0a', pantsShade:'#4a0a04', legs:'long',
+      shoes:'#ffd447', sole:'#8a1a0a', crown:'#ffd766',
+      wings:'#ffb347', aura:'#ff7a1a', sparkle:'#ffe066' },
+    { id:'astronaut', name:'אסטרונאוט',      price:0, exclusive:'pass',
+      skinTone:'#e8b58e', hair:'#3a2a20', hairStyle:'short',
+      shirt:'#f2f4f8', shirtShade:'#b9c0cc', sleeves:'long',
+      pants:'#e4e8ef', pantsShade:'#aab2c0', legs:'long',
+      shoes:'#5a6270', sole:'#2a2f38', helmet:'#f2f4f8', backpack:'#c9ced6',
+      aura:'#9fc4ff', sparkle:'#ffffff', pattern:'stars', patternColor:'#3a6bd6' }
   ];
   var WALLET_KEY = 'canyonChaseWallet';
   var SKINS_KEY = 'canyonChaseOwnedSkins';
@@ -1955,8 +2034,10 @@
       var owned = ownedSkins.indexOf(skin.id) !== -1;
       // tournament prizes: only this tournament's (and ones you've won) show
       if(skin.exclusive === 'tournament' && !owned && skin.id !== focusPrize) return;
+      // battle-pass skins: only this season's (and ones you've earned)
+      if(skin.exclusive === 'pass' && !owned && skin.id !== passSeason().skinId) return;
       var card = document.createElement('div');
-      card.className = 'skin-card' + (skin.price >= 10000 || skin.exclusive === 'tournament' || skin.exclusive === 'boss' ? ' is-premium' : '');
+      card.className = 'skin-card' + (skin.price >= 10000 || skin.exclusive === 'tournament' || skin.exclusive === 'boss' || skin.exclusive === 'pass' ? ' is-premium' : '');
 
       // mini preview of the actual runner in this outfit, mid-stride
       var preview = document.createElement('canvas');
@@ -1983,6 +2064,7 @@
       if(!owned && skin.exclusive){
         btn.classList.add('is-locked');
         btn.textContent = skin.exclusive === 'tournament' ? '🏆 רק מהטורניר'
+          : skin.exclusive === 'pass' ? '🎫 שלב 30 בבאטל פס'
           : skin.exclusive === 'boss' ? '☠️ רק מניצחון על הבוס' : '🎟️ רק מכרטיס גירוד';
         btn.disabled = true;
       } else if(!owned){
@@ -3703,6 +3785,261 @@
     else { loadChat(); pingChat().then(loadOnline); startChatTimers(); }
   });
 
+  // ---------- battle pass ----------
+  // A free 30-tier pass that starts over every calendar month (Israel time).
+  // Pass points come from 3 daily quests (40 each, new ones every day, the
+  // same for everybody) and from every run (more the farther you get, up to
+  // 20). 150 points per tier. Each tier is claimed by tapping it: coins,
+  // diamonds every 5th tier, special chests (a shop skin, coins or diamonds),
+  // and tier 30 is that season's exclusive skin.
+  var PASS_KEY = 'canyonChasePassV1';
+  var PASS_TIERS = 30, PASS_TIER_XP = 150, PASS_QUEST_XP = 40, PASS_RUN_XP_MAX = 20;
+  var PASS_SKINS = ['canyondragon', 'phoenix', 'astronaut'];
+  var PASS_FIRST = { y: 2026, m: 9 };            // October 2026 is season 1 (months 0-based)
+  var PASS_CHEST_TIERS = [3, 8, 13, 18, 23, 28];
+  var PASS_DIAMOND_TIERS = { 5: 1, 10: 1, 15: 2, 20: 2, 25: 3 };
+  // the daily quest pool: [id, text, counter, targets to pick from]
+  var PASS_QUESTS = [
+    ['coins',  'אסוף {n} מטבעות',              'coin',  [60, 100, 150]],
+    ['jumps',  'קפוץ {n} פעמים',               'jump',  [40, 70, 100]],
+    ['ducks',  'התכופף {n} פעמים',             'duck',  [25, 40, 60]],
+    ['runs',   'שחק {n} ריצות',                'run',   [4, 6, 8]],
+    ['score',  'הגע ל-{n} נקודות בריצה אחת',   'best',  [200000, 400000, 700000]],
+    ['runcoin','אסוף {n} מטבעות בריצה אחת',     'runcoin',[25, 40, 60]]
+  ];
+
+  var pass = { season: '', xp: 0, claimed: [], day: '', quests: [] };
+  try {
+    var savedPass = JSON.parse(localStorage.getItem(PASS_KEY) || 'null');
+    if(savedPass && typeof savedPass.xp === 'number') pass = savedPass;
+  } catch(e){}
+  function savePass(){ try { localStorage.setItem(PASS_KEY, JSON.stringify(pass)); } catch(e){} }
+
+  function passSeason(){
+    var key = israelDay().key;                                // YYYY-MM-DD
+    var y = +key.slice(0, 4), m = +key.slice(5, 7) - 1;
+    var index = (y - PASS_FIRST.y) * 12 + (m - PASS_FIRST.m);
+    var dim = new Date(Date.UTC(y, m + 1, 0)).getUTCDate();
+    return {
+      id: key.slice(0, 7), index: index,
+      skinId: PASS_SKINS[((index % PASS_SKINS.length) + PASS_SKINS.length) % PASS_SKINS.length],
+      daysLeft: dim - (+key.slice(8, 10)) + 1,
+      name: ['ינואר','פברואר','מרץ','אפריל','מאי','יוני','יולי','אוגוסט','ספטמבר','אוקטובר','נובמבר','דצמבר'][m]
+    };
+  }
+
+  // a new season wipes the pass; a new day deals 3 new quests (picked from
+  // the date, so everyone gets the same ones)
+  function passRollover(){
+    var s = passSeason(), day = israelDay().key;
+    if(pass.season !== s.id){ pass = { season: s.id, xp: 0, claimed: [], day: '', quests: [] }; }
+    if(pass.day !== day){
+      var seed = 0;
+      for(var i = 0; i < day.length; i++) seed = (seed * 31 + day.charCodeAt(i)) % 2147483647;
+      function rnd(){ seed = (seed * 16807 + 11) % 2147483647; return seed / 2147483647; }
+      var pool = PASS_QUESTS.slice(), picked = [];
+      while(picked.length < 3){
+        var q = pool.splice(Math.floor(rnd() * pool.length), 1)[0];
+        picked.push({ id: q[0], target: q[3][Math.floor(rnd() * q[3].length)], progress: 0, done: false });
+      }
+      pass.day = day;
+      pass.quests = picked;
+    }
+    savePass();
+  }
+
+  function passTier(){ return Math.min(PASS_TIERS, Math.floor(pass.xp / PASS_TIER_XP)); }
+  function passReady(){                                        // reached but not claimed yet
+    var n = 0, t = passTier();
+    for(var i = 1; i <= t; i++) if(pass.claimed.indexOf(i) === -1) n++;
+    return n;
+  }
+
+  function addPassXp(n, why){
+    if(n <= 0) return;
+    var before = passTier();
+    pass.xp += n;
+    savePass();
+    var after = passTier();
+    if(after > before && state === 'playing') showToast('🎫 עלית לשלב ' + after + ' בבאטל פס!');
+    renderPassBtn();
+  }
+
+  function questDef(id){ for(var i = 0; i < PASS_QUESTS.length; i++) if(PASS_QUESTS[i][0] === id) return PASS_QUESTS[i]; return null; }
+  function questText(q){ var d = questDef(q.id); return d ? d[1].replace('{n}', fmtScore(q.target)) : ''; }
+
+  // game events feed the quests: 'coin', 'jump', 'duck', 'run', and at the
+  // end of a run 'best' (its score) and 'runcoin' (its coins)
+  function passEvent(kind, value){
+    if(!pass.quests || !pass.quests.length) return;
+    pass.quests.forEach(function(q){
+      if(q.done) return;
+      var d = questDef(q.id);
+      if(!d || d[2] !== kind) return;
+      if(kind === 'best' || kind === 'runcoin') q.progress = Math.max(q.progress, value || 0);
+      else q.progress += 1;
+      if(q.progress >= q.target){
+        q.progress = q.target;
+        q.done = true;
+        if(state === 'playing') showToast('✅ משימה יומית: ' + questText(q) + ' · +' + PASS_QUEST_XP);
+        addPassXp(PASS_QUEST_XP);
+      }
+    });
+    savePass();
+  }
+
+  // what each tier gives
+  function tierReward(t){
+    if(t === PASS_TIERS) return { kind: 'skin', label: '🌟 הסקין "' + getSkin(passSeason().skinId).name + '"' };
+    if(PASS_DIAMOND_TIERS[t]) return { kind: 'diamonds', n: PASS_DIAMOND_TIERS[t], label: '💎 ' + PASS_DIAMOND_TIERS[t] + ' יהלומים' };
+    if(PASS_CHEST_TIERS.indexOf(t) !== -1) return { kind: 'chest', label: '🎁 תיבה מיוחדת' };
+    var coins = Math.round((300 + t * 60) / 50) * 50;
+    return { kind: 'coins', n: coins, label: '🪙 ' + fmtScore(coins) + ' מטבעות' };
+  }
+
+  // special chest: 30% a shop skin you don't own, 20% 2 diamonds, 50% 3,000 coins
+  function openPassChest(){
+    var r = Math.random();
+    if(r < 0.3){
+      var left = SKINS.filter(function(s){ return !s.exclusive && s.price > 0 && ownedSkins.indexOf(s.id) === -1; });
+      if(left.length){
+        var s = left[Math.floor(Math.random() * left.length)];
+        ownedSkins.push(s.id); selectedSkinId = s.id;
+        return '🎨 סקין חדש: "' + s.name + '"! הוא כבר עליך';
+      }
+    }
+    if(r < 0.5){ diamonds += 2; saveBoss(); renderDiamonds(); return '💎 +2 יהלומים'; }
+    wallet += 3000;
+    return '🪙 +3,000 מטבעות';
+  }
+
+  function claimTier(t){
+    if(t > passTier() || pass.claimed.indexOf(t) !== -1) return;
+    var rw = tierReward(t), text;
+    if(rw.kind === 'coins'){ wallet += rw.n; text = '🪙 +' + fmtScore(rw.n) + ' מטבעות'; }
+    else if(rw.kind === 'diamonds'){ diamonds += rw.n; saveBoss(); renderDiamonds(); text = '💎 +' + rw.n + ' יהלומים'; }
+    else if(rw.kind === 'chest'){ text = '🎁 ' + openPassChest(); }
+    else {
+      var sid = passSeason().skinId;
+      if(ownedSkins.indexOf(sid) === -1) ownedSkins.push(sid);
+      selectedSkinId = sid;
+      text = '🌟 הסקין "' + getSkin(sid).name + '" שלך! הוא כבר עליך';
+    }
+    pass.claimed.push(t);
+    savePass();
+    saveProgress();
+    updateWalletDisplays();
+    var res = document.getElementById('passClaimResult');
+    res.textContent = 'שלב ' + t + ': ' + text;
+    res.hidden = false;
+    renderPass();
+  }
+
+  var passBtn = document.getElementById('passBtn');
+  var passOverlay = document.getElementById('passOverlay');
+  var passBanner = document.getElementById('passBanner');
+
+  function renderPassBtn(){
+    var ready = passReady();
+    passBtn.textContent = '🎫 באטל פס · שלב ' + passTier() + (ready ? ' · 🎁 ' + ready : '');
+    passBtn.classList.toggle('has-claim', ready > 0);
+  }
+
+  function renderPass(){
+    passRollover();
+    var s = passSeason(), tier = passTier();
+    document.getElementById('passSeasonLine').textContent = 'עונת ' + s.name + ' · נגמרת בעוד ' + s.daysLeft + (s.daysLeft === 1 ? ' יום' : ' ימים');
+    document.getElementById('passTierNum').textContent = tier;
+    var into = tier >= PASS_TIERS ? PASS_TIER_XP : pass.xp - tier * PASS_TIER_XP;
+    document.getElementById('passFill').style.width = (into / PASS_TIER_XP * 100) + '%';
+    document.getElementById('passXp').textContent = tier >= PASS_TIERS ? 'הושלם! 🏆' : into + '/' + PASS_TIER_XP;
+
+    var ql = document.getElementById('passQuests');
+    ql.innerHTML = '';
+    pass.quests.forEach(function(q){
+      var row = document.createElement('div');
+      row.className = 'mission-row pass-quest' + (q.done ? ' is-done' : '');
+      var icon = document.createElement('div'); icon.className = 'mission-icon'; icon.textContent = q.done ? '✅' : '📅';
+      var body = document.createElement('div'); body.className = 'mission-body';
+      var title = document.createElement('div'); title.className = 'mission-title'; title.textContent = questText(q);
+      var bar = document.createElement('div'); bar.className = 'bar';
+      var fill = document.createElement('div'); fill.style.width = Math.min(100, q.progress / q.target * 100) + '%';
+      bar.appendChild(fill);
+      var sub = document.createElement('div'); sub.className = 'mission-sub'; sub.textContent = fmtScore(q.progress) + ' / ' + fmtScore(q.target);
+      body.appendChild(title); body.appendChild(bar); body.appendChild(sub);
+      var xp = document.createElement('div'); xp.className = 'xp'; xp.textContent = '+' + PASS_QUEST_XP;
+      row.appendChild(icon); row.appendChild(body); row.appendChild(xp);
+      ql.appendChild(row);
+    });
+
+    var tl = document.getElementById('passTiers');
+    tl.innerHTML = '';
+    var firstReady = null;
+    for(var t = 1; t <= PASS_TIERS; t++){
+      (function(t){
+        var rw = tierReward(t), claimed = pass.claimed.indexOf(t) !== -1, reached = t <= tier;
+        var row = document.createElement('div');
+        row.className = 'pass-row' + (reached && !claimed ? ' is-ready' : '') + (!reached ? ' is-locked' : '');
+        var num = document.createElement('div'); num.className = 'num'; num.textContent = t;
+        var what = document.createElement('div'); what.className = 'what'; what.textContent = rw.label;
+        row.appendChild(num); row.appendChild(what);
+        if(rw.kind === 'skin'){
+          var cv = document.createElement('canvas'); cv.width = 80; cv.height = 112;
+          var pg = cv.getContext('2d'); pg.setTransform(2,0,0,2,0,0); pg.translate(20, 52); pg.scale(0.36, 0.36);
+          drawRunnerFigure(pg, getSkin(passSeason().skinId), { phase: 1.1, mode: 'run', duck: 0, t: 0 });
+          row.appendChild(cv);
+        }
+        if(claimed){
+          var st = document.createElement('div'); st.className = 'state'; st.textContent = '✓'; row.appendChild(st);
+        } else if(reached){
+          var b = document.createElement('button'); b.type = 'button'; b.textContent = 'קבל';
+          b.addEventListener('click', function(){ claimTier(t); });
+          row.appendChild(b);
+          if(firstReady === null) firstReady = row;
+        } else {
+          var lk = document.createElement('div'); lk.className = 'state'; lk.textContent = '🔒'; row.appendChild(lk);
+        }
+        tl.appendChild(row);
+      })(t);
+    }
+    renderPassBtn();
+    return firstReady;
+  }
+
+  function openPass(){
+    document.getElementById('passClaimResult').hidden = true;
+    var first = renderPass();
+    startOverlay.hidden = true;
+    passOverlay.hidden = false;
+    // jump the list to the next prize waiting to be claimed (or where you are)
+    var tl = document.getElementById('passTiers');
+    var target = first || tl.children[Math.max(0, passTier() - 1)];
+    if(target) tl.scrollTop = target.offsetTop - tl.offsetTop - 8;
+  }
+  function closePass(){
+    passOverlay.hidden = true;
+    startOverlay.hidden = false;
+  }
+  passBtn.addEventListener('click', openPass);
+  document.getElementById('closePassBtn').addEventListener('click', closePass);
+
+  // end of a run: points for the run itself, and the end-of-run quests
+  function passRunEnded(score, runCoins, raw){
+    passRollover();
+    passEvent('run');
+    passEvent('best', score);
+    passEvent('runcoin', runCoins);
+    var runXp = Math.min(PASS_RUN_XP_MAX, Math.max(1, Math.floor(raw / 300)));
+    var tierBefore = passTier();
+    addPassXp(runXp);
+    passBanner.textContent = '🎫 +' + runXp + ' נקודות פס' + (passTier() > tierBefore ? ' · עלית לשלב ' + passTier() + '! 🎁' : '');
+    passBanner.hidden = false;
+  }
+
+  passRollover();
+  renderPassBtn();
+  setInterval(function(){ if(!startOverlay.hidden && !document.hidden){ passRollover(); renderPassBtn(); } }, 60000);
+
   // ---------- game state ----------
   var state = 'start'; // start | playing | over
   var player, obstacles, coins, powerups, chests, decor, dustParticles, elapsed, distance, coinCount, speed, spawnTimer, spawnGap, decorTimer, powerupTimer, chestTimer, pendingChestCount, footPuffs;
@@ -3790,12 +4127,14 @@
     player.vy = JUMP_VEL;
     player.ducking = false;
     player.duckTimer = 0;
+    passEvent('jump');
   }
 
   function duckStart(){
     if(state !== 'playing') return;
     if(player.flying) return;
     if(player.jumping) return;
+    if(!player.ducking) passEvent('duck');   // holding the duck key counts once
     player.ducking = true;
     player.duckTimer = DUCK_TIME;
   }
@@ -3972,6 +4311,7 @@
     }
     showMissionResults();
     showBossResult();
+    passRunEnded(scoreVal, coinCount, rawScore());
     if(scratchFound) showScratchCard();
     hud.hidden = true;
     overOverlay.hidden = false;
@@ -4072,6 +4412,7 @@
       if(!c.collected && inReach && c.z <= COLLIDE_Z + 20 && c.z > -30){
         c.collected = true;
         coinCount++;
+        passEvent('coin');
       }
       if(c.z < -80) coins.splice(j,1);
     }
@@ -5710,7 +6051,7 @@
   // never while the name field is being typed in. Everything worth keeping
   // (coins, skins, name, league) is in localStorage, so a reload loses nothing.
   // 'dev' = a local or preview copy: the updater stays off entirely.
-  var BUILD_VERSION = '20261001-193619';
+  var BUILD_VERSION = '20261002-120246';
   var UPDATE_CHECK_MS = 60000;
   var UPDATE_TRIED_KEY = 'canyonChaseTriedUpdate';
   var pendingSubmits = 0;
