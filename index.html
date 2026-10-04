@@ -4112,6 +4112,7 @@
     openChestBtn.classList.remove('is-open');
     resetMissionRun();
     resetScratchRun();
+    resetWorldRun();
     petX = LANES[petLane()];
   }
 
@@ -4197,6 +4198,12 @@
   }
 
   function spawnWave(){
+    if(portalDue && !bossMode){
+      portalDue = false;
+      var choices = WORLD_IDS.filter(function(w){ return w !== currentWorld; });
+      portals.push({ lane: Math.floor(Math.random()*3), z: ZFAR, dest: choices[Math.floor(Math.random()*choices.length)], used: false });
+      return;
+    }
     var items = letterPatternIfDue() || pickPattern();
     items.forEach(function(it){
       if(it.type === 'letter'){
@@ -4215,7 +4222,7 @@
         var type = it.type;
         if(type === 'rock' && Math.random() < 0.45) type = 'chasm';
         if(type === 'beam' && Math.random() < 0.45) type = 'vines';
-        var ob = { lane: it.lane, type:type, z: ZFAR, resolved:false };
+        var ob = { lane: it.lane, type:type, z: ZFAR, resolved:false, world: currentWorld };
         if(type === 'fire') ob.phase = Math.random() * FIRE_CYCLE;
         if(type === 'cart'){
           // rolls in on one lane, then swerves into a neighbouring one
@@ -4474,6 +4481,7 @@
 
     updateMissions(dt);
     updateScratchCards(dt);
+    updatePortals(dt);
 
     // dust particles for speed feel
     if(Math.random() < 0.5){
@@ -4520,8 +4528,322 @@
     if(player.flying) flyTimeNum.textContent = Math.max(0, Math.ceil(player.flyTimer));
   }
 
+  // ---------- portals & other worlds ----------
+  // Now and then a portal stands in one lane (going through is optional).
+  // Run through it and you're in another world -- ice, space, under the sea
+  // or the jungle, picked at random (never the one you're in) -- until the
+  // next portal, which may take you on or back home to the canyon. Each world
+  // has its own sky, walls, track, roadside decor and its own look for the
+  // obstacles (same moves: jump the low ones, duck the high ones, dodge the
+  // walls). No portals during the Thursday boss fight.
+  var WORLDS = {
+    canyon: { name: 'הקניון', emoji: '🏜️', portal: '#ffb347',
+      floor: ['#4a2c26', '#2f1c18'], band: '#3a2035', wallFar: '#452a26', wallNear: '#5c3226',
+      road: '#caa06a', lane: 'rgba(90,58,30,0.55)', tile: 'rgba(255,244,224,0.28)', dust: 'rgba(240,220,190,0.5)', puff: '#f0dcc0',
+      decor: ['pillar', 'torch', 'cactus'] },
+    ice: { name: 'עולם הקרח', emoji: '❄️', portal: '#7fd3ff',
+      sky: ['#7fb2d9', '#c3def2', '#f1f8ff'],
+      floor: ['#b9d4e6', '#8fb3cc'], band: '#a9c6dc', wallFar: '#9dbbd2', wallNear: '#c9dff0',
+      road: '#eef6fb', lane: 'rgba(90,130,170,0.5)', tile: 'rgba(120,160,200,0.35)', dust: 'rgba(255,255,255,0.85)', puff: '#ffffff',
+      decor: ['crystal', 'pine'] },
+    space: { name: 'החלל', emoji: '🌌', portal: '#b48cff',
+      sky: ['#05040f', '#130b33', '#2a1550'],
+      floor: ['#1b1430', '#0d0a1c'], band: '#241a44', wallFar: '#2b2350', wallNear: '#3d3370',
+      road: '#4a4560', lane: 'rgba(160,140,255,0.6)', tile: 'rgba(180,160,255,0.4)', dust: 'rgba(200,190,255,0.7)', puff: '#c8c0ff',
+      decor: ['antenna', 'spacecrystal'] },
+    sea: { name: 'מתחת לים', emoji: '🌊', portal: '#3fe0d0',
+      sky: ['#02243b', '#0a5a85', '#1a86b0'],
+      floor: ['#0e5a6e', '#083e4d'], band: '#0b4a60', wallFar: '#0f5d70', wallNear: '#167a8c',
+      road: '#d9c48f', lane: 'rgba(40,90,110,0.45)', tile: 'rgba(255,255,255,0.25)', dust: 'rgba(210,245,255,0.7)', puff: '#d9f4ff',
+      decor: ['seaweed', 'coralfan'] },
+    jungle: { name: 'הג׳ונגל', emoji: '🌴', portal: '#5fe07a',
+      sky: ['#4f9e5d', '#a6d98a', '#e6f5c8'],
+      floor: ['#2f5a26', '#1e3d18'], band: '#2a5a2a', wallFar: '#2e6a2c', wallNear: '#3f8a3a',
+      road: '#8a6a3f', lane: 'rgba(50,35,15,0.55)', tile: 'rgba(255,240,200,0.25)', dust: 'rgba(200,230,160,0.6)', puff: '#c9b48a',
+      decor: ['palm', 'bush'] }
+  };
+  var WORLD_IDS = ['canyon', 'ice', 'space', 'sea', 'jungle'];
+  var PORTAL_CLEAR_SECS = 1;               // obstacle-free time right after going through
+  var currentWorld = 'canyon', portals = [], portalTimer = 0, worldFlash = 0, portalDue = false;
+  function world(){ return WORLDS[currentWorld]; }
+
+  function resetWorldRun(){
+    currentWorld = 'canyon';
+    portals = [];
+    portalTimer = 30 + Math.random()*10;
+    worldFlash = 0;
+    portalDue = false;
+  }
+
+  function updatePortals(dt){
+    if(worldFlash > 0) worldFlash -= dt;
+    if(!bossMode){
+      portalTimer -= dt;
+      if(portalTimer <= 0 && !portals.length && !portalDue){
+        portalDue = true;                // the next spawn wave becomes the portal
+        portalTimer = 45 + Math.random()*15;
+      }
+    }
+    for(var i = portals.length - 1; i >= 0; i--){
+      var pt = portals[i];
+      pt.z -= speed*dt;
+      if(!pt.used && pt.lane === player.lane && pt.z <= COLLIDE_Z + 10 && pt.z > -30){
+        pt.used = true;
+        currentWorld = pt.dest;
+        worldFlash = 0.6;
+        decor = [];                     // the new world's roadside starts fresh
+        // a breather: nothing that would reach you within the next second
+        var clearUntil = COLLIDE_Z + speed * PORTAL_CLEAR_SECS;
+        obstacles = obstacles.filter(function(o){ return o.z > clearUntil; });
+        showToast('🌀 ' + world().emoji + ' עברת ל' + world().name + '!');
+      }
+      if(pt.z < -80) portals.splice(i, 1);
+    }
+  }
+
+  // a swirling ring standing in its lane, in the colors of where it leads
+  function drawPortal(pt){
+    var p = project(LANES[pt.lane], pt.z, 0);
+    if(p.scale <= 0.02) return;
+    var s = p.sp, col = WORLDS[pt.dest].portal;
+    var cx = p.x, cy = p.y - 62*s, rx = 34*s, ry = 60*s;
+    var glow = ctx.createRadialGradient(cx, cy, 0, cx, cy, ry*1.5);
+    glow.addColorStop(0, hexA(col, 0.55)); glow.addColorStop(1, hexA(col, 0));
+    ctx.fillStyle = glow;
+    ctx.beginPath(); ctx.ellipse(cx, cy, rx*1.5, ry*1.4, 0, 0, Math.PI*2); ctx.fill();
+    // swirl inside
+    for(var k = 0; k < 4; k++){
+      ctx.strokeStyle = hexA(k % 2 ? '#ffffff' : col, 0.55);
+      ctx.lineWidth = Math.max(1, 3*s);
+      ctx.beginPath();
+      ctx.ellipse(cx, cy, rx*(0.25 + k*0.18), ry*(0.25 + k*0.18), elapsed*(k % 2 ? 2 : -2.6) + k, 0.3, Math.PI*1.4);
+      ctx.stroke();
+    }
+    ctx.strokeStyle = col; ctx.lineWidth = Math.max(2, 7*s);                // the ring
+    ctx.beginPath(); ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI*2); ctx.stroke();
+    ctx.strokeStyle = 'rgba(255,255,255,0.7)'; ctx.lineWidth = Math.max(1, 2*s);
+    ctx.beginPath(); ctx.ellipse(cx, cy, rx - 3*s, ry - 3*s, 0, 0, Math.PI*2); ctx.stroke();
+    ctx.font = Math.max(8, Math.round(26*s)) + 'px sans-serif';           // where it goes
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(WORLDS[pt.dest].emoji, cx, cy - ry - 18*s);
+  }
+
+  // the sky of the other worlds (the canyon keeps its day/night cycle)
+  function drawWorldSky(){
+    var w = world(), hY = H*HORIZON_Y_FRAC;
+    var g = ctx.createLinearGradient(0, 0, 0, hY*1.05);
+    g.addColorStop(0, w.sky[0]); g.addColorStop(0.55, w.sky[1]); g.addColorStop(1, w.sky[2]);
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, W, hY*1.05);
+    if(currentWorld === 'space'){
+      STARS.forEach(function(st){
+        ctx.globalAlpha = 0.6 + 0.4*Math.sin(elapsed*2 + st.tw);
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(st.x*W, st.y*hY, st.size, st.size);
+      });
+      ctx.globalAlpha = 1;
+      var pr = Math.min(W, H)*0.09, px = W*0.72, py = hY*0.38;           // a ringed planet
+      var pg = ctx.createRadialGradient(px - pr*0.3, py - pr*0.3, pr*0.1, px, py, pr);
+      pg.addColorStop(0, '#ffb3e6'); pg.addColorStop(1, '#7a3fb0');
+      ctx.fillStyle = pg; ctx.beginPath(); ctx.arc(px, py, pr, 0, Math.PI*2); ctx.fill();
+      ctx.strokeStyle = 'rgba(255,220,250,0.7)'; ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.ellipse(px, py, pr*1.7, pr*0.4, -0.3, 0, Math.PI*2); ctx.stroke();
+    } else if(currentWorld === 'sea'){
+      for(var r = 0; r < 5; r++){                                          // sun rays from above
+        ctx.fillStyle = 'rgba(200,240,255,0.08)';
+        var rx0 = W*(0.15 + r*0.18) + Math.sin(elapsed*0.6 + r)*20;
+        ctx.beginPath(); ctx.moveTo(rx0, 0); ctx.lineTo(rx0 + 40, 0); ctx.lineTo(rx0 + 120, hY); ctx.lineTo(rx0 + 60, hY); ctx.closePath(); ctx.fill();
+      }
+      for(var b = 0; b < 18; b++){                                         // bubbles rising
+        var bx = ((b*137) % 100)/100 * W, by = hY - ((elapsed*30 + b*53) % hY);
+        ctx.strokeStyle = 'rgba(220,250,255,0.6)'; ctx.lineWidth = 1.2;
+        ctx.beginPath(); ctx.arc(bx + Math.sin(elapsed*2 + b)*6, by, 2 + (b % 3), 0, Math.PI*2); ctx.stroke();
+      }
+    } else if(currentWorld === 'ice'){
+      ctx.fillStyle = 'rgba(255,255,255,0.85)';                            // falling snow
+      for(var f = 0; f < 40; f++){
+        var fx = (((f*97) % 100)/100 * W + Math.sin(elapsed + f)*15) % W;
+        var fy = (elapsed*40 + f*31) % (hY*1.05);
+        ctx.beginPath(); ctx.arc(fx, fy, 1.5 + (f % 3)*0.6, 0, Math.PI*2); ctx.fill();
+      }
+      var sr = Math.min(W, H)*0.07;                                         // pale winter sun
+      ctx.fillStyle = 'rgba(255,255,240,0.85)';
+      ctx.beginPath(); ctx.arc(W*0.3, hY*0.35, sr, 0, Math.PI*2); ctx.fill();
+    } else if(currentWorld === 'jungle'){
+      var jr = Math.min(W, H)*0.08;
+      var jg = ctx.createRadialGradient(W*0.65, hY*0.3, 0, W*0.65, hY*0.3, jr*2.5);
+      jg.addColorStop(0, 'rgba(255,250,200,0.9)'); jg.addColorStop(1, 'rgba(255,250,200,0)');
+      ctx.fillStyle = jg; ctx.beginPath(); ctx.arc(W*0.65, hY*0.3, jr*2.5, 0, Math.PI*2); ctx.fill();
+      ctx.fillStyle = '#fff6c8'; ctx.beginPath(); ctx.arc(W*0.65, hY*0.3, jr, 0, Math.PI*2); ctx.fill();
+    }
+  }
+
+  // roadside decor of the other worlds
+  function drawWorldDecor(dcr, p, s){
+    var t = dcr.type;
+    if(t === 'crystal' || t === 'spacecrystal'){
+      var cw = 26*s, ch = 110*s, col = t === 'crystal' ? '#bfe9ff' : '#b48cff';
+      var cg = ctx.createLinearGradient(p.x - cw, p.y - ch, p.x + cw, p.y);
+      cg.addColorStop(0, '#ffffff'); cg.addColorStop(1, col);
+      ctx.fillStyle = cg; ctx.globalAlpha = 0.85;
+      ctx.beginPath(); ctx.moveTo(p.x - cw/2, p.y); ctx.lineTo(p.x - cw*0.2, p.y - ch); ctx.lineTo(p.x + cw*0.15, p.y - ch*0.92); ctx.lineTo(p.x + cw/2, p.y); ctx.closePath(); ctx.fill();
+      ctx.beginPath(); ctx.moveTo(p.x + cw*0.3, p.y); ctx.lineTo(p.x + cw*0.7, p.y - ch*0.55); ctx.lineTo(p.x + cw, p.y); ctx.closePath(); ctx.fill();
+      ctx.globalAlpha = 1;
+    } else if(t === 'pine'){
+      ctx.fillStyle = '#5a3a24'; ctx.fillRect(p.x - 4*s, p.y - 20*s, 8*s, 20*s);
+      for(var k = 0; k < 3; k++){
+        var yb = p.y - 18*s - k*28*s, half = (40 - k*10)*s;
+        ctx.fillStyle = '#2f6a4a';
+        ctx.beginPath(); ctx.moveTo(p.x - half, yb); ctx.lineTo(p.x, yb - 40*s); ctx.lineTo(p.x + half, yb); ctx.closePath(); ctx.fill();
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath(); ctx.moveTo(p.x - half*0.5, yb - 20*s); ctx.lineTo(p.x, yb - 40*s); ctx.lineTo(p.x + half*0.5, yb - 20*s); ctx.closePath(); ctx.fill();
+      }
+    } else if(t === 'antenna'){
+      ctx.fillStyle = '#6b6488'; ctx.fillRect(p.x - 3*s, p.y - 110*s, 6*s, 110*s);
+      ctx.strokeStyle = '#8f88b0'; ctx.lineWidth = Math.max(1, 2*s);
+      ctx.beginPath(); ctx.ellipse(p.x, p.y - 110*s, 18*s, 7*s, 0, Math.PI, Math.PI*2); ctx.stroke();
+      var on = Math.sin(elapsed*5 + dcr.flicker) > 0;
+      ctx.fillStyle = on ? '#ff4a6a' : '#5a2030';
+      ctx.beginPath(); ctx.arc(p.x, p.y - 118*s, 5*s, 0, Math.PI*2); ctx.fill();
+    } else if(t === 'seaweed'){
+      ctx.strokeStyle = '#2f8a4a'; ctx.lineWidth = Math.max(1, 6*s); ctx.lineCap = 'round';
+      for(var w2 = -1; w2 <= 1; w2++){
+        ctx.beginPath(); ctx.moveTo(p.x + w2*8*s, p.y);
+        for(var y2 = 1; y2 <= 6; y2++) ctx.lineTo(p.x + w2*8*s + Math.sin(elapsed*2 + y2 + w2)*8*s, p.y - y2*18*s);
+        ctx.stroke();
+      }
+    } else if(t === 'coralfan'){
+      ctx.strokeStyle = '#ff7a9a'; ctx.lineWidth = Math.max(1, 4*s); ctx.lineCap = 'round';
+      [-0.6, -0.2, 0.2, 0.6].forEach(function(a){
+        ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(p.x + Math.sin(a)*60*s, p.y - Math.cos(a)*70*s); ctx.stroke();
+      });
+    } else if(t === 'palm'){
+      ctx.strokeStyle = '#7a5a34'; ctx.lineWidth = Math.max(2, 9*s); ctx.lineCap = 'round';
+      ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.quadraticCurveTo(p.x + 14*s, p.y - 70*s, p.x + 6*s, p.y - 130*s); ctx.stroke();
+      ctx.strokeStyle = '#3f9a3a'; ctx.lineWidth = Math.max(2, 7*s);
+      [-2.6, -1.9, -1.2, -0.5, 0.2].forEach(function(a){
+        ctx.beginPath(); ctx.moveTo(p.x + 6*s, p.y - 130*s);
+        ctx.quadraticCurveTo(p.x + 6*s + Math.cos(a)*40*s, p.y - 150*s + Math.sin(a)*10*s, p.x + 6*s + Math.cos(a)*70*s, p.y - 112*s);
+        ctx.stroke();
+      });
+    } else if(t === 'bush'){
+      ctx.fillStyle = '#2f7a2c';
+      [[-18, -16, 20], [0, -24, 24], [18, -16, 20]].forEach(function(c){
+        ctx.beginPath(); ctx.arc(p.x + c[0]*s, p.y + c[1]*s, c[2]*s, 0, Math.PI*2); ctx.fill();
+      });
+      ctx.fillStyle = '#ff5a8a';
+      ctx.beginPath(); ctx.arc(p.x - 8*s, p.y - 30*s, 4*s, 0, Math.PI*2); ctx.fill();
+    }
+  }
+
+  // each world's own look for the obstacles; the moves stay the same:
+  // jump the low ones (rock/chasm), duck the high ones (beam/vines), dodge
+  // the walls (barrier)
+  function drawWorldObstacle(ob, p, s){
+    var w = ob.world, kind = (ob.type === 'rock' || ob.type === 'chasm') ? 'low' : (ob.type === 'barrier' ? 'wall' : 'high');
+    if(w === 'ice'){
+      if(kind === 'low'){
+        var bw = 70*s, bh = 52*s;
+        var ig = ctx.createLinearGradient(p.x, p.y - bh, p.x, p.y);
+        ig.addColorStop(0, '#f2fbff'); ig.addColorStop(1, '#8fc8ea');
+        ctx.fillStyle = ig; ctx.fillRect(p.x - bw/2, p.y - bh, bw, bh);
+        ctx.strokeStyle = 'rgba(60,110,160,0.5)'; ctx.lineWidth = Math.max(1, 2*s); ctx.strokeRect(p.x - bw/2, p.y - bh, bw, bh);
+        ctx.strokeStyle = 'rgba(255,255,255,0.8)'; ctx.beginPath(); ctx.moveTo(p.x - bw*0.3, p.y - bh*0.8); ctx.lineTo(p.x - bw*0.1, p.y - bh*0.3); ctx.stroke();
+      } else if(kind === 'high'){
+        var iw = 108*s, iy = p.y - 112*s;
+        ctx.fillStyle = '#cfeaff'; ctx.fillRect(p.x - iw/2, iy, iw, 12*s);
+        ctx.fillStyle = '#e8f6ff';
+        for(var k = 0; k < 7; k++){
+          var ix = p.x - iw/2 + 8*s + k*(iw - 16*s)/6, len = (18 + (k % 3)*7)*s;
+          ctx.beginPath(); ctx.moveTo(ix - 5*s, iy + 12*s); ctx.lineTo(ix, iy + 12*s + len); ctx.lineTo(ix + 5*s, iy + 12*s); ctx.closePath(); ctx.fill();
+        }
+        ctx.fillStyle = '#9dbbd2'; ctx.fillRect(p.x - iw/2, iy, 6*s, p.y - iy); ctx.fillRect(p.x + iw/2 - 6*s, iy, 6*s, p.y - iy);
+      } else {
+        ctx.fillStyle = '#ffffff';                                           // snowman
+        [[0, -22, 24], [0, -60, 18], [0, -90, 13]].forEach(function(c){ ctx.beginPath(); ctx.arc(p.x + c[0]*s, p.y + c[1]*s, c[2]*s, 0, Math.PI*2); ctx.fill(); });
+        ctx.strokeStyle = 'rgba(90,120,150,0.4)'; ctx.lineWidth = Math.max(1, 1.5*s);
+        [[0, -22, 24], [0, -60, 18], [0, -90, 13]].forEach(function(c){ ctx.beginPath(); ctx.arc(p.x + c[0]*s, p.y + c[1]*s, c[2]*s, 0, Math.PI*2); ctx.stroke(); });
+        ctx.fillStyle = '#2a2a2a'; ctx.fillRect(p.x - 12*s, p.y - 108*s, 24*s, 6*s); ctx.fillRect(p.x - 8*s, p.y - 124*s, 16*s, 16*s);
+        ctx.fillStyle = '#d83a2e'; ctx.fillRect(p.x - 16*s, p.y - 80*s, 32*s, 5*s);
+      }
+    } else if(w === 'space'){
+      if(kind === 'low'){
+        var mr = 30*s;
+        var mg = ctx.createRadialGradient(p.x - mr*0.3, p.y - mr - mr*0.3, mr*0.1, p.x, p.y - mr, mr);
+        mg.addColorStop(0, '#8a7aa8'); mg.addColorStop(1, '#3a2f55');
+        ctx.fillStyle = mg; ctx.beginPath(); ctx.arc(p.x, p.y - mr, mr, 0, Math.PI*2); ctx.fill();
+        ctx.fillStyle = 'rgba(20,10,40,0.45)';
+        [[-0.3, -0.2, 0.25], [0.3, 0.1, 0.18], [0, 0.45, 0.14]].forEach(function(c){ ctx.beginPath(); ctx.arc(p.x + c[0]*mr, p.y - mr + c[1]*mr, c[2]*mr, 0, Math.PI*2); ctx.fill(); });
+        var gl = ctx.createRadialGradient(p.x, p.y - mr, mr, p.x, p.y - mr, mr*1.5);
+        gl.addColorStop(0, 'rgba(180,140,255,0.35)'); gl.addColorStop(1, 'rgba(180,140,255,0)');
+        ctx.fillStyle = gl; ctx.beginPath(); ctx.arc(p.x, p.y - mr, mr*1.5, 0, Math.PI*2); ctx.fill();
+      } else if(kind === 'high'){
+        var lw = 108*s, ly = p.y - 100*s;                                    // laser between two posts
+        ctx.fillStyle = '#5a5478'; ctx.fillRect(p.x - lw/2, ly - 6*s, 8*s, p.y - ly + 6*s); ctx.fillRect(p.x + lw/2 - 8*s, ly - 6*s, 8*s, p.y - ly + 6*s);
+        var pulse = 0.7 + Math.sin(elapsed*20)*0.3;
+        ctx.strokeStyle = 'rgba(255,60,90,' + pulse + ')'; ctx.lineWidth = Math.max(2, 6*s);
+        ctx.beginPath(); ctx.moveTo(p.x - lw/2 + 8*s, ly); ctx.lineTo(p.x + lw/2 - 8*s, ly); ctx.stroke();
+        ctx.strokeStyle = 'rgba(255,220,230,0.9)'; ctx.lineWidth = Math.max(1, 2*s); ctx.stroke();
+      } else {
+        var rw = 54*s, rh = 110*s;                                           // robot
+        ctx.fillStyle = '#8a90a8'; ctx.fillRect(p.x - rw/2, p.y - rh, rw, rh*0.75);
+        ctx.fillStyle = '#5a6078'; ctx.fillRect(p.x - rw*0.4, p.y - rh*0.25, rw*0.25, rh*0.25); ctx.fillRect(p.x + rw*0.15, p.y - rh*0.25, rw*0.25, rh*0.25);
+        ctx.fillStyle = '#8a90a8'; ctx.fillRect(p.x - rw*0.3, p.y - rh - 26*s, rw*0.6, 26*s);
+        ctx.fillStyle = '#ff4a6a'; ctx.fillRect(p.x - rw*0.2, p.y - rh - 18*s, rw*0.4, 6*s);
+        ctx.strokeStyle = '#c8cce0'; ctx.lineWidth = Math.max(1, 2*s); ctx.beginPath(); ctx.moveTo(p.x, p.y - rh - 26*s); ctx.lineTo(p.x, p.y - rh - 38*s); ctx.stroke();
+      }
+    } else if(w === 'sea'){
+      if(kind === 'low'){
+        ctx.strokeStyle = '#ff6f91'; ctx.lineWidth = Math.max(2, 9*s); ctx.lineCap = 'round';  // coral
+        [[-24, -30], [-10, -48], [6, -40], [20, -52], [30, -28]].forEach(function(c){
+          ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.quadraticCurveTo(p.x + c[0]*0.4*s, p.y + c[1]*0.5*s, p.x + c[0]*s, p.y + c[1]*s); ctx.stroke();
+        });
+      } else if(kind === 'high'){
+        var jy = p.y - 112*s + Math.sin(elapsed*3 + ob.z*0.01)*4*s;          // jellyfish at head height
+        ctx.fillStyle = 'rgba(255,150,230,0.85)';
+        ctx.beginPath(); ctx.ellipse(p.x, jy, 34*s, 20*s, 0, Math.PI, Math.PI*2); ctx.fill();
+        ctx.strokeStyle = 'rgba(255,170,235,0.8)'; ctx.lineWidth = Math.max(1, 2.5*s);
+        for(var tn = -3; tn <= 3; tn++){
+          ctx.beginPath(); ctx.moveTo(p.x + tn*9*s, jy);
+          ctx.quadraticCurveTo(p.x + tn*9*s + Math.sin(elapsed*4 + tn)*6*s, jy + 14*s, p.x + tn*9*s, jy + 26*s); ctx.stroke();
+        }
+      } else {
+        var sx2 = p.x, sy2 = p.y - 60*s;                                     // shark, swimming across
+        ctx.fillStyle = '#6f8fa8';
+        ctx.beginPath(); ctx.ellipse(sx2, sy2, 46*s, 22*s, 0, 0, Math.PI*2); ctx.fill();
+        ctx.beginPath(); ctx.moveTo(sx2 - 6*s, sy2 - 18*s); ctx.lineTo(sx2 + 6*s, sy2 - 46*s); ctx.lineTo(sx2 + 16*s, sy2 - 16*s); ctx.closePath(); ctx.fill();
+        ctx.beginPath(); ctx.moveTo(sx2 - 44*s, sy2); ctx.lineTo(sx2 - 64*s, sy2 - 18*s); ctx.lineTo(sx2 - 60*s, sy2 + 16*s); ctx.closePath(); ctx.fill();
+        ctx.fillStyle = '#e8f0f6'; ctx.beginPath(); ctx.ellipse(sx2 + 6*s, sy2 + 8*s, 32*s, 10*s, 0, 0, Math.PI); ctx.fill();
+        ctx.fillStyle = '#111'; ctx.beginPath(); ctx.arc(sx2 + 30*s, sy2 - 4*s, 3*s, 0, Math.PI*2); ctx.fill();
+      }
+    } else if(w === 'jungle'){
+      if(kind === 'low'){
+        var lg2 = ctx.createLinearGradient(p.x, p.y - 34*s, p.x, p.y);        // fallen log
+        lg2.addColorStop(0, '#9a6a3a'); lg2.addColorStop(1, '#5a3a1e');
+        ctx.fillStyle = lg2; ctx.fillRect(p.x - 46*s, p.y - 34*s, 92*s, 34*s);
+        ctx.fillStyle = '#c9a070'; ctx.beginPath(); ctx.ellipse(p.x + 46*s, p.y - 17*s, 9*s, 17*s, 0, 0, Math.PI*2); ctx.fill();
+        ctx.strokeStyle = '#8a6a40'; ctx.lineWidth = Math.max(1, 1.5*s); ctx.beginPath(); ctx.ellipse(p.x + 46*s, p.y - 17*s, 5*s, 10*s, 0, 0, Math.PI*2); ctx.stroke();
+      } else if(kind === 'high'){
+        var by2 = p.y - 104*s;                                               // low branch with leaves
+        ctx.strokeStyle = '#6a4a28'; ctx.lineWidth = Math.max(2, 12*s);
+        ctx.beginPath(); ctx.moveTo(p.x - 60*s, by2 - 6*s); ctx.quadraticCurveTo(p.x, by2 + 8*s, p.x + 60*s, by2 - 4*s); ctx.stroke();
+        ctx.fillStyle = '#3f9a3a';
+        for(var lf = -2; lf <= 2; lf++){ ctx.beginPath(); ctx.ellipse(p.x + lf*22*s, by2 + 10*s, 10*s, 6*s, lf*0.4, 0, Math.PI*2); ctx.fill(); }
+      } else {
+        var tw2 = 50*s, th = 120*s;                                           // stone totem
+        ctx.fillStyle = '#7a7a6a'; ctx.fillRect(p.x - tw2/2, p.y - th, tw2, th);
+        ctx.fillStyle = '#4a4a3a';
+        for(var face = 0; face < 3; face++){
+          var fy2 = p.y - th + 10*s + face*38*s;
+          ctx.fillRect(p.x - 14*s, fy2, 8*s, 8*s); ctx.fillRect(p.x + 6*s, fy2, 8*s, 8*s); ctx.fillRect(p.x - 10*s, fy2 + 16*s, 20*s, 5*s);
+        }
+        ctx.fillStyle = '#3f9a3a'; ctx.fillRect(p.x - tw2/2 - 4*s, p.y - th - 6*s, tw2 + 8*s, 8*s);
+      }
+    }
+  }
+
   function spawnDecor(){
-    var types = ['pillar','torch','cactus'];
+    var types = world().decor;
     [-1,1].forEach(function(side){
       decor.push({
         side: side,
@@ -4594,6 +4916,7 @@
   }
 
   function drawSky(){
+    if(currentWorld !== 'canyon'){ drawWorldSky(); return; }
     var sky = skyState();
     var hY = H*HORIZON_Y_FRAC;
     if(skyLastPhase < METEOR_AT && sky.p >= METEOR_AT && state === 'playing') meteorT0 = elapsed;
@@ -4670,6 +4993,7 @@
 
   // night dims the whole canyon; the strong sun warms it up a little
   function drawDaylight(){
+    if(currentWorld !== 'canyon') return;
     var sky = skyState();
     if(sky.night > 0.01){
       var top = H*HORIZON_Y_FRAC*0.5;
@@ -4693,13 +5017,13 @@
     // cliff polygons and the road no longer meet, and without this base fill
     // the gaps between them showed through as unpainted wedges
     var floor = ctx.createLinearGradient(0, horizonY, 0, H);
-    floor.addColorStop(0, '#4a2c26');
-    floor.addColorStop(1, '#2f1c18');
+    floor.addColorStop(0, world().floor[0]);
+    floor.addColorStop(1, world().floor[1]);
     ctx.fillStyle = floor;
     ctx.fillRect(0, horizonY, W, H-horizonY);
 
     // far silhouette band
-    ctx.fillStyle = '#3a2035';
+    ctx.fillStyle = world().band;
     ctx.beginPath();
     ctx.moveTo(0, horizonY);
     for(var i=0;i<=10;i++){
@@ -4710,8 +5034,8 @@
     ctx.lineTo(W, horizonY); ctx.closePath(); ctx.fill();
 
     // canyon walls converging to horizon (fake 3D side cliffs)
-    var wallColorNear = '#5c3226';
-    var wallColorFar = '#452a26';
+    var wallColorNear = world().wallNear;
+    var wallColorFar = world().wallFar;
     // left wall
     var lg = ctx.createLinearGradient(0,horizonY,W*0.30,groundY);
     lg.addColorStop(0, wallColorFar);
@@ -4762,7 +5086,7 @@
     var widthSlope = (botHalfW-topHalfW)/(groundY-horizonY);
     var edgeHalfW = botHalfW + widthSlope*(H-groundY);
 
-    ctx.fillStyle = '#caa06a';
+    ctx.fillStyle = world().road;
     ctx.beginPath();
     ctx.moveTo(W/2-topHalfW, horizonY);
     ctx.lineTo(W/2+topHalfW, horizonY);
@@ -4771,7 +5095,7 @@
     ctx.closePath(); ctx.fill();
 
     // lane divider lines with scrolling tile marks
-    ctx.strokeStyle = 'rgba(90,58,30,0.55)';
+    ctx.strokeStyle = world().lane;
     ctx.lineWidth = 2;
     [-1,1].forEach(function(side){
       var topX = W/2 + side*LANE_GAP*0.5*(FOCAL/(FOCAL+ZFAR));
@@ -4784,7 +5108,7 @@
 
     // scrolling tile marks along center + edges for speed feel
     var offset = (distance*0.14) % 60;
-    ctx.strokeStyle = 'rgba(255,244,224,0.28)';
+    ctx.strokeStyle = world().tile;
     ctx.lineWidth = 3;
     for(var i=-2;i<14;i++){
       var z = i*70 - offset*4;
@@ -4802,7 +5126,7 @@
   }
 
   function drawDust(){
-    ctx.fillStyle = 'rgba(240,220,190,0.5)';
+    ctx.fillStyle = world().dust;
     dustParticles.forEach(function(d){
       var p = project(d.x*LANE_GAP*3.2, d.z, 0);
       var r = 2.2*p.sp;
@@ -4946,6 +5270,7 @@
     var p = project(laneX, ob.z, 0);
     if(p.scale <= 0.02) return;
     var s = p.sp;
+    if(ob.world && ob.world !== 'canyon' && ['rock','chasm','beam','vines','barrier'].indexOf(ob.type) !== -1){ drawWorldObstacle(ob, p, s); return; }
     if(ob.type === 'boulder'){
       // round boulder rolling toward you -- jump it (needs a bit more height than a rock)
       var br = 36*s, bcy = p.y - br;
@@ -5107,6 +5432,7 @@
     var p = project(worldX, dcr.z, 0);
     if(p.scale <= 0.02) return;
     var s = p.sp;
+    if(dcr.type !== 'pillar' && dcr.type !== 'torch' && dcr.type !== 'cactus'){ drawWorldDecor(dcr, p, s); return; }
     if(dcr.type === 'pillar'){
       var pw = 40*s, ph = 150*s;
       var grd = ctx.createLinearGradient(p.x-pw/2,p.y-ph,p.x+pw/2,p.y);
@@ -5150,7 +5476,7 @@
       var p = project(player.x + f.x*VIEW, -6, 0);
       var r = ((1-f.life)*20 + 6) * VIEW;
       ctx.globalAlpha = Math.max(0, f.life*0.4);
-      ctx.fillStyle = '#f0dcc0';
+      ctx.fillStyle = world().puff;
       ctx.beginPath(); ctx.ellipse(p.x, p.y, r, r*0.45, 0, 0, Math.PI*2); ctx.fill();
     });
     ctx.globalAlpha = 1;
@@ -5917,12 +6243,19 @@
     chests.forEach(function(ch){ if(!ch.collected) entities.push({z:ch.z, draw:function(){drawChest(ch);}}); });
     letterPickups.forEach(function(L){ if(!L.collected) entities.push({z:L.z, draw:function(){drawLetter(L);}}); });
     scratchCards.forEach(function(sc){ if(!sc.collected) entities.push({z:sc.z, draw:function(){drawScratchTicket(sc);}}); });
+    portals.forEach(function(pt){ if(!pt.used) entities.push({z:pt.z, draw:function(){drawPortal(pt);}}); });
     entities.sort(function(a,b){ return b.z - a.z; });
     entities.forEach(function(e){ e.draw(); });
 
     drawFootPuffs();
     drawPet();
     drawPlayer();
+
+    // the flash of going through a portal
+    if(worldFlash > 0){
+      ctx.fillStyle = 'rgba(255,255,255,' + Math.min(1, worldFlash/0.6) + ')';
+      ctx.fillRect(0, 0, W, H);
+    }
 
     // vignette
     var vg = ctx.createRadialGradient(W/2,H*0.55,H*0.2,W/2,H*0.55,H*0.75);
@@ -6054,7 +6387,7 @@
   // never while the name field is being typed in. Everything worth keeping
   // (coins, skins, name, league) is in localStorage, so a reload loses nothing.
   // 'dev' = a local or preview copy: the updater stays off entirely.
-  var BUILD_VERSION = '20261002-121612';
+  var BUILD_VERSION = '20261004-205649';
   var UPDATE_CHECK_MS = 60000;
   var UPDATE_TRIED_KEY = 'canyonChaseTriedUpdate';
   var pendingSubmits = 0;
