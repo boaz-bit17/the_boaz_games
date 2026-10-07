@@ -6253,6 +6253,7 @@
   };
   var EVENT_REGULAR = ['tornado', 'rain', 'chaser', 'diamond', 'flip'];
   var EVENT_CHANCE = 0.15, VOLCANO_CHANCE = 0.08, VOLCANO_DIAMONDS = 3;
+  var IS_BETA = location.pathname.indexOf('/beta/') !== -1;
   var eventPlan = null;            // { kind, at } -- decided when the run starts
   var evt = null;                  // the running event: { kind, t0, ... }
   var eventBadge = document.getElementById('eventBadge');
@@ -6262,6 +6263,8 @@
     eventPlan = null;
     eventBadge.hidden = true;
     var r = Math.random();
+    // on the beta site every run gets one, any of the six equally -- for testing
+    if(IS_BETA){ var all = EVENT_REGULAR.concat(['volcano']); eventPlan = { kind: all[Math.floor(r * all.length)], at: 20 + Math.random() * 30 }; return; }
     var kind = r < VOLCANO_CHANCE ? 'volcano'
       : r < VOLCANO_CHANCE + EVENT_CHANCE ? EVENT_REGULAR[Math.floor(Math.random() * EVENT_REGULAR.length)] : null;
     if(kind) eventPlan = { kind: kind, at: 20 + Math.random() * 30 };
@@ -6598,7 +6601,7 @@
   // never while the name field is being typed in. Everything worth keeping
   // (coins, skins, name, league) is in localStorage, so a reload loses nothing.
   // 'dev' = a local or preview copy: the updater stays off entirely.
-  var BUILD_VERSION = '20261007-205650';
+  var BUILD_VERSION = '20261007-210116';
   var UPDATE_CHECK_MS = 60000;
   var UPDATE_TRIED_KEY = 'canyonChaseTriedUpdate';
   var pendingSubmits = 0;
