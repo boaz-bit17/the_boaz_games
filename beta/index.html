@@ -6449,11 +6449,12 @@
   // large at the bottom of the screen, gliding from corner to corner and
   // hurling obstacles over your head
   function drawChaserBehind(){
+    // kept small and tucked into a bottom corner so he never hides the track
     var side = Math.tanh(4 * Math.sin(elapsed * 0.6));
-    var bx = W * 0.5 + side * W * 0.34, by = H * 1.04;
-    var sc = (H * 0.55) / 130;
+    var bx = W * 0.5 + side * W * 0.42, by = H * 1.02;
+    var sc = (H * 0.3) / 130;
     ctx.save();
-    ctx.globalAlpha = 0.93;
+    ctx.globalAlpha = 0.8;
     ctx.translate(bx, by);
     ctx.scale(sc, sc);
     ctx.rotate(side * 0.06);
@@ -6665,7 +6666,7 @@
   // never while the name field is being typed in. Everything worth keeping
   // (coins, skins, name, league) is in localStorage, so a reload loses nothing.
   // 'dev' = a local or preview copy: the updater stays off entirely.
-  var BUILD_VERSION = '20261008-153410';
+  var BUILD_VERSION = '20261008-153813';
   var UPDATE_CHECK_MS = 60000;
   var UPDATE_TRIED_KEY = 'canyonChaseTriedUpdate';
   var pendingSubmits = 0;
