@@ -5145,7 +5145,35 @@
     ctx.globalAlpha = 1;
   }
 
+  // a gold coin seen spinning: it narrows to its edge and back, with a
+  // little sparkle when it faces you
+  function drawSpinCoin(x, y, r, ang){
+    var face = Math.abs(Math.cos(ang)), w = Math.max(r * 0.18, r * face);
+    var grd = ctx.createRadialGradient(x - w*0.3, y - r*0.3, 0, x, y, r);
+    grd.addColorStop(0, '#fff2c4'); grd.addColorStop(0.6, '#ffcf6b'); grd.addColorStop(1, '#c9552a');
+    ctx.fillStyle = grd;
+    ctx.beginPath(); ctx.ellipse(x, y, w, r, 0, 0, Math.PI*2); ctx.fill();
+    ctx.strokeStyle = 'rgba(120,60,10,0.6)'; ctx.lineWidth = Math.max(1, r*0.12);
+    ctx.stroke();
+    if(face > 0.5){
+      ctx.strokeStyle = 'rgba(160,90,20,0.55)'; ctx.lineWidth = Math.max(1, r*0.1);   // the inner rim
+      ctx.beginPath(); ctx.ellipse(x, y, w*0.62, r*0.62, 0, 0, Math.PI*2); ctx.stroke();
+    }
+    if(face > 0.85){
+      ctx.fillStyle = 'rgba(255,255,255,0.9)';
+      ctx.beginPath(); ctx.arc(x - w*0.35, y - r*0.4, Math.max(1, r*0.16), 0, Math.PI*2); ctx.fill();
+    }
+  }
+
   function drawCoin(c){
+    // rain coins spin all the way down to the track
+    if(c.fall){
+      var dropR = Math.max(0, (c.z - 300) / (c.fall - 300)) * 380;
+      var pr = project(LANES[c.lane], c.z, 46 + dropR + Math.sin((elapsed*6 + c.z*0.02))*4);
+      if(pr.scale <= 0) return;
+      drawSpinCoin(pr.x, pr.y, 13*pr.sp, elapsed*8 + c.z*0.05);
+      return;
+    }
     // rain coins start high in the sky and drop to coin height as they come
     var drop = c.fall ? Math.max(0, (c.z - 300) / (c.fall - 300)) * 380 : 0;
     var p = project(LANES[c.lane], c.z, 46 + drop + Math.sin((elapsed*6 + c.z*0.02))*4);
@@ -6386,10 +6414,11 @@
       }
     }
     if(evt.kind === 'rain'){
-      ctx.strokeStyle = 'rgba(255,220,120,0.35)'; ctx.lineWidth = 2;
-      for(var r = 0; r < 30; r++){
-        var rx = ((r*73) % 100)/100 * W, ry = (elapsed*600 + r*97) % H;
-        ctx.beginPath(); ctx.moveTo(rx, ry); ctx.lineTo(rx - 6, ry + 18); ctx.stroke();
+      // gold coins tumbling down all over the sky
+      for(var r = 0; r < 26; r++){
+        var rx = ((r*73) % 100)/100 * W + Math.sin(elapsed*1.5 + r)*12;
+        var ry = (elapsed*260 + r*97) % (H*0.75) - 20;
+        drawSpinCoin(rx, ry, 9 + (r % 3)*3, elapsed*7 + r);
       }
     }
   }
@@ -6636,7 +6665,7 @@
   // never while the name field is being typed in. Everything worth keeping
   // (coins, skins, name, league) is in localStorage, so a reload loses nothing.
   // 'dev' = a local or preview copy: the updater stays off entirely.
-  var BUILD_VERSION = '20261008-153057';
+  var BUILD_VERSION = '20261008-153410';
   var UPDATE_CHECK_MS = 60000;
   var UPDATE_TRIED_KEY = 'canyonChaseTriedUpdate';
   var pendingSubmits = 0;
