@@ -6300,6 +6300,11 @@
     evt = null;
     eventPlan = null;
     eventBadge.hidden = true;
+  }
+
+  // decided as a run starts (not on page load, and never for the boss fight)
+  function planEventRun(){
+    if(bossMode) return;
     var r = Math.random();
     // on the beta site every run gets one, early on (5-10s in), taking turns
     // in a fixed order so all six show up within six runs -- for testing
@@ -6644,6 +6649,7 @@
     bossRunDay = israelDay().key;
     bossHp.hidden = !bossMode;
     renderBossHp();
+    planEventRun();
     state = 'playing';
     startOverlay.hidden = true;
     overOverlay.hidden = true;
@@ -6671,7 +6677,7 @@
   // never while the name field is being typed in. Everything worth keeping
   // (coins, skins, name, league) is in localStorage, so a reload loses nothing.
   // 'dev' = a local or preview copy: the updater stays off entirely.
-  var BUILD_VERSION = '20261008-153955';
+  var BUILD_VERSION = '20261008-154123';
   var UPDATE_CHECK_MS = 60000;
   var UPDATE_TRIED_KEY = 'canyonChaseTriedUpdate';
   var pendingSubmits = 0;
