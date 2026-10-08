@@ -4397,6 +4397,9 @@
     spawnTimer -= dt;
     if(spawnTimer <= 0){
       spawnWave();
+      if(evtIs('chaser')){
+        obstacles.forEach(function(o){ if(o.z === ZFAR){ o.z = CHASER_LAND_Z; o.drop = CHASER_DROP_SECS; } });
+      }
       spawnGap = Math.max(0.42 - Math.min(MAX_DENSITY_STEPS, milestones)*0.01, 0.95 - difficultyProgress()*0.00021);
       if(bossMode){ spawnGap = Math.max(BOSS_GAP_MIN, spawnGap * BOSS_GAP_MULT); bossThrow = 0.35; }
       if(evtIs('chaser')){ spawnGap = Math.max(0.3, spawnGap * 0.6); bossThrow = 0.35; }   // he throws extra
@@ -4407,6 +4410,7 @@
     for(var i=obstacles.length-1;i>=0;i--){
       var ob = obstacles[i];
       ob.z -= speed*dt * (ob.type === 'boulder' ? BOULDER_ROLL : 1);
+      if(ob.drop > 0) ob.drop = Math.max(0, ob.drop - dt);
       if(!ob.resolved && ob.z <= COLLIDE_Z){
         ob.resolved = true;
         if(!evaluateCollision(ob)){
@@ -5277,6 +5281,10 @@
     var p = project(laneX, ob.z, 0);
     if(p.scale <= 0.02) return;
     var s = p.sp;
+    if(ob.drop > 0){
+      var lift = Math.pow(ob.drop / CHASER_DROP_SECS, 2) * H * 0.6;
+      p = { x: p.x, y: p.y - lift, scale: p.scale, sp: p.sp };
+    }
     if(ob.world && ob.world !== 'canyon' && ['rock','chasm','beam','vines','barrier'].indexOf(ob.type) !== -1){ drawWorldObstacle(ob, p, s); return; }
     if(ob.type === 'boulder'){
       // round boulder rolling toward you -- jump it (needs a bit more height than a rock)
@@ -6238,7 +6246,8 @@
   // boss fight): 15% of runs get one of five, 8% get the volcano instead.
   //   tornado  15s  sweeps between lanes after you -- if it reaches you, you fall
   //   rain     12s  coins and rocks pour down out of the sky
-  //   chaser   20s  a boss rides ahead hurling extra obstacles at you
+  //   chaser   20s  a boss chases you from behind, hurling extra obstacles
+  //                 over your head onto the track ahead
   //   diamond       a diamond drops onto the track: grab it for +1
   //   flip      8s  the world turns upside down and left/right swap
   //   volcano  15s  fireballs land on the lanes (a red shadow shows where);
@@ -6252,6 +6261,7 @@
     volcano: { emoji: '🌋', secs: 15, start: '🌋 הר געש מתפרץ! ברח מכדורי האש', end: '🌋 שרדת את הר הגעש! +3 💎' }
   };
   var EVENT_REGULAR = ['tornado', 'rain', 'chaser', 'diamond', 'flip'];
+  var CHASER_LAND_Z = 950, CHASER_DROP_SECS = 0.45;   // where his throws land, and how long they fall
   var EVENT_CHANCE = 0.15, VOLCANO_CHANCE = 0.08, VOLCANO_DIAMONDS = 3;
   var IS_BETA = location.pathname.indexOf('/beta/') !== -1;
   var eventPlan = null;            // { kind, at } -- decided when the run starts
@@ -6361,7 +6371,6 @@
   function drawEventsBack(){
     if(!evt) return;
     var hY = H*HORIZON_Y_FRAC;
-    if(evt.kind === 'chaser') drawBoss();
     if(evt.kind === 'volcano'){
       ctx.fillStyle = 'rgba(255,60,20,0.12)'; ctx.fillRect(0, 0, W, H);
       var vx = W*0.3, vy = hY, vw = W*0.22, vh = hY*0.38;
@@ -6403,6 +6412,30 @@
       var a = elapsed*5 + d*1.05, rr = (40 + (d % 3)*18)*s;
       ctx.fillStyle = 'rgba(110,80,50,0.85)';
       ctx.fillRect(p.x + Math.cos(a)*rr, p.y - (40 + d*24)*s + Math.sin(a)*rr*0.3, 5*s, 5*s);
+    }
+    ctx.restore();
+  }
+
+  // the boss chasing you from behind: nearer the camera than you, so he looms
+  // large at the bottom of the screen, gliding from corner to corner and
+  // hurling obstacles over your head
+  function drawChaserBehind(){
+    var side = Math.tanh(4 * Math.sin(elapsed * 0.6));
+    var bx = W * 0.5 + side * W * 0.34, by = H * 1.04;
+    var sc = (H * 0.55) / 130;
+    ctx.save();
+    ctx.globalAlpha = 0.93;
+    ctx.translate(bx, by);
+    ctx.scale(sc, sc);
+    ctx.rotate(side * 0.06);
+    drawRunnerFigure(ctx, BOSS_FIG, { phase: 0, mode: 'run', duck: 0, t: elapsed, stance: side > 0 ? 'goofy' : 'regular' });
+    if(bossThrow > 0){
+      var a = Math.min(1, bossThrow / 0.35);
+      var fx = ctx.createRadialGradient(0, -110, 0, 0, -110, 40);
+      fx.addColorStop(0, 'rgba(255,90,60,' + (0.85*a) + ')');
+      fx.addColorStop(1, 'rgba(255,90,60,0)');
+      ctx.fillStyle = fx;
+      ctx.beginPath(); ctx.arc(0, -110, 40, 0, Math.PI*2); ctx.fill();
     }
     ctx.restore();
   }
@@ -6464,6 +6497,7 @@
     drawEventsFront();
     drawPlayer();
     if(evtIs('tornado')) drawTornadoOver();
+    if(evtIs('chaser')) drawChaserBehind();
 
     // the flash of going through a portal
     if(worldFlash > 0){
@@ -6602,7 +6636,7 @@
   // never while the name field is being typed in. Everything worth keeping
   // (coins, skins, name, league) is in localStorage, so a reload loses nothing.
   // 'dev' = a local or preview copy: the updater stays off entirely.
-  var BUILD_VERSION = '20261007-213337';
+  var BUILD_VERSION = '20261008-153057';
   var UPDATE_CHECK_MS = 60000;
   var UPDATE_TRIED_KEY = 'canyonChaseTriedUpdate';
   var pendingSubmits = 0;
