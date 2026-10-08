@@ -4243,6 +4243,7 @@
   // ---------- collision ----------
   function evaluateCollision(ob){
     if(player.flying) return true; // feather power-up: brief invincible flight
+    if(evtIs('ghost')) return true; // ghost event: you drift right through
     if(ob.lane !== player.lane) return true; // different lane, always safe
     switch(ob.type){
       case 'rock':
@@ -5145,38 +5146,8 @@
     ctx.globalAlpha = 1;
   }
 
-  // a gold coin seen spinning: it narrows to its edge and back, with a
-  // little sparkle when it faces you
-  function drawSpinCoin(x, y, r, ang){
-    var face = Math.abs(Math.cos(ang)), w = Math.max(r * 0.18, r * face);
-    var grd = ctx.createRadialGradient(x - w*0.3, y - r*0.3, 0, x, y, r);
-    grd.addColorStop(0, '#fff2c4'); grd.addColorStop(0.6, '#ffcf6b'); grd.addColorStop(1, '#c9552a');
-    ctx.fillStyle = grd;
-    ctx.beginPath(); ctx.ellipse(x, y, w, r, 0, 0, Math.PI*2); ctx.fill();
-    ctx.strokeStyle = 'rgba(120,60,10,0.6)'; ctx.lineWidth = Math.max(1, r*0.12);
-    ctx.stroke();
-    if(face > 0.5){
-      ctx.strokeStyle = 'rgba(160,90,20,0.55)'; ctx.lineWidth = Math.max(1, r*0.1);   // the inner rim
-      ctx.beginPath(); ctx.ellipse(x, y, w*0.62, r*0.62, 0, 0, Math.PI*2); ctx.stroke();
-    }
-    if(face > 0.85){
-      ctx.fillStyle = 'rgba(255,255,255,0.9)';
-      ctx.beginPath(); ctx.arc(x - w*0.35, y - r*0.4, Math.max(1, r*0.16), 0, Math.PI*2); ctx.fill();
-    }
-  }
-
   function drawCoin(c){
-    // rain coins spin all the way down to the track
-    if(c.fall){
-      var dropR = Math.max(0, (c.z - 300) / (c.fall - 300)) * 380;
-      var pr = project(LANES[c.lane], c.z, 46 + dropR + Math.sin((elapsed*6 + c.z*0.02))*4);
-      if(pr.scale <= 0) return;
-      drawSpinCoin(pr.x, pr.y, 13*pr.sp, elapsed*8 + c.z*0.05);
-      return;
-    }
-    // rain coins start high in the sky and drop to coin height as they come
-    var drop = c.fall ? Math.max(0, (c.z - 300) / (c.fall - 300)) * 380 : 0;
-    var p = project(LANES[c.lane], c.z, 46 + drop + Math.sin((elapsed*6 + c.z*0.02))*4);
+    var p = project(LANES[c.lane], c.z, 46 + Math.sin((elapsed*6 + c.z*0.02))*4);
     if(p.scale <= 0) return;
     var r = 13*p.sp;
     var grd = ctx.createRadialGradient(p.x-r*0.3,p.y-r*0.3,0,p.x,p.y,r);
@@ -6242,7 +6213,16 @@
     }
 
     var mode = player.flying ? 'fly' : (player.jumping ? 'jump' : (state === 'playing' ? 'run' : 'idle'));
+    // ghost event: see-through, wrapped in a pale flicker
+    var ghost = evtIs('ghost') && state === 'playing';
+    if(ghost){
+      var gg = ctx.createRadialGradient(0, -62, 0, 0, -62, 80);
+      gg.addColorStop(0, 'rgba(200,235,255,0.45)'); gg.addColorStop(1, 'rgba(200,235,255,0)');
+      ctx.fillStyle = gg; ctx.beginPath(); ctx.arc(0, -62, 80, 0, Math.PI*2); ctx.fill();
+      ctx.globalAlpha = 0.35 + Math.sin(elapsed*9)*0.1;
+    }
     drawRunnerFigure(ctx, skin, { phase: player.legPhase, mode: mode, duck: player.ducking ? 1 : 0, t: elapsed, stance: playerStance() });
+    if(ghost) ctx.globalAlpha = 1;
 
     // wings grow out of the back, which faces the camera -> on top
     if(player.flying){
@@ -6273,7 +6253,7 @@
   // At most one per run, at a random moment 20-50s in (never in the Thursday
   // boss fight): 15% of runs get one of five, 8% get the volcano instead.
   //   tornado  15s  sweeps between lanes after you -- if it reaches you, you fall
-  //   rain     12s  coins and rocks pour down out of the sky
+  //   ghost     8s  you turn see-through and pass right through obstacles
   //   chaser   20s  a boss chases you from behind, hurling extra obstacles
   //                 over your head onto the track ahead
   //   diamond       a diamond drops onto the track: grab it for +1
@@ -6282,13 +6262,13 @@
   //                 survive it for +3 diamonds
   var EVENT_INFO = {
     tornado: { emoji: '🌪️', secs: 15, start: '🌪️ טורנדו! ברח ממנו 15 שניות', end: '🌪️ הטורנדו נעלם!' },
-    rain:    { emoji: '🌧️', secs: 12, start: '🌧️ גשם של מטבעות... ומכשולים!', end: '🌧️ הגשם נגמר' },
+    ghost:   { emoji: '👻', secs: 8,  start: '👻 הפכת לרוח רפאים! עובר דרך מכשולים 8 שניות', end: '👻 חזרת לגוף' },
     chaser:  { emoji: '☠️', secs: 20, start: '☠️ בוס רודף אחריך! תתחמק 20 שניות', end: '☠️ הבוס הלך' },
     diamond: { emoji: '💎', secs: 4,  start: '💎 משהו נופל מהשמיים... תתפוס אותו!', end: '' },
     flip:    { emoji: '🙃', secs: 8,  start: '🙃 העולם התהפך! ימין ושמאל הפוכים', end: '🙂 העולם חזר לעצמו' },
     volcano: { emoji: '🌋', secs: 15, start: '🌋 הר געש מתפרץ! ברח מכדורי האש', end: '🌋 שרדת את הר הגעש! +3 💎' }
   };
-  var EVENT_REGULAR = ['tornado', 'rain', 'chaser', 'diamond', 'flip'];
+  var EVENT_REGULAR = ['tornado', 'ghost', 'chaser', 'diamond', 'flip'];
   var CHASER_LAND_Z = 950, CHASER_DROP_SECS = 0.45;   // where his throws land, and how long they fall
   var EVENT_CHANCE = 0.15, VOLCANO_CHANCE = 0.08, VOLCANO_DIAMONDS = 3;
   var IS_BETA = location.pathname.indexOf('/beta/') !== -1;
@@ -6309,7 +6289,7 @@
     // on the beta site every run gets one, early on (5-10s in), taking turns
     // in a fixed order so all six show up within six runs -- for testing
     if(IS_BETA){
-      var order = ['rain', 'tornado', 'chaser', 'diamond', 'flip', 'volcano'], n = 0;
+      var order = ['ghost', 'tornado', 'chaser', 'diamond', 'flip', 'volcano'], n = 0;
       try { n = parseInt(localStorage.getItem('canyonChaseBetaEvent') || '0', 10) || 0; localStorage.setItem('canyonChaseBetaEvent', String(n + 1)); } catch(e){}
       eventPlan = { kind: order[n % order.length], at: 5 + Math.random() * 5 };
       return;
@@ -6322,7 +6302,7 @@
   function worldFlipped(){ return evtIs('flip'); }
 
   function startEvent(kind){
-    evt = { kind: kind, t0: elapsed, rainCoin: 0, rainRock: 0, fireballs: [], fireTimer: 0.6, tornado: null, gem: null };
+    evt = { kind: kind, t0: elapsed, fireballs: [], fireTimer: 0.6, tornado: null, gem: null };
     if(kind === 'tornado'){
       var l0 = player.lane === 1 ? 0 : 1;
       evt.tornado = { lane: l0, x: LANES[l0], retarget: 1.4, grace: 1.2 };
@@ -6360,16 +6340,6 @@
         handleFail();
         return true;
       }
-    } else if(evt.kind === 'rain'){
-      evt.rainCoin -= dt; evt.rainRock -= dt;
-      if(evt.rainCoin <= 0){
-        coins.push({ lane: Math.floor(Math.random()*3), z: ZFAR*0.7, collected: false, fall: ZFAR*0.7 });
-        evt.rainCoin = 0.12;
-      }
-      if(evt.rainRock <= 0){
-        obstacles.push({ lane: Math.floor(Math.random()*3), type: 'rock', z: ZFAR, resolved: false, world: currentWorld });
-        evt.rainRock = 1.1 + Math.random()*0.5;
-      }
     } else if(evt.kind === 'chaser'){
       bossThrow -= dt;
     } else if(evt.kind === 'diamond'){
@@ -6405,7 +6375,7 @@
     return false;
   }
 
-  // far-away layer: the volcano on the horizon, rain streaks, the chasing boss
+  // far-away layer: the volcano on the horizon
   function drawEventsBack(){
     if(!evt) return;
     var hY = H*HORIZON_Y_FRAC;
@@ -6421,14 +6391,6 @@
         var sp = ((elapsed*0.4 + sm*0.2) % 1);
         ctx.fillStyle = 'rgba(60,40,40,' + (0.5*(1 - sp)) + ')';
         ctx.beginPath(); ctx.arc(vx + Math.sin(sm*2 + elapsed)*20, vy - vh - sp*hY*0.5, 18 + sp*40, 0, Math.PI*2); ctx.fill();
-      }
-    }
-    if(evt.kind === 'rain'){
-      // gold coins tumbling down all over the sky
-      for(var r = 0; r < 26; r++){
-        var rx = ((r*73) % 100)/100 * W + Math.sin(elapsed*1.5 + r)*12;
-        var ry = (elapsed*260 + r*97) % (H*0.75) - 20;
-        drawSpinCoin(rx, ry, 9 + (r % 3)*3, elapsed*7 + r);
       }
     }
   }
@@ -6677,7 +6639,7 @@
   // never while the name field is being typed in. Everything worth keeping
   // (coins, skins, name, league) is in localStorage, so a reload loses nothing.
   // 'dev' = a local or preview copy: the updater stays off entirely.
-  var BUILD_VERSION = '20261008-154123';
+  var BUILD_VERSION = '20261008-154353';
   var UPDATE_CHECK_MS = 60000;
   var UPDATE_TRIED_KEY = 'canyonChaseTriedUpdate';
   var pendingSubmits = 0;
