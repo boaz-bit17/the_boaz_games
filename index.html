@@ -591,6 +591,45 @@
   .chat-send button:disabled{ opacity:.5; cursor:default; }
   .chat-note{ font-size:11.5px; font-weight:700; color:#b3261e; min-height:14px; margin-top:6px; }
 
+  /* ---------- 1 on 1 ---------- */
+  .duel-btn{ background:linear-gradient(135deg,#ff6f61,#c2185b); color:#fff; border-color:rgba(90,0,30,.4); }
+  .duel-menu{ display:flex; flex-direction:column; gap:10px; margin-bottom:12px; }
+  .duel-menu .go-btn{ margin:0; }
+  .duel-menu .shop-btn{ width:100%; }
+  .duel-join{ display:flex; gap:8px; }
+  .duel-join input{
+    flex:1; min-width:0; text-align:center; letter-spacing:6px;
+    font-family:'Suez One',serif; font-size:20px; color:var(--ink);
+    background:rgba(255,255,255,.6); border:2px solid rgba(92,50,38,.3); border-radius:10px; padding:8px;
+  }
+  .duel-join button{
+    font-family:'Suez One',serif; font-size:16px; color:#fff;
+    background:linear-gradient(180deg,var(--ember),var(--ember-dim));
+    border:none; border-radius:10px; padding:0 18px; cursor:pointer;
+  }
+  .duel-status{
+    white-space:pre-line; text-align:center; font-weight:800; font-size:15px; color:#0c3c5c;
+    background:rgba(255,255,255,.5); border:1px solid rgba(12,60,92,.25); border-radius:12px;
+    padding:12px; margin-bottom:10px;
+  }
+  .duel-code{ display:block; font-family:'Suez One',serif; font-size:40px; letter-spacing:10px; color:#c2185b; margin:4px 0; }
+  .duel-bar{
+    order:5;   /* under the score panel and the mission letters */
+    display:flex; align-items:center; gap:8px; white-space:nowrap;
+    background:rgba(20,10,30,.72); color:#fff; border-radius:999px; padding:5px 12px;
+    font-size:12.5px; font-weight:800;
+  }
+  .duel-bar .vs{ color:#ffd447; font-family:'Suez One',serif; }
+  .duel-bar .is-ahead{ color:#7dff9a; }
+  .duel-bar .is-down{ opacity:.55; text-decoration:line-through; }
+  .duel-count{
+    position:fixed; inset:0; display:flex; align-items:center; justify-content:center;
+    font-family:'Suez One',serif; font-size:120px; color:#fff;
+    text-shadow:0 6px 0 rgba(0,0,0,.35), 0 0 30px rgba(255,120,80,.8); pointer-events:none;
+  }
+  .duel-result.is-win{ background:linear-gradient(135deg,#ffe58a,#ffbf3a); }
+  .duel-result.is-lose{ background:rgba(255,255,255,.55); }
+
   /* ---------- thursday boss ---------- */
   .boss-banner{
     display:block; width:100%;
@@ -877,6 +916,8 @@
     </div>
     <div class="fly-badge" id="flyBadge" hidden>🪶 <span id="flyTimeNum">0</span>s</div>
     <div class="fly-badge" id="eventBadge" hidden></div>
+    <div class="duel-bar" id="duelBar" hidden><span id="duelMe"></span><span class="vs">VS</span><span id="duelOpp"></span></div>
+    <div class="duel-count" id="duelCount" hidden></div>
     <div class="boss-hp" id="bossHp" hidden>☠️ בוס <div class="boss-hp-bar"><div class="boss-hp-fill" id="bossHpFill"></div></div><span id="bossHpPct">100%</span></div>
     <div class="mission-badge" id="missionBadge" hidden></div>
     <div class="mission-toast" id="missionToast" hidden></div>
@@ -900,6 +941,7 @@
         <button class="shop-btn" id="leagueBtn" type="button">🏅 ליגות</button>
         <button class="shop-btn" id="missionsBtn" type="button">🎯 משימות</button>
         <button class="shop-btn" id="chatBtn" type="button" hidden>💬 חדר המתנה</button>
+        <button class="shop-btn duel-btn" id="duelBtn" type="button" hidden>⚔️ אחד על אחד</button>
         <button class="shop-btn pass-btn" id="passBtn" type="button">🎫 באטל פס</button>
       </div>
       <div class="rules">
@@ -959,10 +1001,12 @@
       <div class="league-banner boss-result" id="bossBanner" hidden></div>
       <div class="league-banner" id="missionBanner" hidden></div>
       <div class="league-banner pass-gain" id="passBanner" hidden></div>
+      <div class="league-banner duel-result" id="duelBanner" hidden></div>
       <div class="league-banner" id="tourneyRunBanner" hidden></div>
       <button class="go-btn special-btn" id="specialFromOverBtn" type="button" hidden>🎁 פתח את התיבה המיוחדת!</button>
       <div class="earn-row">🪙 נוספו <span id="earnedCoins">0</span> מטבעות לארנק</div>
       <button class="go-btn" id="retryBtn">נסה שוב</button>
+      <button class="shop-btn duel-btn" id="duelAgainBtn" type="button" style="margin-top:10px; width:100%;" hidden>⚔️ עוד קרב</button>
       <button class="shop-btn" id="shopBtnOver" type="button" style="margin-top:10px; width:100%;">🎨 חנות סקינים</button>
     </div>
   </div>
@@ -1057,6 +1101,29 @@
       </div>
       <div class="chat-note" id="chatNote"></div>
       <button class="back-btn" id="closeChatBtn" type="button">חזרה</button>
+    </div>
+  </div>
+
+  <div class="overlay" id="duelOverlay" hidden>
+    <div class="tablet">
+      <h1>⚔️ אחד על אחד</h1>
+      <p class="tagline">שניכם רצים באותו רגע על אותו מסלול בדיוק, בלי אירועים משוגעים. מי שמגיע לניקוד גבוה יותר מנצח!</p>
+      <div class="name-row" id="duelNameRow" hidden>
+        <input type="text" id="duelNameInput" maxlength="14" placeholder="קודם כתוב את השם שלך" autocomplete="off">
+      </div>
+      <div class="duel-menu" id="duelMenu">
+        <button class="go-btn" id="duelRandomBtn" type="button">🎲 מצא יריב אקראי</button>
+        <button class="shop-btn" id="duelCreateBtn" type="button">🔑 פתח חדר עם קוד</button>
+        <div class="duel-join">
+          <input type="text" id="duelCodeInput" inputmode="numeric" maxlength="4" placeholder="קוד חדר" autocomplete="off">
+          <button type="button" id="duelJoinBtn">הצטרף</button>
+        </div>
+      </div>
+      <div class="duel-status" id="duelStatus" hidden></div>
+      <button class="back-btn" id="duelCancelBtn" type="button" hidden>ביטול</button>
+      <div class="mission-title">🏆 טבלת ניצחונות</div>
+      <div class="leaderboard-list" id="duelWinsList"></div>
+      <button class="back-btn" id="closeDuelBtn" type="button">חזרה</button>
     </div>
   </div>
 
@@ -2301,9 +2368,9 @@
     while(letterQueue.length){
       var lp = letterQueue.shift();
       if(missions.letters.indexOf(lp.i) !== -1) continue;
-      var open = Math.floor(Math.random() * 3);
+      var open = Math.floor(trackRand() * 3);
       var pat = [0,1,2].filter(function(l){ return l !== open; }).map(function(l){
-        var rr = Math.random();
+        var rr = trackRand();
         return { lane: l, type: rr < 0.4 ? 'rock' : (rr < 0.8 ? 'beam' : 'barrier') };
       });
       pat.push({ lane: open, type: 'letter', i: lp.i });
@@ -3786,6 +3853,440 @@
     else { loadChat(); pingChat().then(loadOnline); startChatTimers(); }
   });
 
+  // ---------- 1 on 1 (live duel) ----------
+  // Two players run the same track at the same moment. Supabase Realtime
+  // (broadcast + presence over one websocket -- no tables) pairs them up, by
+  // a 4-digit room code or at random from a lobby, and carries each runner's
+  // lane / jump / score about 8 times a second; the other one shows up as a
+  // see-through rider. The track is the same because every wave is built
+  // from the duel's seed + the wave's number (trackRand), so it stays in step
+  // even when one of them gets a portal or a letter a wave earlier. No crazy
+  // events in a duel. The higher final score wins; once one has fallen, the
+  // other wins the moment they pass that score. Silent for 12s = left the
+  // duel: the one still there wins. The winner adds a row to duel_results;
+  // duel_wins counts them for the wins table.
+  var DUEL_LIB = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.3/dist/umd/supabase.min.js';
+  var DUEL_PREFIX = 'ccduel-';
+  var DUEL_SEND_MS = 120, DUEL_SILENT_MS = 12000, DUEL_COUNTDOWN = 3;
+  var REALTIME_URL = SUPABASE_URL, REALTIME_KEY = SUPABASE_KEY;
+  var duelBtn = document.getElementById('duelBtn');
+  var duelOverlay = document.getElementById('duelOverlay');
+  var duelNameRow = document.getElementById('duelNameRow');
+  var duelNameInput = document.getElementById('duelNameInput');
+  var duelMenu = document.getElementById('duelMenu');
+  var duelRandomBtn = document.getElementById('duelRandomBtn');
+  var duelCreateBtn = document.getElementById('duelCreateBtn');
+  var duelCodeInput = document.getElementById('duelCodeInput');
+  var duelJoinBtn = document.getElementById('duelJoinBtn');
+  var duelStatus = document.getElementById('duelStatus');
+  var duelCancelBtn = document.getElementById('duelCancelBtn');
+  var duelWinsList = document.getElementById('duelWinsList');
+  var closeDuelBtn = document.getElementById('closeDuelBtn');
+  var duelBar = document.getElementById('duelBar');
+  var duelMe = document.getElementById('duelMe');
+  var duelOpp = document.getElementById('duelOpp');
+  var duelCount = document.getElementById('duelCount');
+  var duelBanner = document.getElementById('duelBanner');
+  var duelAgainBtn = document.getElementById('duelAgainBtn');
+  var duelClient = null, duelLobby = null, duelRoom = null;
+  var duel = null;     // the duel being set up or run
+  var duelMyId = Math.random().toString(36).slice(2, 10);
+
+  duelBtn.hidden = !isOnlineBoard;
+
+  function duelLoad(){
+    if(window.supabase && window.supabase.createClient) return Promise.resolve();
+    return new Promise(function(res, rej){
+      var s = document.createElement('script');
+      s.src = DUEL_LIB; s.onload = res; s.onerror = rej;
+      document.head.appendChild(s);
+    });
+  }
+  function duelGetClient(){
+    return duelLoad().then(function(){
+      if(!duelClient){
+        duelClient = window.supabase.createClient(REALTIME_URL, REALTIME_KEY, {
+          auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
+          realtime: { params: { eventsPerSecond: 20 } }
+        });
+      }
+      return duelClient;
+    });
+  }
+
+  function duelSay(text, waiting){
+    duelStatus.hidden = !text;
+    duelStatus.innerHTML = '';
+    if(text) (Array.isArray(text) ? text : [text]).forEach(function(part){
+      if(part && part.code){ var c = document.createElement('span'); c.className = 'duel-code'; c.textContent = part.code; duelStatus.appendChild(c); }
+      else duelStatus.appendChild(document.createTextNode(part));
+    });
+    duelCancelBtn.hidden = !waiting;
+    duelMenu.hidden = !!waiting;
+  }
+
+  function duelNameOk(){
+    if(chatName()) return true;
+    duelNameRow.hidden = false;
+    duelNameInput.value = playerName;
+    duelNameInput.focus();
+    duelSay('קודם כתוב את השם שלך — ככה היריב יידע מול מי הוא רץ');
+    return false;
+  }
+  duelNameInput.addEventListener('input', function(){
+    playerName = duelNameInput.value.slice(0, 14);
+    playerNameInput.value = playerName;
+    saveName();
+  });
+
+  function duelLeaveLobby(){
+    if(duelLobby){ var ch = duelLobby; duelLobby = null; try { duelClient.removeChannel(ch); } catch(e){} }
+  }
+  function duelLeaveRoom(){
+    if(duelRoom){ var ch = duelRoom; duelRoom = null; try { duelClient.removeChannel(ch); } catch(e){} }
+  }
+  function duelCancel(){
+    duelLeaveLobby(); duelLeaveRoom();
+    duel = null;
+    duelSay('');
+  }
+  function duelFail(){
+    duelLeaveLobby(); duelLeaveRoom();
+    duel = null;
+    duelSay('אין חיבור לשרת הקרבות. בדוק את האינטרנט ונסה שוב.');
+  }
+  function duelNewCode(){ return String(1000 + Math.floor(Math.random() * 9000)); }
+
+  // everyone looking for a random opponent waits in one lobby; the one who
+  // has waited longest pairs up with the next in line and opens a room for both
+  function duelFindRandom(){
+    if(!duelNameOk()) return;
+    duelSay('מחפש יריב... 🔎', true);
+    duelGetClient().then(function(c){
+      var ch = c.channel(DUEL_PREFIX + 'lobby', { config: { presence: { key: duelMyId }, broadcast: { self: false } } });
+      var since = Date.now();
+      duelLobby = ch;
+      ch.on('presence', { event: 'sync' }, function(){
+        if(duelLobby !== ch) return;
+        var st = ch.presenceState(), list = [];
+        Object.keys(st).forEach(function(k){ var m = st[k] && st[k][0]; if(m && m.v === BUILD_VERSION) list.push(m); });
+        list.sort(function(a, b){ return (a.at - b.at) || (a.id < b.id ? -1 : 1); });
+        if(list.length >= 2 && list[0].id === duelMyId){
+          var code = duelNewCode(), other = list[1];
+          ch.send({ type: 'broadcast', event: 'match', payload: { a: duelMyId, b: other.id, code: code } })
+            .then(function(){ setTimeout(function(){ if(duelLobby === ch) duelLeaveLobby(); }, 300); });
+          duelLobby = null;   // stop pairing; the channel closes once the message is out
+          duelEnterRoom(code, true, other.id);
+        }
+      });
+      ch.on('broadcast', { event: 'match' }, function(msg){
+        var m = msg && msg.payload;
+        if(duelLobby !== ch || !m || m.b !== duelMyId) return;
+        duelLeaveLobby();
+        duelEnterRoom(m.code, false, m.a);
+      });
+      ch.subscribe(function(status){
+        if(status === 'SUBSCRIBED') ch.track({ id: duelMyId, name: chatName(), at: since, v: BUILD_VERSION });
+        else if((status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') && duelLobby === ch) duelFail();
+      });
+    }).catch(duelFail);
+  }
+
+  function duelCreateRoom(){
+    if(!duelNameOk()) return;
+    duelEnterRoom(duelNewCode(), true, null);
+  }
+  function duelJoinRoom(){
+    var code = duelCodeInput.value.replace(/\D/g, '');
+    if(code.length !== 4){ duelSay('קוד חדר הוא 4 ספרות'); return; }
+    if(!duelNameOk()) return;
+    duelEnterRoom(code, false, null);
+  }
+
+  // a room holds two: the host (opened it / was first in the lobby) starts
+  // the duel as soon as the other one is in
+  function duelEnterRoom(code, host, expectId){
+    duel = { code: code, host: host, expect: expectId, seed: 0, oppId: null, oppName: '', opp: null, oppSeen: 0,
+             myFinal: null, oppFinal: null, result: null, started: false, lastSend: 0, gx: null };
+    if(expectId) duelSay('נמצא יריב! מתחברים... ⚔️', true);
+    else if(host) duelSay(['קוד החדר שלך:', { code: code }, 'שלח אותו לחבר — הקרב מתחיל ברגע שהוא נכנס ⏳'], true);
+    else duelSay('נכנס לחדר ' + code + '... ⏳', true);
+    var d = duel;
+    duelGetClient().then(function(c){
+      if(duel !== d) return;
+      var ch = c.channel(DUEL_PREFIX + 'room-' + code, { config: { presence: { key: duelMyId }, broadcast: { self: false } } });
+      var joinedAt = Date.now();
+      duelRoom = ch;
+      ch.on('presence', { event: 'sync' }, function(){
+        if(duelRoom !== ch || duel !== d || d.started) return;
+        var st = ch.presenceState(), all = [];
+        Object.keys(st).forEach(function(k){ var m = st[k] && st[k][0]; if(m) all.push(m); });
+        all.sort(function(a, b){ return (a.at - b.at) || (a.id < b.id ? -1 : 1); });
+        var others = all.filter(function(m){ return m.id !== duelMyId; });
+        if(!host){
+          var mine = all.map(function(m){ return m.id; }).indexOf(duelMyId);
+          if(mine >= 2 && !d.expect){ duelLeaveRoom(); duel = null; duelSay('החדר הזה כבר תפוס. בקש מהחבר קוד חדש.'); return; }
+          if(!others.length && !d.expect) duelSay('נכנסת לחדר ' + code + '. מחכים למי שפתח אותו... ⏳', true);
+          return;
+        }
+        var o = d.expect ? others.filter(function(m){ return m.id === d.expect; })[0] : others[0];
+        if(!o || d.oppId) return;
+        if(o.v !== BUILD_VERSION){ duelSay('ליריב יש גרסה אחרת של המשחק. שניכם תרעננו את הדף ותנסו שוב.', true); return; }
+        d.oppId = o.id; d.oppName = o.name || 'יריב';
+        var seed = 1 + Math.floor(Math.random() * 2147483000);
+        ch.send({ type: 'broadcast', event: 'go', payload: { from: duelMyId, to: o.id, seed: seed, name: chatName() } });
+        duelStart(seed);
+      });
+      ch.on('broadcast', { event: 'go' }, function(msg){
+        var m = msg && msg.payload;
+        if(duelRoom !== ch || duel !== d || d.started || host || !m || m.to !== duelMyId) return;
+        d.oppId = m.from; d.oppName = m.name || 'יריב';
+        duelStart(m.seed);
+      });
+      ch.on('broadcast', { event: 'st' }, function(msg){ duelOnState(d, msg && msg.payload); });
+      ch.on('broadcast', { event: 'end' }, function(msg){
+        var m = msg && msg.payload;
+        if(duel !== d || !m || m.id !== d.oppId) return;
+        d.oppSeen = Date.now();
+        if(d.oppFinal === null) d.oppFinal = m.sc;
+        duelCheck();
+      });
+      ch.subscribe(function(status){
+        if(status === 'SUBSCRIBED') ch.track({ id: duelMyId, name: chatName(), at: joinedAt, v: BUILD_VERSION });
+        else if((status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') && duelRoom === ch && !d.started) duelFail();
+      });
+    }).catch(duelFail);
+  }
+
+  // 3-2-1 and go: the run is set up at once, but nobody moves until zero
+  function duelStart(seed){
+    var d = duel;
+    d.seed = seed; d.started = true; d.oppSeen = Date.now();
+    duelOverlay.hidden = true;
+    beginRun(false, seed);
+    state = 'countdown';
+    duelBar.hidden = false;
+    duelBanner.hidden = true;
+    var n = DUEL_COUNTDOWN;
+    duelCount.hidden = false; duelCount.textContent = n;
+    var iv = setInterval(function(){
+      n--;
+      if(duel !== d){ clearInterval(iv); duelCount.hidden = true; return; }
+      if(n > 0){ duelCount.textContent = n; return; }
+      clearInterval(iv);
+      duelCount.textContent = 'צא!';
+      d.oppSeen = Date.now();
+      if(state === 'countdown') state = 'playing';
+      setTimeout(function(){ duelCount.hidden = true; }, 600);
+    }, 1000);
+  }
+
+  function duelOnState(d, m){
+    if(duel !== d || !m || m.id !== d.oppId) return;
+    m.t = Date.now();
+    d.opp = m; d.oppSeen = m.t;
+    if(!m.al && d.oppFinal === null) d.oppFinal = m.sc;
+    duelCheck();
+  }
+
+  // called every frame (from the main loop)
+  function duelTick(){
+    var d = duel;
+    if(!d || !d.started) return;
+    var now = Date.now();
+    if(duelRoom && now - d.lastSend >= DUEL_SEND_MS){
+      d.lastSend = now;
+      var alive = d.myFinal === null;
+      duelRoom.send({ type: 'broadcast', event: 'st', payload: {
+        id: duelMyId, l: player.lane, y: Math.round(player.y), dk: player.ducking ? 1 : 0, f: player.flying ? 1 : 0,
+        dist: Math.round(distance), sc: alive ? currentScore() : d.myFinal, al: alive ? 1 : 0, sk: selectedSkinId } });
+    }
+    if(!d.result && d.oppFinal === null && state !== 'countdown' && now - d.oppSeen > DUEL_SILENT_MS) duelDecide('left');
+    duelCheck();
+    duelHud();
+  }
+
+  function duelOppScore(){
+    var d = duel;
+    return d.oppFinal !== null ? d.oppFinal : (d.opp ? d.opp.sc : 0);
+  }
+
+  function duelCheck(){
+    var d = duel;
+    if(!d || !d.started || d.result) return;
+    var mine = d.myFinal, theirs = d.oppFinal;
+    if(mine !== null && theirs !== null) return duelDecide(mine > theirs ? 'win' : (mine < theirs ? 'lose' : 'tie'));
+    if(mine === null && theirs !== null && state === 'playing' && currentScore() > theirs) return duelDecide('win');
+    if(theirs === null && mine !== null && duelOppScore() > mine) return duelDecide('lose');
+  }
+
+  function duelResultText(d){
+    var o = d.oppName || 'היריב';
+    if(d.left) return o + ' יצא מהקרב — ניצחת! 🏆';
+    if(d.result === 'win') return 'ניצחת את ' + o + '! 🏆';
+    if(d.result === 'lose') return o + ' ניצח הפעם 😅 נסה שוב!';
+    return 'תיקו מול ' + o + '! 🤝';
+  }
+
+  function duelDecide(res){
+    var d = duel;
+    if(!d || d.result) return;
+    d.left = res === 'left';
+    d.result = d.left ? 'win' : res;
+    if(d.result === 'win') duelRecordWin(chatName(), d.oppName);
+    var text = duelResultText(d);
+    if(state === 'playing') showToast(text + (d.myFinal === null ? ' אפשר להמשיך לרוץ' : ''));
+    duelShowBanner();
+    // keep the line open a moment so the other side gets our last word
+    setTimeout(function(){
+      if(duel !== d) return;
+      if(d.myFinal === null && state === 'playing') return;   // still running: closed when this run ends
+      duelLeaveRoom(); duel = null; duelBar.hidden = true;
+    }, 4000);
+  }
+
+  // the game-over screen: the result, or "waiting for ..." until there is one
+  function duelShowBanner(){
+    var d = duel;
+    if(!d || !d.started || overOverlay.hidden) return;
+    duelBanner.hidden = false;
+    duelAgainBtn.hidden = false;
+    duelBanner.classList.toggle('is-win', d.result === 'win');
+    duelBanner.classList.toggle('is-lose', d.result === 'lose');
+    duelBanner.textContent = d.result ? duelResultText(d)
+      : 'מחכה ל' + (d.oppName || 'יריב') + '... הניקוד שלו עכשיו: ' + fmtScore(duelOppScore());
+  }
+
+  // our own run ended for good (no more revives)
+  function duelRunOver(score){
+    var d = duel;
+    if(!d || !d.started) return;
+    if(d.myFinal === null){
+      d.myFinal = score;
+      if(duelRoom) duelRoom.send({ type: 'broadcast', event: 'end', payload: { id: duelMyId, sc: score } });
+    }
+    duelCheck();
+    duelShowBanner();
+    if(d.result) setTimeout(function(){ if(duel === d){ duelLeaveRoom(); duel = null; duelBar.hidden = true; } }, 4000);
+  }
+
+  var duelHudShown = '';
+  function duelHud(){
+    var d = duel;
+    if(!d || !d.started) return;
+    var myScore = d.myFinal !== null ? d.myFinal : currentScore();
+    var oppScore = duelOppScore();
+    var key = myScore + '|' + oppScore + '|' + d.myFinal + '|' + d.oppFinal;
+    if(key !== duelHudShown){
+      duelHudShown = key;
+      duelMe.textContent = 'אתה ' + fmtScore(myScore);
+      duelOpp.textContent = (d.oppName || 'יריב') + ' ' + fmtScore(oppScore);
+      duelMe.className = (myScore > oppScore ? 'is-ahead' : '') + (d.myFinal !== null ? ' is-down' : '');
+      duelOpp.className = (oppScore > myScore ? 'is-ahead' : '') + (d.oppFinal !== null ? ' is-down' : '');
+    }
+    if(!overOverlay.hidden && !d.result) duelShowBanner();
+  }
+
+  // the opponent: a see-through rider in their lane, as far ahead (or behind)
+  // as they really are
+  function drawDuelGhost(){
+    var d = duel;
+    if(!d || !d.started || !d.opp || d.oppFinal !== null || state === 'over') return;
+    var o = d.opp;
+    var oppDist = o.dist + speed * Math.min(0.5, (Date.now() - o.t) / 1000);
+    var dz = oppDist - distance;
+    var tx = LANES[o.l] || 0;
+    d.gx = d.gx === null ? tx : d.gx + (tx - d.gx) * 0.3;
+    if(dz < -30 || dz > ZFAR) return;
+    var p = project(d.gx, Math.max(0, dz), o.y || 0);
+    if(p.scale <= 0.03) return;
+    ctx.save();
+    ctx.translate(p.x, p.y);
+    var sc = p.sp * 1.2;
+    ctx.scale(sc, sc);
+    ctx.globalAlpha = 0.5;
+    drawRunnerFigure(ctx, getSkin(o.sk || 'ember'), { phase: elapsed * 9, mode: o.f ? 'fly' : (o.y > 2 ? 'jump' : 'run'), duck: o.dk ? 1 : 0, t: elapsed });
+    ctx.globalAlpha = 1;
+    ctx.font = 'bold 15px Rubik, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.lineWidth = 4; ctx.strokeStyle = 'rgba(20,10,30,0.8)'; ctx.fillStyle = '#ffd447';
+    ctx.strokeText(d.oppName || 'יריב', 0, -150);
+    ctx.fillText(d.oppName || 'יריב', 0, -150);
+    ctx.restore();
+  }
+
+  function duelRecordWin(winner, loser){
+    if(!isOnlineBoard || !winner) return;
+    pendingSubmits++;
+    fetch(SUPABASE_URL + '/rest/v1/duel_results', {
+      method: 'POST', headers: supabaseHeaders(),
+      body: JSON.stringify({ winner: winner.slice(0, 14), loser: (loser || 'יריב').slice(0, 14) })
+    }).catch(function(){}).then(function(){ pendingSubmits--; });
+  }
+
+  function loadDuelWins(){
+    duelWinsList.innerHTML = '<div class="leaderboard-empty">טוען...</div>';
+    sbGet('duel_wins?select=name,wins&order=wins.desc&limit=20').then(function(rows){
+      duelWinsList.innerHTML = '';
+      if(!rows || !rows.length){
+        duelWinsList.innerHTML = '<div class="leaderboard-empty">' + (rows ? 'עוד אין ניצחונות — תהיה הראשון!' : 'הטבלה עוד לא מוכנה') + '</div>';
+        return;
+      }
+      var me = chatName();
+      rows.forEach(function(r, i){
+        var row = document.createElement('div');
+        row.className = 'leaderboard-row' + (i === 0 ? ' is-top' : '') + (me && sameName(r.name, me) ? ' is-you' : '');
+        var rank = document.createElement('div'); rank.className = 'leaderboard-rank'; rank.textContent = i + 1;
+        var name = document.createElement('div'); name.className = 'leaderboard-name'; name.textContent = r.name;
+        var wins = document.createElement('div'); wins.className = 'leaderboard-score'; wins.textContent = r.wins + ' ⚔️';
+        row.appendChild(rank); row.appendChild(name); row.appendChild(wins);
+        duelWinsList.appendChild(row);
+      });
+    });
+  }
+
+  function openDuel(){
+    startOverlay.hidden = true;
+    overOverlay.hidden = true;
+    duelOverlay.hidden = false;
+    duelNameRow.hidden = !!chatName();
+    if(!duel) duelSay('');
+    loadDuelWins();
+  }
+  function closeDuel(){
+    duelCancel();
+    duelOverlay.hidden = true;
+    startOverlay.hidden = false;
+  }
+  duelBtn.addEventListener('click', openDuel);
+  duelAgainBtn.addEventListener('click', function(){
+    if(duel && !duel.result) return;   // still waiting on this one
+    duelLeaveRoom(); duel = null; duelBar.hidden = true;
+    openDuel();
+  });
+  closeDuelBtn.addEventListener('click', closeDuel);
+  duelCancelBtn.addEventListener('click', duelCancel);
+  duelRandomBtn.addEventListener('click', duelFindRandom);
+  duelCreateBtn.addEventListener('click', duelCreateRoom);
+  duelJoinBtn.addEventListener('click', duelJoinRoom);
+  duelCodeInput.addEventListener('keydown', function(e){ if(e.key === 'Enter'){ e.preventDefault(); duelJoinRoom(); } });
+
+  // the same track for both: each wave (and each feather) gets its own
+  // random numbers from the duel seed and its number
+  var trackSeed = 0, trackRng = null, trackWaveN = 0, trackPowerN = 0;
+  function mulberry32(a){
+    return function(){
+      a |= 0; a = a + 0x6D2B79F5 | 0;
+      var t = Math.imul(a ^ a >>> 15, 1 | a);
+      t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+      return ((t ^ t >>> 14) >>> 0) / 4294967296;
+    };
+  }
+  function trackReseed(stream, n){
+    trackRng = trackSeed ? mulberry32((trackSeed ^ Math.imul(n + 1, 2654435761) ^ Math.imul(stream, 40503)) >>> 0) : null;
+  }
+  function trackRand(){ return trackRng ? trackRng() : Math.random(); }
+
   // ---------- battle pass ----------
   // A free 30-tier pass that starts over every calendar month (Israel time).
   // Pass points come from 3 daily quests (40 each, new ones every day, the
@@ -4160,20 +4661,20 @@
     var doubleChance = Math.min(0.45 + density*0.02, 0.08 + score*0.00014);
     var barrierChance = Math.min(0.22, 0.08 + score*0.00006);
 
-    if(Math.random() < doubleChance){
-      var openLane = Math.floor(Math.random()*3);
+    if(trackRand() < doubleChance){
+      var openLane = Math.floor(trackRand()*3);
       var blocked = lanes.filter(function(l){ return l!==openLane; });
       var pat = blocked.map(function(l){
-        var rr = Math.random();
+        var rr = trackRand();
         return {lane:l, type: rr<0.4 ? 'rock' : (rr<0.8 ? 'beam' : 'barrier')};
       });
       // treasure chest: rare, and only ever placed in the one safe lane of a
       // hard double-block wave, so reaching it means threading the obstacles first.
       // during the chest mission one comes at the first hard wave every 30s
       var chestMission = chestMissionActive();
-      if(chestTimer <= 0 && (chestMission || Math.random() < 0.4)){
+      if(chestTimer <= 0 && (chestMission || trackRand() < 0.4)){
         pat.push({lane: openLane, type:'chest'});
-        chestTimer = chestMission ? CHEST_MISSION_INTERVAL : 38 + Math.random()*20;
+        chestTimer = chestMission ? CHEST_MISSION_INTERVAL : 38 + trackRand()*20;
       } else {
         pat.push({lane: openLane, type:'coin-line'});
       }
@@ -4183,28 +4684,29 @@
     // unlocked new obstacle kinds only ever come as a single, never inside a
     // double-block wave -- a switching cart could otherwise seal the open lane
     var unlocked = Math.min(milestones, NEW_OBSTACLES.length);
-    if(unlocked > 0 && Math.random() < 0.3){
-      return [{ lane: lanes[Math.floor(Math.random()*3)], type: NEW_OBSTACLES[Math.floor(Math.random()*unlocked)].type }];
+    if(unlocked > 0 && trackRand() < 0.3){
+      return [{ lane: lanes[Math.floor(trackRand()*3)], type: NEW_OBSTACLES[Math.floor(trackRand()*unlocked)].type }];
     }
 
-    var r = Math.random();
+    var r = trackRand();
     if(r < barrierChance){
-      var block = lanes[Math.floor(Math.random()*3)];
+      var block = lanes[Math.floor(trackRand()*3)];
       return [{lane:block, type:'barrier'}];
     } else if(r < barrierChance + 0.38){
-      var lane = lanes[Math.floor(Math.random()*3)];
+      var lane = lanes[Math.floor(trackRand()*3)];
       return [{lane:lane, type:'rock'}];
     } else {
-      var lane2 = lanes[Math.floor(Math.random()*3)];
+      var lane2 = lanes[Math.floor(trackRand()*3)];
       return [{lane:lane2, type:'beam'}];
     }
   }
 
   function spawnWave(){
+    trackReseed(1, trackWaveN++);
     if(portalDue && !bossMode){
       portalDue = false;
       var choices = WORLD_IDS.filter(function(w){ return w !== currentWorld; });
-      portals.push({ lane: Math.floor(Math.random()*3), z: ZFAR, dest: choices[Math.floor(Math.random()*choices.length)], used: false });
+      portals.push({ lane: Math.floor(trackRand()*3), z: ZFAR, dest: choices[Math.floor(trackRand()*choices.length)], used: false });
       return;
     }
     var items = letterPatternIfDue() || pickPattern();
@@ -4223,17 +4725,17 @@
         // different skin -- keeps the run from always looking like the same
         // three props
         var type = it.type;
-        if(type === 'rock' && Math.random() < 0.45) type = 'chasm';
-        if(type === 'beam' && Math.random() < 0.45) type = 'vines';
+        if(type === 'rock' && trackRand() < 0.45) type = 'chasm';
+        if(type === 'beam' && trackRand() < 0.45) type = 'vines';
         var ob = { lane: it.lane, type:type, z: ZFAR, resolved:false, world: currentWorld };
-        if(type === 'fire') ob.phase = Math.random() * FIRE_CYCLE;
+        if(type === 'fire') ob.phase = trackRand() * FIRE_CYCLE;
         if(type === 'cart'){
           // rolls in on one lane, then swerves into a neighbouring one
           ob.fromLane = it.lane;
-          ob.lane = it.lane === 1 ? (Math.random() < 0.5 ? 0 : 2) : 1;
+          ob.lane = it.lane === 1 ? (trackRand() < 0.5 ? 0 : 2) : 1;
         }
         obstacles.push(ob);
-        if(Math.random() < 0.4){
+        if(trackRand() < 0.4){
           coins.push({ lane: (it.lane+1)%3 === it.lane ? it.lane : (it.lane+2)%3, z: ZFAR - 40, collected:false });
         }
       }
@@ -4329,6 +4831,8 @@
     if(scratchFound) showScratchCard();
     hud.hidden = true;
     overOverlay.hidden = false;
+    duelBanner.hidden = true; duelAgainBtn.hidden = true;
+    if(trackSeed) duelRunOver(scoreVal);
   }
 
   // the old-style score: what coins earned, mission letter timing and the
@@ -4443,8 +4947,9 @@
     powerupTimer -= dt;
     if(powerupTimer <= 0){
       // the boss gives no feathers -- no invincible flight to hide in
-      if(!bossMode) powerups.push({ lane: Math.floor(Math.random()*3), z: ZFAR, collected:false });
-      powerupTimer = 20 + Math.random()*10;
+      trackReseed(2, trackPowerN++);
+      if(!bossMode) powerups.push({ lane: Math.floor(trackRand()*3), z: ZFAR, collected:false });
+      powerupTimer = 20 + trackRand()*10;
     }
     for(var pIdx=powerups.length-1; pIdx>=0; pIdx--){
       var pu = powerups[pIdx];
@@ -4594,7 +5099,7 @@
       portalTimer -= dt;
       if(portalTimer <= 0 && !portals.length && !portalDue){
         portalDue = true;                // the next spawn wave becomes the portal
-        portalTimer = 45 + Math.random()*15;
+        portalTimer = 45 + trackRand()*15;
       }
     }
     for(var i = portals.length - 1; i >= 0; i--){
@@ -6761,6 +7266,7 @@
     drawFootPuffs();
     drawPet();
     drawEventsFront();
+    if(trackSeed) drawDuelGhost();
     drawPlayer();
     if(evtIs('tornado')) drawTornadoOver();
     if(evtIs('chaser')) drawChaserBehind();
@@ -6791,6 +7297,7 @@
     } else {
       player.legPhase += dt*3;
     }
+    duelTick();
     draw();
     requestAnimationFrame(frame);
   }
@@ -6867,15 +7374,19 @@
 
   function hideHint(){ swipeHint.style.display='none'; }
 
-  function beginRun(boss){
+  // seed: a 1-on-1 duel run (the same track as the opponent, no crazy events)
+  function beginRun(boss, seed){
     resetGame();
+    trackSeed = seed || 0; trackWaveN = 0; trackPowerN = 0; trackRng = null;
+    if(trackSeed){ trackReseed(3, 0); powerupTimer = 10 + trackRand()*6; portalTimer = 30 + trackRand()*10; }
+    duelBar.hidden = !trackSeed;
     bossMode = !!boss;
     lastRunBoss = bossMode;
     bossWonThisRun = false;
     bossRunDay = israelDay().key;
     bossHp.hidden = !bossMode;
     renderBossHp();
-    planEventRun();
+    if(!trackSeed) planEventRun();
     state = 'playing';
     startOverlay.hidden = true;
     overOverlay.hidden = true;
@@ -6903,7 +7414,7 @@
   // never while the name field is being typed in. Everything worth keeping
   // (coins, skins, name, league) is in localStorage, so a reload loses nothing.
   // 'dev' = a local or preview copy: the updater stays off entirely.
-  var BUILD_VERSION = '20261008-160715';
+  var BUILD_VERSION = '20261009-091445';
   var UPDATE_CHECK_MS = 60000;
   var UPDATE_TRIED_KEY = 'canyonChaseTriedUpdate';
   var pendingSubmits = 0;
@@ -6911,7 +7422,8 @@
   document.documentElement.setAttribute('data-build', BUILD_VERSION);
 
   function isSafeToReload(){
-    if(state === 'playing' || state === 'revive') return false;
+    if(state === 'playing' || state === 'revive' || state === 'countdown') return false;
+    if(duel) return false;                      // setting up or in a 1-on-1
     if(pendingSubmits > 0) return false;
     if(specialOpening) return false;
     if(!chatOverlay.hidden) return false;       // mid-conversation
