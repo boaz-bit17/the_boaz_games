@@ -303,6 +303,14 @@
     border-radius:10px; padding:8px 14px; cursor:pointer;
   }
   .shop-btn:active{ transform:translateY(1px); }
+  .home-btn{
+    display:block; width:100%; margin-top:10px;
+    font-family:'Suez One',serif; font-size:18px; color:#fff;
+    background:linear-gradient(180deg,#3a8fd9,#1f5f9e);
+    border:none; border-radius:12px; padding:11px 14px; cursor:pointer;
+    box-shadow:0 4px 0 #154573;
+  }
+  .home-btn:active{ transform:translateY(2px); box-shadow:0 2px 0 #154573; }
   .back-btn{
     margin-top:16px; width:100%;
     font-family:'Rubik',sans-serif; font-weight:700; font-size:14px;
@@ -1014,6 +1022,7 @@
       <button class="go-btn special-btn" id="specialFromOverBtn" type="button" hidden>🎁 פתח את התיבה המיוחדת!</button>
       <div class="earn-row">🪙 נוספו <span id="earnedCoins">0</span> מטבעות לארנק</div>
       <button class="go-btn" id="retryBtn">נסה שוב</button>
+      <button class="home-btn" id="homeBtn" type="button">🏠 חזרה למסך הראשי</button>
       <button class="shop-btn duel-btn" id="duelAgainBtn" type="button" style="margin-top:10px; width:100%;" hidden>⚔️ עוד קרב</button>
       <button class="shop-btn" id="shopBtnOver" type="button" style="margin-top:10px; width:100%;">🎨 חנות סקינים</button>
     </div>
@@ -1892,6 +1901,7 @@
   var newBestTag = document.getElementById('newBestTag');
   var startBtn = document.getElementById('startBtn');
   var retryBtn = document.getElementById('retryBtn');
+  var homeBtn = document.getElementById('homeBtn');
   var swipeHint = document.getElementById('swipeHint');
   var walletNum = document.getElementById('walletNum');
   var shopWalletNum = document.getElementById('shopWalletNum');
@@ -4210,7 +4220,8 @@
   // as they really are
   function drawDuelGhost(){
     var d = duel;
-    if(!d || !d.started || !d.opp || d.oppFinal !== null || state === 'over' || state === 'watch') return;
+    if(!d || !d.started || !d.opp || d.oppFinal !== null) return;
+    if(state !== 'playing' && state !== 'revive' && state !== 'countdown') return;
     var o = d.opp;
     var oppDist = o.dist + speed * Math.min(0.5, (Date.now() - o.t) / 1000);
     var dz = oppDist - distance;
@@ -7538,6 +7549,12 @@
   startBtn.addEventListener('click', function(){ beginRun(false); });
   // "try again" after a boss run fights the boss again -- while it's still Thursday
   retryBtn.addEventListener('click', function(){ beginRun(lastRunBoss && isBossDay()); });
+  // back to the main menu from the game-over screen
+  homeBtn.addEventListener('click', function(){
+    overOverlay.hidden = true;
+    state = 'start';
+    startOverlay.hidden = false;
+  });
   continueBtn.addEventListener('click', continueRun);
   giveUpBtn.addEventListener('click', giveUpRun);
 
@@ -7550,7 +7567,7 @@
   // never while the name field is being typed in. Everything worth keeping
   // (coins, skins, name, league) is in localStorage, so a reload loses nothing.
   // 'dev' = a local or preview copy: the updater stays off entirely.
-  var BUILD_VERSION = '20261009-103326';
+  var BUILD_VERSION = '20261009-103740';
   var UPDATE_CHECK_MS = 60000;
   var UPDATE_TRIED_KEY = 'canyonChaseTriedUpdate';
   var pendingSubmits = 0;
