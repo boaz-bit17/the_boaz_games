@@ -4,6 +4,12 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <meta name="theme-color" content="#241531">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="מרדף בקניון">
 <style>:root{color-scheme:light}html,body{margin:0;padding:0}img{max-width:100%}[hidden]{display:none!important}</style>
 </head>
 <body>
@@ -304,6 +310,7 @@
     border-radius:10px; padding:8px 14px; cursor:pointer;
   }
   .shop-btn:active{ transform:translateY(1px); }
+  .privacy-link{ display:block; text-align:center; margin-top:12px; font-size:11.5px; color:rgba(42,21,15,.55); }
   .home-btn{
     display:block; width:100%; margin-top:10px;
     font-family:'Suez One',serif; font-size:18px; color:#fff;
@@ -969,6 +976,7 @@
         <div class="rule"><span class="glyph">⬇️</span><span class="txt">התכפפות מתחת לקורות</span><span class="key key-desk">חץ למטה</span><span class="key key-touch">החלקה למטה</span></div>
       </div>
       <button class="go-btn" id="startBtn">התחל גלישה</button>
+      <a class="privacy-link" href="privacy.html" target="_blank" rel="noopener">מדיניות פרטיות</a>
     </div>
   </div>
 
@@ -7872,7 +7880,7 @@
   // never while the name field is being typed in. Everything worth keeping
   // (coins, skins, name, league) is in localStorage, so a reload loses nothing.
   // 'dev' = a local or preview copy: the updater stays off entirely.
-  var BUILD_VERSION = '20261010-102505';
+  var BUILD_VERSION = '20261010-184242';
   var UPDATE_CHECK_MS = 60000;
   var UPDATE_TRIED_KEY = 'canyonChaseTriedUpdate';
   var pendingSubmits = 0;
@@ -7913,6 +7921,12 @@
         }
       })
       .catch(function(){});
+  }
+
+  // the installed app (Google Play / home screen): a small service worker,
+  // network first -- see sw.js. Not on local test copies.
+  if(BUILD_VERSION !== 'dev' && 'serviceWorker' in navigator){
+    navigator.serviceWorker.register('sw.js').catch(function(){});
   }
 
   if(BUILD_VERSION !== 'dev'){

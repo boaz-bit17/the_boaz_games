@@ -1,0 +1,20 @@
+{
+  "name": "מרדף בקניון",
+  "short_name": "מרדף בקניון",
+  "description": "משחק ריצה בקניון: קופצים, מתכופפים ומחליפים מסלול. טורנירים, ראש בראש עד 4 שחקנים, עולמות, בוס ועוד.",
+  "lang": "he",
+  "dir": "rtl",
+  "id": "./",
+  "start_url": "./",
+  "scope": "./",
+  "display": "fullscreen",
+  "orientation": "portrait",
+  "background_color": "#241531",
+  "theme_color": "#241531",
+  "categories": ["games"],
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
