@@ -70,6 +70,7 @@
     pointer-events:none;
     z-index:5;
   }
+  .fly-badge.shoe-badge{ background:linear-gradient(180deg,#eaffea,#a6f0b4); border-color:rgba(20,90,40,.45); }
   .fly-badge{
     background:linear-gradient(180deg,#eaf6ff,#bfe6ff);
     border:2px solid rgba(18,58,92,.4);
@@ -929,6 +930,7 @@
       </div>
     </div>
     <div class="fly-badge" id="flyBadge" hidden>🪶 <span id="flyTimeNum">0</span>s</div>
+    <div class="fly-badge shoe-badge" id="shoeBadge" hidden>👟 <span id="shoeTimeNum">0</span>s</div>
     <div class="fly-badge" id="eventBadge" hidden></div>
     <div class="duel-bar" id="duelBar" hidden><span id="duelMe"></span><span class="vs">VS</span><span id="duelOpp"></span></div>
     <div class="duel-count" id="duelCount" hidden></div>
@@ -1302,6 +1304,13 @@
   var LANE_LERP_SPEED = 12;
   var FLY_DURATION = 6;
   var FLY_HOVER_Y = 130;
+  // super sneakers: lying on the track now and then (about every 30s, never
+  // in the boss fight); for 10s every jump is a giant one -- high and long
+  // enough to clear anything, walls, carts and burning fire included
+  var SHOE_DURATION = 10;
+  var SHOE_JUMP_VEL = 1100;          // vs 760: about twice as high, half again as long
+  var SHOE_CLEAR = { barrier: 128, cart: 100, fire: 140 };   // height that clears each
+  var sneakers = [], shoeTimer = 0, trackShoeN = 0;
 
   var BEST_KEY = 'canyonChaseBest';
   var best = 0;
@@ -1918,6 +1927,8 @@
   var continueBtn = document.getElementById('continueBtn');
   var giveUpBtn = document.getElementById('giveUpBtn');
   var flyBadge = document.getElementById('flyBadge');
+  var shoeBadge = document.getElementById('shoeBadge');
+  var shoeTimeNum = document.getElementById('shoeTimeNum');
   var flyTimeNum = document.getElementById('flyTimeNum');
   var chestOpenBox = document.getElementById('chestOpenBox');
   var chestCountNum = document.getElementById('chestCountNum');
@@ -4270,7 +4281,8 @@
     evt = null; currentWorld = 'canyon'; worldFlash = 0;
     elapsed = 0; distance = 0; speed = 480; spawnTimer = 0; spawnGap = 0.95; decorTimer = 0;
     trackSeed = d.seed; trackWaveN = 0; trackPowerN = 0; trackRng = null;
-    trackReseed(3, 0); powerupTimer = 10 + trackRand()*6;
+    trackReseed(3, 0); powerupTimer = 10 + trackRand()*6; portalTimer = 30 + trackRand()*10; shoeTimer = 25 + trackRand()*10;
+    sneakers = []; trackShoeN = 0;
     player.lane = d.opp.l; player.x = LANES[player.lane]; player.y = 0; player.vy = 0;
     player.jumping = false; player.ducking = false; player.duckAmt = 0; player.flying = false; player.tilt = 0;
     state = 'watch';
@@ -4319,9 +4331,15 @@
       powerups.push({ lane: Math.floor(trackRand()*3), z: ZFAR, collected: false });
       powerupTimer = 20 + trackRand()*10;
     }
+    shoeTimer -= edt;
+    if(shoeTimer <= 0){
+      trackReseed(4, trackShoeN++);
+      sneakers.push({ lane: Math.floor(trackRand()*3), z: ZFAR, collected: false });
+      shoeTimer = 25 + trackRand()*10;
+    }
     decorTimer -= edt;
     if(decorTimer <= 0){ spawnDecor(); decorTimer = 0.5; }
-    [obstacles, coins, powerups, chests, decor].forEach(function(list){
+    [obstacles, coins, powerups, chests, decor, sneakers].forEach(function(list){
       for(var i = list.length - 1; i >= 0; i--){
         var it = list[i];
         it.z -= step * (it.type === 'boulder' ? BOULDER_ROLL : 1);
@@ -4730,11 +4748,15 @@
       lastFootStep: 0,
       tilt: 0,
       flying: false,
-      flyTimer: 0
+      flyTimer: 0,
+      shoes: 0,          // super sneakers time left
+      superJump: false   // this jump was a giant one
     };
     obstacles = [];
     coins = [];
     powerups = [];
+    sneakers = [];
+    shoeTimer = 25 + Math.random()*10;
     chests = [];
     decor = [];
     dustParticles = [];
@@ -4776,7 +4798,8 @@
     if(player.flying) return;
     if(player.jumping) return;
     player.jumping = true;
-    player.vy = JUMP_VEL;
+    player.superJump = player.shoes > 0;
+    player.vy = player.superJump ? SHOE_JUMP_VEL : JUMP_VEL;
     player.ducking = false;
     player.duckTimer = 0; player.duckAmt = 0;
     passEvent('jump');
@@ -4900,11 +4923,11 @@
         return player.ducking || (player.jumping && player.y > 92);
       case 'barrier':
       case 'cart':
-        return false;
+        return player.superJump && player.y > SHOE_CLEAR[ob.type];
       case 'boulder':
         return player.jumping && player.y > 50;
       case 'fire':
-        return !fireBurning(ob);
+        return !fireBurning(ob) || (player.superJump && player.y > SHOE_CLEAR.fire);
       default:
         return true;
     }
@@ -5030,7 +5053,7 @@
       player.y += player.vy*dt;
       player.vy -= GRAVITY*dt;
       if(player.y <= 0){
-        player.y = 0; player.vy = 0; player.jumping = false;
+        player.y = 0; player.vy = 0; player.jumping = false; player.superJump = false;
       }
     }
 
@@ -5104,6 +5127,25 @@
         player.flyTimer = FLY_DURATION;
       }
       if(pu.z < -80) powerups.splice(pIdx,1);
+    }
+
+    // super sneakers
+    if(player.shoes > 0) player.shoes = Math.max(0, player.shoes - dt);
+    shoeTimer -= dt;
+    if(shoeTimer <= 0){
+      trackReseed(4, trackShoeN++);
+      if(!bossMode) sneakers.push({ lane: Math.floor(trackRand()*3), z: ZFAR, collected: false });
+      shoeTimer = 25 + trackRand()*10;
+    }
+    for(var snIdx = sneakers.length - 1; snIdx >= 0; snIdx--){
+      var sn = sneakers[snIdx];
+      sn.z -= speed*dt;
+      if(!sn.collected && sn.lane === player.lane && sn.z <= COLLIDE_Z + 20 && sn.z > -30){
+        sn.collected = true;
+        player.shoes = SHOE_DURATION;
+        showToast('👟 נעליים קופצניות! קפיצה ענקית ל-10 שניות');
+      }
+      if(sn.z < -80) sneakers.splice(snIdx, 1);
     }
 
     // treasure chest: cools down over time, only actually spawns (see
@@ -5187,6 +5229,8 @@
     scoreNum.textContent = fmtScore(currentScore());
     coinNum.textContent = coinCount;
     flyBadge.hidden = !player.flying;
+    shoeBadge.hidden = !(player.shoes > 0);
+    if(player.shoes > 0) shoeTimeNum.textContent = Math.ceil(player.shoes);
     if(player.flying) flyTimeNum.textContent = Math.max(0, Math.ceil(player.flyTimer));
   }
 
@@ -5956,6 +6000,55 @@
     ctx.restore();
   }
 
+  // a red high-top on a green spring, bobbing and glowing
+  function drawSneaker(sn){
+    var bob = 44 + Math.sin(elapsed*4 + sn.z*0.02)*7;
+    var p = project(LANES[sn.lane], sn.z, bob);
+    if(p.scale <= 0.02) return;
+    var s = p.sp;
+    var glow = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, 32*s);
+    glow.addColorStop(0, 'rgba(120,255,150,0.55)');
+    glow.addColorStop(1, 'rgba(120,255,150,0)');
+    ctx.fillStyle = glow;
+    ctx.beginPath(); ctx.arc(p.x, p.y, 32*s, 0, Math.PI*2); ctx.fill();
+    var sh = project(LANES[sn.lane], sn.z, 0);                      // shadow on the ground below
+    ctx.fillStyle = 'rgba(0,0,0,0.22)';
+    ctx.beginPath(); ctx.ellipse(sh.x, sh.y, 16*s, 4*s, 0, 0, Math.PI*2); ctx.fill();
+    ctx.save();
+    ctx.translate(p.x, p.y);
+    ctx.scale(1 + Math.sin(elapsed*3 + sn.z*0.01)*0.08, 1);
+    ctx.lineJoin = 'round';
+    // spring
+    ctx.strokeStyle = '#2fd15a'; ctx.lineWidth = Math.max(1, 2.4*s);
+    ctx.beginPath(); ctx.moveTo(-6*s, 9*s);
+    for(var k = 0; k < 4; k++) ctx.lineTo((k % 2 ? -6 : 6)*s, (12 + k*3)*s);
+    ctx.stroke();
+    // sole
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(-18*s, 4*s, 36*s, 6*s);
+    ctx.strokeStyle = 'rgba(40,20,20,0.5)'; ctx.lineWidth = Math.max(1, 1.2*s);
+    ctx.strokeRect(-18*s, 4*s, 36*s, 6*s);
+    // upper
+    var ug = ctx.createLinearGradient(0, -16*s, 0, 4*s);
+    ug.addColorStop(0, '#ff5a74'); ug.addColorStop(1, '#c4123a');
+    ctx.fillStyle = ug;
+    ctx.beginPath();
+    ctx.moveTo(-17*s, 4*s);
+    ctx.lineTo(-17*s, -9*s);
+    ctx.quadraticCurveTo(-16*s, -17*s, -8*s, -17*s);
+    ctx.lineTo(-4*s, -9*s);
+    ctx.quadraticCurveTo(8*s, -8*s, 16*s, -1*s);
+    ctx.quadraticCurveTo(19*s, 3*s, 17*s, 4*s);
+    ctx.closePath(); ctx.fill(); ctx.stroke();
+    // laces, swoosh and toe cap
+    ctx.strokeStyle = '#ffffff'; ctx.lineWidth = Math.max(1, 1.4*s);
+    for(var l = 0; l < 3; l++){ ctx.beginPath(); ctx.moveTo((-9 + l*4)*s, (-12 + l*1.5)*s); ctx.lineTo((-5 + l*4)*s, (-10 + l*1.5)*s); ctx.stroke(); }
+    ctx.beginPath(); ctx.moveTo(-12*s, 0); ctx.quadraticCurveTo(0, -3*s, 12*s, -2*s); ctx.stroke();
+    ctx.fillStyle = 'rgba(255,255,255,0.85)';
+    ctx.beginPath(); ctx.ellipse(14*s, 1*s, 3.5*s, 2.5*s, 0, 0, Math.PI*2); ctx.fill();
+    ctx.restore();
+  }
+
   function drawChest(ch){
     var p = project(LANES[ch.lane], ch.z, 0);
     if(p.scale <= 0.02) return;
@@ -6711,6 +6804,22 @@
       if(skin.legs === 'shorts'){
         limb(g, L.hipX, L.hipY, L.hipX + (L.kneeX-L.hipX)*0.55, L.hipY + (L.kneeY-L.hipY)*0.55, 13, skin.pants);
       }
+      if(pose.superShoes){
+        // super sneakers: chunky red high-tops, a white sole and stripe,
+        // and a green spring under the heel
+        g.strokeStyle = '#2fd15a'; g.lineWidth = 1.8;
+        g.beginPath(); g.moveTo(L.footX - 4, L.footY + 6);
+        for(var sp = 0; sp < 4; sp++) g.lineTo(L.footX + (sp % 2 ? -4 : 4), L.footY + 8 + sp*2.2);
+        g.stroke();
+        g.fillStyle = '#e8203f';
+        g.beginPath(); g.ellipse(L.footX, L.footY - 1, 8.5, 6.5, 0, 0, Math.PI*2); g.fill();
+        g.fillStyle = '#ffffff';
+        g.fillRect(L.footX - 8.5, L.footY + 3, 17, 3.2);
+        g.fillRect(L.footX - 6, L.footY - 3, 12, 1.6);
+        g.fillStyle = 'rgba(255,255,255,0.45)';
+        g.beginPath(); g.ellipse(L.footX - 3, L.footY - 5, 3, 1.5, -0.3, 0, Math.PI*2); g.fill();
+        return;
+      }
       g.fillStyle = skin.shoes;
       g.beginPath(); g.ellipse(L.footX, L.footY + 1, 6.5, 4.5, 0, 0, Math.PI*2); g.fill();
       g.fillStyle = skin.sole;
@@ -7135,7 +7244,25 @@
         ctx.beginPath(); ctx.moveTo(sx, st[1]); ctx.lineTo(sx + (st[0] < 0 ? -st[2] : st[2]), st[1] + 6); ctx.stroke();
       });
     }
-    drawRunnerFigure(ctx, skin, { phase: player.legPhase, mode: mode, duck: duckA, t: elapsed, stance: playerStance() });
+    if(player.shoes > 0 && state !== 'watch'){
+      // super sneakers: the feet glow green, and a giant jump leaves a trail
+      var blink = player.shoes < 2 ? (Math.sin(elapsed*18) > 0 ? 1 : 0.35) : 1;   // running out
+      var sg = ctx.createRadialGradient(0, -4, 0, 0, -4, 30);
+      sg.addColorStop(0, 'rgba(120,255,150,' + (0.7*blink).toFixed(3) + ')');
+      sg.addColorStop(1, 'rgba(120,255,150,0)');
+      ctx.fillStyle = sg;
+      ctx.beginPath(); ctx.ellipse(0, -4, 30, 16, 0, 0, Math.PI*2); ctx.fill();
+      if(player.superJump && player.jumping){
+        for(var tr = 0; tr < 6; tr++){
+          var tl = ((elapsed*4 + tr/6) % 1);
+          ctx.fillStyle = 'rgba(140,255,170,' + (0.7*(1 - tl)).toFixed(3) + ')';
+          ctx.beginPath(); ctx.arc((tr % 2 ? 7 : -7) + Math.sin(tr*2.3)*4, 6 + tl*40, 4*(1 - tl) + 1, 0, Math.PI*2); ctx.fill();
+        }
+      }
+    }
+    var shod = player.shoes > 0 && state !== 'watch';
+    drawRunnerFigure(ctx, shod ? Object.assign({}, skin, { shoes: '#e8203f', sole: '#ffffff' }) : skin,
+                     { phase: player.legPhase, mode: mode, duck: duckA, t: elapsed, stance: playerStance(), superShoes: shod });
     if(ghost) ctx.globalAlpha = 1;
 
     // wings grow out of the back, which faces the camera -> on top
@@ -7401,6 +7528,7 @@
     obstacles.forEach(function(o){ entities.push({z:o.z, draw:function(){drawObstacle(o);}}); });
     coins.forEach(function(c){ if(!c.collected) entities.push({z:c.z, draw:function(){drawCoin(c);}}); });
     powerups.forEach(function(pu){ if(!pu.collected) entities.push({z:pu.z, draw:function(){drawPowerup(pu);}}); });
+    sneakers.forEach(function(sn){ if(!sn.collected) entities.push({z:sn.z, draw:function(){drawSneaker(sn);}}); });
     chests.forEach(function(ch){ if(!ch.collected) entities.push({z:ch.z, draw:function(){drawChest(ch);}}); });
     letterPickups.forEach(function(L){ if(!L.collected) entities.push({z:L.z, draw:function(){drawLetter(L);}}); });
     scratchCards.forEach(function(sc){ if(!sc.collected) entities.push({z:sc.z, draw:function(){drawScratchTicket(sc);}}); });
@@ -7525,7 +7653,8 @@
   function beginRun(boss, seed){
     resetGame();
     trackSeed = seed || 0; trackWaveN = 0; trackPowerN = 0; trackRng = null;
-    if(trackSeed){ trackReseed(3, 0); powerupTimer = 10 + trackRand()*6; portalTimer = 30 + trackRand()*10; }
+    trackShoeN = 0;
+    if(trackSeed){ trackReseed(3, 0); powerupTimer = 10 + trackRand()*6; portalTimer = 30 + trackRand()*10; shoeTimer = 25 + trackRand()*10; }
     duelBar.hidden = !trackSeed;
     bossMode = !!boss;
     lastRunBoss = bossMode;
@@ -7567,7 +7696,7 @@
   // never while the name field is being typed in. Everything worth keeping
   // (coins, skins, name, league) is in localStorage, so a reload loses nothing.
   // 'dev' = a local or preview copy: the updater stays off entirely.
-  var BUILD_VERSION = '20261009-103740';
+  var BUILD_VERSION = '20261010-100732';
   var UPDATE_CHECK_MS = 60000;
   var UPDATE_TRIED_KEY = 'canyonChaseTriedUpdate';
   var pendingSubmits = 0;
