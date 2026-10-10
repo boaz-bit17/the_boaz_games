@@ -2,8 +2,8 @@
 // to the site reaches players right away (the game's own auto-updater keeps
 // working). The cache is only a fallback so the game still opens on a weak
 // or missing connection. version.json and the database never come from here.
-var CACHE = 'canyon-chase-v1';
-var SHELL = ['./', 'manifest.webmanifest', 'icons/icon-192.png', 'icons/icon-512.png'];
+var CACHE = 'canyon-chase-v2';
+var SHELL = ['./', 'manifest.webmanifest', 'icons/icon-192-v2.png', 'icons/icon-512-v2.png'];
 
 self.addEventListener('install', function(e){
   e.waitUntil(caches.open(CACHE).then(function(c){ return c.addAll(SHELL); }).catch(function(){}));
