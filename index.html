@@ -4,10 +4,16 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <meta name="theme-color" content="#241531">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192-v2.png">
+<link rel="apple-touch-icon" href="icons/icon-180-v2.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Canyon Surfers">
 <style>:root{color-scheme:light}html,body{margin:0;padding:0}img{max-width:100%}[hidden]{display:none!important}</style>
 </head>
 <body>
-<title>מרדף בקניון</title>
+<title>מרדף בקניון · Canyon Surfers</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Suez+One&family=Rubik:wght@400;500;600;700;800&display=swap">
 <style>
@@ -207,7 +213,7 @@
   }
   .best-row .best-num{ font-family:'Suez One',serif; font-size:18px; font-variant-numeric: tabular-nums; }
   .new-best{
-    display:inline-block; margin-right:8px; font-size:11px; font-weight:700;
+    display:inline-block; margin-inline-start:8px; font-size:11px; font-weight:700;
     color:#fff5e6; background:var(--ember); border-radius:8px; padding:2px 8px;
     letter-spacing:.03em;
   }
@@ -262,7 +268,7 @@
   }
   .leaderboard-name{
     flex:1; font-size:13px; font-weight:700; color:var(--ink);
-    text-align:right;
+    text-align:start;
     overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
   }
   .leaderboard-score{
@@ -304,6 +310,14 @@
     border-radius:10px; padding:8px 14px; cursor:pointer;
   }
   .shop-btn:active{ transform:translateY(1px); }
+  .lang-tablet .lang-pick{ margin-top:12px; }
+  .lang-tablet h1{ font-size:44px; margin-bottom:4px; }
+  .lang-btn{
+    display:block; margin:14px auto 0; cursor:pointer;
+    font-family:'Rubik',sans-serif; font-weight:700; font-size:13px; color:var(--ink);
+    background:rgba(255,255,255,.45); border:1px solid rgba(42,21,15,.25); border-radius:999px; padding:6px 16px;
+  }
+  .privacy-link{ display:block; text-align:center; margin-top:12px; font-size:11.5px; color:rgba(42,21,15,.55); }
   .home-btn{
     display:block; width:100%; margin-top:10px;
     font-family:'Suez One',serif; font-size:18px; color:#fff;
@@ -368,7 +382,7 @@
     margin-bottom:14px;
   }
   .revive-shop-text{
-    display:flex; flex-direction:column; gap:2px; text-align:right;
+    display:flex; flex-direction:column; gap:2px; text-align:start;
   }
   .revive-shop-text strong{ font-size:13px; color:var(--ink); }
   .revive-shop-text span{ font-size:11px; color:var(--ember-dim); font-weight:600; font-variant-numeric: tabular-nums; }
@@ -418,7 +432,6 @@
     font-size:14px;
     color:var(--ink);
     box-shadow:0 6px 14px -6px rgba(0,0,0,.4);
-    direction:rtl;
     font-variant-numeric: tabular-nums;
   }
   .mission-letters{ display:inline-flex; gap:3px; direction:ltr; }
@@ -463,7 +476,7 @@
     border:1px solid rgba(42,21,15,.18);
     border-radius:12px;
     padding:10px 12px;
-    text-align:right;
+    text-align:start;
   }
   .mission-row.is-current{
     background:linear-gradient(160deg,#ffe9a8,#ffcf6b);
@@ -528,7 +541,7 @@
   .pass-row{
     display:flex; align-items:center; gap:10px;
     background:rgba(255,255,255,.35); border:1px solid rgba(42,21,15,.18);
-    border-radius:10px; padding:6px 10px; text-align:right;
+    border-radius:10px; padding:6px 10px; text-align:start;
   }
   .pass-row.is-ready{ background:linear-gradient(160deg,#ffe9a8,#ffcf6b); border:2px solid rgba(160,90,0,.5); }
   .pass-row.is-locked{ opacity:.55; }
@@ -552,9 +565,9 @@
     border-radius:10px;
     padding:6px 10px;
     margin-bottom:10px;
-    text-align:right;
+    text-align:start;
   }
-  .chat-online .dot{ display:inline-block; width:8px; height:8px; border-radius:50%; background:#2fbf5a; margin-left:5px; }
+  .chat-online .dot{ display:inline-block; width:8px; height:8px; border-radius:50%; background:#2fbf5a; margin-inline-end:5px; }
   .chat-list{
     height:min(46vh, 340px);
     overflow-y:auto;
@@ -563,7 +576,7 @@
     border-radius:12px;
     padding:8px;
     display:flex; flex-direction:column; gap:6px;
-    text-align:right;
+    text-align:start;
     margin-bottom:10px;
   }
   .chat-msg{
@@ -581,8 +594,8 @@
     background:linear-gradient(160deg,#ffe0c2,#ffc999);
     border-radius:12px 12px 4px 12px;
   }
-  .chat-msg .who{ font-size:11px; font-weight:800; color:var(--ember-dim); margin-left:6px; }
-  .chat-msg .when{ font-size:10px; font-weight:600; color:rgba(42,21,15,.45); margin-right:6px; }
+  .chat-msg .who{ font-size:11px; font-weight:800; color:var(--ember-dim); margin-inline-end:6px; }
+  .chat-msg .when{ font-size:10px; font-weight:600; color:rgba(42,21,15,.45); margin-inline-start:6px; }
   .chat-empty{ font-size:13px; font-weight:600; color:var(--ember-dim); text-align:center; margin:auto; }
   .chat-send{ display:flex; gap:8px; }
   .chat-send input{
@@ -675,7 +688,7 @@
   .boss-hp-bar{ flex:1; height:10px; border-radius:5px; background:rgba(255,255,255,.2); overflow:hidden; }
   .boss-hp-fill{ height:100%; width:100%; background:linear-gradient(90deg,#ff3c3c,#ffb347); transition:width .2s linear; }
   .boss-result{ background:linear-gradient(160deg,#ff9a9a,#ffd447); }
-  .boss-rules{ text-align:right; font-size:13px; font-weight:600; color:var(--ink); line-height:1.6; margin:0 0 14px; padding:0 4px; }
+  .boss-rules{ text-align:start; font-size:13px; font-weight:600; color:var(--ink); line-height:1.6; margin:0 0 14px; padding:0 4px; }
   .boss-go{ background:linear-gradient(180deg,#e0243a,#7a0c22); box-shadow:0 8px 0 0 #4a0714, 0 12px 18px -6px rgba(0,0,0,.45); }
   .boss-go:active{ box-shadow:0 2px 0 0 #4a0714, 0 4px 10px -4px rgba(0,0,0,.4); }
 
@@ -774,7 +787,7 @@
     border-radius:12px;
     padding:8px 10px;
     margin-bottom:6px;
-    text-align:right;
+    text-align:start;
     font-size:12px; font-weight:700; color:var(--ink);
   }
   .tourney-prize canvas{ width:56px; height:80px; flex:none; }
@@ -969,6 +982,17 @@
         <div class="rule"><span class="glyph">⬇️</span><span class="txt">התכפפות מתחת לקורות</span><span class="key key-desk">חץ למטה</span><span class="key key-touch">החלקה למטה</span></div>
       </div>
       <button class="go-btn" id="startBtn">התחל גלישה</button>
+      <button class="lang-btn" id="langBtn" type="button"></button>
+      <a class="privacy-link" href="privacy.html" target="_blank" rel="noopener">מדיניות פרטיות</a>
+    </div>
+  </div>
+
+  <div class="overlay" id="langOverlay" hidden>
+    <div class="tablet lang-tablet">
+      <h1>🌐</h1>
+      <p class="tagline">בחר שפה · Choose a language</p>
+      <button class="go-btn lang-pick" type="button" data-lang="he">עברית</button>
+      <button class="go-btn lang-pick" type="button" data-lang="en">English</button>
     </div>
   </div>
 
@@ -1261,6 +1285,157 @@
 <script>
 (function(){
   "use strict";
+  // ---------- language ----------
+  // Hebrew or English. The first visit shows a picker (until then the
+  // phone's language decides); the choice is kept and can be changed from
+  // the main screen. L(he, en) picks a text in the code; the page's own
+  // fixed text is swapped from I18N_HTML once, right here. Changing the
+  // language reloads the page -- everything worth keeping is in localStorage.
+  var LANG_KEY = 'canyonChaseLang';
+  var LANG_CHOSEN = null;
+  try { LANG_CHOSEN = localStorage.getItem(LANG_KEY); } catch(e){}
+  var LANG = (LANG_CHOSEN === 'he' || LANG_CHOSEN === 'en') ? LANG_CHOSEN
+    : (/^(he|iw)\b/i.test(navigator.language || '') ? 'he' : 'en');
+  function L(he, en){ return LANG === 'en' ? en : he; }
+  var I18N_HTML = {
+   "מרדף בקניון · Canyon Surfers": "Canyon Surfers",
+   "ניקוד": "Score",
+   "שיא": "Best",
+   "✖ הפסק לצפות": "✖ Stop watching",
+   "☠️ בוס": "☠️ Boss",
+   "מרדף בקניון": "Canyon Surfers",
+   "גלישה פראית בין הריסות המדבר. תישאר על הרגליים כמה שיותר!": "A wild ride through the desert ruins. Stay on your feet as long as you can!",
+   "🎨 חנות סקינים": "🎨 Skin shop",
+   "🏆 שיאים": "🏆 Leaderboard",
+   "🏅 ליגות": "🏅 Leagues",
+   "🎯 משימות": "🎯 Missions",
+   "💬 חדר המתנה": "💬 Lobby chat",
+   "⚔️ ראש בראש": "⚔️ Head to head",
+   "🎫 באטל פס": "🎫 Battle pass",
+   "החלף מסלול": "Change lane",
+   "חצים": "Arrows",
+   "החלקה הצידה": "Swipe sideways",
+   "קפיצה מעל סלעים": "Jump over rocks",
+   "חץ למעלה": "Up arrow",
+   "נגיעה או החלקה למעלה": "Tap or swipe up",
+   "התכפפות מתחת לקורות": "Duck under beams",
+   "חץ למטה": "Down arrow",
+   "החלקה למטה": "Swipe down",
+   "התחל גלישה": "Start surfing",
+   "מדיניות פרטיות": "Privacy policy",
+   "נפלת!": "You fell!",
+   "יש לך אבן תחייה — אפשר להשתמש בה ולהמשיך מיד": "You have a revive stone — use it to keep going right away",
+   "אבני תחייה": "revive stones",
+   "💠 השתמש באבן תחייה": "💠 Use a revive stone",
+   "וותר וסיים": "Give up",
+   "נפלת בקניון": "You fell in the canyon",
+   "הניקוד שלך": "Your score",
+   "שברת את השיא האישי שלך!": "New personal best!",
+   "השיא הטוב ביותר:": "Best:",
+   "מצאת": "You found",
+   "תיבות אוצר בדרך!": "treasure chests on the way!",
+   "לחץ על התיבה כדי לפתוח": "Tap the chest to open it",
+   "🎟️ מצאת כרטיס גירוד בדרך!": "🎟️ You found a scratch card!",
+   "הוזמנת לאימון של ים פלישר!": "You're invited to surf training!",
+   "גרד עם האצבע כדי לגלות מה יצא לך": "Scratch with your finger to see what you got",
+   "👀 צפה ביריב ממשיך": "👀 Watch your opponent",
+   "🎁 פתח את התיבה המיוחדת!": "🎁 Open the special chest!",
+   "🪙 נוספו": "🪙",
+   "מטבעות לארנק": "coins added to your wallet",
+   "נסה שוב": "Try again",
+   "🏠 חזרה למסך הראשי": "🏠 Back to main screen",
+   "⚔️ עוד קרב": "⚔️ Another match",
+   "חנות סקינים": "Skin shop",
+   "קנה מראות חדשים לדמות עם המטבעות שאספת בריצות": "Buy new looks with the coins you collect",
+   "💠 אבן תחייה": "💠 Revive stone",
+   "בבעלותך:": "You have:",
+   "/2 · נהרסת? קום מיד וממשיך": "/2 · Crashed? Get right back up",
+   "קנה 🪙": "Buy 🪙",
+   "🐾 חיות מחמד": "🐾 Pets",
+   "החיה רצה במסלול לידך ואוספת בשבילך את המטבעות שם. משיגים אותן בתיבת חמישי.": "Your pet runs in the lane next to you and collects the coins there. Get pets from the Thursday chest.",
+   "חזרה": "Back",
+   "שיאי הקניון": "Canyon leaderboard",
+   "הטבלה המשותפת של כל מי שמשחק": "Everyone who plays, on one board",
+   "ליגה 3": "League 3",
+   "המתחרים הראשונים בדרך לצמרת": "First steps toward the top",
+   "בכל עונה 6 סיבובים -- כל ריצה שלך היא סיבוב, וגם ששת היריבים משחקים אותו סיבוב וצוברים ניקוד. הם מתחילים בעדינות ומתחזקים מסיבוב לסיבוב. אחרי סיבוב 6, אם סיימת במקום הראשון בטבלה -- ניצחת את העונה ועלית ליגה. בליגה 1 זה מזכה בפרס אלוף!": "Each season has 6 rounds -- every run of yours is a round, and your six rivals play the same round and score too. They start gently and get stronger each round. After round 6, if you're in first place you win the season and move up a league. In League 1 that earns the champion prize!",
+   "משימות": "Missions",
+   "השלם את כל 4 המשימות לפי הסדר וזכה בתיבה מיוחדת": "Complete all 4 missions in order to win a special chest",
+   "🎁 הפרס: תיבה מיוחדת — ואולי יצא לך ממנה הסקין המוזהב \"אגדת הזהב\"!": "🎁 The prize: a special chest — maybe with the golden skin \"Golden Legend\"!",
+   "📅 משימות יומיות": "📅 Daily quests",
+   "וגם כל ריצה נותנת נקודות פס — ככל שמגיעים רחוק יותר.": "Every run also gives pass points — the further you get, the more.",
+   "🏁 30 שלבים": "🏁 30 tiers",
+   "מדברים לפני שיוצאים לגלוש": "Chat before you hit the waves",
+   "שלח": "Send",
+   "2 עד 4 שחקנים רצים באותו רגע על אותו מסלול בדיוק, בלי אירועים משוגעים. מי שמגיע לניקוד הכי גבוה מנצח!": "2 to 4 players run at the same moment on the exact same track, with no crazy events. Highest score wins!",
+   "🎲 יריב אקראי (1 על 1)": "🎲 Random opponent (1 on 1)",
+   "🔑 פתח חדר עם קוד (עד 4 שחקנים)": "🔑 Open a room with a code (up to 4)",
+   "הצטרף": "Join",
+   "▶ התחל קרב": "▶ Start match",
+   "ביטול": "Cancel",
+   "🏆 טבלת ניצחונות": "🏆 Wins table",
+   "🎁 תיבת חמישי": "🎁 Thursday chest",
+   "רק בימי חמישי · 2 💎 לתיבה": "Thursdays only · 2 💎 per chest",
+   "מה יכול לצאת: 🪙 5,000 מטבעות (35%) · 🎨 סקין מהחנות שאין לך (30%) · 🐾 חיית מחמד (20%) · 💥 הורדת 2,000,000 נקודות לקבוצה השנייה בטורניר (15%)": "What you can get: 🪙 5,000 coins (35%) · 🎨 a shop skin you don't have (30%) · 🐾 a pet (20%) · 💥 take 2,000,000 points off the other tournament team (15%)",
+   "פתח ב-2 💎": "Open for 2 💎",
+   "☠️ שלב בוס": "☠️ Boss level",
+   "רק בימי חמישי!": "Thursdays only!",
+   "🏄 גולש ענק רוכב בקצה המסלול ושולח עליך מחסומים.": "🏄 A giant surfer rides at the end of the track and sends barriers at you.",
+   "⚠️ אין נוצות תעופה — אין איפה להתחבא.": "⚠️ No flying feathers — nowhere to hide.",
+   "💥 כדי להרוג אותו צריך להגיע ל-": "💥 To beat him, reach ",
+   "נקודות בריצה אחת.": "points in one run.",
+   "💎 פרס: 4 יהלומים (פעם בכל חמישי), ובניצחון הראשון גם הסקין": "💎 Prize: 4 diamonds (once every Thursday), and on your first win also the skin",
+   "קוטל הבוס": "Boss Slayer",
+   "— גולש שרוכב על הגלשן שלו!": "— a surfer who rides his own board!",
+   "הילחם בבוס!": "Fight the boss!",
+   "רגולר נגד גופי": "Regular vs Goofy",
+   "טורניר קבוצות: 6 ימים, כל 20 יום": "Team tournament: 6 days, every 20 days",
+   "🏄 רגולר": "🏄 Regular",
+   "רגל שמאל מקדימה": "Left foot forward",
+   "🏄 גופי": "🏄 Goofy",
+   "רגל ימין מקדימה": "Right foot forward",
+   "💥 הורדות נקודות": "💥 Point drops",
+   "מי איתך ומי נגדך": "Who's with you and who's against you",
+   "הגולשים המובילים": "Top surfers",
+   "ניקוד הקבוצה = סכום כל הריצות של כל חברי הקבוצה בזמן הטורניר": "Team score = all runs of all team members during the tournament",
+   "תיבה מיוחדת": "Special chest",
+   "השלמת את כל המשימות!": "You completed all the missions!",
+   "המשך": "Continue",
+   "⬅️➡️ החלף": "⬅️➡️ Switch",
+   "⬆️ קפוץ": "⬆️ Jump",
+   "⬇️ התכפף": "⬇️ Duck",
+   "השם שלך": "Your name",
+   "פתח תיבה": "Open chest",
+   "קודם כתוב את השם שלך": "First type your name",
+   "כתוב הודעה...": "Write a message...",
+   "קוד חדר": "Room code",
+   "פתח תיבה מיוחדת": "Open special chest"
+  };
+  (function translatePage(){
+    var root = document.documentElement;
+    root.lang = LANG;
+    root.dir = LANG === 'en' ? 'ltr' : 'rtl';
+    if(LANG !== 'en') return;
+    var walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT), nodes = [];
+    while(walker.nextNode()) nodes.push(walker.currentNode);
+    nodes.forEach(function(t){
+      var p = t.parentNode && t.parentNode.nodeName;
+      if(p === 'SCRIPT' || p === 'STYLE') return;
+      var raw = t.nodeValue, en = I18N_HTML[raw.replace(/\s+/g, ' ').trim()];
+      if(en === undefined) return;
+      t.nodeValue = (/^\s/.test(raw) ? ' ' : '') + en + (/\s$/.test(raw) ? ' ' : '');
+    });
+    ['placeholder', 'aria-label'].forEach(function(at){
+      Array.prototype.forEach.call(document.querySelectorAll('[' + at + ']'), function(el){
+        var en = I18N_HTML[el.getAttribute(at)];
+        if(en !== undefined) el.setAttribute(at, en);
+      });
+    });
+  })();
+  function setLang(lang){
+    try { localStorage.setItem(LANG_KEY, lang); } catch(e){}
+    if(lang !== LANG) location.reload();
+  }
 
   var canvas = document.getElementById('game');
   var ctx = canvas.getContext('2d');
@@ -1328,50 +1503,50 @@
   // `exclusive` skins can't be bought -- they only come from somewhere else
   // (the surfer: the scratch card's "tube day").
   var SKINS = [
-    { id:'ember',    name:'הרפתקן',      price:0,
+    { id:'ember',    name:L('הרפתקן', 'Adventurer'),      price:0,
       skinTone:'#dba27a', hair:'#4a2a17', hairStyle:'short',
       shirt:'#e86a2e', shirtShade:'#a9461a', sleeves:'short',
       pants:'#8f7a58', pantsShade:'#6a5a40', legs:'long',
       shoes:'#5a3b24', sole:'#d8c7a8', headband:'#d83a2e' },
-    { id:'azure',    name:'גולש עירוני',  price:40,
+    { id:'azure',    name:L('גולש עירוני', 'City Surfer'),  price:40,
       skinTone:'#c68a5e', hair:'#231710', hairStyle:'short',
       shirt:'#3f8fd6', shirtShade:'#245f99', sleeves:'long', hood:'down',
       pants:'#3b4f7a', pantsShade:'#29375a', legs:'long',
       shoes:'#f2f2f0', sole:'#bfbfbf' },
-    { id:'jade',     name:'רצת המדבר',    price:70,
+    { id:'jade',     name:L('רצת המדבר', 'Desert Runner'),    price:70,
       skinTone:'#f0c9a4', hair:'#dcb660', hairStyle:'pony',
       shirt:'#3faf6a', shirtShade:'#27804b', sleeves:'none',
       pants:'#e8e0cc', pantsShade:'#c9bfa6', legs:'shorts',
       shoes:'#2f8a57', sole:'#f2f2f0' },
-    { id:'royal',    name:'מטייל ארגמן',  price:110,
+    { id:'royal',    name:L('מטייל ארגמן', 'Crimson Hiker'),  price:110,
       skinTone:'#f2cfae', hair:'#b3421f', hairStyle:'long',
       shirt:'#7a3fb0', shirtShade:'#52277d', sleeves:'long',
       pants:'#2a2530', pantsShade:'#18151d', legs:'long',
       shoes:'#1d1a20', sole:'#8a8390', backpack:'#c9a24a' },
-    { id:'obsidian', name:'נינג׳ה',       price:160,
+    { id:'obsidian', name:L('נינג׳ה', 'Ninja'),       price:160,
       skinTone:'#8a5a3c', hair:'#141414', hairStyle:'short',
       shirt:'#2c2c36', shirtShade:'#15151b', sleeves:'long',
       pants:'#22222b', pantsShade:'#131318', legs:'long',
       shoes:'#18181d', sole:'#3a3a44', headband:'#c0282d' },
-    { id:'crimson',  name:'אלוף ארגמן',   price:380,
+    { id:'crimson',  name:L('אלוף ארגמן', 'Crimson Champ'),   price:380,
       skinTone:'#e8b58e', hair:'#1c1410', hairStyle:'short',
       shirt:'#d23a3a', shirtShade:'#8a1818', sleeves:'long',
       pants:'#243773', pantsShade:'#172452', legs:'long',
       shoes:'#e8b830', sole:'#a07a18',
       cape:'#b81c1c', capeShade:'#7e1010', emblem:{shape:'bolt', color:'#ffd447'} },
-    { id:'shadow',   name:'צל הלילה',     price:460,
+    { id:'shadow',   name:L('צל הלילה', 'Night Shadow'),     price:460,
       skinTone:'#d8b89a', hair:'#101018', hairStyle:'short',
       shirt:'#3a3a55', shirtShade:'#1e1e2e', sleeves:'long', hood:'up',
       pants:'#1c1c28', pantsShade:'#101018', legs:'long',
       shoes:'#2a2a3a', sole:'#4a4a60',
       cape:'#17172b', capeShade:'#0b0b16', emblem:{shape:'star', color:'#8a5cff'} },
-    { id:'solar',    name:'אביר השמש',    price:560,
+    { id:'solar',    name:L('אביר השמש', 'Sun Knight'),    price:560,
       skinTone:'#f0d2b4', hair:'#6a4a2a', hairStyle:'short',
       shirt:'#d9d4c7', shirtShade:'#a19b8c', sleeves:'long',
       pants:'#bdb7a8', pantsShade:'#8f8a7d', legs:'long',
       shoes:'#8f8a7f', sole:'#5f5b53', helmet:'#cfc9ba',
       cape:'#f3e2b0', capeShade:'#cdb77a', emblem:{shape:'sun', color:'#e8952a'} },
-    { id:'venom',    name:'רעל ירוק',     price:680,
+    { id:'venom',    name:L('רעל ירוק', 'Green Venom'),     price:680,
       skinTone:'#9fd98a', hair:'#0f2a0f', hairStyle:'short',
       shirt:'#4fc23c', shirtShade:'#1f6a1a', sleeves:'long', hood:'up',
       pants:'#15301a', pantsShade:'#0b1c0e', legs:'long',
@@ -1379,56 +1554,56 @@
       cape:'#144414', capeShade:'#0a2a0a', emblem:{shape:'bolt', color:'#c8ffb0'} },
 
     // ---- premium tier: 10,000+ coins, each with its own glow and extras ----
-    { id:'thunder',  name:'סערת ברקים',   price:10000,
+    { id:'thunder',  name:L('סערת ברקים', 'Thunderstorm'),   price:10000,
       skinTone:'#e8b58e', hair:'#f4f6ff', hairStyle:'spiky',
       shirt:'#2f6fe0', shirtShade:'#173a8a', sleeves:'long', shine:true,
       pattern:'stripes', patternColor:'#ffe34a',
       pants:'#1c2a55', pantsShade:'#101a38', legs:'long',
       shoes:'#ffe34a', sole:'#b38f00', aura:'#7fd4ff' },
-    { id:'lava',     name:'מלך הלבה',     price:10500,
+    { id:'lava',     name:L('מלך הלבה', 'Lava King'),     price:10500,
       skinTone:'#c98a64', hair:'#1a0f0a', hairStyle:'short',
       shirt:'#2a1410', shirtShade:'#120806', sleeves:'long',
       pattern:'stripes', patternColor:'#ff6a1a',
       pants:'#1a0d09', pantsShade:'#0d0604', legs:'long',
       shoes:'#ff6a1a', sole:'#7a2a05', horns:'#f4d7b0',
       cape:'#1a0d09', capeShade:'#c2380a', emblem:{shape:'flame', color:'#ffb347'}, aura:'#ff5a1f' },
-    { id:'frost',    name:'מלכת הקרח',    price:11000,
+    { id:'frost',    name:L('מלכת הקרח', 'Ice Queen'),    price:11000,
       skinTone:'#f3dccb', hair:'#eef7ff', hairStyle:'long',
       shirt:'#a8dcff', shirtShade:'#5a9fd6', sleeves:'long', shine:true,
       pants:'#e8f4ff', pantsShade:'#b9d6ee', legs:'long',
       shoes:'#d8f0ff', sole:'#7fb2d9', crown:'#bfe8ff', aura:'#9fe2ff', sparkle:'#ffffff' },
-    { id:'pharaoh',  name:'פרעה',          price:11500,
+    { id:'pharaoh',  name:L('פרעה', 'Pharaoh'),          price:11500,
       skinTone:'#c68a5e', hair:'#2f5fc9', hairStyle:'nemes', patternColor:'#f2c14e',
       shirt:'#f4efe2', shirtShade:'#cfc6ae', sleeves:'none',
       pants:'#f4efe2', pantsShade:'#d8cfb6', legs:'shorts',
       shoes:'#c9a24a', sole:'#8a6a20', aura:'#f2c14e' },
-    { id:'cyber',    name:'סייבורג',       price:12000,
+    { id:'cyber',    name:L('סייבורג', 'Cyborg'),       price:12000,
       skinTone:'#d9b392', hair:'#0a0a0a', hairStyle:'short', helmet:'#c9d2dc',
       shirt:'#9aa6b2', shirtShade:'#4d5763', sleeves:'long', shine:true,
       pattern:'stripes', patternColor:'#39ff88',
       pants:'#3a424c', pantsShade:'#22282e', legs:'long',
       shoes:'#39ff88', sole:'#0f6a36', aura:'#39ff88', sparkle:'#39ff88' },
-    { id:'samurai',  name:'סמוראי',        price:12500,
+    { id:'samurai',  name:L('סמוראי', 'Samurai'),        price:12500,
       skinTone:'#e0b08a', hair:'#111111', hairStyle:'short', helmet:'#3a1a1a', helmetDark:true,
       horns:'#d4a93a',
       shirt:'#8a1c1c', shirtShade:'#4a0c0c', sleeves:'long',
       pattern:'stripes', patternColor:'#2a0808',
       pants:'#1f1f24', pantsShade:'#121216', legs:'long',
       shoes:'#1a1a1a', sole:'#5a4a2a', sword:'#1a1a22', aura:'#c0282d' },
-    { id:'angel',    name:'מלאך',          price:13000,
+    { id:'angel',    name:L('מלאך', 'Angel'),          price:13000,
       skinTone:'#f5dcc4', hair:'#f3d27a', hairStyle:'long',
       shirt:'#ffffff', shirtShade:'#d9d6ea', sleeves:'long',
       pants:'#f7f5ff', pantsShade:'#d6d2e8', legs:'long',
       shoes:'#f2e7c4', sole:'#c9b27a',
       halo:'#ffd766', wings:'#ffffff', aura:'#fff2b3', sparkle:'#fff4c2' },
-    { id:'demon',    name:'שד הצללים',    price:13500,
+    { id:'demon',    name:L('שד הצללים', 'Shadow Demon'),    price:13500,
       skinTone:'#8a4a5a', hair:'#140a18', hairStyle:'spiky',
       shirt:'#2a0f36', shirtShade:'#12061a', sleeves:'long',
       pattern:'stripes', patternColor:'#5a1f7a',
       pants:'#150a1c', pantsShade:'#0a0510', legs:'long',
       shoes:'#6a1a8a', sole:'#2a0a3a',
       horns:'#d63a3a', wings:'#3a1450', aura:'#9b3cff' },
-    { id:'galaxy',   name:'גלקסיה',        price:14000,
+    { id:'galaxy',   name:L('גלקסיה', 'Galaxy'),        price:14000,
       skinTone:'#d8b89a', hair:'#2a1a5a', hairStyle:'short', hood:'up',
       shirt:'#2a1f6e', shirtShade:'#0f0a33', sleeves:'long',
       pattern:'stars', patternColor:'#ffffff',
@@ -1436,14 +1611,14 @@
       shoes:'#5ad1ff', sole:'#1a3a6a',
       cape:'#3a1f8a', capeShade:'#0a0a2a', emblem:{shape:'moon', color:'#e8e0ff'},
       aura:'#7a5cff', sparkle:'#c9b8ff' },
-    { id:'golden',   name:'אגדת הזהב',    price:15000,
+    { id:'golden',   name:L('אגדת הזהב', 'Golden Legend'),    price:15000,
       skinTone:'#e8b58e', hair:'#f2c14e', hairStyle:'short',
       shirt:'#f2c14e', shirtShade:'#a8781a', sleeves:'long', shine:true,
       pants:'#d9a93a', pantsShade:'#8a6414', legs:'long',
       shoes:'#fff0b3', sole:'#a8781a', crown:'#ffd766',
       cape:'#ffd766', capeShade:'#b8860b', emblem:{shape:'sun', color:'#fff8dc'},
       wings:'#ffe9a0', aura:'#ffd766', sparkle:'#fff4c2' },
-    { id:'surfer',   name:'גולש צינורות', price:0, exclusive:'scratch',
+    { id:'surfer',   name:L('גולש צינורות', 'Barrel Surfer'), price:0, exclusive:'scratch',
       skinTone:'#c98b5e', hair:'#ecc766', hairStyle:'spiky',
       shirt:'#1fa3b8', shirtShade:'#127486', sleeves:'short',
       pants:'#ff7a3d', pantsShade:'#c9551f', legs:'shorts',
@@ -1452,7 +1627,7 @@
     // ---- regular-vs-goofy tournament prizes: a new surf skin every month,
     // in order (Sept 2026 first). Only the current one shows in the shop
     // until you've won it.
-    { id:'wavelord', name:'מלך הגלים',      price:0, exclusive:'tournament',
+    { id:'wavelord', name:L('מלך הגלים', 'Wave Lord'),      price:0, exclusive:'tournament',
       skinTone:'#c98b5e', hair:'#7fe3ff', hairStyle:'spiky',
       shirt:'#0a6cff', shirtShade:'#053a8c', sleeves:'long',
       pattern:'stripes', patternColor:'rgba(127,227,255,0.55)',
@@ -1461,7 +1636,7 @@
       surfboard:'#ffd447', boardStripe:'#ff3dbb',
       aura:'#39c6ff', sparkle:'#bff3ff',
       splash:'#39c6ff', boardGlow:'#ff3dbb' },
-    { id:'reefshark', name:'כריש השונית',   price:0, exclusive:'tournament',
+    { id:'reefshark', name:L('כריש השונית', 'Reef Shark'),   price:0, exclusive:'tournament',
       skinTone:'#e0a882', hair:'#2b2b33', hairStyle:'short',
       shirt:'#8c9aa8', shirtShade:'#55626f', sleeves:'long',
       pattern:'stripes', patternColor:'rgba(255,255,255,0.35)',
@@ -1470,7 +1645,7 @@
       surfboard:'#e8eef3', boardStripe:'#2e3b48',
       aura:'#9fb4c7', sparkle:'#e8eef3',
       splash:'#bfe9ff', boardGlow:'#bfe9ff' },
-    { id:'stormrider', name:'רוכב הסערה',   price:0, exclusive:'tournament',
+    { id:'stormrider', name:L('רוכב הסערה', 'Storm Rider'),   price:0, exclusive:'tournament',
       skinTone:'#d8b089', hair:'#1b1030', hairStyle:'long',
       shirt:'#4b2a8a', shirtShade:'#261451', sleeves:'long',
       pattern:'stars', patternColor:'#ffe45c',
@@ -1479,7 +1654,7 @@
       surfboard:'#1d1336', boardStripe:'#ffe45c',
       aura:'#8a5cff', sparkle:'#ffe45c',
       splash:'#8a5cff', boardGlow:'#ffe45c' },
-    { id:'icewave', name:'גל הקרח',         price:0, exclusive:'tournament',
+    { id:'icewave', name:L('גל הקרח', 'Ice Wave'),         price:0, exclusive:'tournament',
       skinTone:'#f2d3bb', hair:'#e9f6ff', hairStyle:'pony',
       shirt:'#dff3ff', shirtShade:'#9cc8e6', sleeves:'long', shine:true,
       pants:'#b8def5', pantsShade:'#7fb3d6', legs:'long',
@@ -1487,7 +1662,7 @@
       surfboard:'#ffffff', boardStripe:'#6ec6ff',
       aura:'#bfe9ff', sparkle:'#ffffff',
       splash:'#bfe9ff', boardGlow:'#6ec6ff' },
-    { id:'sunsetpro', name:'מקצוען השקיעה', price:0, exclusive:'tournament',
+    { id:'sunsetpro', name:L('מקצוען השקיעה', 'Sunset Pro'), price:0, exclusive:'tournament',
       skinTone:'#b87a50', hair:'#3a2012', hairStyle:'short',
       shirt:'#ff7a3d', shirtShade:'#d93b6a', sleeves:'short',
       pants:'#6a1f5c', pantsShade:'#44123b', legs:'shorts',
@@ -1495,7 +1670,7 @@
       surfboard:'#ffb347', boardStripe:'#d93b6a',
       aura:'#ff9a5c', sparkle:'#ffd9a0',
       splash:'#ff9a5c', boardGlow:'#d93b6a' },
-    { id:'coralqueen', name:'מלכת האלמוגים', price:0, exclusive:'tournament',
+    { id:'coralqueen', name:L('מלכת האלמוגים', 'Coral Queen'), price:0, exclusive:'tournament',
       skinTone:'#e8b58e', hair:'#ff6f91', hairStyle:'long',
       shirt:'#ff8a8a', shirtShade:'#d9536b', sleeves:'none',
       pattern:'stars', patternColor:'#fff0f3',
@@ -1504,7 +1679,7 @@
       surfboard:'#fff0f3', boardStripe:'#2aa7a0',
       aura:'#ff9eb5', sparkle:'#fff0f3',
       splash:'#ff9eb5', boardGlow:'#2aa7a0' },
-    { id:'tsunami', name:'צונאמי',          price:0, exclusive:'tournament',
+    { id:'tsunami', name:L('צונאמי', 'Tsunami'),          price:0, exclusive:'tournament',
       skinTone:'#c68a5e', hair:'#0b3d4d', hairStyle:'spiky',
       shirt:'#0f6e7a', shirtShade:'#083f47', sleeves:'long',
       pattern:'stripes', patternColor:'rgba(255,255,255,0.45)',
@@ -1513,7 +1688,7 @@
       surfboard:'#ffffff', boardStripe:'#0f6e7a',
       aura:'#1fc4d6', sparkle:'#bff3ff',
       splash:'#1fc4d6', boardGlow:'#0f6e7a' },
-    { id:'lavasurf', name:'גולש הלבה',      price:0, exclusive:'tournament',
+    { id:'lavasurf', name:L('גולש הלבה', 'Lava Surfer'),      price:0, exclusive:'tournament',
       skinTone:'#b8764e', hair:'#1a0a06', hairStyle:'spiky',
       shirt:'#2a0f0a', shirtShade:'#120503', sleeves:'long',
       pattern:'stripes', patternColor:'rgba(255,90,20,0.7)',
@@ -1522,7 +1697,7 @@
       surfboard:'#2a0f0a', boardStripe:'#ff5a14',
       aura:'#ff4a14', sparkle:'#ffb347',
       splash:'#ff4a14', boardGlow:'#ff5a14' },
-    { id:'goldbarrel', name:'הצינור המוזהב', price:0, exclusive:'tournament',
+    { id:'goldbarrel', name:L('הצינור המוזהב', 'Golden Barrel'), price:0, exclusive:'tournament',
       skinTone:'#d9a07a', hair:'#f2c14e', hairStyle:'long',
       shirt:'#f2c14e', shirtShade:'#a8781a', sleeves:'short', shine:true,
       pants:'#ffffff', pantsShade:'#e0d6c0', legs:'shorts',
@@ -1530,7 +1705,7 @@
       surfboard:'#fff4c2', boardStripe:'#d4a017',
       aura:'#ffd766', sparkle:'#fff4c2',
       splash:'#ffd766', boardGlow:'#d4a017' },
-    { id:'neonnight', name:'גולש הניאון',   price:0, exclusive:'tournament',
+    { id:'neonnight', name:L('גולש הניאון', 'Neon Surfer'),   price:0, exclusive:'tournament',
       skinTone:'#a86f4a', hair:'#39ff88', hairStyle:'spiky',
       shirt:'#111418', shirtShade:'#050608', sleeves:'long',
       pattern:'stripes', patternColor:'rgba(57,255,136,0.75)',
@@ -1539,7 +1714,7 @@
       surfboard:'#111418', boardStripe:'#39ff88',
       aura:'#39ff88', sparkle:'#c8ffe0',
       splash:'#39ff88', boardGlow:'#39ff88' },
-    { id:'dolphin', name:'רוכב הדולפינים',  price:0, exclusive:'tournament',
+    { id:'dolphin', name:L('רוכב הדולפינים', 'Dolphin Rider'),  price:0, exclusive:'tournament',
       skinTone:'#e0a882', hair:'#5a3a22', hairStyle:'pony',
       shirt:'#6fa8c7', shirtShade:'#3f7593', sleeves:'short',
       pants:'#e8eef3', pantsShade:'#b5c3cf', legs:'shorts',
@@ -1547,7 +1722,7 @@
       surfboard:'#bfe3f2', boardStripe:'#3f7593',
       aura:'#8fd1f0', sparkle:'#e8f8ff',
       splash:'#8fd1f0', boardGlow:'#3f7593' },
-    { id:'rainbowrider', name:'רוכב הקשת',  price:0, exclusive:'tournament',
+    { id:'rainbowrider', name:L('רוכב הקשת', 'Rainbow Rider'),  price:0, exclusive:'tournament',
       skinTone:'#d8a57e', hair:'#ff5ab4', hairStyle:'spiky',
       shirt:'#7a3fff', shirtShade:'#3b1d99', sleeves:'long',
       pattern:'stars', patternColor:'#7fffd4',
@@ -1557,7 +1732,7 @@
       aura:'#ff5ab4', sparkle:'#fff4c2',
       splash:'#ff5ab4', boardGlow:'#ff5ab4' },
     // the Thursday boss prize: rides its board instead of running
-    { id:'bossslayer', name:'קוטל הבוס',   price:0, exclusive:'boss', rides:true,
+    { id:'bossslayer', name:L('קוטל הבוס', 'Boss Slayer'),   price:0, exclusive:'boss', rides:true,
       skinTone:'#c98b5e', hair:'#ffffff', hairStyle:'spiky',
       shirt:'#1a1a1f', shirtShade:'#0a0a0d', sleeves:'long',
       pattern:'stripes', patternColor:'rgba(255,60,60,0.6)',
@@ -1566,7 +1741,7 @@
       rideBoard:'#ffd447', rideStripe:'#ff3c3c', boardGlow:'#ff3c3c',
       aura:'#ff3c3c', sparkle:'#ffd0c0', splash:'#7fe3ff' },
     // ---- battle pass: the tier-30 skin, a different one each monthly season
-    { id:'canyondragon', name:'דרקון הקניון', price:0, exclusive:'pass',
+    { id:'canyondragon', name:L('דרקון הקניון', 'Canyon Dragon'), price:0, exclusive:'pass',
       skinTone:'#5a8a3a', hair:'#1f3d14', hairStyle:'spiky',
       shirt:'#2f6b2a', shirtShade:'#173a14', sleeves:'long',
       pattern:'stars', patternColor:'#ffd447',
@@ -1574,13 +1749,13 @@
       shoes:'#ffd447', sole:'#173a14', horns:'#ffd447',
       wings:'#7fd36a', aura:'#7fd36a', sparkle:'#ffe9a0',
       cape:'#2f6b2a', capeShade:'#0b1f09', emblem:{shape:'flame', color:'#ffd447'} },
-    { id:'phoenix', name:'עוף החול',         price:0, exclusive:'pass',
+    { id:'phoenix', name:L('עוף החול', 'Phoenix'),         price:0, exclusive:'pass',
       skinTone:'#e8b58e', hair:'#ff5a14', hairStyle:'spiky',
       shirt:'#ff7a1a', shirtShade:'#b8320a', sleeves:'long', shine:true,
       pants:'#8a1a0a', pantsShade:'#4a0a04', legs:'long',
       shoes:'#ffd447', sole:'#8a1a0a', crown:'#ffd766',
       wings:'#ffb347', aura:'#ff7a1a', sparkle:'#ffe066' },
-    { id:'astronaut', name:'אסטרונאוט',      price:0, exclusive:'pass',
+    { id:'astronaut', name:L('אסטרונאוט', 'Astronaut'),      price:0, exclusive:'pass',
       skinTone:'#e8b58e', hair:'#3a2a20', hairStyle:'short',
       shirt:'#f2f4f8', shirtShade:'#b9c0cc', sleeves:'long',
       pants:'#e4e8ef', pantsShade:'#aab2c0', legs:'long',
@@ -1756,11 +1931,11 @@
   // leader) is what wins the league and promotes you to the next one up.
   // same six rival names in every league -- you keep chasing the same crew
   // as they (and you) get tougher climbing the ladder.
-  var BOT_NAMES = ['רוכב האש','נץ הקניון','זאב החולות','ברק המדבר','צל הסלעים','עקרב האבק'];
+  var BOT_NAMES = L(['רוכב האש','נץ הקניון','זאב החולות','ברק המדבר','צל הסלעים','עקרב האבק'], ['Fire Rider','Canyon Hawk','Dune Wolf','Desert Bolt','Rock Shadow','Dust Scorpion']);
   var LEAGUES = [
-    { id:3, name:'ליגה 3', tagline:'המתחרים הראשונים בדרך לצמרת',   bots:[20000,16000,12800,10000,7600,5200] },
-    { id:2, name:'ליגה 2', tagline:'כאן זה כבר מתחיל להיות רציני',  bots:[48000,40000,33600,28000,23200,19200] },
-    { id:1, name:'ליגה 1', tagline:'רק הטובים ביותר שורדים כאן',    bots:[120000,100000,84000,70400,58400,48000] }
+    { id:3, name:L('ליגה 3', 'League 3'), tagline:L('המתחרים הראשונים בדרך לצמרת', 'First steps toward the top'),   bots:[20000,16000,12800,10000,7600,5200] },
+    { id:2, name:L('ליגה 2', 'League 2'), tagline:L('כאן זה כבר מתחיל להיות רציני', 'Now it gets serious'),  bots:[48000,40000,33600,28000,23200,19200] },
+    { id:1, name:L('ליגה 1', 'League 1'), tagline:L('רק הטובים ביותר שורדים כאן', 'Only the best survive here'),    bots:[120000,100000,84000,70400,58400,48000] }
   ];
   // versioned keys: bot scores just got a lot harder, so everyone (including
   // anyone already mid-ladder) starts the climb over from league 3 at 0
@@ -1830,7 +2005,7 @@
     var rows = league.bots.map(function(ceiling, idx){
       return { name: BOT_NAMES[idx], total: seasonBotTotals[idx], isYou: false };
     });
-    rows.push({ name: (playerName.trim() || 'אתה'), total: seasonPlayerTotal, isYou: true });
+    rows.push({ name: (playerName.trim() || L('אתה', 'You')), total: seasonPlayerTotal, isYou: true });
     rows.sort(function(a,b){ return b.total - a.total; });
     return rows;
   }
@@ -1862,7 +2037,8 @@
     standings.forEach(function(entry, idx){ if(entry.isYou) yourRank = idx+1; });
 
     if(seasonRound < SEASON_LENGTH){
-      leagueBanner.textContent = 'סיבוב ' + seasonRound + '/' + SEASON_LENGTH + ' -- מקום ' + yourRank + ' מתוך ' + (RIVAL_COUNT+1) + ' עם ' + fmtScore(seasonPlayerTotal);
+      leagueBanner.textContent = L('סיבוב ' + seasonRound + '/' + SEASON_LENGTH + ' -- מקום ' + yourRank + ' מתוך ' + (RIVAL_COUNT+1) + ' עם ' + fmtScore(seasonPlayerTotal),
+        'Round ' + seasonRound + '/' + SEASON_LENGTH + ' -- place ' + yourRank + ' of ' + (RIVAL_COUNT+1) + ' with ' + fmtScore(seasonPlayerTotal));
       leagueBanner.hidden = false;
       return;
     }
@@ -1873,7 +2049,8 @@
     resetSeason();
 
     if(!wonSeason){
-      leagueBanner.textContent = 'העונה הסתיימה -- סיימת במקום ' + yourRank + ' עם ' + fmtScore(finalPlayerTotal) + ' (המוביל: ' + fmtScore(finalLeaderTotal) + '). עונה חדשה מתחילה!';
+      leagueBanner.textContent = L('העונה הסתיימה -- סיימת במקום ' + yourRank + ' עם ' + fmtScore(finalPlayerTotal) + ' (המוביל: ' + fmtScore(finalLeaderTotal) + '). עונה חדשה מתחילה!',
+        'Season over -- you finished in place ' + yourRank + ' with ' + fmtScore(finalPlayerTotal) + ' (leader: ' + fmtScore(finalLeaderTotal) + '). A new season begins!');
       leagueBanner.hidden = false;
       return;
     }
@@ -1885,7 +2062,8 @@
       // league's rivals, the exact same "beat them without playing" bug again
       leagueBest = 0;
       saveLeague();
-      leagueBanner.textContent = '🏅 סיימת ראשון עם ' + fmtScore(finalPlayerTotal) + '! עלית ל' + getLeague(currentLeague).name + '!';
+      leagueBanner.textContent = L('🏅 סיימת ראשון עם ' + fmtScore(finalPlayerTotal) + '! עלית ל' + getLeague(currentLeague).name + '!',
+        '🏅 You finished first with ' + fmtScore(finalPlayerTotal) + '! Up to ' + getLeague(currentLeague).name + '!');
       leagueBanner.hidden = false;
     } else if(!isChampion){
       isChampion = true;
@@ -1893,10 +2071,11 @@
       saveLeague();
       saveProgress();
       updateWalletDisplays();
-      leagueBanner.textContent = '👑 סיימת ראשון עם ' + fmtScore(finalPlayerTotal) + '! אתה האלוף! +' + CHAMPION_PRIZE + ' 🪙';
+      leagueBanner.textContent = L('👑 סיימת ראשון עם ' + fmtScore(finalPlayerTotal) + '! אתה האלוף! +' + CHAMPION_PRIZE + ' 🪙',
+        '👑 You finished first with ' + fmtScore(finalPlayerTotal) + '! You are the champion! +' + CHAMPION_PRIZE + ' 🪙');
       leagueBanner.hidden = false;
     } else {
-      leagueBanner.textContent = '👑 שוב ראשון בליגה 1! (' + fmtScore(finalPlayerTotal) + ')';
+      leagueBanner.textContent = L('👑 שוב ראשון בליגה 1! (', '👑 First in League 1 again! (') + fmtScore(finalPlayerTotal) + ')';
       leagueBanner.hidden = false;
     }
   }
@@ -1972,7 +2151,7 @@
       if(!statusText){
         var empty = document.createElement('div');
         empty.className = 'leaderboard-empty';
-        empty.textContent = 'עדיין אין שיאים -- תהיה הראשון!';
+        empty.textContent = L('עדיין אין שיאים -- תהיה הראשון!', 'No scores yet -- be the first!');
         leaderboardList.appendChild(empty);
       }
       return;
@@ -1988,7 +2167,7 @@
       rank.textContent = (idx+1);
       var name = document.createElement('div');
       name.className = 'leaderboard-name';
-      name.textContent = entry.name || 'שחקן';
+      name.textContent = entry.name || L('שחקן', 'Player');
       var score = document.createElement('div');
       score.className = 'leaderboard-score';
       score.textContent = fmtScore(entry.score);
@@ -2002,17 +2181,17 @@
   // מרענן מהשרת ומצייר מחדש; אם אין רשת/הגדרה -- נשאר עם מה שיש מקומית
   function refreshLeaderboard(){
     if(!isOnlineBoard){
-      renderLeaderboard('טבלה מקומית בלבד -- עדיין לא חובר שרת שיאים');
+      renderLeaderboard(L('טבלה מקומית בלבד -- עדיין לא חובר שרת שיאים', 'Local board only -- no score server connected yet'));
       return;
     }
-    renderLeaderboard('טוען שיאים...');
+    renderLeaderboard(L('טוען שיאים...', 'Loading scores...'));
     fetchBoard().then(function(rows){
       if(rows){
         leaderboard = rows;
         cacheBoard();
         renderLeaderboard();
       } else {
-        renderLeaderboard('אין חיבור כרגע -- מוצגים השיאים האחרונים שנשמרו');
+        renderLeaderboard(L('אין חיבור כרגע -- מוצגים השיאים האחרונים שנשמרו', 'No connection -- showing the last saved scores'));
       }
     });
   }
@@ -2037,9 +2216,9 @@
     leagueLevelTag.textContent = league.tagline;
 
     if(seasonRound > 0){
-      leagueSeasonStatus.textContent = 'עונה בעיצומה -- סיבוב ' + seasonRound + ' מתוך ' + SEASON_LENGTH;
+      leagueSeasonStatus.textContent = L('עונה בעיצומה -- סיבוב ' + seasonRound + ' מתוך ' + SEASON_LENGTH, 'Season in progress -- round ' + seasonRound + ' of ' + SEASON_LENGTH);
     } else {
-      leagueSeasonStatus.textContent = 'עונה חדשה -- כולם על 0. הריצה הבאה היא סיבוב 1 מתוך ' + SEASON_LENGTH;
+      leagueSeasonStatus.textContent = L('עונה חדשה -- כולם על 0. הריצה הבאה היא סיבוב 1 מתוך ', 'New season -- everyone at 0. Your next run is round 1 of ') + SEASON_LENGTH;
     }
 
     leagueList.innerHTML = '';
@@ -2108,10 +2287,10 @@
     reviveStockNumPrompt.textContent = reviveStock;
     if(reviveStock >= MAX_REVIVE_STOCK){
       buyReviveBtn.disabled = true;
-      buyReviveBtn.textContent = 'מלא (' + MAX_REVIVE_STOCK + ')';
+      buyReviveBtn.textContent = L('מלא (', 'Full (') + MAX_REVIVE_STOCK + ')';
     } else {
       buyReviveBtn.disabled = wallet < REVIVE_STONE_PRICE;
-      buyReviveBtn.textContent = 'קנה ב-' + REVIVE_STONE_PRICE.toLocaleString('en-US') + ' 🪙';
+      buyReviveBtn.textContent = L('קנה ב-', 'Buy for ') + REVIVE_STONE_PRICE.toLocaleString('en-US') + ' 🪙';
     }
   }
   updateWalletDisplays();
@@ -2163,9 +2342,9 @@
       btn.className = 'skin-btn';
       if(!owned && skin.exclusive){
         btn.classList.add('is-locked');
-        btn.textContent = skin.exclusive === 'tournament' ? '🏆 רק מהטורניר'
-          : skin.exclusive === 'pass' ? '🎫 שלב 30 בבאטל פס'
-          : skin.exclusive === 'boss' ? '☠️ רק מניצחון על הבוס' : '🎟️ רק מכרטיס גירוד';
+        btn.textContent = skin.exclusive === 'tournament' ? L('🏆 רק מהטורניר', '🏆 Tournament only')
+          : skin.exclusive === 'pass' ? L('🎫 שלב 30 בבאטל פס', '🎫 Battle pass tier 30')
+          : skin.exclusive === 'boss' ? L('☠️ רק מניצחון על הבוס', '☠️ Beat the boss') : L('🎟️ רק מכרטיס גירוד', '🎟️ Scratch card only');
         btn.disabled = true;
       } else if(!owned){
         var afford = wallet >= skin.price;
@@ -2174,10 +2353,10 @@
         btn.disabled = !afford;
       } else if(skin.id === selectedSkinId){
         btn.classList.add('is-selected');
-        btn.textContent = 'נבחר';
+        btn.textContent = L('נבחר', 'Selected');
         btn.disabled = true;
       } else {
-        btn.textContent = 'בחר';
+        btn.textContent = L('בחר', 'Choose');
       }
       btn.addEventListener('click', function(){ buyOrSelectSkin(skin.id); });
       card.appendChild(btn);
@@ -2279,18 +2458,18 @@
   }
   function missionTitle(idx){
     switch(missionType(idx)){
-      case 'letters': return 'אסוף את האותיות של המילה ' + missionWord(idx);
-      case 'score': return 'הגע ל-' + SCORE_MISSION_TARGET.toLocaleString('en-US') + ' נקודות בריצה אחת';
-      default: return 'אסוף ' + CHEST_MISSION_TARGET + ' תיבות אוצר בריצה אחת';
+      case 'letters': return L('אסוף את האותיות של המילה ', 'Collect the letters of the word ') + missionWord(idx);
+      case 'score': return L('הגע ל-' + SCORE_MISSION_TARGET.toLocaleString('en-US') + ' נקודות בריצה אחת', 'Reach ' + SCORE_MISSION_TARGET.toLocaleString('en-US') + ' points in one run');
+      default: return L('אסוף ' + CHEST_MISSION_TARGET + ' תיבות אוצר בריצה אחת', 'Collect ' + CHEST_MISSION_TARGET + ' treasure chests in one run');
     }
   }
   function missionSub(idx){
     // deliberately doesn't say at what score the letters show up
     if(missionType(idx) === 'letters'){
-      return 'האותיות מפוזרות במסלול בין המכשולים. אות שאספת נשמרת גם אם נפלת, אבל אות שפספסת לא חוזרת באותה ריצה';
+      return L('האותיות מפוזרות במסלול בין המכשולים. אות שאספת נשמרת גם אם נפלת, אבל אות שפספסת לא חוזרת באותה ריצה', 'The letters are scattered between the obstacles. A letter you collect is kept even if you fall, but one you miss won\'t come back that run');
     }
-    if(missionType(idx) === 'chests') return 'כל 4 התיבות צריכות להיאסף באותה ריצה';
-    return 'הניקוד של ריצה אחת';
+    if(missionType(idx) === 'chests') return L('כל 4 התיבות צריכות להיאסף באותה ריצה', 'All 4 chests must be collected in the same run');
+    return L('הניקוד של ריצה אחת', 'The score of a single run');
   }
 
   function lettersHtml(word, got){
@@ -2306,7 +2485,7 @@
     if(type === 'letters'){
       missionBadge.innerHTML = '🎯 ' + lettersHtml(missionWord(idx), missions.letters);
     } else if(type === 'score'){
-      missionBadge.textContent = '🎯 הגע ל-' + SCORE_MISSION_TARGET.toLocaleString('en-US');
+      missionBadge.textContent = L('🎯 הגע ל-', '🎯 Reach ') + SCORE_MISSION_TARGET.toLocaleString('en-US');
     } else {
       missionBadge.textContent = '🎯 🧰 ' + runMissionChests + '/' + CHEST_MISSION_TARGET;
     }
@@ -2351,9 +2530,9 @@
       missions.idx = 0;
       missions.cycle++;
       missions.specialPending = true;
-      showToast('🎁 כל המשימות הושלמו! זכית בתיבה מיוחדת');
+      showToast(L('🎁 כל המשימות הושלמו! זכית בתיבה מיוחדת', '🎁 All missions complete! You won a special chest'));
     } else {
-      showToast('✅ משימה הושלמה!');
+      showToast(L('✅ משימה הושלמה!', '✅ Mission complete!'));
     }
     saveMissions();
     runMissionChests = 0;
@@ -2371,7 +2550,7 @@
     var word = missionWord(missions.idx);
     renderMissionBadge();
     if(missions.letters.length >= word.length) completeMission();
-    else showToast('אות ' + word[i] + '!', true);
+    else showToast(L('אות ', 'Letter ') + word[i] + '!', true);
   }
 
   // called every frame of a run
@@ -2429,7 +2608,8 @@
 
   function showMissionResults(){
     if(missionsDoneThisRun.length){
-      missionBanner.textContent = '🎯 השלמת ' + (missionsDoneThisRun.length === 1 ? 'משימה' : missionsDoneThisRun.length + ' משימות') + ' בריצה הזו!';
+      missionBanner.textContent = L('🎯 השלמת ' + (missionsDoneThisRun.length === 1 ? 'משימה' : missionsDoneThisRun.length + ' משימות') + ' בריצה הזו!',
+        '🎯 You completed ' + (missionsDoneThisRun.length === 1 ? 'a mission' : missionsDoneThisRun.length + ' missions') + ' this run!');
       missionBanner.hidden = false;
     } else {
       missionBanner.hidden = true;
@@ -2510,7 +2690,7 @@
       if(!hasGolden && Math.random() < GOLDEN_SKIN_CHANCE){
         ownedSkins.push('golden');
         selectedSkinId = 'golden';
-        text = '✨ הסקין המוזהב "אגדת הזהב"! הוא כבר עליך ✨';
+        text = L('✨ הסקין המוזהב "אגדת הזהב"! הוא כבר עליך ✨', '✨ The golden skin "Golden Legend"! You\'re already wearing it ✨');
       } else {
         var coinsWon = 3000 + Math.floor(Math.random() * 3001);
         wallet += coinsWon;
@@ -2579,7 +2759,7 @@
       if(!sc.collected && sc.lane === player.lane && sc.z <= COLLIDE_Z + 20 && sc.z > -30){
         sc.collected = true;
         scratchFound = true;
-        showToast('🎟️ כרטיס גירוד!');
+        showToast(L('🎟️ כרטיס גירוד!', '🎟️ Scratch card!'));
       }
       if(sc.z < -80) scratchCards.splice(i, 1);
     }
@@ -2629,16 +2809,16 @@
     var amt = document.createElement('div');
     amt.className = 'amt';
     if(scratchOutcome === 'skin'){
-      line.textContent = 'איזה כיף! נפלת על יום צינורות 🌊';
-      amt.textContent = 'קיבלת סקין של גולש! 🏄';
+      line.textContent = L('איזה כיף! נפלת על יום צינורות 🌊', 'Lucky you! It\'s a barrel day 🌊');
+      amt.textContent = L('קיבלת סקין של גולש! 🏄', 'You got a surfer skin! 🏄');
     } else if(scratchOutcome === 'tube'){
-      line.textContent = 'איזה כיף! נפלת על יום צינורות 🌊';
+      line.textContent = L('איזה כיף! נפלת על יום צינורות 🌊', 'Lucky you! It\'s a barrel day 🌊');
       amt.textContent = '+' + SCRATCH_TUBE_COINS.toLocaleString('en-US') + ' 🪙';
     } else if(scratchOutcome === 'good'){
-      line.textContent = 'איזה כיף, יש גלים היום! 🏄';
+      line.textContent = L('איזה כיף, יש גלים היום! 🏄', 'Great, there are waves today! 🏄');
       amt.textContent = '+' + SCRATCH_AMOUNT + ' 🪙';
     } else {
-      line.textContent = 'איזה ביש מזל! נפלת על אימון שחייה 🏊';
+      line.textContent = L('איזה ביש מזל! נפלת על אימון שחייה 🏊', 'Bad luck! It\'s swim practice instead 🏊');
       amt.textContent = '−' + SCRATCH_AMOUNT + ' 🪙';
     }
     scratchResult.appendChild(line);
@@ -2648,7 +2828,7 @@
     scratchChecks = 0;
     scratchCover.classList.remove('is-gone');
     scratchHint.hidden = false;
-    scratchHint.textContent = 'גרד עם האצבע כדי לגלות מה יצא לך';
+    scratchHint.textContent = L('גרד עם האצבע כדי לגלות מה יצא לך', 'Scratch with your finger to see what you got');
     scratchBox.hidden = false;
     // size the coating once the panel is laid out
     requestAnimationFrame(paintScratchCover);
@@ -2676,7 +2856,7 @@
     scratchCtx.font = '700 15px Rubik, sans-serif';
     scratchCtx.textAlign = 'center';
     scratchCtx.textBaseline = 'middle';
-    scratchCtx.fillText('גרד כאן 🌊', rect.width/2, rect.height/2);
+    scratchCtx.fillText(L('גרד כאן 🌊', 'Scratch here 🌊'), rect.width/2, rect.height/2);
   }
 
   function scratchAt(e){
@@ -2708,7 +2888,7 @@
     if(scratchOutcome === 'skin'){
       if(ownedSkins.indexOf(SCRATCH_SKIN_ID) === -1) ownedSkins.push(SCRATCH_SKIN_ID);
       selectedSkinId = SCRATCH_SKIN_ID;
-      scratchHint.textContent = 'הסקין כבר עליך!';
+      scratchHint.textContent = L('הסקין כבר עליך!', 'You\'re already wearing the skin!');
       scratchHint.hidden = false;
     } else if(scratchOutcome === 'tube'){
       wallet += SCRATCH_TUBE_COINS;
@@ -2754,7 +2934,7 @@
   var TOURNEY_FIRST = { y: 2026, m: 8, d: 29 };   // the first: 29.9.2026 (months are 0-based)
   var TOURNEY_REPEAT_COINS = 5000;
   var TOURNEY_KEY = 'canyonChaseTourneyV1';
-  var TEAM_NAMES = { regular: 'רגולר', goofy: 'גופי' };
+  var TEAM_NAMES = { regular: L('רגולר', 'Regular'), goofy: L('גופי', 'Goofy') };
   var TOURNEY_SKIN_IDS = SKINS.filter(function(s){ return s.exclusive === 'tournament'; }).map(function(s){ return s.id; });
 
   var tourneyBanner = document.getElementById('tourneyBanner');
@@ -2913,7 +3093,7 @@
         var el = document.createElement('div');
         var you = sameName(r.name, myName);
         el.className = 'tourney-roster-name' + (you ? ' is-you' : '');
-        el.textContent = r.name + (you ? ' (אתה)' : '');
+        el.textContent = r.name + (you ? L(' (אתה)', ' (you)') : '');
         col.appendChild(el);
       });
     });
@@ -2939,9 +3119,9 @@
 
   function timeLeft(ms){
     var h = Math.max(0, Math.floor(ms / 3600000)), dd = Math.floor(h / 24);
-    if(dd >= 1) return dd + (dd === 1 ? ' יום' : ' ימים') + (h % 24 ? ' ו-' + (h % 24) + ' שעות' : '');
-    if(h >= 1) return h + ' שעות';
-    return Math.max(1, Math.ceil(ms / 60000)) + ' דקות';
+    if(dd >= 1) return dd + L(dd === 1 ? ' יום' : ' ימים', dd === 1 ? ' day' : ' days') + (h % 24 ? L(' ו-' + (h % 24) + ' שעות', ' ' + (h % 24) + 'h') : '');
+    if(h >= 1) return h + L(' שעות', ' hours');
+    return Math.max(1, Math.ceil(ms / 60000)) + L(' דקות', ' minutes');
   }
 
   // the tournament people can act on right now: the running one, else the next
@@ -2965,10 +3145,10 @@
         if(ownedSkins.indexOf(last.prizeId) === -1){
           ownedSkins.push(last.prizeId);
           selectedSkinId = last.prizeId;
-          message = '🏆 הקבוצה שלך ניצחה בטורניר! קיבלת את הסקין "' + getSkin(last.prizeId).name + '" והוא כבר עליך';
+          message = L('🏆 הקבוצה שלך ניצחה בטורניר! קיבלת את הסקין "' + getSkin(last.prizeId).name + '" והוא כבר עליך', '🏆 Your team won the tournament! You got the skin "' + getSkin(last.prizeId).name + '" and you\'re wearing it');
         } else {
           wallet += TOURNEY_REPEAT_COINS;
-          message = '🏆 הקבוצה שלך ניצחה בטורניר! +' + TOURNEY_REPEAT_COINS.toLocaleString('en-US') + ' 🪙';
+          message = L('🏆 הקבוצה שלך ניצחה בטורניר! +', '🏆 Your team won the tournament! +') + TOURNEY_REPEAT_COINS.toLocaleString('en-US') + ' 🪙';
         }
         saveProgress();
         updateWalletDisplays();
@@ -2987,17 +3167,17 @@
     tourneyBanner.hidden = false;
     if(!n.current){
       tourneyBanner.textContent = reg
-        ? '🏄 רשום לקבוצת ' + TEAM_NAMES[reg.team] + ' · הטורניר מתחיל בעוד ' + timeLeft(t.start - Date.now())
-        : '🏄 טורניר רגולר נגד גופי מתחיל ב-' + t.label.split('–')[0] + '! לחץ כאן להרשמה';
+        ? L('🏄 רשום לקבוצת ' + TEAM_NAMES[reg.team] + ' · הטורניר מתחיל בעוד ' + timeLeft(t.start - Date.now()), '🏄 Signed up for ' + TEAM_NAMES[reg.team] + ' · the tournament starts in ' + timeLeft(t.start - Date.now()))
+        : L('🏄 טורניר רגולר נגד גופי מתחיל ב-' + t.label.split('–')[0] + '! לחץ כאן להרשמה', '🏄 Regular vs Goofy tournament starts ' + t.label.split('–')[0] + '! Tap here to sign up');
       return;
     }
     if(!reg){
-      tourneyBanner.textContent = '🏄 טורניר רגולר נגד גופי פתוח עכשיו! לחץ כאן להרשמה';
+      tourneyBanner.textContent = L('🏄 טורניר רגולר נגד גופי פתוח עכשיו! לחץ כאן להרשמה', '🏄 Regular vs Goofy tournament is on now! Tap here to sign up');
       return;
     }
     var totals = tourneyCache[t.id];
-    tourneyBanner.textContent = '🏄 אתה ב' + TEAM_NAMES[reg.team] +
-      (totals ? ' · רגולר ' + fmtShort(totals.regular.total) + ' – גופי ' + fmtShort(totals.goofy.total) : ' · לחץ לראות מי מוביל');
+    tourneyBanner.textContent = L('🏄 אתה ב', '🏄 You\'re on ') + TEAM_NAMES[reg.team] +
+      (totals ? ' · ' + TEAM_NAMES.regular + ' ' + fmtShort(totals.regular.total) + ' – ' + TEAM_NAMES.goofy + ' ' + fmtShort(totals.goofy.total) : L(' · לחץ לראות מי מוביל', ' · tap to see who leads'));
   }
   function refreshTourneyBanner(){
     renderTourneyBanner();
@@ -3013,10 +3193,10 @@
   var joinBusy = false, joinError = '';
   function renderTourneyScreen(){
     var n = tourneyNow(), t = n.current || n.next, now = Date.now();
-    if(!t){ tourneyStatus.textContent = 'אין טורניר קרוב'; return; }
+    if(!t){ tourneyStatus.textContent = L('אין טורניר קרוב', 'No tournament coming up'); return; }
     tourneyStatus.textContent = n.current
-      ? '🟢 הטורניר פעיל (' + t.label + ') · נגמר בעוד ' + timeLeft(t.end - now)
-      : '⏳ הטורניר הבא: ' + t.label + ' · מתחיל בעוד ' + timeLeft(t.start - now) + ' · אפשר כבר להירשם!';
+      ? L('🟢 הטורניר פעיל (' + t.label + ') · נגמר בעוד ' + timeLeft(t.end - now), '🟢 Tournament on (' + t.label + ') · ends in ' + timeLeft(t.end - now))
+      : L('⏳ הטורניר הבא: ' + t.label + ' · מתחיל בעוד ' + timeLeft(t.start - now) + ' · אפשר כבר להירשם!', '⏳ Next tournament: ' + t.label + ' · starts in ' + timeLeft(t.start - now) + ' · sign up now!');
 
     // prize preview: this tournament's skin
     var pg = tourneyPrizeCanvas.getContext('2d');
@@ -3027,7 +3207,7 @@
     pg.scale(0.5, 0.5);
     drawRunnerFigure(pg, getSkin(t.prizeId), { phase: 1.1, mode: 'run', duck: 0, t: 0 });
     document.getElementById('tourneyPrizeText').textContent =
-      '🏆 הפרס הפעם: הסקין "' + getSkin(t.prizeId).name + '" — לכל מי ששיחק בקבוצה המנצחת! בכל טורניר סקין חדש (מי שכבר יש לו מקבל 5,000 🪙)';
+      L('🏆 הפרס הפעם: הסקין "' + getSkin(t.prizeId).name + '" — לכל מי ששיחק בקבוצה המנצחת! בכל טורניר סקין חדש (מי שכבר יש לו מקבל 5,000 🪙)', '🏆 This time\'s prize: the skin "' + getSkin(t.prizeId).name + '" — for everyone who played on the winning team! A new skin every tournament (if you have it, you get 5,000 🪙)');
 
     renderJoin(t);
     renderHitBox(n, t);
@@ -3052,8 +3232,8 @@
         var w = winnerOf(totals);
         if(!w || (!totals.regular.total && !totals.goofy.total)) return;
         tourneyResult.textContent = w === 'tie'
-          ? '🤝 הטורניר הקודם (' + n.last.label + ') נגמר בתיקו!'
-          : '🏆 הטורניר הקודם (' + n.last.label + '): ' + TEAM_NAMES[w] + ' ניצחו!';
+          ? L('🤝 הטורניר הקודם (' + n.last.label + ') נגמר בתיקו!', '🤝 The last tournament (' + n.last.label + ') ended in a tie!')
+          : L('🏆 הטורניר הקודם (' + n.last.label + '): ' + TEAM_NAMES[w] + ' ניצחו!', '🏆 Last tournament (' + n.last.label + '): ' + TEAM_NAMES[w] + ' won!');
         tourneyResult.hidden = false;
       });
     }
@@ -3074,7 +3254,7 @@
       row.className = 'leaderboard-row';
       var txt = document.createElement('div');
       txt.className = 'leaderboard-name';
-      txt.textContent = '💥 ' + r.name + ' הוריד ל' + (TEAM_NAMES[r.team] || r.team) + ' ' + fmtScore(+r.amount || 0);
+      txt.textContent = L('💥 ' + r.name + ' הוריד ל' + (TEAM_NAMES[r.team] || r.team) + ' ' + fmtScore(+r.amount || 0), '💥 ' + r.name + ' took ' + fmtScore(+r.amount || 0) + ' off ' + (TEAM_NAMES[r.team] || r.team));
       row.appendChild(txt);
       list.appendChild(row);
     });
@@ -3088,13 +3268,14 @@
     var reg = tourney.reg[t.id];
     var line = document.createElement('div');
     if(!n.current || !reg){
-      line.textContent = '💥 יש לך ' + hitsHeld + ' הורדות של ' + fmtScore(HIT_AMOUNT) + ' נקודות. ' +
-        (!reg ? 'הירשם לקבוצה כדי להשתמש בהן' : 'אפשר להשתמש בהן כשהטורניר מתחיל') + '.';
+      line.textContent = L('💥 יש לך ' + hitsHeld + ' הורדות של ' + fmtScore(HIT_AMOUNT) + ' נקודות. ' +
+        (!reg ? 'הירשם לקבוצה כדי להשתמש בהן' : 'אפשר להשתמש בהן כשהטורניר מתחיל') + '.',
+        '💥 You have ' + hitsHeld + ' drops of ' + fmtScore(HIT_AMOUNT) + ' points. ' + (!reg ? 'Join a team to use them' : 'You can use them once the tournament starts') + '.');
       box.appendChild(line);
       return;
     }
     var target = otherTeam(reg.team);
-    line.textContent = '💥 יש לך ' + hitsHeld + ' הורדות. כל אחת מורידה לקבוצת ' + TEAM_NAMES[target] + ' ' + fmtScore(HIT_AMOUNT) + ' נקודות.';
+    line.textContent = L('💥 יש לך ' + hitsHeld + ' הורדות. כל אחת מורידה לקבוצת ' + TEAM_NAMES[target] + ' ' + fmtScore(HIT_AMOUNT) + ' נקודות.', '💥 You have ' + hitsHeld + ' drops. Each takes ' + fmtScore(HIT_AMOUNT) + ' points off team ' + TEAM_NAMES[target] + '.');
     box.appendChild(line);
     var btns = document.createElement('div');
     btns.className = 'tourney-join-btns';
@@ -3102,7 +3283,7 @@
     var b = document.createElement('button');
     b.type = 'button';
     b.className = target;
-    b.textContent = '💥 הורד ל' + TEAM_NAMES[target] + ' ' + fmtScore(HIT_AMOUNT);
+    b.textContent = L('💥 הורד ל' + TEAM_NAMES[target] + ' ' + fmtScore(HIT_AMOUNT), '💥 Take ' + fmtScore(HIT_AMOUNT) + ' off ' + TEAM_NAMES[target]);
     b.disabled = hitBusy;
     b.addEventListener('click', function(){ useHit(t, reg, target); });
     btns.appendChild(b);
@@ -3124,7 +3305,7 @@
     }).then(function(res){ return res.ok; }).catch(function(){ return false; }).then(function(ok){
       hitBusy = false;
       if(ok){ hitsHeld--; saveHits(); }
-      else hitNote = 'ההורדה לא נשלחה. בדוק חיבור ונסה שוב.';
+      else hitNote = L('ההורדה לא נשלחה. בדוק חיבור ונסה שוב.', 'The drop wasn\'t sent. Check your connection and try again.');
       renderTourneyScreen();
       refreshTourneyBanner();
     });
@@ -3136,8 +3317,8 @@
     document.getElementById('teamGoofyTotal').textContent = fmtScore(g);
     var rp = counts ? counts.regular : (totals ? totals.regular.players : 0);
     var gp = counts ? counts.goofy : (totals ? totals.goofy.players : 0);
-    document.getElementById('teamRegularPlayers').textContent = rp + ' נרשמו';
-    document.getElementById('teamGoofyPlayers').textContent = gp + ' נרשמו';
+    document.getElementById('teamRegularPlayers').textContent = rp + L(' נרשמו', ' signed up');
+    document.getElementById('teamGoofyPlayers').textContent = gp + L(' נרשמו', ' signed up');
     document.getElementById('teamRegularBox').classList.toggle('is-leading', r > g);
     document.getElementById('teamGoofyBox').classList.toggle('is-leading', g > r);
     var share = (r + g) ? r / (r + g) * 100 : 50;
@@ -3166,23 +3347,23 @@
     var reg = tourney.reg[t.id];
     if(reg){
       var ok = document.createElement('div');
-      ok.textContent = '✅ אתה בקבוצת ' + TEAM_NAMES[reg.team] + ' (בשם "' + reg.name + '"). כל ריצה שלך בזמן הטורניר נספרת לקבוצה!';
+      ok.textContent = L('✅ אתה בקבוצת ' + TEAM_NAMES[reg.team] + ' (בשם "' + reg.name + '"). כל ריצה שלך בזמן הטורניר נספרת לקבוצה!', '✅ You\'re on team ' + TEAM_NAMES[reg.team] + ' (as "' + reg.name + '"). Every run during the tournament counts for your team!');
       tourneyJoin.appendChild(ok);
       if(!sameName(reg.name, playerName)){
         var warn = document.createElement('div');
         warn.className = 'tourney-join-err';
-        warn.textContent = 'שים לב: השם שלך עכשיו הוא "' + (playerName.trim() || '—') + '". רק ריצות בשם "' + reg.name + '" נספרות לקבוצה.';
+        warn.textContent = L('שים לב: השם שלך עכשיו הוא "' + (playerName.trim() || '—') + '". רק ריצות בשם "' + reg.name + '" נספרות לקבוצה.', 'Note: your name is now "' + (playerName.trim() || '—') + '". Only runs as "' + reg.name + '" count for the team.');
         tourneyJoin.appendChild(warn);
       }
       return;
     }
     var lead = document.createElement('div');
-    lead.textContent = 'הירשם לטורניר: כתוב את השם שלך ובחר אם אתה רגולר או גופי. הבחירה סופית לכל הטורניר.';
+    lead.textContent = L('הירשם לטורניר: כתוב את השם שלך ובחר אם אתה רגולר או גופי. הבחירה סופית לכל הטורניר.', 'Sign up: type your name and pick Regular or Goofy. Your pick is final for the whole tournament.');
     tourneyJoin.appendChild(lead);
     var nameRow = document.createElement('div');
     nameRow.className = 'name-row';
     var input = document.createElement('input');
-    input.type = 'text'; input.maxLength = 14; input.placeholder = 'השם שלך'; input.autocomplete = 'off';
+    input.type = 'text'; input.maxLength = 14; input.placeholder = L('השם שלך', 'Your name'); input.autocomplete = 'off';
     input.value = playerName;
     input.addEventListener('input', function(){
       playerName = input.value.slice(0, 14);
@@ -3197,7 +3378,7 @@
       var b = document.createElement('button');
       b.type = 'button';
       b.className = team;
-      b.textContent = 'אני ' + TEAM_NAMES[team];
+      b.textContent = L('אני ', 'I\'m ') + TEAM_NAMES[team];
       b.disabled = joinBusy;
       b.addEventListener('click', function(){ joinTeam(t, team); });
       btns.appendChild(b);
@@ -3213,7 +3394,7 @@
 
   function joinTeam(t, team){
     var name = playerName.trim().slice(0, 14);
-    if(!name){ joinError = 'קודם כתוב שם 🙂'; renderJoin(t); return; }
+    if(!name){ joinError = L('קודם כתוב שם 🙂', 'Type a name first 🙂'); renderJoin(t); return; }
     joinBusy = true; joinError = ''; renderJoin(t);
     fetch(SUPABASE_URL + '/rest/v1/tournament_players', {
       method: 'POST',
@@ -3227,10 +3408,10 @@
       if(result === 'taken'){
         // the name is already signed up. The list of who's on which team is
         // private, so the game can't look it up -- just ask for another name
-        joinError = 'השם "' + name + '" כבר רשום לטורניר. בחר שם אחר.';
+        joinError = L('השם "' + name + '" כבר רשום לטורניר. בחר שם אחר.', 'The name "' + name + '" is already signed up. Pick another name.');
         return 'fail';
       }
-      if(result === 'error'){ joinError = 'ההרשמה לא הצליחה. בדוק חיבור לאינטרנט ונסה שוב.'; return 'fail'; }
+      if(result === 'error'){ joinError = L('ההרשמה לא הצליחה. בדוק חיבור לאינטרנט ונסה שוב.', 'Sign-up failed. Check your internet connection and try again.'); return 'fail'; }
       return result;
     }).then(function(result){
       joinBusy = false;
@@ -3264,15 +3445,16 @@
       // say so right here, where the player looks after every run
       var t = tourneyNow().current, reg = t && tourney.reg[t.id];
       if(reg){
-        tourneyRunBanner.textContent = '⚠️ הריצה לא נספרה לטורניר: נרשמת בשם "' + reg.name +
-          '" ועכשיו אתה משחק בשם "' + (playerName.trim() || 'שחקן') + '". תחזיר את השם "' + reg.name + '" כדי שהריצות ייספרו.';
+        tourneyRunBanner.textContent = L('⚠️ הריצה לא נספרה לטורניר: נרשמת בשם "' + reg.name +
+          '" ועכשיו אתה משחק בשם "' + (playerName.trim() || 'שחקן') + '". תחזיר את השם "' + reg.name + '" כדי שהריצות ייספרו.',
+          '⚠️ This run didn\'t count: you signed up as "' + reg.name + '" but you\'re playing as "' + (playerName.trim() || 'Player') + '". Switch back to "' + reg.name + '" so your runs count.');
         tourneyRunBanner.hidden = false;
       } else {
         tourneyRunBanner.hidden = true;
       }
       return;
     }
-    tourneyRunBanner.textContent = '🏄 הריצה נספרה לקבוצת ' + TEAM_NAMES[counted.team] + '! +' + fmtScore(score);
+    tourneyRunBanner.textContent = L('🏄 הריצה נספרה לקבוצת ', '🏄 Run counted for team ') + TEAM_NAMES[counted.team] + '! +' + fmtScore(score);
     tourneyRunBanner.hidden = false;
   }
 
@@ -3371,8 +3553,8 @@
     bossBtn.hidden = false;
     bossBtn.classList.toggle('is-done', won);
     bossBtn.textContent = won
-      ? '☠️ ניצחת את הבוס היום! אפשר להילחם שוב (בלי פרס)'
-      : '☠️ שלב בוס! רק היום — לחץ כדי להילחם בגולש הענק';
+      ? L('☠️ ניצחת את הבוס היום! אפשר להילחם שוב (בלי פרס)', '☠️ You beat the boss today! Fight again (no prize)')
+      : L('☠️ שלב בוס! רק היום — לחץ כדי להילחם בגולש הענק', '☠️ Boss level! Today only — tap to fight the giant surfer');
   }
 
   function openBoss(){
@@ -3383,9 +3565,9 @@
     pg.setTransform(2,0,0,2,0,0); pg.translate(28, 70); pg.scale(0.48, 0.48);
     drawRunnerFigure(pg, getSkin(BOSS_SKIN_ID), { phase: 0, mode: 'run', duck: 0, t: 0 });
     document.getElementById('bossPrizeText').textContent = won
-      ? '✅ כבר ניצחת את הבוס היום. אפשר להילחם שוב בשביל הכבוד — הפרס הבא ביום חמישי הבא.'
-      : (owns ? '💎 הפרס היום: 4 יהלומים (את הסקין "קוטל הבוס" כבר יש לך)'
-              : '💎 הפרס היום: 4 יהלומים + הסקין "קוטל הבוס"');
+      ? L('✅ כבר ניצחת את הבוס היום. אפשר להילחם שוב בשביל הכבוד — הפרס הבא ביום חמישי הבא.', '✅ You already beat the boss today. Fight again for glory — next prize next Thursday.')
+      : (owns ? L('💎 הפרס היום: 4 יהלומים (את הסקין "קוטל הבוס" כבר יש לך)', '💎 Today\'s prize: 4 diamonds (you already have the "Boss Slayer" skin)')
+              : L('💎 הפרס היום: 4 יהלומים + הסקין "קוטל הבוס"', '💎 Today\'s prize: 4 diamonds + the "Boss Slayer" skin'));
     startOverlay.hidden = true;
     bossOverlay.hidden = false;
   }
@@ -3448,29 +3630,29 @@
   // game over after a boss run: the prize, or how close you got
   function showBossResult(){
     bossHp.hidden = true;
-    document.getElementById('overTitle').textContent = bossWonThisRun ? '☠️ ניצחת את הבוס!' : 'נפלת בקניון';
+    document.getElementById('overTitle').textContent = bossWonThisRun ? L('☠️ ניצחת את הבוס!', '☠️ You beat the boss!') : L('נפלת בקניון', 'You fell in the canyon');
     if(!lastRunBoss){ bossBanner.hidden = true; return; }
     if(bossWonThisRun){
       var lines = [];
       if(bossState.lastWin !== bossRunDay){
         bossState.lastWin = bossRunDay;
         diamonds += BOSS_DIAMONDS;
-        lines.push('💎 +' + BOSS_DIAMONDS + ' יהלומים! היהלומים ישמשו אותך בהמשך');
+        lines.push('💎 +' + BOSS_DIAMONDS + L(' יהלומים! היהלומים ישמשו אותך בהמשך', ' diamonds! You\'ll use them later'));
         if(ownedSkins.indexOf(BOSS_SKIN_ID) === -1){
           ownedSkins.push(BOSS_SKIN_ID);
           selectedSkinId = BOSS_SKIN_ID;
-          lines.push('🏄 קיבלת את הסקין "קוטל הבוס" — והוא כבר עליך');
+          lines.push(L('🏄 קיבלת את הסקין "קוטל הבוס" — והוא כבר עליך', '🏄 You got the "Boss Slayer" skin — and you\'re wearing it'));
         }
         saveBoss();
         saveProgress();
         renderDiamonds();
       } else {
-        lines.push('(את הפרס של היום כבר קיבלת — נתראה בחמישי הבא)');
+        lines.push(L('(את הפרס של היום כבר קיבלת — נתראה בחמישי הבא)', '(you already got today\'s prize — see you next Thursday)'));
       }
       bossBanner.textContent = lines.join(' · ');
     } else {
       var pct = Math.min(99, Math.floor(currentScore() / BOSS_TARGET * 100));
-      bossBanner.textContent = '☠️ הבוס ניצח הפעם... הגעת ל-' + pct + '% מהדרך. נסה שוב!';
+      bossBanner.textContent = L('☠️ הבוס ניצח הפעם... הגעת ל-' + pct + '% מהדרך. נסה שוב!', '☠️ The boss won this time... you got ' + pct + '% of the way. Try again!');
     }
     bossBanner.hidden = false;
   }
@@ -3489,10 +3671,10 @@
   // the tournament screen, while one is running and you're signed up. A new
   // pet or skin is put on right away.
   var PETS = [
-    { id: 'dog',    name: 'כלב' },
-    { id: 'cat',    name: 'חתול' },
-    { id: 'fox',    name: 'שועל' },
-    { id: 'turtle', name: 'צב ים' }
+    { id: 'dog',    name: L('כלב', 'Dog') },
+    { id: 'cat',    name: L('חתול', 'Cat') },
+    { id: 'fox',    name: L('שועל', 'Fox') },
+    { id: 'turtle', name: L('צב ים', 'Sea Turtle') }
   ];
   var PETS_KEY = 'canyonChasePetsV1';        // { owned: [...], selected: id|null }
   var THU_CHEST_COST = 2, THU_CHEST_COINS = 5000;
@@ -3614,9 +3796,9 @@
       card.appendChild(name);
       var btn = document.createElement('button');
       btn.type = 'button'; btn.className = 'skin-btn';
-      if(!owned){ btn.classList.add('is-locked'); btn.textContent = '🎁 רק מתיבת חמישי'; btn.disabled = true; }
-      else if(pets.selected === pet.id){ btn.classList.add('is-selected'); btn.textContent = 'רץ איתך · הסר'; }
-      else { btn.textContent = 'בחר'; }
+      if(!owned){ btn.classList.add('is-locked'); btn.textContent = L('🎁 רק מתיבת חמישי', '🎁 Thursday chest only'); btn.disabled = true; }
+      else if(pets.selected === pet.id){ btn.classList.add('is-selected'); btn.textContent = L('רץ איתך · הסר', 'Running with you · remove'); }
+      else { btn.textContent = L('בחר', 'Choose'); }
       btn.addEventListener('click', function(){
         if(!owned) return;
         pets.selected = pets.selected === pet.id ? null : pet.id;   // tap the chosen one again to run alone
@@ -3641,15 +3823,15 @@
   function renderThuChestBtn(){
     if(!isBossDay()){ thuChestBtn.hidden = true; return; }
     thuChestBtn.hidden = false;
-    thuChestBtn.textContent = '🎁 תיבת חמישי — 2 💎 · יש לך ' + diamonds + ' 💎';
+    thuChestBtn.textContent = L('🎁 תיבת חמישי — 2 💎 · יש לך ', '🎁 Thursday chest — 2 💎 · you have ') + diamonds + ' 💎';
   }
 
   function renderThuChest(){
     document.getElementById('thuChestDiamonds').textContent = diamonds;
     var can = diamonds >= THU_CHEST_COST && isBossDay() && !thuChestOpening;
     thuChestOpenBtn.disabled = !can;
-    thuChestOpenBtn.textContent = diamonds >= THU_CHEST_COST ? 'פתח ב-2 💎' : 'אין מספיק 💎 (צריך 2)';
-    thuChestHint.textContent = diamonds >= THU_CHEST_COST ? '' : 'יהלומים מקבלים מניצחון על הבוס ביום חמישי';
+    thuChestOpenBtn.textContent = diamonds >= THU_CHEST_COST ? L('פתח ב-2 💎', 'Open for 2 💎') : L('אין מספיק 💎 (צריך 2)', 'Not enough 💎 (need 2)');
+    thuChestHint.textContent = diamonds >= THU_CHEST_COST ? '' : L('יהלומים מקבלים מניצחון על הבוס ביום חמישי', 'You get diamonds by beating the boss on Thursday');
   }
 
   function openThuChestScreen(){
@@ -3677,7 +3859,7 @@
       if(skinsLeft.length){
         var s = skinsLeft[Math.floor(Math.random() * skinsLeft.length)];
         ownedSkins.push(s.id); selectedSkinId = s.id;
-        return '🎨 סקין חדש: "' + s.name + '"! הוא כבר עליך';
+        return L('🎨 סקין חדש: "' + s.name + '"! הוא כבר עליך', '🎨 New skin: "' + s.name + '"! You\'re wearing it');
       }
     }
     if(kind === 'pet'){
@@ -3685,15 +3867,15 @@
       if(petsLeft.length){
         var p = petsLeft[Math.floor(Math.random() * petsLeft.length)];
         pets.owned.push(p.id); pets.selected = p.id; savePets();
-        return '🐾 חיית מחמד: ' + p.name + '! היא כבר רצה איתך ואוספת מטבעות';
+        return L('🐾 חיית מחמד: ' + p.name + '! היא כבר רצה איתך ואוספת מטבעות', '🐾 A pet: ' + p.name + '! It\'s already running with you collecting coins');
       }
     }
     if(kind === 'hit'){
       hitsHeld++; saveHits();
-      return '💥 הורדת ' + fmtScore(HIT_AMOUNT) + ' נקודות לקבוצה השנייה! מפעילים אותה במסך הטורניר (יש לך ' + hitsHeld + ')';
+      return L('💥 הורדת ' + fmtScore(HIT_AMOUNT) + ' נקודות לקבוצה השנייה! מפעילים אותה במסך הטורניר (יש לך ' + hitsHeld + ')', '💥 A drop of ' + fmtScore(HIT_AMOUNT) + ' points on the other team! Use it in the tournament screen (you have ' + hitsHeld + ')');
     }
     wallet += THU_CHEST_COINS;
-    return '🪙 +' + THU_CHEST_COINS.toLocaleString('en-US') + ' מטבעות';
+    return '🪙 +' + THU_CHEST_COINS.toLocaleString('en-US') + L(' מטבעות', ' coins');
   }
 
   function openThuChest(){
@@ -3781,10 +3963,10 @@
       ? 'chat_messages?select=id,name,body,created_at&id=gt.' + chatLastId + '&order=id.asc&limit=' + CHAT_HISTORY
       : 'chat_messages?select=id,name,body,created_at&order=id.desc&limit=' + CHAT_HISTORY;
     return sbGet(q).then(function(rows){
-      if(!rows){ if(!chatLastId) chatOnline.textContent = 'הצ\'אט עוד לא מוכן. נסה שוב מאוחר יותר.'; return; }
+      if(!rows){ if(!chatLastId) chatOnline.textContent = L('הצ\'אט עוד לא מוכן. נסה שוב מאוחר יותר.', 'The chat isn\'t ready yet. Try again later.'); return; }
       if(!chatLastId) rows.reverse();
       if(!chatLastId && !rows.length && !chatList.children.length){
-        chatList.innerHTML = '<div class="chat-empty">עוד אין הודעות. תהיה הראשון לכתוב! 👋</div>';
+        chatList.innerHTML = '<div class="chat-empty">' + L('עוד אין הודעות. תהיה הראשון לכתוב! 👋', 'No messages yet. Be the first to write! 👋') + '</div>';
       }
       addChatMessages(rows);
     });
@@ -3809,8 +3991,8 @@
         var dot = document.createElement('span'); dot.className = 'dot';
         chatOnline.appendChild(dot);
         chatOnline.appendChild(document.createTextNode(names.length
-          ? 'עכשיו בחדר (' + names.length + '): ' + names.join(', ')
-          : 'אין עכשיו אף אחד בחדר'));
+          ? L('עכשיו בחדר (', 'In the room now (') + names.length + '): ' + names.join(', ')
+          : L('אין עכשיו אף אחד בחדר', 'Nobody in the room right now')));
       });
   }
 
@@ -3834,14 +4016,14 @@
     var name = chatName(), text = chatInput.value.trim().slice(0, CHAT_MAX_LEN);
     if(!name || !text || chatSending) return;
     var wait = CHAT_COOLDOWN_MS - (Date.now() - chatLastSent);
-    if(wait > 0){ chatNote.textContent = 'רגע... אפשר לשלוח הודעה כל 2 שניות'; return; }
+    if(wait > 0){ chatNote.textContent = L('רגע... אפשר לשלוח הודעה כל 2 שניות', 'Wait... one message every 2 seconds'); return; }
     chatSending = true; chatSendBtn.disabled = true; chatNote.textContent = '';
     fetch(SUPABASE_URL + '/rest/v1/chat_messages', {
       method: 'POST', headers: supabaseHeaders(), body: JSON.stringify({ name: name, body: text })
     }).then(function(res){ return res.ok; }).catch(function(){ return false; }).then(function(ok){
       chatSending = false;
       renderChatName();
-      if(!ok){ chatNote.textContent = 'ההודעה לא נשלחה. בדוק חיבור ונסה שוב.'; return; }
+      if(!ok){ chatNote.textContent = L('ההודעה לא נשלחה. בדוק חיבור ונסה שוב.', 'Message not sent. Check your connection and try again.'); return; }
       chatLastSent = Date.now();
       chatInput.value = '';
       chatInput.focus();
@@ -3968,7 +4150,7 @@
     duelNameRow.hidden = false;
     duelNameInput.value = playerName;
     duelNameInput.focus();
-    duelSay('קודם כתוב את השם שלך — ככה היריבים יידעו מול מי הם רצים');
+    duelSay(L('קודם כתוב את השם שלך — ככה היריבים יידעו מול מי הם רצים', 'First type your name — so your opponents know who they\'re racing'));
     return false;
   }
   duelNameInput.addEventListener('input', function(){
@@ -3991,7 +4173,7 @@
   function duelFail(){
     duelLeaveLobby(); duelLeaveRoom();
     duel = null;
-    duelSay('אין חיבור לשרת הקרבות. בדוק את האינטרנט ונסה שוב.');
+    duelSay(L('אין חיבור לשרת הקרבות. בדוק את האינטרנט ונסה שוב.', 'Can\'t reach the match server. Check your internet and try again.'));
   }
   function duelNewCode(){ return String(1000 + Math.floor(Math.random() * 9000)); }
 
@@ -4007,7 +4189,7 @@
   // has waited longest pairs up with the next in line and opens a room for both
   function duelFindRandom(){
     if(!duelNameOk()) return;
-    duelSay('מחפש יריב... 🔎', true);
+    duelSay(L('מחפש יריב... 🔎', 'Looking for an opponent... 🔎'), true);
     duelGetClient().then(function(c){
       var ch = c.channel(DUEL_PREFIX + 'lobby', { config: { presence: { key: duelMyId }, broadcast: { self: false } } });
       var since = Date.now();
@@ -4042,7 +4224,7 @@
   }
   function duelJoinRoom(){
     var code = duelCodeInput.value.replace(/\D/g, '');
-    if(code.length !== 4){ duelSay('קוד חדר הוא 4 ספרות'); return; }
+    if(code.length !== 4){ duelSay(L('קוד חדר הוא 4 ספרות', 'A room code has 4 digits')); return; }
     if(!duelNameOk()) return;
     duelEnterRoom(code, false, null);
   }
@@ -4052,9 +4234,9 @@
   function duelEnterRoom(code, host, expectId){
     duel = { code: code, host: host, expect: expectId, seed: 0, opps: {}, order: [], members: [],
              myFinal: null, result: null, started: false, lastSend: 0, watchId: null };
-    if(expectId) duelSay('נמצא יריב! מתחברים... ⚔️', true);
-    else if(host) duelSay(['קוד החדר שלך:', { code: code }, 'שלח אותו לחברים — עד 4 שחקנים ⏳'], true);
-    else duelSay('נכנס לחדר ' + code + '... ⏳', true);
+    if(expectId) duelSay(L('נמצא יריב! מתחברים... ⚔️', 'Opponent found! Connecting... ⚔️'), true);
+    else if(host) duelSay([L('קוד החדר שלך:', 'Your room code:'), { code: code }, L('שלח אותו לחברים — עד 4 שחקנים ⏳', 'Send it to your friends — up to 4 players ⏳')], true);
+    else duelSay(L('נכנס לחדר ', 'Joining room ') + code + '... ⏳', true);
     var d = duel;
     duelGetClient().then(function(c){
       if(duel !== d) return;
@@ -4069,14 +4251,14 @@
         if(d.expect){
           var o = all.filter(function(m){ return m.id === d.expect; })[0];
           if(!o || !host) return;
-          if(o.v !== BUILD_VERSION){ duelSay('ליריב יש גרסה אחרת של המשחק. שניכם תרעננו את הדף ותנסו שוב.', true); return; }
+          if(o.v !== BUILD_VERSION){ duelSay(L('ליריב יש גרסה אחרת של המשחק. שניכם תרעננו את הדף ותנסו שוב.', 'Your opponent has a different version of the game. Both of you refresh and try again.'), true); return; }
           duelGo(d);
           return;
         }
         if(!host){
           var mine = all.map(function(m){ return m.id; }).indexOf(duelMyId);
-          if(all[0] && all[0].started){ duelLeaveRoom(); duel = null; duelSay('הקרב בחדר הזה כבר התחיל. בקש קוד חדש.'); return; }
-          if(mine >= DUEL_MAX){ duelLeaveRoom(); duel = null; duelSay('החדר מלא (4 שחקנים). בקש קוד חדש.'); return; }
+          if(all[0] && all[0].started){ duelLeaveRoom(); duel = null; duelSay(L('הקרב בחדר הזה כבר התחיל. בקש קוד חדש.', 'The match in this room already started. Ask for a new code.')); return; }
+          if(mine >= DUEL_MAX){ duelLeaveRoom(); duel = null; duelSay(L('החדר מלא (4 שחקנים). בקש קוד חדש.', 'The room is full (4 players). Ask for a new code.')); return; }
         }
         duelRoomList(d);
       });
@@ -4084,7 +4266,7 @@
         var m = msg && msg.payload;
         if(duelRoom !== ch || duel !== d || d.started || host || !m || !m.players) return;
         if(!m.players.some(function(p){ return p.id === duelMyId; })){
-          if(!d.expect){ duelLeaveRoom(); duel = null; duelSay('הקרב בחדר הזה כבר התחיל. בקש קוד חדש.'); }
+          if(!d.expect){ duelLeaveRoom(); duel = null; duelSay(L('הקרב בחדר הזה כבר התחיל. בקש קוד חדש.', 'The match in this room already started. Ask for a new code.')); }
           return;
         }
         duelSetPlayers(d, m.players);
@@ -4121,16 +4303,16 @@
   function duelRoomList(d){
     var all = d.members.slice(0, DUEL_MAX);
     var bad = all.some(function(m){ return m.v !== BUILD_VERSION; });
-    var names = all.map(function(m){ return (m.id === duelMyId ? 'אתה' : (m.name || 'שחקן')) + (m.v !== BUILD_VERSION ? ' ⚠️' : ''); });
-    var lines = d.host ? ['קוד החדר שלך:', { code: d.code }, 'שלח אותו לחברים — עד 4 שחקנים\n\n']
-                       : ['נכנסת לחדר ' + d.code + '\n\n'];
-    lines.push('בחדר (' + all.length + '/' + DUEL_MAX + '): ' + names.join(', '));
-    if(bad) lines.push('\n⚠️ למי שמסומן יש גרסה אחרת של המשחק — שירענן את הדף');
-    if(!d.host) lines.push('\n\nמחכים שמי שפתח את החדר יתחיל ⏳');
-    else if(all.length < 2) lines.push('\n\nמחכים שמישהו ייכנס ⏳');
+    var names = all.map(function(m){ return (m.id === duelMyId ? L('אתה', 'You') : (m.name || L('שחקן', 'Player'))) + (m.v !== BUILD_VERSION ? ' ⚠️' : ''); });
+    var lines = d.host ? [L('קוד החדר שלך:', 'Your room code:'), { code: d.code }, L('שלח אותו לחברים — עד 4 שחקנים', 'Send it to your friends — up to 4 players') + '\n\n']
+                       : [L('נכנסת לחדר ', 'You joined room ') + d.code + '\n\n'];
+    lines.push(L('בחדר (', 'In the room (') + all.length + '/' + DUEL_MAX + '): ' + names.join(', '));
+    if(bad) lines.push('\n' + L('⚠️ למי שמסומן יש גרסה אחרת של המשחק — שירענן את הדף', '⚠️ Anyone marked has a different game version — they should refresh'));
+    if(!d.host) lines.push('\n\n' + L('מחכים שמי שפתח את החדר יתחיל ⏳', 'Waiting for the room\'s host to start ⏳'));
+    else if(all.length < 2) lines.push('\n\n' + L('מחכים שמישהו ייכנס ⏳', 'Waiting for someone to join ⏳'));
     duelSay(lines, true);
     duelGoBtn.hidden = !(d.host && all.length >= 2 && !bad);
-    duelGoBtn.textContent = '▶ התחל קרב (' + all.length + ' שחקנים)';
+    duelGoBtn.textContent = L('▶ התחל קרב (' + all.length + ' שחקנים)', '▶ Start match (' + all.length + ' players)');
   }
 
   // the host sends everyone in the room the seed and the line-up. First it
@@ -4140,7 +4322,7 @@
     if(!d || d.started || d.going || !duelRoom) return;
     var all = d.members.slice(0, DUEL_MAX);
     if(d.expect) all = all.filter(function(m){ return m.id === duelMyId || m.id === d.expect; });
-    var players = all.map(function(m){ return { id: m.id, name: (m.id === duelMyId ? chatName() : m.name) || 'שחקן' }; });
+    var players = all.map(function(m){ return { id: m.id, name: (m.id === duelMyId ? chatName() : m.name) || L('שחקן', 'Player') }; });
     if(players.length < 2) return;
     d.going = true;
     d.rtt = {};
@@ -4171,7 +4353,7 @@
     players.forEach(function(p, i){
       var lane = lanes[i % lanes.length];
       if(p.id === duelMyId){ d.startLane = lane; return; }
-      d.opps[p.id] = { id: p.id, name: p.name || 'שחקן', st: null, seen: Date.now(), final: null, left: false, gx: LANES[lane] };
+      d.opps[p.id] = { id: p.id, name: p.name || L('שחקן', 'Player'), st: null, seen: Date.now(), final: null, left: false, gx: LANES[lane] };
       d.order.push(p.id);
     });
   }
@@ -4203,7 +4385,7 @@
       var left = goAt - Date.now();
       if(left > 0){ duelCount.textContent = Math.ceil(left / 1000); return; }
       clearInterval(iv);
-      duelCount.textContent = 'צא!';
+      duelCount.textContent = L('צא!', 'GO!');
       duelOppList(d).forEach(function(o){ o.seen = Date.now(); });
       if(state === 'countdown') state = 'playing';
       setTimeout(function(){ duelCount.hidden = true; }, 600);
@@ -4235,7 +4417,7 @@
       duelOppList(d).forEach(function(o){
         if(o.final === null && now - o.seen > DUEL_SILENT_MS){
           o.final = -1; o.left = true;              // gone: out of the running
-          if(state === 'playing' || state === 'watch') showToast(o.name + ' יצא מהקרב');
+          if(state === 'playing' || state === 'watch') showToast(o.name + L(' יצא מהקרב', ' left the match'));
         }
       });
     }
@@ -4265,13 +4447,13 @@
   function duelResultText(d){
     var opps = duelOppList(d), lead = duelLeader(d);
     var solo = opps.length === 1;
-    if(d.left) return solo ? opps[0].name + ' יצא מהקרב — ניצחת! 🏆' : 'כולם יצאו מהקרב — ניצחת! 🏆';
-    if(d.result === 'win') return solo ? 'ניצחת את ' + opps[0].name + '! 🏆' : 'ניצחת! 🏆 מקום ראשון מתוך ' + (opps.length + 1);
+    if(d.left) return solo ? opps[0].name + L(' יצא מהקרב — ניצחת! 🏆', ' left the match — you win! 🏆') : L('כולם יצאו מהקרב — ניצחת! 🏆', 'Everyone left — you win! 🏆');
+    if(d.result === 'win') return solo ? L('ניצחת את ' + opps[0].name + '! 🏆', 'You beat ' + opps[0].name + '! 🏆') : L('ניצחת! 🏆 מקום ראשון מתוך ', 'You win! 🏆 First place of ') + (opps.length + 1);
     if(d.result === 'lose'){
       var done = opps.every(function(o){ return o.final !== null; });
-      return done || solo ? '🏆 ' + lead.name + ' במקום הראשון הפעם 😅 נסה שוב!' : 'הפעם זה לא מקום ראשון 😅';
+      return done || solo ? '🏆 ' + lead.name + L(' במקום הראשון הפעם 😅 נסה שוב!', ' takes first place this time 😅 Try again!') : L('הפעם זה לא מקום ראשון 😅', 'Not first place this time 😅');
     }
-    return 'תיקו על המקום הראשון! 🤝';
+    return L('תיקו על המקום הראשון! 🤝', 'A tie for first place! 🤝');
   }
 
   function duelDecide(res){
@@ -4282,10 +4464,10 @@
     d.left = res === 'win' && opps.every(function(o){ return o.left; });
     if(res === 'win'){
       var second = duelLeader(d);
-      duelRecordWin(chatName(), second ? second.name : 'יריב');
+      duelRecordWin(chatName(), second ? second.name : L('יריב', 'Opponent'));
     }
     var text = duelResultText(d);
-    if(state === 'playing') showToast(text + (d.myFinal === null ? ' אפשר להמשיך לרוץ' : ''));
+    if(state === 'playing') showToast(text + (d.myFinal === null ? L(' אפשר להמשיך לרוץ', ' Keep running!') : ''));
     else if(state === 'watch') showToast(text);
     duelShowBanner();
   }
@@ -4304,7 +4486,7 @@
 
   // everybody, best first: [{ name, score, live, left, me }]
   function duelStandings(d){
-    var rows = [{ name: 'אתה', score: duelMyScore(d), live: d.myFinal === null, left: false, me: true }];
+    var rows = [{ name: L('אתה', 'You'), score: duelMyScore(d), live: d.myFinal === null, left: false, me: true }];
     duelOppList(d).forEach(function(o){
       rows.push({ name: o.name, score: duelOppScore(o), live: o.final === null, left: o.left, me: false });
     });
@@ -4322,12 +4504,12 @@
     duelBanner.classList.toggle('is-lose', d.result === 'lose');
     var running = duelOppList(d).filter(function(o){ return o.final === null && o.st; });
     duelWatchBtn.hidden = !(d.myFinal !== null && running.length);
-    duelWatchBtn.textContent = running.length === 1 ? '👀 צפה ב' + running[0].name + ' ממשיך' : '👀 צפה במי שעוד רץ';
+    duelWatchBtn.textContent = running.length === 1 ? L('👀 צפה ב' + running[0].name + ' ממשיך', '👀 Watch ' + running[0].name + ' keep going') : L('👀 צפה במי שעוד רץ', '👀 Watch who\'s still running');
     var head = d.result ? duelResultText(d)
-      : 'מחכה ל' + running.map(function(o){ return o.name; }).join(', ') + '...';
+      : L('מחכה ל', 'Waiting for ') + running.map(function(o){ return o.name; }).join(', ') + '...';
     var medals = ['🥇', '🥈', '🥉', '4.'];
     var table = duelStandings(d).map(function(r, i){
-      return medals[i] + ' ' + r.name + ' ' + fmtScore(r.score) + (r.left ? ' (יצא)' : (r.live ? ' 🏃' : ''));
+      return medals[i] + ' ' + r.name + ' ' + fmtScore(r.score) + (r.left ? L(' (יצא)', ' (left)') : (r.live ? ' 🏃' : ''));
     }).join('\n');
     duelBanner.textContent = head + '\n\n' + table;
   }
@@ -4459,8 +4641,8 @@
     hud.hidden = false;
     duelBar.hidden = false;
     duelStopWatchBtn.hidden = false;
-    duelStopWatchBtn.textContent = '✖ הפסק לצפות';
-    scoreLbl.textContent = 'הניקוד של ' + o.name;
+    duelStopWatchBtn.textContent = L('✖ הפסק לצפות', '✖ Stop watching');
+    scoreLbl.textContent = L('הניקוד של ', 'Score: ') + o.name;
   }
 
   // the one we watch fell: on to the next still running, or back
@@ -4469,7 +4651,7 @@
     if(o && o.final === null) return;
     if(watchBack === 'ending') return;
     var next = watchPick(d);
-    if(next){ showToast('צופה עכשיו ב' + next.name); watchStart(); }
+    if(next){ showToast(L('צופה עכשיו ב', 'Now watching ') + next.name); watchStart(); }
     else watchEnd(1500);
   }
 
@@ -4482,7 +4664,7 @@
       duelStopWatchBtn.hidden = true;
       hud.hidden = true;
       overOverlay.hidden = false;
-      scoreLbl.textContent = 'ניקוד';
+      scoreLbl.textContent = L('ניקוד', 'Score');
       watchBack = null;
       duelShowBanner();
     }, delay || 0);
@@ -4557,16 +4739,16 @@
     pendingSubmits++;
     fetch(SUPABASE_URL + '/rest/v1/duel_results', {
       method: 'POST', headers: supabaseHeaders(),
-      body: JSON.stringify({ winner: winner.slice(0, 14), loser: (loser || 'יריב').slice(0, 14) })
+      body: JSON.stringify({ winner: winner.slice(0, 14), loser: (loser || L('יריב', 'Opponent')).slice(0, 14) })
     }).catch(function(){}).then(function(){ pendingSubmits--; });
   }
 
   function loadDuelWins(){
-    duelWinsList.innerHTML = '<div class="leaderboard-empty">טוען...</div>';
+    duelWinsList.innerHTML = '<div class="leaderboard-empty">' + L('טוען...', 'Loading...') + '</div>';
     sbGet('duel_wins?select=name,wins&order=wins.desc&limit=20').then(function(rows){
       duelWinsList.innerHTML = '';
       if(!rows || !rows.length){
-        duelWinsList.innerHTML = '<div class="leaderboard-empty">' + (rows ? 'עוד אין ניצחונות — תהיה הראשון!' : 'הטבלה עוד לא מוכנה') + '</div>';
+        duelWinsList.innerHTML = '<div class="leaderboard-empty">' + (rows ? L('עוד אין ניצחונות — תהיה הראשון!', 'No wins yet — be the first!') : L('הטבלה עוד לא מוכנה', 'The table isn\'t ready yet')) + '</div>';
         return;
       }
       var me = chatName();
@@ -4641,12 +4823,12 @@
   var PASS_DIAMOND_TIERS = { 5: 1, 10: 1, 15: 2, 20: 2, 25: 3 };
   // the daily quest pool: [id, text, counter, targets to pick from]
   var PASS_QUESTS = [
-    ['coins',  'אסוף {n} מטבעות',              'coin',  [60, 100, 150]],
-    ['jumps',  'קפוץ {n} פעמים',               'jump',  [40, 70, 100]],
-    ['ducks',  'התכופף {n} פעמים',             'duck',  [25, 40, 60]],
-    ['runs',   'שחק {n} ריצות',                'run',   [4, 6, 8]],
-    ['score',  'הגע ל-{n} נקודות בריצה אחת',   'best',  [200000, 400000, 700000]],
-    ['runcoin','אסוף {n} מטבעות בריצה אחת',     'runcoin',[25, 40, 60]]
+    ['coins',  L('אסוף {n} מטבעות', 'Collect {n} coins'),                       'coin',  [60, 100, 150]],
+    ['jumps',  L('קפוץ {n} פעמים', 'Jump {n} times'),                           'jump',  [40, 70, 100]],
+    ['ducks',  L('התכופף {n} פעמים', 'Duck {n} times'),                         'duck',  [25, 40, 60]],
+    ['runs',   L('שחק {n} ריצות', 'Play {n} runs'),                             'run',   [4, 6, 8]],
+    ['score',  L('הגע ל-{n} נקודות בריצה אחת', 'Reach {n} points in one run'),  'best',  [200000, 400000, 700000]],
+    ['runcoin',L('אסוף {n} מטבעות בריצה אחת', 'Collect {n} coins in one run'),   'runcoin',[25, 40, 60]]
   ];
 
   var pass = { season: '', xp: 0, claimed: [], day: '', quests: [] };
@@ -4665,7 +4847,7 @@
       id: key.slice(0, 7), index: index,
       skinId: PASS_SKINS[((index % PASS_SKINS.length) + PASS_SKINS.length) % PASS_SKINS.length],
       daysLeft: dim - (+key.slice(8, 10)) + 1,
-      name: ['ינואר','פברואר','מרץ','אפריל','מאי','יוני','יולי','אוגוסט','ספטמבר','אוקטובר','נובמבר','דצמבר'][m]
+      name: L(['ינואר','פברואר','מרץ','אפריל','מאי','יוני','יולי','אוגוסט','ספטמבר','אוקטובר','נובמבר','דצמבר'], ['January','February','March','April','May','June','July','August','September','October','November','December'])[m]
     };
   }
 
@@ -4702,7 +4884,7 @@
     pass.xp += n;
     savePass();
     var after = passTier();
-    if(after > before && state === 'playing') showToast('🎫 עלית לשלב ' + after + ' בבאטל פס!');
+    if(after > before && state === 'playing') showToast(L('🎫 עלית לשלב ' + after + ' בבאטל פס!', '🎫 Battle pass tier ' + after + '!'));
     renderPassBtn();
   }
 
@@ -4722,7 +4904,7 @@
       if(q.progress >= q.target){
         q.progress = q.target;
         q.done = true;
-        if(state === 'playing') showToast('✅ משימה יומית: ' + questText(q) + ' · +' + PASS_QUEST_XP);
+        if(state === 'playing') showToast(L('✅ משימה יומית: ', '✅ Daily quest: ') + questText(q) + ' · +' + PASS_QUEST_XP);
         addPassXp(PASS_QUEST_XP);
       }
     });
@@ -4731,11 +4913,11 @@
 
   // what each tier gives
   function tierReward(t){
-    if(t === PASS_TIERS) return { kind: 'skin', label: '🌟 הסקין "' + getSkin(passSeason().skinId).name + '"' };
-    if(PASS_DIAMOND_TIERS[t]) return { kind: 'diamonds', n: PASS_DIAMOND_TIERS[t], label: '💎 ' + PASS_DIAMOND_TIERS[t] + ' יהלומים' };
-    if(PASS_CHEST_TIERS.indexOf(t) !== -1) return { kind: 'chest', label: '🎁 תיבה מיוחדת' };
+    if(t === PASS_TIERS) return { kind: 'skin', label: L('🌟 הסקין "', '🌟 The skin "') + getSkin(passSeason().skinId).name + '"' };
+    if(PASS_DIAMOND_TIERS[t]) return { kind: 'diamonds', n: PASS_DIAMOND_TIERS[t], label: '💎 ' + PASS_DIAMOND_TIERS[t] + L(' יהלומים', PASS_DIAMOND_TIERS[t] === 1 ? ' diamond' : ' diamonds') };
+    if(PASS_CHEST_TIERS.indexOf(t) !== -1) return { kind: 'chest', label: L('🎁 תיבה מיוחדת', '🎁 Special chest') };
     var coins = Math.round((300 + t * 60) / 50) * 50;
-    return { kind: 'coins', n: coins, label: '🪙 ' + fmtScore(coins) + ' מטבעות' };
+    return { kind: 'coins', n: coins, label: '🪙 ' + fmtScore(coins) + L(' מטבעות', ' coins') };
   }
 
   // special chest: 30% a shop skin you don't own, 20% 2 diamonds, 50% 3,000 coins
@@ -4746,32 +4928,32 @@
       if(left.length){
         var s = left[Math.floor(Math.random() * left.length)];
         ownedSkins.push(s.id); selectedSkinId = s.id;
-        return '🎨 סקין חדש: "' + s.name + '"! הוא כבר עליך';
+        return L('🎨 סקין חדש: "' + s.name + '"! הוא כבר עליך', '🎨 New skin: "' + s.name + '"! You\'re wearing it');
       }
     }
-    if(r < 0.5){ diamonds += 2; saveBoss(); renderDiamonds(); return '💎 +2 יהלומים'; }
+    if(r < 0.5){ diamonds += 2; saveBoss(); renderDiamonds(); return L('💎 +2 יהלומים', '💎 +2 diamonds'); }
     wallet += 3000;
-    return '🪙 +3,000 מטבעות';
+    return L('🪙 +3,000 מטבעות', '🪙 +3,000 coins');
   }
 
   function claimTier(t){
     if(t > passTier() || pass.claimed.indexOf(t) !== -1) return;
     var rw = tierReward(t), text;
-    if(rw.kind === 'coins'){ wallet += rw.n; text = '🪙 +' + fmtScore(rw.n) + ' מטבעות'; }
-    else if(rw.kind === 'diamonds'){ diamonds += rw.n; saveBoss(); renderDiamonds(); text = '💎 +' + rw.n + ' יהלומים'; }
+    if(rw.kind === 'coins'){ wallet += rw.n; text = '🪙 +' + fmtScore(rw.n) + L(' מטבעות', ' coins'); }
+    else if(rw.kind === 'diamonds'){ diamonds += rw.n; saveBoss(); renderDiamonds(); text = '💎 +' + rw.n + L(' יהלומים', ' diamonds'); }
     else if(rw.kind === 'chest'){ text = '🎁 ' + openPassChest(); }
     else {
       var sid = passSeason().skinId;
       if(ownedSkins.indexOf(sid) === -1) ownedSkins.push(sid);
       selectedSkinId = sid;
-      text = '🌟 הסקין "' + getSkin(sid).name + '" שלך! הוא כבר עליך';
+      text = L('🌟 הסקין "' + getSkin(sid).name + '" שלך! הוא כבר עליך', '🌟 The skin "' + getSkin(sid).name + '" is yours! You\'re wearing it');
     }
     pass.claimed.push(t);
     savePass();
     saveProgress();
     updateWalletDisplays();
     var res = document.getElementById('passClaimResult');
-    res.textContent = 'שלב ' + t + ': ' + text;
+    res.textContent = L('שלב ', 'Tier ') + t + ': ' + text;
     res.hidden = false;
     renderPass();
   }
@@ -4782,18 +4964,18 @@
 
   function renderPassBtn(){
     var ready = passReady();
-    passBtn.textContent = '🎫 באטל פס · שלב ' + passTier() + (ready ? ' · 🎁 ' + ready : '');
+    passBtn.textContent = L('🎫 באטל פס · שלב ', '🎫 Battle pass · tier ') + passTier() + (ready ? ' · 🎁 ' + ready : '');
     passBtn.classList.toggle('has-claim', ready > 0);
   }
 
   function renderPass(){
     passRollover();
     var s = passSeason(), tier = passTier();
-    document.getElementById('passSeasonLine').textContent = 'עונת ' + s.name + ' · נגמרת בעוד ' + s.daysLeft + (s.daysLeft === 1 ? ' יום' : ' ימים');
+    document.getElementById('passSeasonLine').textContent = L('עונת ' + s.name + ' · נגמרת בעוד ' + s.daysLeft + (s.daysLeft === 1 ? ' יום' : ' ימים'), s.name + ' season · ends in ' + s.daysLeft + (s.daysLeft === 1 ? ' day' : ' days'));
     document.getElementById('passTierNum').textContent = tier;
     var into = tier >= PASS_TIERS ? PASS_TIER_XP : pass.xp - tier * PASS_TIER_XP;
     document.getElementById('passFill').style.width = (into / PASS_TIER_XP * 100) + '%';
-    document.getElementById('passXp').textContent = tier >= PASS_TIERS ? 'הושלם! 🏆' : into + '/' + PASS_TIER_XP;
+    document.getElementById('passXp').textContent = tier >= PASS_TIERS ? L('הושלם! 🏆', 'Complete! 🏆') : into + '/' + PASS_TIER_XP;
 
     var ql = document.getElementById('passQuests');
     ql.innerHTML = '';
@@ -4833,7 +5015,7 @@
         if(claimed){
           var st = document.createElement('div'); st.className = 'state'; st.textContent = '✓'; row.appendChild(st);
         } else if(reached){
-          var b = document.createElement('button'); b.type = 'button'; b.textContent = 'קבל';
+          var b = document.createElement('button'); b.type = 'button'; b.textContent = L('קבל', 'Claim');
           b.addEventListener('click', function(){ claimTier(t); });
           row.appendChild(b);
           if(firstReady === null) firstReady = row;
@@ -4874,7 +5056,7 @@
     var runXp = Math.max(1, Math.round(PASS_RUN_XP_MAX * Math.min(1, score / PASS_RUN_FULL_AT)));
     var tierBefore = passTier();
     addPassXp(runXp);
-    passBanner.textContent = '🎫 +' + runXp + ' נקודות פס' + (passTier() > tierBefore ? ' · עלית לשלב ' + passTier() + '! 🎁' : '');
+    passBanner.textContent = '🎫 +' + runXp + L(' נקודות פס', runXp === 1 ? ' pass point' : ' pass points') + (passTier() > tierBefore ? L(' · עלית לשלב ', ' · up to tier ') + passTier() + '! 🎁' : '');
     passBanner.hidden = false;
   }
 
@@ -4891,9 +5073,9 @@
   // the first three milestones each bring a new kind of obstacle; every
   // milestone also makes obstacles come a little denser
   var NEW_OBSTACLES = [
-    { type:'boulder', name:'סלע מתגלגל' },
-    { type:'fire',    name:'עמוד אש' },
-    { type:'cart',    name:'עגלת מכרה' }
+    { type:'boulder', name:L('סלע מתגלגל', 'Rolling Boulder') },
+    { type:'fire',    name:L('עמוד אש', 'Fire Pillar') },
+    { type:'cart',    name:L('עגלת מכרה', 'Mine Cart') }
   ];
   var MAX_DENSITY_STEPS = 8;
   var FIRE_CYCLE = 1.8, FIRE_ON = 1.0;       // seconds: full cycle / burning part
@@ -4903,9 +5085,9 @@
   function reachMilestone(){
     milestones++;
     scoreMult = milestones + 1;
-    scoreLbl.textContent = 'ניקוד ×' + scoreMult;
+    scoreLbl.textContent = L('ניקוד ×', 'Score ×') + scoreMult;
     var fresh = NEW_OBSTACLES[milestones - 1];
-    showToast('×' + scoreMult + ' ניקוד! ' + (fresh ? 'מכשול חדש: ' + fresh.name : 'יותר מכשולים'));
+    showToast(L('×' + scoreMult + ' ניקוד! ' + (fresh ? 'מכשול חדש: ' + fresh.name : 'יותר מכשולים'), '×' + scoreMult + ' score! ' + (fresh ? 'New obstacle: ' + fresh.name : 'More obstacles')));
   }
 
   function resetGame(){
@@ -4940,7 +5122,7 @@
     distance = 0;
     coinCount = 0;
     runScore = 0; lastRawScore = 0; scoreMult = 1; milestones = 0;
-    scoreLbl.textContent = 'ניקוד';
+    scoreLbl.textContent = L('ניקוד', 'Score');
     speed = 480;
     spawnTimer = 0;
     spawnGap = 0.95;
@@ -5157,7 +5339,7 @@
     wallet += totalEarned;
     saveProgress();
     updateWalletDisplays();
-    showTourneyRunResult(recordScore(playerName.trim() || 'שחקן', scoreVal), scoreVal);
+    showTourneyRunResult(recordScore(playerName.trim() || L('שחקן', 'Player'), scoreVal), scoreVal);
     checkLeaguePromotion(scoreVal);
     earnedCoins.textContent = totalEarned;
     finalScore.textContent = fmtScore(scoreVal);
@@ -5318,7 +5500,7 @@
       if(!sn.collected && sn.lane === player.lane && sn.z <= COLLIDE_Z + 20 && sn.z > -30){
         sn.collected = true;
         player.shoes = SHOE_DURATION;
-        showToast('👟 נעליים קופצניות! קפיצה ענקית ל-10 שניות');
+        showToast(L('👟 נעליים קופצניות! קפיצה ענקית ל-10 שניות', '👟 Super sneakers! Giant jumps for 10 seconds'));
       }
       if(sn.z < -80) sneakers.splice(snIdx, 1);
     }
@@ -5418,26 +5600,26 @@
   // obstacles (same moves: jump the low ones, duck the high ones, dodge the
   // walls). No portals during the Thursday boss fight.
   var WORLDS = {
-    canyon: { name: 'הקניון', emoji: '🏜️', portal: '#ffb347',
+    canyon: { name: L('הקניון', 'the Canyon'), emoji: '🏜️', portal: '#ffb347',
       floor: ['#4a2c26', '#2f1c18'], band: '#3a2035', wallFar: '#452a26', wallNear: '#5c3226',
       road: '#caa06a', lane: 'rgba(90,58,30,0.55)', tile: 'rgba(255,244,224,0.28)', dust: 'rgba(240,220,190,0.5)', puff: '#f0dcc0',
       decor: ['pillar', 'torch', 'cactus'] },
-    ice: { name: 'עולם הקרח', emoji: '❄️', portal: '#7fd3ff',
+    ice: { name: L('עולם הקרח', 'the Ice World'), emoji: '❄️', portal: '#7fd3ff',
       sky: ['#7fb2d9', '#c3def2', '#f1f8ff'],
       floor: ['#b9d4e6', '#8fb3cc'], band: '#a9c6dc', wallFar: '#9dbbd2', wallNear: '#c9dff0',
       road: '#eef6fb', lane: 'rgba(90,130,170,0.5)', tile: 'rgba(120,160,200,0.35)', dust: 'rgba(255,255,255,0.85)', puff: '#ffffff',
       decor: ['crystal', 'pine'] },
-    space: { name: 'החלל', emoji: '🌌', portal: '#b48cff',
+    space: { name: L('החלל', 'Space'), emoji: '🌌', portal: '#b48cff',
       sky: ['#05040f', '#130b33', '#2a1550'],
       floor: ['#1b1430', '#0d0a1c'], band: '#241a44', wallFar: '#2b2350', wallNear: '#3d3370',
       road: '#4a4560', lane: 'rgba(160,140,255,0.6)', tile: 'rgba(180,160,255,0.4)', dust: 'rgba(200,190,255,0.7)', puff: '#c8c0ff',
       decor: ['antenna', 'spacecrystal'] },
-    sea: { name: 'מתחת לים', emoji: '🌊', portal: '#3fe0d0',
+    sea: { name: L('מתחת לים', 'the Deep Sea'), emoji: '🌊', portal: '#3fe0d0',
       sky: ['#02243b', '#0a5a85', '#1a86b0'],
       floor: ['#0e5a6e', '#083e4d'], band: '#0b4a60', wallFar: '#0f5d70', wallNear: '#167a8c',
       road: '#d9c48f', lane: 'rgba(40,90,110,0.45)', tile: 'rgba(255,255,255,0.25)', dust: 'rgba(210,245,255,0.7)', puff: '#d9f4ff',
       decor: ['seaweed', 'coralfan'] },
-    jungle: { name: 'הג׳ונגל', emoji: '🌴', portal: '#5fe07a',
+    jungle: { name: L('הג׳ונגל', 'the Jungle'), emoji: '🌴', portal: '#5fe07a',
       sky: ['#4f9e5d', '#a6d98a', '#e6f5c8'],
       floor: ['#2f5a26', '#1e3d18'], band: '#2a5a2a', wallFar: '#2e6a2c', wallNear: '#3f8a3a',
       road: '#8a6a3f', lane: 'rgba(50,35,15,0.55)', tile: 'rgba(255,240,200,0.25)', dust: 'rgba(200,230,160,0.6)', puff: '#c9b48a',
@@ -5476,7 +5658,7 @@
         // a breather: nothing that would reach you within the next second
         var clearUntil = COLLIDE_Z + speed * PORTAL_CLEAR_SECS;
         obstacles = obstacles.filter(function(o){ return o.z > clearUntil; });
-        showToast('🌀 ' + world().emoji + ' עברת ל' + world().name + '!');
+        showToast('🌀 ' + world().emoji + L(' עברת ל', ' Welcome to ') + world().name + '!');
       }
       if(pt.z < -80) portals.splice(i, 1);
     }
@@ -7477,12 +7659,12 @@
   //   volcano  15s  fireballs land on the lanes (a red shadow shows where);
   //                 survive it for +3 diamonds
   var EVENT_INFO = {
-    tornado: { emoji: '🌪️', secs: 15, start: '🌪️ טורנדו! ברח ממנו 15 שניות', end: '🌪️ הטורנדו נעלם!' },
-    ghost:   { emoji: '👻', secs: 8,  start: '👻 הפכת לרוח רפאים! עובר דרך מכשולים 8 שניות', end: '👻 חזרת לגוף' },
-    chaser:  { emoji: '☠️', secs: 20, start: '☠️ בוס רודף אחריך! תתחמק 20 שניות', end: '☠️ הבוס הלך' },
-    diamond: { emoji: '💎', secs: 4,  start: '💎 משהו נופל מהשמיים... תתפוס אותו!', end: '' },
-    flip:    { emoji: '🙃', secs: 8,  start: '🙃 העולם התהפך! ימין ושמאל הפוכים', end: '🙂 העולם חזר לעצמו' },
-    volcano: { emoji: '🌋', secs: 15, start: '🌋 הר געש מתפרץ! ברח מכדורי האש', end: '🌋 שרדת את הר הגעש! +3 💎' }
+    tornado: { emoji: '🌪️', secs: 15, start: L('🌪️ טורנדו! ברח ממנו 15 שניות', '🌪️ Tornado! Escape it for 15 seconds'), end: L('🌪️ הטורנדו נעלם!', '🌪️ The tornado is gone!') },
+    ghost:   { emoji: '👻', secs: 8,  start: L('👻 הפכת לרוח רפאים! עובר דרך מכשולים 8 שניות', '👻 You\'re a ghost! Pass through obstacles for 8 seconds'), end: L('👻 חזרת לגוף', '👻 Back to normal') },
+    chaser:  { emoji: '☠️', secs: 20, start: L('☠️ בוס רודף אחריך! תתחמק 20 שניות', '☠️ A boss is chasing you! Dodge for 20 seconds'), end: L('☠️ הבוס הלך', '☠️ The boss is gone') },
+    diamond: { emoji: '💎', secs: 4,  start: L('💎 משהו נופל מהשמיים... תתפוס אותו!', '💎 Something is falling from the sky... catch it!'), end: '' },
+    flip:    { emoji: '🙃', secs: 8,  start: L('🙃 העולם התהפך! ימין ושמאל הפוכים', '🙃 The world flipped! Left and right are swapped'), end: L('🙂 העולם חזר לעצמו', '🙂 The world is back to normal') },
+    volcano: { emoji: '🌋', secs: 15, start: L('🌋 הר געש מתפרץ! ברח מכדורי האש', '🌋 Volcano eruption! Dodge the fireballs'), end: L('🌋 שרדת את הר הגעש! +3 💎', '🌋 You survived the volcano! +3 💎') }
   };
   var EVENT_REGULAR = ['tornado', 'ghost', 'chaser', 'diamond', 'flip'];
   var CHASER_LAND_Z = 950, CHASER_DROP_SECS = 0.45;   // where his throws land, and how long they fall
@@ -7565,7 +7747,7 @@
         gm.z -= speed * dt;
         if(gm.lane === player.lane && gm.z <= COLLIDE_Z + 20 && gm.z > -30){
           diamonds += 1; saveBoss(); renderDiamonds();
-          showToast('💎 +1 יהלום!');
+          showToast(L('💎 +1 יהלום!', '💎 +1 diamond!'));
           evt.gem = null;
         } else if(gm.z < -80) evt.gem = null;
       }
@@ -7872,7 +8054,7 @@
   // never while the name field is being typed in. Everything worth keeping
   // (coins, skins, name, league) is in localStorage, so a reload loses nothing.
   // 'dev' = a local or preview copy: the updater stays off entirely.
-  var BUILD_VERSION = '20261010-102505';
+  var BUILD_VERSION = '20261010-222729';
   var UPDATE_CHECK_MS = 60000;
   var UPDATE_TRIED_KEY = 'canyonChaseTriedUpdate';
   var pendingSubmits = 0;
@@ -7915,6 +8097,12 @@
       .catch(function(){});
   }
 
+  // the installed app (Google Play / home screen): a small service worker,
+  // network first -- see sw.js. Not on local test copies.
+  if(BUILD_VERSION !== 'dev' && 'serviceWorker' in navigator){
+    navigator.serviceWorker.register('sw.js').catch(function(){});
+  }
+
   if(BUILD_VERSION !== 'dev'){
     setTimeout(checkForUpdate, 5000);
     setInterval(checkForUpdate, UPDATE_CHECK_MS);
@@ -7923,6 +8111,23 @@
     document.addEventListener('visibilitychange', function(){
       if(!document.hidden) checkForUpdate();
     });
+  }
+
+  // language: the picker on a first visit, the switch on the main screen
+  var langOverlay = document.getElementById('langOverlay');
+  var langBtn = document.getElementById('langBtn');
+  langBtn.textContent = LANG === 'en' ? '🌐 עברית' : '🌐 English';
+  langBtn.addEventListener('click', function(){ setLang(LANG === 'en' ? 'he' : 'en'); });
+  Array.prototype.forEach.call(document.querySelectorAll('.lang-pick'), function(b){
+    b.addEventListener('click', function(){
+      setLang(b.getAttribute('data-lang'));
+      langOverlay.hidden = true;
+      startOverlay.hidden = false;
+    });
+  });
+  if(LANG_CHOSEN !== 'he' && LANG_CHOSEN !== 'en'){
+    langOverlay.hidden = false;
+    startOverlay.hidden = true;
   }
 
   // idle player pose before first game
