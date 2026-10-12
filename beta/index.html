@@ -5131,7 +5131,7 @@
     sneakers = [];
     shoeTimer = 25 + Math.random()*10;
     flickStart = -1;
-    flickAt = (selectedSkinId === 'wizard10' && Math.random() < (IS_BETA ? 1 : FLICK_CHANCE)) ? 6 + Math.random() * 40 : 0;
+    flickAt = (selectedSkinId === 'wizard10' && Math.random() < (IS_BETA ? 1 : FLICK_CHANCE)) ? 4 + Math.random() * 8 : 0;      // early on, while the run is still slow enough to watch
     chests = [];
     decor = [];
     dustParticles = [];
@@ -8332,7 +8332,7 @@
   // never while the name field is being typed in. Everything worth keeping
   // (coins, skins, name, league) is in localStorage, so a reload loses nothing.
   // 'dev' = a local or preview copy: the updater stays off entirely.
-  var BUILD_VERSION = '20261012-213113';
+  var BUILD_VERSION = '20261012-213705';
   var UPDATE_CHECK_MS = 60000;
   var UPDATE_TRIED_KEY = 'canyonChaseTriedUpdate';
   var pendingSubmits = 0;
