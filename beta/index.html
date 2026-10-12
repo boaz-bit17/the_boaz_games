@@ -7562,56 +7562,198 @@
     if(skin.ball && !riding) drawSkinBall(g, skin.ball, pose, mode, ph, t);
   }
 
-  // Sports skins bring their ball. Football: rolls between the feet as he
-  // runs, flicked up into the air with him on a jump, kept at his foot when he
-  // ducks. Basketball: dribbled beside him, thrown high on a jump and caught
-  // as he lands, dribbled low when he ducks. Just the look -- the ball never
-  // touches anything. pose.air: 0..1 through the jump.
+  // Sports skins bring their ball. Football: rolled along at his feet, a
+  // touch every stride, flicked up into the air with him on a jump, kept at
+  // his foot when he ducks. Basketball: dribbled beside him, thrown high on a
+  // jump and caught as he lands, dribbled low when he ducks. Just the look --
+  // the ball never touches anything. pose.air: 0..1 through the jump.
+  // Both balls are real spheres: their markings are points on a sphere that
+  // turn as the ball rolls and are projected (only the near side drawn), then
+  // lit from the low sun behind the canyon.
+  var BALL_ICO = (function(){
+    var f = (1 + Math.sqrt(5)) / 2, v = [];
+    [[0,1,f],[0,1,-f],[0,-1,f],[0,-1,-f],[1,f,0],[1,-f,0],[-1,f,0],[-1,-f,0],[f,0,1],[f,0,-1],[-f,0,1],[-f,0,-1]].forEach(function(p){
+      var l = Math.hypot(p[0], p[1], p[2]); v.push([p[0]/l, p[1]/l, p[2]/l]);
+    });
+    return v;
+  })();
+  function ballRot(p, ax, ay){                       // roll about x, then turn about y
+    var y = p[1]*Math.cos(ax) - p[2]*Math.sin(ax), z = p[1]*Math.sin(ax) + p[2]*Math.cos(ax);
+    var x = p[0]*Math.cos(ay) + z*Math.sin(ay); z = -p[0]*Math.sin(ay) + z*Math.cos(ay);
+    return [x, y, z];
+  }
+  function ballNorm(p){ var l = Math.hypot(p[0], p[1], p[2]); return [p[0]/l, p[1]/l, p[2]/l]; }
+  // light and shade over the whole ball
+  function ballShade(g, r, glossy){
+    var sh = g.createRadialGradient(-r*0.35, -r*0.4, r*0.1, 0, 0, r*1.02);
+    sh.addColorStop(0, 'rgba(255,255,255,0)');
+    sh.addColorStop(0.65, 'rgba(0,0,0,0.06)');
+    sh.addColorStop(1, 'rgba(20,10,0,0.42)');
+    g.fillStyle = sh; g.beginPath(); g.arc(0, 0, r, 0, Math.PI*2); g.fill();
+    var rim = g.createRadialGradient(r*0.5, r*0.55, 0, r*0.5, r*0.55, r*0.6);   // warm bounce light from the sand
+    rim.addColorStop(0, 'rgba(255,190,120,0.22)'); rim.addColorStop(1, 'rgba(255,190,120,0)');
+    g.fillStyle = rim; g.beginPath(); g.arc(0, 0, r, 0, Math.PI*2); g.fill();
+    g.fillStyle = 'rgba(255,255,255,' + (glossy ? 0.75 : 0.55) + ')';
+    g.beginPath(); g.ellipse(-r*0.38, -r*0.42, r*0.26, r*0.15, -0.6, 0, Math.PI*2); g.fill();
+    g.fillStyle = 'rgba(255,255,255,0.35)';
+    g.beginPath(); g.arc(-r*0.18, -r*0.6, r*0.07, 0, Math.PI*2); g.fill();
+  }
+  // a real football is a truncated icosahedron: cut every corner of an
+  // icosahedron a third of the way along its edges. Each corner becomes a
+  // black pentagon; the white hexagons are what's left. Built once on the
+  // unit sphere: the pentagons (5 points each, in order) and the seams that
+  // join neighbouring pentagons (the hexagons' other edges).
+  var BALL_GEO = (function(){
+    var V = BALL_ICO, pents = [], seams = [];
+    function lerp3(a, b, k){ return [a[0] + (b[0] - a[0])*k, a[1] + (b[1] - a[1])*k, a[2] + (b[2] - a[2])*k]; }
+    function dot(a, b){ return a[0]*b[0] + a[1]*b[1] + a[2]*b[2]; }
+    V.forEach(function(A, ia){
+      var nb = [];
+      V.forEach(function(B, ib){ if(ib !== ia && dot(A, B) > 0.3) nb.push(ib); });
+      // order the five neighbours around A
+      var up = Math.abs(A[1]) > 0.9 ? [1, 0, 0] : [0, 1, 0];
+      var u = ballNorm([up[1]*A[2] - up[2]*A[1], up[2]*A[0] - up[0]*A[2], up[0]*A[1] - up[1]*A[0]]);
+      var w = [A[1]*u[2] - A[2]*u[1], A[2]*u[0] - A[0]*u[2], A[0]*u[1] - A[1]*u[0]];
+      nb.sort(function(i, j){ return Math.atan2(dot(V[i], w), dot(V[i], u)) - Math.atan2(dot(V[j], w), dot(V[j], u)); });
+      pents.push(nb.map(function(ib){ return ballNorm(lerp3(A, V[ib], 1/3)); }));
+      nb.forEach(function(ib){
+        if(ib < ia) return;                               // each edge once
+        var p = lerp3(A, V[ib], 1/3), q = lerp3(A, V[ib], 2/3), seg = [];
+        for(var s = 0; s <= 4; s++) seg.push(ballNorm(lerp3(p, q, s/4)));
+        seams.push(seg);
+      });
+    });
+    return { pents: pents, seams: seams };
+  })();
+  function drawSoccerBall(g, r, ax, ay){
+    g.save();
+    g.beginPath(); g.arc(0, 0, r, 0, Math.PI*2); g.clip();
+    var base = g.createRadialGradient(-r*0.3, -r*0.35, r*0.1, 0, 0, r);
+    base.addColorStop(0, '#ffffff'); base.addColorStop(1, '#dde2e8');
+    g.fillStyle = base; g.fillRect(-r, -r, r*2, r*2);
+    // seams between the hexagons
+    g.strokeStyle = 'rgba(80,90,105,0.7)'; g.lineWidth = Math.max(0.5, r*0.05); g.lineCap = 'round';
+    BALL_GEO.seams.forEach(function(seg){
+      var pts = seg.map(function(p){ return ballRot(p, ax, ay); });
+      if(pts[0][2] < 0 && pts[pts.length - 1][2] < 0) return;
+      g.beginPath();
+      pts.forEach(function(p, i){ if(i) g.lineTo(p[0]*r, p[1]*r); else g.moveTo(p[0]*r, p[1]*r); });
+      g.stroke();
+    });
+    // the black pentagons (their edges curve a little with the sphere)
+    g.fillStyle = '#15171c';
+    BALL_GEO.pents.forEach(function(pent){
+      var pts = pent.map(function(p){ return ballRot(p, ax, ay); });
+      var cz = pts.reduce(function(s, p){ return s + p[2]; }, 0) / 5;
+      if(cz < -0.2) return;
+      g.beginPath();
+      pts.forEach(function(p, i){
+        var nx = pts[(i + 1) % 5], mid = ballNorm([(p[0] + nx[0]) / 2, (p[1] + nx[1]) / 2, (p[2] + nx[2]) / 2]);
+        if(i) g.lineTo(p[0]*r, p[1]*r); else g.moveTo(p[0]*r, p[1]*r);
+        g.quadraticCurveTo(mid[0]*r*1.02, mid[1]*r*1.02, nx[0]*r, nx[1]*r);
+      });
+      g.closePath(); g.fill();
+    });
+    ballShade(g, r, false);
+    g.restore();
+    g.strokeStyle = 'rgba(30,30,40,0.55)'; g.lineWidth = Math.max(0.6, r*0.07);
+    g.beginPath(); g.arc(0, 0, r, 0, Math.PI*2); g.stroke();
+  }
+  // the basketball's seams: two great circles crossing, and the two curved
+  // side seams (small circles around the x axis)
+  var BALL_SEAMS = (function(){
+    var seams = [], N = 48, i, a;
+    var c1 = [], c2 = [], s1 = [], s2 = [], cs = Math.cos(0.9), sn = Math.sin(0.9);
+    for(i = 0; i <= N; i++){
+      a = i / N * Math.PI * 2;
+      c1.push([Math.cos(a), Math.sin(a), 0]);
+      c2.push([0, Math.sin(a), Math.cos(a)]);
+      s1.push([cs, sn*Math.cos(a), sn*Math.sin(a)]);
+      s2.push([-cs, sn*Math.cos(a), sn*Math.sin(a)]);
+    }
+    seams.push(c1, c2, s1, s2);
+    return seams;
+  })();
+  var BALL_PEBBLES = (function(){
+    var s = 11, out = [];
+    function r(){ s = (s * 16807) % 2147483647; return s / 2147483647; }
+    for(var i = 0; i < 90; i++){
+      var z = r()*2 - 1, a = r()*Math.PI*2, q = Math.sqrt(1 - z*z);
+      out.push([q*Math.cos(a), q*Math.sin(a), z]);
+    }
+    return out;
+  })();
+  function drawBasketball(g, r, ax, ay){
+    g.save();
+    g.beginPath(); g.arc(0, 0, r, 0, Math.PI*2); g.clip();
+    var base = g.createRadialGradient(-r*0.3, -r*0.35, r*0.1, 0, 0, r);
+    base.addColorStop(0, '#ff9a3c'); base.addColorStop(1, '#d4581b');
+    g.fillStyle = base; g.fillRect(-r, -r, r*2, r*2);
+    g.fillStyle = 'rgba(120,40,0,0.28)';                                       // pebbled leather
+    BALL_PEBBLES.forEach(function(p0){
+      var p = ballRot(p0, ax, ay);
+      if(p[2] <= 0.05) return;
+      g.beginPath(); g.arc(p[0]*r, p[1]*r, Math.max(0.35, r*0.045*p[2]), 0, Math.PI*2); g.fill();
+    });
+    g.strokeStyle = '#2b1206'; g.lineWidth = Math.max(0.7, r*0.085); g.lineCap = 'round';
+    BALL_SEAMS.forEach(function(line){
+      var drawing = false;
+      g.beginPath();
+      line.forEach(function(p0){
+        var p = ballRot(p0, ax, ay);
+        if(p[2] < 0){ drawing = false; return; }
+        if(drawing) g.lineTo(p[0]*r, p[1]*r); else { g.moveTo(p[0]*r, p[1]*r); drawing = true; }
+      });
+      g.stroke();
+    });
+    ballShade(g, r, true);
+    g.restore();
+    g.strokeStyle = 'rgba(70,25,5,0.6)'; g.lineWidth = Math.max(0.6, r*0.06);
+    g.beginPath(); g.arc(0, 0, r, 0, Math.PI*2); g.stroke();
+  }
+
   function drawSkinBall(g, kind, pose, mode, ph, t){
     var duck = pose.duck || 0, air = pose.air === undefined ? 0.5 : pose.air;
     var inAir = mode === 'jump' || mode === 'fly';
-    var x, y, r, spin, onGround;
+    var x, y, r, ax, ay, squash = 1, shadowAt = null;
     if(kind === 'soccer'){
-      r = 7.5;
-      if(inAir){ x = 9; y = -16 - Math.sin(air * Math.PI) * 38; spin = t * 14; onGround = false; }
-      else { x = 7 + Math.sin(ph) * 7; y = -r + 1 - Math.abs(Math.sin(ph * 2)) * 3 * (1 - duck); spin = ph * 2; onGround = true; }
+      r = 10;
+      if(inAir){
+        // flicked up off the foot and carried along with him
+        x = 12; y = -20 - Math.sin(air * Math.PI) * 42;
+        ax = t * 16; ay = 0.5;
+      } else {
+        // a touch every stride: nudged out ahead, then caught up with
+        var touch = (Math.sin(ph) + 1) / 2;
+        x = 11 + Math.sin(ph * 0.5) * 3; y = -r - touch * 6 * (1 - duck * 0.6);
+        ax = -ph * 1.6; ay = 0.35;
+        shadowAt = x;
+      }
     } else {
-      r = 8.5;
-      if(inAir){ x = 18; y = -72 - Math.sin(air * Math.PI) * 95; spin = t * 6; onGround = false; }
-      else {
+      r = 11;
+      if(inAir){
+        // thrown high on the way up, caught as he lands
+        x = 18; y = -76 - Math.sin(air * Math.PI) * 100;
+        ax = t * 7; ay = 0.4;
+      } else {
         var b = Math.abs(Math.cos(ph));                       // 1 = in the hand, 0 = on the floor
-        x = 21; y = -r - b * (40 - 22 * duck); spin = ph; onGround = true;
+        var top = 44 - 24 * duck;
+        x = 22; y = -r - b * top;
+        if(b < 0.12) squash = 0.82 + b * 1.5;                 // squashed against the ground
+        ax = ph * 1.2; ay = 0.4;
+        shadowAt = x;
       }
     }
-    if(onGround){
-      g.fillStyle = 'rgba(0,0,0,0.2)';
-      g.beginPath(); g.ellipse(x, 1, r * 0.9, r * 0.3, 0, 0, Math.PI * 2); g.fill();
+    if(shadowAt !== null){
+      var lift = Math.max(0, -y - r);
+      g.fillStyle = 'rgba(40,20,5,' + (0.28 * (1 - Math.min(0.7, lift / 60))).toFixed(3) + ')';
+      g.beginPath(); g.ellipse(shadowAt + 2, 1.5, r * (1 + lift / 120), r * 0.32, 0, 0, Math.PI * 2); g.fill();
     }
     g.save();
-    g.translate(x, y);
-    g.beginPath(); g.arc(0, 0, r, 0, Math.PI * 2);
-    if(kind === 'soccer'){
-      g.fillStyle = '#ffffff'; g.fill();
-      g.save(); g.clip(); g.rotate(spin);
-      g.fillStyle = '#1b1b1b';
-      function pent(cx, cy, s){ g.beginPath(); for(var k = 0; k < 5; k++){ var a = -Math.PI/2 + k * Math.PI * 2 / 5; g.lineTo(cx + Math.cos(a) * s, cy + Math.sin(a) * s); } g.closePath(); g.fill(); }
-      pent(0, 0, r * 0.38);
-      for(var k = 0; k < 5; k++){ var a = -Math.PI/2 + k * Math.PI * 2 / 5; pent(Math.cos(a) * r * 0.95, Math.sin(a) * r * 0.95, r * 0.32); }
-      g.restore();
-      g.strokeStyle = 'rgba(0,0,0,0.45)'; g.lineWidth = 0.9; g.stroke();
-    } else {
-      var bg = g.createRadialGradient(-r * 0.35, -r * 0.35, 1, 0, 0, r);
-      bg.addColorStop(0, '#ffa04a'); bg.addColorStop(1, '#c4521a');
-      g.fillStyle = bg; g.fill();
-      g.save(); g.clip(); g.rotate(spin);
-      g.strokeStyle = '#2a1206'; g.lineWidth = 1.1;
-      g.beginPath(); g.moveTo(-r, 0); g.lineTo(r, 0); g.stroke();
-      g.beginPath(); g.moveTo(0, -r); g.lineTo(0, r); g.stroke();
-      g.beginPath(); g.arc(-r * 1.25, 0, r * 0.95, -0.9, 0.9); g.stroke();
-      g.beginPath(); g.arc(r * 1.25, 0, r * 0.95, Math.PI - 0.9, Math.PI + 0.9); g.stroke();
-      g.restore();
-      g.strokeStyle = 'rgba(0,0,0,0.4)'; g.lineWidth = 0.8; g.stroke();
-    }
+    g.translate(x, y + r * (1 - squash));
+    g.scale(1 + (1 - squash) * 0.6, squash);
+    if(kind === 'soccer') drawSoccerBall(g, r, ax, ay);
+    else drawBasketball(g, r, ax, ay);
     g.restore();
   }
 
@@ -8132,7 +8274,7 @@
   // never while the name field is being typed in. Everything worth keeping
   // (coins, skins, name, league) is in localStorage, so a reload loses nothing.
   // 'dev' = a local or preview copy: the updater stays off entirely.
-  var BUILD_VERSION = '20261012-191547';
+  var BUILD_VERSION = '20261012-191948';
   var UPDATE_CHECK_MS = 60000;
   var UPDATE_TRIED_KEY = 'canyonChaseTriedUpdate';
   var pendingSubmits = 0;
