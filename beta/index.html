@@ -1485,6 +1485,9 @@
   // super sneakers: lying on the track now and then (about every 30s, never
   // in the boss fight); for 10s every jump is a giant one -- high and long
   // enough to clear anything, walls, carts and burning fire included
+  // Ball Wizard's rainbow flick
+  var FLICK_CHANCE = 0.2, FLICK_SECS = 1.15;
+  var flickAt = 0, flickStart = -1;
   var SHOE_DURATION = 10;
   var SHOE_JUMP_VEL = 1100;          // vs 760: about twice as high, half again as long
   var SHOE_CLEAR = { barrier: 128, cart: 100, fire: 140 };   // height that clears each
@@ -5127,6 +5130,8 @@
     powerups = [];
     sneakers = [];
     shoeTimer = 25 + Math.random()*10;
+    flickStart = -1;
+    flickAt = (selectedSkinId === 'wizard10' && Math.random() < FLICK_CHANCE) ? 6 + Math.random() * 40 : 0;
     chests = [];
     decor = [];
     dustParticles = [];
@@ -5498,6 +5503,13 @@
       }
       if(pu.z < -80) powerups.splice(pIdx,1);
     }
+
+    // the rainbow flick: starts when he's running along, cut short by a jump or duck
+    if(flickAt && elapsed >= flickAt && !player.jumping && !player.ducking && !player.flying){
+      flickAt = 0; flickStart = elapsed;
+      showToast(L('🪄 הרמה ברזילאית!', '🪄 Rainbow flick!'));
+    }
+    if(flickStart >= 0 && (elapsed - flickStart > FLICK_SECS || player.jumping || player.ducking || player.flying)) flickStart = -1;
 
     // super sneakers
     if(player.shoes > 0) player.shoes = Math.max(0, player.shoes - dt);
@@ -7063,7 +7075,7 @@
     // `rides` skins don't run: they stand on a surfboard, knees bent, arms
     // out for balance (feather flight still spreads the arms as usual)
     var riding = !!skin.rides && mode !== 'fly';
-    if(skin.ball === 'soccer' && !riding) drawSkinBall(g, skin.ball, pose, mode, ph, t);   // out in front, behind his legs
+    if(skin.ball && !riding) drawSkinBall(g, skin.ball, pose, mode, ph, t, 'ahead');   // out in front, behind his legs
 
     g.save();
     if(pose.duck){
@@ -7144,6 +7156,10 @@
       if(mode === 'jump'){ fwd = 0.75; back = 0.15; }
       if(mode === 'fly'){ fwd = 0.1; back = 0.45; }
       if(mode === 'idle'){ fwd = 0; back = 0; }
+      if(pose.flick !== undefined && side > 0 && mode === 'run' && pose.flick < 0.3){
+        var kick = Math.sin(pose.flick / 0.3 * Math.PI);     // the heel flicks up behind him
+        back = Math.max(back, 1.35 * kick); fwd = fwd * (1 - kick);
+      }
       var hipX = side*6.5, hipY = -62;
       // a leg stepping forward (away from camera) lifts its knee; the leg
       // swinging back kicks its heel up toward the camera
@@ -7566,7 +7582,7 @@
     }
 
     g.restore();
-    if(skin.ball === 'basket' && !riding) drawSkinBall(g, skin.ball, pose, mode, ph, t);
+    if(skin.ball && !riding) drawSkinBall(g, skin.ball, pose, mode, ph, t, 'near');
   }
 
   // Sports skins bring their ball. Football: rolled along at his feet, a
@@ -7733,12 +7749,28 @@
     return { cy: cy, b: b, handY: handY };
   }
 
-  function drawSkinBall(g, kind, pose, mode, ph, t){
+  function drawSkinBall(g, kind, pose, mode, ph, t, layer){
     var duck = pose.duck || 0, air = pose.air === undefined ? 0.5 : pose.air;
     var inAir = mode === 'jump' || mode === 'fly';
-    var x, y, r, ax, ay, squash = 1, shadowAt = null;
+    var x, y, r, ax, ay, squash = 1, shadowAt = null, where = kind === 'soccer' ? 'ahead' : 'near';
     var ground = pose.ground || 0, shadowY = ground + 1.5;
-    if(kind === 'soccer'){
+    if(kind === 'soccer' && pose.flick !== undefined && !inAir){
+      // the rainbow flick: rolled up the back of the leg, flicked off the
+      // heel over his head, and down out in front of him again
+      var f = pose.flick;
+      r = 10.5 - Math.max(0, f - 0.5) * 2;
+      ax = t * 18; ay = 0.4;
+      if(f < 0.18){
+        var k = f / 0.18;                                    // up the back of the leg
+        x = 7; y = ground - 9 - k * 26; where = 'near';
+      } else {
+        var k2 = (f - 0.18) / 0.82;                          // the arc: behind him, over the top, ahead
+        x = 7 - Math.sin(k2 * Math.PI) * 7 + k2 * 1;
+        y = (ground - 35) + ((ground - 15) - (ground - 35)) * k2 - Math.sin(k2 * Math.PI) * 175;
+        where = k2 < 0.5 ? 'near' : 'ahead';
+        if(k2 > 0.85){ shadowAt = x; shadowY = ground - 4; }
+      }
+    } else if(kind === 'soccer'){
       // the ball runs ahead of him, up the track: a little further away, so
       // a little higher on screen and smaller, and his legs pass in front of it
       if(inAir){
@@ -7768,6 +7800,7 @@
         shadowAt = x;
       }
     }
+    if(layer && layer !== where) return;
     if(shadowAt !== null){
       var lift = Math.max(0, shadowY - (y + r));
       g.fillStyle = 'rgba(40,20,5,' + (0.3 * (1 - Math.min(0.7, lift / 60))).toFixed(3) + ')';
@@ -7863,7 +7896,8 @@
     var jv = player.superJump ? SHOE_JUMP_VEL : JUMP_VEL;
     var airT = player.jumping ? Math.max(0, Math.min(1, (jv - player.vy) / (2 * jv))) : 0;
     drawRunnerFigure(ctx, shod ? Object.assign({}, skin, { shoes: '#e8203f', sole: '#ffffff' }) : skin,
-                     { phase: player.legPhase, mode: mode, duck: duckA, t: elapsed, stance: playerStance(), superShoes: shod, air: airT, ground: running ? lift : 0 });
+                     { phase: player.legPhase, mode: mode, duck: duckA, t: elapsed, stance: playerStance(), superShoes: shod, air: airT, ground: running ? lift : 0,
+                       flick: (flickStart >= 0 && state === 'playing') ? (elapsed - flickStart) / FLICK_SECS : undefined });
     if(ghost) ctx.globalAlpha = 1;
 
     // wings grow out of the back, which faces the camera -> on top
@@ -8298,7 +8332,7 @@
   // never while the name field is being typed in. Everything worth keeping
   // (coins, skins, name, league) is in localStorage, so a reload loses nothing.
   // 'dev' = a local or preview copy: the updater stays off entirely.
-  var BUILD_VERSION = '20261012-211401';
+  var BUILD_VERSION = '20261012-212139';
   var UPDATE_CHECK_MS = 60000;
   var UPDATE_TRIED_KEY = 'canyonChaseTriedUpdate';
   var pendingSubmits = 0;
