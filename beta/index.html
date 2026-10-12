@@ -1618,6 +1618,19 @@
       shoes:'#fff0b3', sole:'#a8781a', crown:'#ffd766',
       cape:'#ffd766', capeShade:'#b8860b', emblem:{shape:'sun', color:'#fff8dc'},
       wings:'#ffe9a0', aura:'#ffd766', sparkle:'#fff4c2' },
+    // ---- sports stars: they bring their ball along (see drawSkinBall)
+    { id:'wizard10', name:L('קוסם הכדור', 'Ball Wizard'), price:30000, ball:'soccer',
+      skinTone:'#e0b08a', hair:'#3b2412', hairStyle:'short',
+      shirt:'#75aadb', shirtShade:'#5d93c9', sleeves:'short',
+      pattern:'vstripes', patternColor:'#ffffff', number:'10', numberColor:'#1b1b3a',
+      pants:'#1b1b3a', pantsShade:'#10102a', legs:'shorts', socks:'#ffffff',
+      shoes:'#f5c542', sole:'#2a2a2a' },
+    { id:'hoops23', name:L('מלך הסלים', 'Hoop King'), price:30000, ball:'basket',
+      skinTone:'#8a5a3c', hair:'#1a1008', hairStyle:'short',
+      shirt:'#fdb927', shirtShade:'#e09a10', sleeves:'none',
+      number:'23', numberColor:'#552583',
+      pants:'#fdb927', pantsShade:'#e09a10', legs:'shorts', socks:'#ffffff',
+      shoes:'#552583', sole:'#ffffff', headband:'#552583' },
     { id:'surfer',   name:L('גולש צינורות', 'Barrel Surfer'), price:0, exclusive:'scratch',
       skinTone:'#c98b5e', hair:'#ecc766', hairStyle:'spiky',
       shirt:'#1fa3b8', shirtShade:'#127486', sleeves:'short',
@@ -6933,7 +6946,7 @@
   // Drawn on top of the board, which drawRunnerFigure has already put down.
   function drawSideRider(g, skin, t, f){
     var sway = Math.sin(t*3) * 2;
-    var shinColor = skin.legs === 'shorts' ? skin.skinTone : skin.pantsShade;
+    var shinColor = skin.legs === 'shorts' ? (skin.socks || skin.skinTone) : skin.pantsShade;
     function leg(hipX, hipY, kneeX, kneeY, footX, footY){
       limb(g, hipX, hipY, kneeX, kneeY, 12, skin.pants);
       limb(g, kneeX, kneeY, footX, footY, 9.5, shinColor);
@@ -7156,7 +7169,7 @@
 
     function drawLeg(L){
       limb(g, L.hipX, L.hipY, L.kneeX, L.kneeY, 12, skin.pants);
-      var shinColor = skin.legs === 'shorts' ? skin.skinTone : skin.pantsShade;
+      var shinColor = skin.legs === 'shorts' ? (skin.socks || skin.skinTone) : skin.pantsShade;
       limb(g, L.kneeX, L.kneeY, L.footX, L.footY, 9.5, shinColor);
       if(skin.legs === 'shorts'){
         limb(g, L.hipX, L.hipY, L.hipX + (L.kneeX-L.hipX)*0.55, L.hipY + (L.kneeY-L.hipY)*0.55, 13, skin.pants);
@@ -7208,6 +7221,9 @@
       if(allowPattern && skin.pattern === 'stripes'){
         g.fillStyle = skin.patternColor;
         for(var y = top + 3; y < bottom; y += 8) g.fillRect(-30, y, 60, 3.2);
+      } else if(allowPattern && skin.pattern === 'vstripes'){
+        g.fillStyle = skin.patternColor;
+        for(var vx = -21; vx < 22; vx += 8.5) g.fillRect(vx, top, 4, bottom - top);
       } else if(allowPattern && skin.pattern === 'stars'){
         var spots = [[-9,-92],[6,-86],[-3,-76],[10,-68],[-11,-62],[2,-55],[-6,-47],[12,-50],[0,-96]];
         spots.forEach(function(p, i){
@@ -7265,6 +7281,12 @@
     torsoPath(); g.fill();
     // a cape hides the back, so its pattern goes on the cape instead
     decorate(torsoPath, -102, -60, !skin.cape);
+    if(skin.number && !skin.cape){
+      g.font = 'bold 17px Rubik, Arial, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
+      g.lineWidth = 3; g.strokeStyle = 'rgba(255,255,255,0.85)'; g.strokeText(skin.number, 0, -80);
+      g.fillStyle = skin.numberColor || '#222'; g.fillText(skin.number, 0, -80);
+      g.textBaseline = 'alphabetic';
+    }
     g.strokeStyle = 'rgba(0,0,0,0.16)';
     g.lineWidth = 1.4;
     g.beginPath(); g.moveTo(0, -98); g.lineTo(0, -62); g.stroke();          // spine crease
@@ -7537,6 +7559,60 @@
     }
 
     g.restore();
+    if(skin.ball && !riding) drawSkinBall(g, skin.ball, pose, mode, ph, t);
+  }
+
+  // Sports skins bring their ball. Football: rolls between the feet as he
+  // runs, flicked up into the air with him on a jump, kept at his foot when he
+  // ducks. Basketball: dribbled beside him, thrown high on a jump and caught
+  // as he lands, dribbled low when he ducks. Just the look -- the ball never
+  // touches anything. pose.air: 0..1 through the jump.
+  function drawSkinBall(g, kind, pose, mode, ph, t){
+    var duck = pose.duck || 0, air = pose.air === undefined ? 0.5 : pose.air;
+    var inAir = mode === 'jump' || mode === 'fly';
+    var x, y, r, spin, onGround;
+    if(kind === 'soccer'){
+      r = 7.5;
+      if(inAir){ x = 9; y = -16 - Math.sin(air * Math.PI) * 38; spin = t * 14; onGround = false; }
+      else { x = 7 + Math.sin(ph) * 7; y = -r + 1 - Math.abs(Math.sin(ph * 2)) * 3 * (1 - duck); spin = ph * 2; onGround = true; }
+    } else {
+      r = 8.5;
+      if(inAir){ x = 18; y = -72 - Math.sin(air * Math.PI) * 95; spin = t * 6; onGround = false; }
+      else {
+        var b = Math.abs(Math.cos(ph));                       // 1 = in the hand, 0 = on the floor
+        x = 21; y = -r - b * (40 - 22 * duck); spin = ph; onGround = true;
+      }
+    }
+    if(onGround){
+      g.fillStyle = 'rgba(0,0,0,0.2)';
+      g.beginPath(); g.ellipse(x, 1, r * 0.9, r * 0.3, 0, 0, Math.PI * 2); g.fill();
+    }
+    g.save();
+    g.translate(x, y);
+    g.beginPath(); g.arc(0, 0, r, 0, Math.PI * 2);
+    if(kind === 'soccer'){
+      g.fillStyle = '#ffffff'; g.fill();
+      g.save(); g.clip(); g.rotate(spin);
+      g.fillStyle = '#1b1b1b';
+      function pent(cx, cy, s){ g.beginPath(); for(var k = 0; k < 5; k++){ var a = -Math.PI/2 + k * Math.PI * 2 / 5; g.lineTo(cx + Math.cos(a) * s, cy + Math.sin(a) * s); } g.closePath(); g.fill(); }
+      pent(0, 0, r * 0.38);
+      for(var k = 0; k < 5; k++){ var a = -Math.PI/2 + k * Math.PI * 2 / 5; pent(Math.cos(a) * r * 0.95, Math.sin(a) * r * 0.95, r * 0.32); }
+      g.restore();
+      g.strokeStyle = 'rgba(0,0,0,0.45)'; g.lineWidth = 0.9; g.stroke();
+    } else {
+      var bg = g.createRadialGradient(-r * 0.35, -r * 0.35, 1, 0, 0, r);
+      bg.addColorStop(0, '#ffa04a'); bg.addColorStop(1, '#c4521a');
+      g.fillStyle = bg; g.fill();
+      g.save(); g.clip(); g.rotate(spin);
+      g.strokeStyle = '#2a1206'; g.lineWidth = 1.1;
+      g.beginPath(); g.moveTo(-r, 0); g.lineTo(r, 0); g.stroke();
+      g.beginPath(); g.moveTo(0, -r); g.lineTo(0, r); g.stroke();
+      g.beginPath(); g.arc(-r * 1.25, 0, r * 0.95, -0.9, 0.9); g.stroke();
+      g.beginPath(); g.arc(r * 1.25, 0, r * 0.95, Math.PI - 0.9, Math.PI + 0.9); g.stroke();
+      g.restore();
+      g.strokeStyle = 'rgba(0,0,0,0.4)'; g.lineWidth = 0.8; g.stroke();
+    }
+    g.restore();
   }
 
   function drawPlayer(){
@@ -7618,8 +7694,10 @@
       }
     }
     var shod = player.shoes > 0 && state !== 'watch';
+    var jv = player.superJump ? SHOE_JUMP_VEL : JUMP_VEL;
+    var airT = player.jumping ? Math.max(0, Math.min(1, (jv - player.vy) / (2 * jv))) : 0;
     drawRunnerFigure(ctx, shod ? Object.assign({}, skin, { shoes: '#e8203f', sole: '#ffffff' }) : skin,
-                     { phase: player.legPhase, mode: mode, duck: duckA, t: elapsed, stance: playerStance(), superShoes: shod });
+                     { phase: player.legPhase, mode: mode, duck: duckA, t: elapsed, stance: playerStance(), superShoes: shod, air: airT });
     if(ghost) ctx.globalAlpha = 1;
 
     // wings grow out of the back, which faces the camera -> on top
@@ -8054,7 +8132,7 @@
   // never while the name field is being typed in. Everything worth keeping
   // (coins, skins, name, league) is in localStorage, so a reload loses nothing.
   // 'dev' = a local or preview copy: the updater stays off entirely.
-  var BUILD_VERSION = '20261010-222729';
+  var BUILD_VERSION = '20261012-191547';
   var UPDATE_CHECK_MS = 60000;
   var UPDATE_TRIED_KEY = 'canyonChaseTriedUpdate';
   var pendingSubmits = 0;
