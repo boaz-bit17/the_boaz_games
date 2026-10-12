@@ -7063,6 +7063,7 @@
     // `rides` skins don't run: they stand on a surfboard, knees bent, arms
     // out for balance (feather flight still spreads the arms as usual)
     var riding = !!skin.rides && mode !== 'fly';
+    if(skin.ball === 'soccer' && !riding) drawSkinBall(g, skin.ball, pose, mode, ph, t);   // out in front, behind his legs
 
     g.save();
     if(pose.duck){
@@ -7152,6 +7153,12 @@
       return {hipX:hipX, hipY:hipY, kneeX:kneeX, kneeY:kneeY, footX:footX, footY:footY, back:back, fwd:fwd};
     }
     function armPose(side){
+      if(skin.ball === 'basket' && side > 0 && (mode === 'run' || mode === 'idle') && !riding){
+        // the dribbling arm: hand on the ball's top, pushing it down
+        var dr = basketDribble(ph, pose.duck || 0, pose.ground || 0);
+        var hy = dr.handY / (1 - 0.5 * (pose.duck || 0));       // back inside the crouch squash
+        return { sx: 17, sy: -97, ex: 25, ey: -80 + (hy + 58) * 0.35, hx: DRIBBLE_X - 1, hy: hy - 2, fwd: 0, back: 0.4 };
+      }
       var s = Math.sin(ph + (side < 0 ? Math.PI : 0));
       var fwd = Math.max(0, s), back = Math.max(0, -s);
       if(mode === 'jump'){ fwd = 0.25; back = 0; }
@@ -7559,7 +7566,7 @@
     }
 
     g.restore();
-    if(skin.ball && !riding) drawSkinBall(g, skin.ball, pose, mode, ph, t);
+    if(skin.ball === 'basket' && !riding) drawSkinBall(g, skin.ball, pose, mode, ph, t);
   }
 
   // Sports skins bring their ball. Football: rolled along at his feet, a
@@ -7712,42 +7719,59 @@
     g.beginPath(); g.arc(0, 0, r, 0, Math.PI*2); g.stroke();
   }
 
+  // one dribble per stride. Heights are outside the crouch squash (the
+  // figure's origin = his feet). The ball's top meets the hand at the top of
+  // the bounce; the hand rides the ball down a little and waits for it.
+  var DRIBBLE_R = 11, DRIBBLE_X = 23;
+  function basketDribble(ph, duck, ground){
+    var b = Math.abs(Math.cos(ph));                           // 1 = up in the hand, 0 = on the floor
+    var handTop = -58 * (1 - 0.5 * duck);                     // where the hand meets the ball
+    var floorY = (ground || 0) - DRIBBLE_R;                   // ball centre when touching the floor
+    var topY = handTop + DRIBBLE_R;                           // ball centre when in the hand
+    var cy = floorY + (topY - floorY) * b;
+    var handY = Math.max(handTop, Math.min(cy - DRIBBLE_R, handTop * 0.68));
+    return { cy: cy, b: b, handY: handY };
+  }
+
   function drawSkinBall(g, kind, pose, mode, ph, t){
     var duck = pose.duck || 0, air = pose.air === undefined ? 0.5 : pose.air;
     var inAir = mode === 'jump' || mode === 'fly';
     var x, y, r, ax, ay, squash = 1, shadowAt = null;
+    var ground = pose.ground || 0, shadowY = ground + 1.5;
     if(kind === 'soccer'){
-      r = 10;
+      // the ball runs ahead of him, up the track: a little further away, so
+      // a little higher on screen and smaller, and his legs pass in front of it
       if(inAir){
-        // flicked up off the foot and carried along with him
-        x = 12; y = -20 - Math.sin(air * Math.PI) * 42;
+        // flicked up off the foot, out in front and to the side
+        r = 9; x = 27; y = ground - 24 - Math.sin(air * Math.PI) * 44;
         ax = t * 16; ay = 0.5;
       } else {
-        // a touch every stride: nudged out ahead, then caught up with
-        var touch = (Math.sin(ph) + 1) / 2;
-        x = 11 + Math.sin(ph * 0.5) * 3; y = -r - touch * 6 * (1 - duck * 0.6);
-        ax = -ph * 1.6; ay = 0.35;
-        shadowAt = x;
+        // pushed ahead with each stride, then he runs up to it again
+        var ahead = 1 - ((ph % Math.PI) + Math.PI) % Math.PI / Math.PI;   // 1 right after the touch
+        r = 9.5 - ahead * 0.8;
+        x = 8 + Math.sin(ph * 0.5) * 4;
+        y = ground - r - 5 - ahead * 7;
+        ax = -ph * 1.8; ay = 0.3;
+        shadowAt = x; shadowY = y + r + 1;
       }
     } else {
-      r = 11;
+      r = DRIBBLE_R;
       if(inAir){
         // thrown high on the way up, caught as he lands
         x = 18; y = -76 - Math.sin(air * Math.PI) * 100;
         ax = t * 7; ay = 0.4;
       } else {
-        var b = Math.abs(Math.cos(ph));                       // 1 = in the hand, 0 = on the floor
-        var top = 44 - 24 * duck;
-        x = 22; y = -r - b * top;
-        if(b < 0.12) squash = 0.82 + b * 1.5;                 // squashed against the ground
+        var dr = basketDribble(ph, duck, ground);
+        x = DRIBBLE_X; y = dr.cy;
+        if(dr.b < 0.12) squash = 0.82 + dr.b * 1.5;          // squashed against the floor
         ax = ph * 1.2; ay = 0.4;
         shadowAt = x;
       }
     }
     if(shadowAt !== null){
-      var lift = Math.max(0, -y - r);
-      g.fillStyle = 'rgba(40,20,5,' + (0.28 * (1 - Math.min(0.7, lift / 60))).toFixed(3) + ')';
-      g.beginPath(); g.ellipse(shadowAt + 2, 1.5, r * (1 + lift / 120), r * 0.32, 0, 0, Math.PI * 2); g.fill();
+      var lift = Math.max(0, shadowY - (y + r));
+      g.fillStyle = 'rgba(40,20,5,' + (0.3 * (1 - Math.min(0.7, lift / 60))).toFixed(3) + ')';
+      g.beginPath(); g.ellipse(shadowAt + 2, shadowY, r * (1 + lift / 120), r * 0.32, 0, 0, Math.PI * 2); g.fill();
     }
     g.save();
     g.translate(x, y + r * (1 - squash));
@@ -7839,7 +7863,7 @@
     var jv = player.superJump ? SHOE_JUMP_VEL : JUMP_VEL;
     var airT = player.jumping ? Math.max(0, Math.min(1, (jv - player.vy) / (2 * jv))) : 0;
     drawRunnerFigure(ctx, shod ? Object.assign({}, skin, { shoes: '#e8203f', sole: '#ffffff' }) : skin,
-                     { phase: player.legPhase, mode: mode, duck: duckA, t: elapsed, stance: playerStance(), superShoes: shod, air: airT });
+                     { phase: player.legPhase, mode: mode, duck: duckA, t: elapsed, stance: playerStance(), superShoes: shod, air: airT, ground: running ? lift : 0 });
     if(ghost) ctx.globalAlpha = 1;
 
     // wings grow out of the back, which faces the camera -> on top
@@ -8274,7 +8298,7 @@
   // never while the name field is being typed in. Everything worth keeping
   // (coins, skins, name, league) is in localStorage, so a reload loses nothing.
   // 'dev' = a local or preview copy: the updater stays off entirely.
-  var BUILD_VERSION = '20261012-194934';
+  var BUILD_VERSION = '20261012-210906';
   var UPDATE_CHECK_MS = 60000;
   var UPDATE_TRIED_KEY = 'canyonChaseTriedUpdate';
   var pendingSubmits = 0;
