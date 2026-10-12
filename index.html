@@ -1485,6 +1485,9 @@
   // super sneakers: lying on the track now and then (about every 30s, never
   // in the boss fight); for 10s every jump is a giant one -- high and long
   // enough to clear anything, walls, carts and burning fire included
+  // Ball Wizard's rainbow flick
+  var FLICK_CHANCE = 0.35, FLICK_SECS = 2.1;          // every run on the beta site, to try it out
+  var flickAt = 0, flickStart = -1;
   var SHOE_DURATION = 10;
   var SHOE_JUMP_VEL = 1100;          // vs 760: about twice as high, half again as long
   var SHOE_CLEAR = { barrier: 128, cart: 100, fire: 140 };   // height that clears each
@@ -1618,6 +1621,19 @@
       shoes:'#fff0b3', sole:'#a8781a', crown:'#ffd766',
       cape:'#ffd766', capeShade:'#b8860b', emblem:{shape:'sun', color:'#fff8dc'},
       wings:'#ffe9a0', aura:'#ffd766', sparkle:'#fff4c2' },
+    // ---- sports stars: they bring their ball along (see drawSkinBall)
+    { id:'wizard10', name:L('קוסם הכדור', 'Ball Wizard'), price:30000, ball:'soccer',
+      skinTone:'#e0b08a', hair:'#3b2412', hairStyle:'short',
+      shirt:'#75aadb', shirtShade:'#5d93c9', sleeves:'short',
+      pattern:'vstripes', patternColor:'#ffffff', number:'10', numberColor:'#1b1b3a',
+      pants:'#1b1b3a', pantsShade:'#10102a', legs:'shorts', socks:'#ffffff',
+      shoes:'#f5c542', sole:'#2a2a2a' },
+    { id:'hoops23', name:L('מלך הסלים', 'Hoop King'), price:30000, ball:'basket',
+      skinTone:'#8a5a3c', hair:'#1a1008', hairStyle:'short',
+      shirt:'#fdb927', shirtShade:'#e09a10', sleeves:'none',
+      number:'23', numberColor:'#552583',
+      pants:'#fdb927', pantsShade:'#e09a10', legs:'shorts', socks:'#ffffff',
+      shoes:'#552583', sole:'#ffffff', headband:'#552583' },
     { id:'surfer',   name:L('גולש צינורות', 'Barrel Surfer'), price:0, exclusive:'scratch',
       skinTone:'#c98b5e', hair:'#ecc766', hairStyle:'spiky',
       shirt:'#1fa3b8', shirtShade:'#127486', sleeves:'short',
@@ -5114,6 +5130,8 @@
     powerups = [];
     sneakers = [];
     shoeTimer = 25 + Math.random()*10;
+    flickStart = -1;
+    flickAt = (selectedSkinId === 'wizard10' && Math.random() < (IS_BETA ? 1 : FLICK_CHANCE)) ? 4 + Math.random() * 8 : 0;      // early on, while the run is still slow enough to watch
     chests = [];
     decor = [];
     dustParticles = [];
@@ -5485,6 +5503,13 @@
       }
       if(pu.z < -80) powerups.splice(pIdx,1);
     }
+
+    // the rainbow flick: starts when he's running along, cut short by a jump or duck
+    if(flickAt && elapsed >= flickAt && !player.jumping && !player.ducking && !player.flying){
+      flickAt = 0; flickStart = elapsed;
+      showToast(L('🪄 הרמה ברזילאית!', '🪄 Rainbow flick!'));
+    }
+    if(flickStart >= 0 && (elapsed - flickStart > FLICK_SECS || player.jumping || player.ducking || player.flying)) flickStart = -1;
 
     // super sneakers
     if(player.shoes > 0) player.shoes = Math.max(0, player.shoes - dt);
@@ -6933,7 +6958,7 @@
   // Drawn on top of the board, which drawRunnerFigure has already put down.
   function drawSideRider(g, skin, t, f){
     var sway = Math.sin(t*3) * 2;
-    var shinColor = skin.legs === 'shorts' ? skin.skinTone : skin.pantsShade;
+    var shinColor = skin.legs === 'shorts' ? (skin.socks || skin.skinTone) : skin.pantsShade;
     function leg(hipX, hipY, kneeX, kneeY, footX, footY){
       limb(g, hipX, hipY, kneeX, kneeY, 12, skin.pants);
       limb(g, kneeX, kneeY, footX, footY, 9.5, shinColor);
@@ -7050,6 +7075,7 @@
     // `rides` skins don't run: they stand on a surfboard, knees bent, arms
     // out for balance (feather flight still spreads the arms as usual)
     var riding = !!skin.rides && mode !== 'fly';
+    if(skin.ball && !riding) drawSkinBall(g, skin.ball, pose, mode, ph, t, 'ahead');   // out in front, behind his legs
 
     g.save();
     if(pose.duck){
@@ -7130,6 +7156,10 @@
       if(mode === 'jump'){ fwd = 0.75; back = 0.15; }
       if(mode === 'fly'){ fwd = 0.1; back = 0.45; }
       if(mode === 'idle'){ fwd = 0; back = 0; }
+      if(pose.flick !== undefined && side > 0 && mode === 'run' && pose.flick < 0.3){
+        var kick = Math.sin(pose.flick / 0.3 * Math.PI);     // the heel flicks up behind him
+        back = Math.max(back, 1.35 * kick); fwd = fwd * (1 - kick);
+      }
       var hipX = side*6.5, hipY = -62;
       // a leg stepping forward (away from camera) lifts its knee; the leg
       // swinging back kicks its heel up toward the camera
@@ -7139,6 +7169,12 @@
       return {hipX:hipX, hipY:hipY, kneeX:kneeX, kneeY:kneeY, footX:footX, footY:footY, back:back, fwd:fwd};
     }
     function armPose(side){
+      if(skin.ball === 'basket' && side > 0 && (mode === 'run' || mode === 'idle') && !riding){
+        // the dribbling arm: hand on the ball's top, pushing it down
+        var dr = basketDribble(ph, pose.duck || 0, pose.ground || 0);
+        var hy = dr.handY / (1 - 0.5 * (pose.duck || 0));       // back inside the crouch squash
+        return { sx: 17, sy: -97, ex: 25, ey: -80 + (hy + 58) * 0.35, hx: DRIBBLE_X - 1, hy: hy - 2, fwd: 0, back: 0.4 };
+      }
       var s = Math.sin(ph + (side < 0 ? Math.PI : 0));
       var fwd = Math.max(0, s), back = Math.max(0, -s);
       if(mode === 'jump'){ fwd = 0.25; back = 0; }
@@ -7156,7 +7192,7 @@
 
     function drawLeg(L){
       limb(g, L.hipX, L.hipY, L.kneeX, L.kneeY, 12, skin.pants);
-      var shinColor = skin.legs === 'shorts' ? skin.skinTone : skin.pantsShade;
+      var shinColor = skin.legs === 'shorts' ? (skin.socks || skin.skinTone) : skin.pantsShade;
       limb(g, L.kneeX, L.kneeY, L.footX, L.footY, 9.5, shinColor);
       if(skin.legs === 'shorts'){
         limb(g, L.hipX, L.hipY, L.hipX + (L.kneeX-L.hipX)*0.55, L.hipY + (L.kneeY-L.hipY)*0.55, 13, skin.pants);
@@ -7208,6 +7244,9 @@
       if(allowPattern && skin.pattern === 'stripes'){
         g.fillStyle = skin.patternColor;
         for(var y = top + 3; y < bottom; y += 8) g.fillRect(-30, y, 60, 3.2);
+      } else if(allowPattern && skin.pattern === 'vstripes'){
+        g.fillStyle = skin.patternColor;
+        for(var vx = -21; vx < 22; vx += 8.5) g.fillRect(vx, top, 4, bottom - top);
       } else if(allowPattern && skin.pattern === 'stars'){
         var spots = [[-9,-92],[6,-86],[-3,-76],[10,-68],[-11,-62],[2,-55],[-6,-47],[12,-50],[0,-96]];
         spots.forEach(function(p, i){
@@ -7265,6 +7304,12 @@
     torsoPath(); g.fill();
     // a cape hides the back, so its pattern goes on the cape instead
     decorate(torsoPath, -102, -60, !skin.cape);
+    if(skin.number && !skin.cape){
+      g.font = 'bold 17px Rubik, Arial, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
+      g.lineWidth = 3; g.strokeStyle = 'rgba(255,255,255,0.85)'; g.strokeText(skin.number, 0, -80);
+      g.fillStyle = skin.numberColor || '#222'; g.fillText(skin.number, 0, -80);
+      g.textBaseline = 'alphabetic';
+    }
     g.strokeStyle = 'rgba(0,0,0,0.16)';
     g.lineWidth = 1.4;
     g.beginPath(); g.moveTo(0, -98); g.lineTo(0, -62); g.stroke();          // spine crease
@@ -7537,6 +7582,236 @@
     }
 
     g.restore();
+    if(skin.ball && !riding) drawSkinBall(g, skin.ball, pose, mode, ph, t, 'near');
+  }
+
+  // Sports skins bring their ball. Football: rolled along at his feet, a
+  // touch every stride, flicked up into the air with him on a jump, kept at
+  // his foot when he ducks. Basketball: dribbled beside him, thrown high on a
+  // jump and caught as he lands, dribbled low when he ducks. Just the look --
+  // the ball never touches anything. pose.air: 0..1 through the jump.
+  // Both balls are real spheres: their markings are points on a sphere that
+  // turn as the ball rolls and are projected (only the near side drawn), then
+  // lit from the low sun behind the canyon.
+  var BALL_ICO = (function(){
+    var f = (1 + Math.sqrt(5)) / 2, v = [];
+    [[0,1,f],[0,1,-f],[0,-1,f],[0,-1,-f],[1,f,0],[1,-f,0],[-1,f,0],[-1,-f,0],[f,0,1],[f,0,-1],[-f,0,1],[-f,0,-1]].forEach(function(p){
+      var l = Math.hypot(p[0], p[1], p[2]); v.push([p[0]/l, p[1]/l, p[2]/l]);
+    });
+    return v;
+  })();
+  function ballRot(p, ax, ay){                       // roll about x, then turn about y
+    var y = p[1]*Math.cos(ax) - p[2]*Math.sin(ax), z = p[1]*Math.sin(ax) + p[2]*Math.cos(ax);
+    var x = p[0]*Math.cos(ay) + z*Math.sin(ay); z = -p[0]*Math.sin(ay) + z*Math.cos(ay);
+    return [x, y, z];
+  }
+  function ballNorm(p){ var l = Math.hypot(p[0], p[1], p[2]); return [p[0]/l, p[1]/l, p[2]/l]; }
+  // light and shade over the whole ball
+  function ballShade(g, r, glossy){
+    var sh = g.createRadialGradient(-r*0.35, -r*0.4, r*0.1, 0, 0, r*1.02);
+    sh.addColorStop(0, 'rgba(255,255,255,0)');
+    sh.addColorStop(0.65, 'rgba(0,0,0,0.06)');
+    sh.addColorStop(1, 'rgba(20,10,0,0.42)');
+    g.fillStyle = sh; g.beginPath(); g.arc(0, 0, r, 0, Math.PI*2); g.fill();
+    var rim = g.createRadialGradient(r*0.5, r*0.55, 0, r*0.5, r*0.55, r*0.6);   // warm bounce light from the sand
+    rim.addColorStop(0, 'rgba(255,190,120,0.22)'); rim.addColorStop(1, 'rgba(255,190,120,0)');
+    g.fillStyle = rim; g.beginPath(); g.arc(0, 0, r, 0, Math.PI*2); g.fill();
+    g.fillStyle = 'rgba(255,255,255,' + (glossy ? 0.75 : 0.55) + ')';
+    g.beginPath(); g.ellipse(-r*0.38, -r*0.42, r*0.26, r*0.15, -0.6, 0, Math.PI*2); g.fill();
+    g.fillStyle = 'rgba(255,255,255,0.35)';
+    g.beginPath(); g.arc(-r*0.18, -r*0.6, r*0.07, 0, Math.PI*2); g.fill();
+  }
+  // a real football is a truncated icosahedron: cut every corner of an
+  // icosahedron a third of the way along its edges. Each corner becomes a
+  // black pentagon; the white hexagons are what's left. Built once on the
+  // unit sphere: the pentagons (5 points each, in order) and the seams that
+  // join neighbouring pentagons (the hexagons' other edges).
+  var BALL_GEO = (function(){
+    var V = BALL_ICO, pents = [], seams = [];
+    function lerp3(a, b, k){ return [a[0] + (b[0] - a[0])*k, a[1] + (b[1] - a[1])*k, a[2] + (b[2] - a[2])*k]; }
+    function dot(a, b){ return a[0]*b[0] + a[1]*b[1] + a[2]*b[2]; }
+    V.forEach(function(A, ia){
+      var nb = [];
+      V.forEach(function(B, ib){ if(ib !== ia && dot(A, B) > 0.3) nb.push(ib); });
+      // order the five neighbours around A
+      var up = Math.abs(A[1]) > 0.9 ? [1, 0, 0] : [0, 1, 0];
+      var u = ballNorm([up[1]*A[2] - up[2]*A[1], up[2]*A[0] - up[0]*A[2], up[0]*A[1] - up[1]*A[0]]);
+      var w = [A[1]*u[2] - A[2]*u[1], A[2]*u[0] - A[0]*u[2], A[0]*u[1] - A[1]*u[0]];
+      nb.sort(function(i, j){ return Math.atan2(dot(V[i], w), dot(V[i], u)) - Math.atan2(dot(V[j], w), dot(V[j], u)); });
+      pents.push(nb.map(function(ib){ return ballNorm(lerp3(A, V[ib], 1/3)); }));
+      nb.forEach(function(ib){
+        if(ib < ia) return;                               // each edge once
+        var p = lerp3(A, V[ib], 1/3), q = lerp3(A, V[ib], 2/3), seg = [];
+        for(var s = 0; s <= 4; s++) seg.push(ballNorm(lerp3(p, q, s/4)));
+        seams.push(seg);
+      });
+    });
+    return { pents: pents, seams: seams };
+  })();
+  function drawSoccerBall(g, r, ax, ay){
+    g.save();
+    g.beginPath(); g.arc(0, 0, r, 0, Math.PI*2); g.clip();
+    var base = g.createRadialGradient(-r*0.3, -r*0.35, r*0.1, 0, 0, r);
+    base.addColorStop(0, '#ffffff'); base.addColorStop(1, '#dde2e8');
+    g.fillStyle = base; g.fillRect(-r, -r, r*2, r*2);
+    // seams between the hexagons
+    g.strokeStyle = 'rgba(80,90,105,0.7)'; g.lineWidth = Math.max(0.5, r*0.05); g.lineCap = 'round';
+    BALL_GEO.seams.forEach(function(seg){
+      var pts = seg.map(function(p){ return ballRot(p, ax, ay); });
+      if(pts[0][2] < 0 && pts[pts.length - 1][2] < 0) return;
+      g.beginPath();
+      pts.forEach(function(p, i){ if(i) g.lineTo(p[0]*r, p[1]*r); else g.moveTo(p[0]*r, p[1]*r); });
+      g.stroke();
+    });
+    // the black pentagons (their edges curve a little with the sphere)
+    g.fillStyle = '#15171c';
+    BALL_GEO.pents.forEach(function(pent){
+      var pts = pent.map(function(p){ return ballRot(p, ax, ay); });
+      var cz = pts.reduce(function(s, p){ return s + p[2]; }, 0) / 5;
+      if(cz < -0.2) return;
+      g.beginPath();
+      pts.forEach(function(p, i){
+        var nx = pts[(i + 1) % 5], mid = ballNorm([(p[0] + nx[0]) / 2, (p[1] + nx[1]) / 2, (p[2] + nx[2]) / 2]);
+        if(i) g.lineTo(p[0]*r, p[1]*r); else g.moveTo(p[0]*r, p[1]*r);
+        g.quadraticCurveTo(mid[0]*r*1.02, mid[1]*r*1.02, nx[0]*r, nx[1]*r);
+      });
+      g.closePath(); g.fill();
+    });
+    ballShade(g, r, false);
+    g.restore();
+    g.strokeStyle = 'rgba(30,30,40,0.55)'; g.lineWidth = Math.max(0.6, r*0.07);
+    g.beginPath(); g.arc(0, 0, r, 0, Math.PI*2); g.stroke();
+  }
+  // the basketball's seams: two great circles crossing, and the two curved
+  // side seams (small circles around the x axis)
+  var BALL_SEAMS = (function(){
+    var seams = [], N = 48, i, a;
+    var c1 = [], c2 = [], s1 = [], s2 = [], cs = Math.cos(0.9), sn = Math.sin(0.9);
+    for(i = 0; i <= N; i++){
+      a = i / N * Math.PI * 2;
+      c1.push([Math.cos(a), Math.sin(a), 0]);
+      c2.push([0, Math.sin(a), Math.cos(a)]);
+      s1.push([cs, sn*Math.cos(a), sn*Math.sin(a)]);
+      s2.push([-cs, sn*Math.cos(a), sn*Math.sin(a)]);
+    }
+    seams.push(c1, c2, s1, s2);
+    return seams;
+  })();
+  var BALL_PEBBLES = (function(){
+    var s = 11, out = [];
+    function r(){ s = (s * 16807) % 2147483647; return s / 2147483647; }
+    for(var i = 0; i < 90; i++){
+      var z = r()*2 - 1, a = r()*Math.PI*2, q = Math.sqrt(1 - z*z);
+      out.push([q*Math.cos(a), q*Math.sin(a), z]);
+    }
+    return out;
+  })();
+  function drawBasketball(g, r, ax, ay){
+    g.save();
+    g.beginPath(); g.arc(0, 0, r, 0, Math.PI*2); g.clip();
+    var base = g.createRadialGradient(-r*0.3, -r*0.35, r*0.1, 0, 0, r);
+    base.addColorStop(0, '#ff9a3c'); base.addColorStop(1, '#d4581b');
+    g.fillStyle = base; g.fillRect(-r, -r, r*2, r*2);
+    g.fillStyle = 'rgba(120,40,0,0.28)';                                       // pebbled leather
+    BALL_PEBBLES.forEach(function(p0){
+      var p = ballRot(p0, ax, ay);
+      if(p[2] <= 0.05) return;
+      g.beginPath(); g.arc(p[0]*r, p[1]*r, Math.max(0.35, r*0.045*p[2]), 0, Math.PI*2); g.fill();
+    });
+    g.strokeStyle = '#2b1206'; g.lineWidth = Math.max(0.7, r*0.085); g.lineCap = 'round';
+    BALL_SEAMS.forEach(function(line){
+      var drawing = false;
+      g.beginPath();
+      line.forEach(function(p0){
+        var p = ballRot(p0, ax, ay);
+        if(p[2] < 0){ drawing = false; return; }
+        if(drawing) g.lineTo(p[0]*r, p[1]*r); else { g.moveTo(p[0]*r, p[1]*r); drawing = true; }
+      });
+      g.stroke();
+    });
+    ballShade(g, r, true);
+    g.restore();
+    g.strokeStyle = 'rgba(70,25,5,0.6)'; g.lineWidth = Math.max(0.6, r*0.06);
+    g.beginPath(); g.arc(0, 0, r, 0, Math.PI*2); g.stroke();
+  }
+
+  // one dribble every two strides (about two a second, like a real player). Heights are outside the crouch squash (the
+  // figure's origin = his feet). The ball's top meets the hand at the top of
+  // the bounce; the hand rides the ball down a little and waits for it.
+  var DRIBBLE_R = 11, DRIBBLE_X = 23;
+  function basketDribble(ph, duck, ground){
+    var b = Math.abs(Math.cos(ph * 0.5));                     // 1 = up in the hand, 0 = on the floor (one bounce every 2 strides)
+    var handTop = -58 * (1 - 0.5 * duck);                     // where the hand meets the ball
+    var floorY = (ground || 0) - DRIBBLE_R;                   // ball centre when touching the floor
+    var topY = handTop + DRIBBLE_R;                           // ball centre when in the hand
+    var cy = floorY + (topY - floorY) * b;
+    var handY = Math.max(handTop, Math.min(cy - DRIBBLE_R, handTop * 0.68));
+    return { cy: cy, b: b, handY: handY };
+  }
+
+  function drawSkinBall(g, kind, pose, mode, ph, t, layer){
+    var duck = pose.duck || 0, air = pose.air === undefined ? 0.5 : pose.air;
+    var inAir = mode === 'jump' || mode === 'fly';
+    var x, y, r, ax, ay, squash = 1, shadowAt = null, where = kind === 'soccer' ? 'ahead' : 'near';
+    var ground = pose.ground || 0, shadowY = ground + 1.5;
+    if(kind === 'soccer' && pose.flick !== undefined && !inAir){
+      // the rainbow flick: rolled up the back of the leg, flicked off the
+      // heel over his head, and down out in front of him again
+      var f = pose.flick;
+      r = 10.5 - Math.max(0, f - 0.5) * 2;
+      ax = t * 18; ay = 0.4;
+      if(f < 0.18){
+        var k = f / 0.18;                                    // up the back of the leg
+        x = 7; y = ground - 9 - k * 26; where = 'near';
+      } else {
+        var k2 = (f - 0.18) / 0.82;                          // the arc: behind him, over the top, ahead
+        x = 7 - Math.sin(k2 * Math.PI) * 7 + k2 * 1;
+        y = (ground - 35) + ((ground - 15) - (ground - 35)) * k2 - Math.sin(k2 * Math.PI) * 175;
+        where = k2 < 0.5 ? 'near' : 'ahead';
+        if(k2 > 0.85){ shadowAt = x; shadowY = ground - 4; }
+      }
+    } else if(kind === 'soccer'){
+      // the ball runs ahead of him, up the track: a little further away, so
+      // a little higher on screen and smaller, and his legs pass in front of it
+      if(inAir){
+        // flicked up off the foot, out in front and to the side
+        r = 9; x = 27; y = ground - 24 - Math.sin(air * Math.PI) * 44;
+        ax = t * 16; ay = 0.5;
+      } else {
+        // pushed ahead with each stride, then he runs up to it again
+        var ahead = 1 - ((ph % Math.PI) + Math.PI) % Math.PI / Math.PI;   // 1 right after the touch
+        r = 9.5 - ahead * 0.8;
+        x = 8 + Math.sin(ph * 0.5) * 4;
+        y = ground - r - 5 - ahead * 7;
+        ax = -ph * 1.8; ay = 0.3;
+        shadowAt = x; shadowY = y + r + 1;
+      }
+    } else {
+      r = DRIBBLE_R;
+      if(inAir){
+        // thrown high on the way up, caught as he lands
+        x = 18; y = -76 - Math.sin(air * Math.PI) * 100;
+        ax = t * 7; ay = 0.4;
+      } else {
+        var dr = basketDribble(ph, duck, ground);
+        x = DRIBBLE_X; y = dr.cy;
+        if(dr.b < 0.12) squash = 0.82 + dr.b * 1.5;          // squashed against the floor
+        ax = ph * 0.6; ay = 0.4;
+        shadowAt = x;
+      }
+    }
+    if(layer && layer !== where) return;
+    if(shadowAt !== null){
+      var lift = Math.max(0, shadowY - (y + r));
+      g.fillStyle = 'rgba(40,20,5,' + (0.3 * (1 - Math.min(0.7, lift / 60))).toFixed(3) + ')';
+      g.beginPath(); g.ellipse(shadowAt + 2, shadowY, r * (1 + lift / 120), r * 0.32, 0, 0, Math.PI * 2); g.fill();
+    }
+    g.save();
+    g.translate(x, y + r * (1 - squash));
+    g.scale(1 + (1 - squash) * 0.6, squash);
+    if(kind === 'soccer') drawSoccerBall(g, r, ax, ay);
+    else drawBasketball(g, r, ax, ay);
+    g.restore();
   }
 
   function drawPlayer(){
@@ -7618,8 +7893,11 @@
       }
     }
     var shod = player.shoes > 0 && state !== 'watch';
+    var jv = player.superJump ? SHOE_JUMP_VEL : JUMP_VEL;
+    var airT = player.jumping ? Math.max(0, Math.min(1, (jv - player.vy) / (2 * jv))) : 0;
     drawRunnerFigure(ctx, shod ? Object.assign({}, skin, { shoes: '#e8203f', sole: '#ffffff' }) : skin,
-                     { phase: player.legPhase, mode: mode, duck: duckA, t: elapsed, stance: playerStance(), superShoes: shod });
+                     { phase: player.legPhase, mode: mode, duck: duckA, t: elapsed, stance: playerStance(), superShoes: shod, air: airT, ground: running ? lift : 0,
+                       flick: (flickStart >= 0 && state === 'playing') ? (elapsed - flickStart) / FLICK_SECS : undefined });
     if(ghost) ctx.globalAlpha = 1;
 
     // wings grow out of the back, which faces the camera -> on top
@@ -8054,7 +8332,7 @@
   // never while the name field is being typed in. Everything worth keeping
   // (coins, skins, name, league) is in localStorage, so a reload loses nothing.
   // 'dev' = a local or preview copy: the updater stays off entirely.
-  var BUILD_VERSION = '20261010-222729';
+  var BUILD_VERSION = '20261012-213938';
   var UPDATE_CHECK_MS = 60000;
   var UPDATE_TRIED_KEY = 'canyonChaseTriedUpdate';
   var pendingSubmits = 0;
@@ -8111,6 +8389,20 @@
     document.addEventListener('visibilitychange', function(){
       if(!document.hidden) checkForUpdate();
     });
+  }
+
+  // beta only, once per device: 60,000 coins for trying out the shop.
+  // (beta and the main site share this browser's storage, so they show there too)
+  if(IS_BETA){
+    try {
+      if(!localStorage.getItem('canyonChaseBetaGift60k')){
+        localStorage.setItem('canyonChaseBetaGift60k', '1');
+        wallet += 60000;
+        saveProgress();
+        updateWalletDisplays();
+        setTimeout(function(){ showToast(L('🎁 בטא: קיבלת 60,000 מטבעות לבדיקה!', '🎁 Beta: 60,000 coins for testing!')); }, 600);
+      }
+    } catch(e){}
   }
 
   // language: the picker on a first visit, the switch on the main screen
