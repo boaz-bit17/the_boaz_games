@@ -5127,6 +5127,7 @@
     powerups = [];
     sneakers = [];
     shoeTimer = 25 + Math.random()*10;
+    shot = null; shotPlan = 0;
     chests = [];
     decor = [];
     dustParticles = [];
@@ -5156,7 +5157,7 @@
   }
 
   function laneMove(dir){
-    if(state !== 'playing') return;
+    if(state !== 'playing' || shot) return;
     if(worldFlipped()) dir = -dir;            // the flip event swaps left and right
     var target = player.lane + dir;
     if(target < 0 || target > 2) return;
@@ -5176,7 +5177,7 @@
   }
 
   function duckStart(){
-    if(state !== 'playing') return;
+    if(state !== 'playing' || shot) return;
     if(player.flying) return;
     if(player.jumping) return;
     if(!player.ducking) passEvent('duck');   // holding the duck key counts once
@@ -5394,6 +5395,7 @@
 
   // ---------- update ----------
   function update(dt){
+    if(shot){ updateShot(dt); return; }      // the super shot freezes everything else
     elapsed += dt;
     // speed keeps climbing with score, well past where it used to plateau,
     // so the run keeps getting harder deep into a long game instead of leveling off
@@ -5425,6 +5427,11 @@
       if(player.y <= 0){
         player.y = 0; player.vy = 0; player.jumping = false; player.superJump = false;
       }
+    }
+    if(shotPlan && elapsed >= shotPlan && player.jumping && !player.flying && player.vy <= 0 && player.vy + GRAVITY*dt > 0){
+      shotPlan = 0;                                   // the top of the jump: go
+      shot = { kind: getSkin(selectedSkinId).ball, t: 0, x0: player.x, y0: player.y, scored: false,
+               gx: (player.lane === 0 ? 1 : -1) * LANE_GAP * 1.2 };   // in the lane beside him, not hidden behind him
     }
 
     // duck timer
@@ -7144,6 +7151,14 @@
       if(mode === 'jump'){ fwd = 0.75; back = 0.15; }
       if(mode === 'fly'){ fwd = 0.1; back = 0.45; }
       if(mode === 'idle'){ fwd = 0; back = 0; }
+      if(pose.shot && pose.shot.kind === 'soccer'){
+        var sp = pose.shot.p;
+        if(side > 0){
+          if(sp < 0.25){ back = 1.4 * sp / 0.25; fwd = 0; }                         // winding up
+          else if(sp < 0.32){ var sw = (sp - 0.25) / 0.07; back = 1.4 * (1 - sw); fwd = 1.2 * sw; }   // the strike
+          else { back = 0; fwd = 1.2 - Math.min(0.6, (sp - 0.32) * 1.5); }         // follow-through
+        } else { fwd = 0.45; back = 0.1; }
+      }
       var hipX = side*6.5, hipY = -62;
       // a leg stepping forward (away from camera) lifts its knee; the leg
       // swinging back kicks its heel up toward the camera
@@ -7153,6 +7168,11 @@
       return {hipX:hipX, hipY:hipY, kneeX:kneeX, kneeY:kneeY, footX:footX, footY:footY, back:back, fwd:fwd};
     }
     function armPose(side){
+      if(pose.shot){
+        if(pose.shot.kind === 'basket')                                            // both hands up over his head
+          return { sx: side*17, sy: -97, ex: side*15, ey: -128, hx: side*6, hy: -156, fwd: 0, back: 0.5 };
+        return { sx: side*17, sy: -97, ex: side*31, ey: -100, hx: side*45, hy: -112, fwd: 0, back: 0.5 };   // out wide for balance
+      }
       if(skin.ball === 'basket' && side > 0 && (mode === 'run' || mode === 'idle') && !riding){
         // the dribbling arm: hand on the ball's top, pushing it down
         var dr = basketDribble(ph, pose.duck || 0, pose.ground || 0);
@@ -7738,7 +7758,12 @@
     var inAir = mode === 'jump' || mode === 'fly';
     var x, y, r, ax, ay, squash = 1, shadowAt = null, where = kind === 'soccer' ? 'ahead' : 'near';
     var ground = pose.ground || 0, shadowY = ground + 1.5;
-    if(kind === 'soccer'){
+    if(pose.shot){
+      if(pose.shot.p >= SHOT_RELEASE) return;                  // in flight: drawn by drawShotFront
+      r = kind === 'soccer' ? 10 : 11; where = 'near';
+      x = kind === 'soccer' ? 13 : 0; y = kind === 'soccer' ? -36 : -170;
+      ax = pose.shot.p * 8; ay = 0.4;
+    } else if(kind === 'soccer'){
       // the ball runs ahead of him, up the track: a little further away, so
       // a little higher on screen and smaller, and his legs pass in front of it
       if(inAir){
@@ -7780,6 +7805,199 @@
     if(kind === 'soccer') drawSoccerBall(g, r, ax, ay);
     else drawBasketball(g, r, ax, ay);
     g.restore();
+  }
+
+  // ---------- the super shot (Ball Wizard / Hoop King) ----------
+  // In 45% of their runs (every run on beta), on the first
+  // jump after the opening seconds: at the top of the jump everything
+  // freezes, a goal (or a hoop) rises up ahead, and he blasts the ball in on
+  // a trail of stars -- Argentina's sky blue, white and sun gold for the
+  // football, purple and gold for the hoop. GOAL! +10,000, and the run picks
+  // up again from the very same moment. Not in head to head (the freeze
+  // would cost him ground against the others) and not in the boss fight.
+  var SHOT_CHANCE = 0.45, SHOT_SECS = 2.8, SHOT_BONUS = 10000, SHOT_Z = 300;
+  var SHOT_RELEASE = 0.3, SHOT_HIT = 0.74;         // fractions of the shot
+  var shotPlan = 0, shot = null;
+  var SHOT_COLORS = { soccer: ['#75aadb', '#ffffff', '#f6b40e'], basket: ['#fdb927', '#7a3fb8', '#ffffff'] };
+  var SHOT_CONFETTI = (function(){
+    var s = 5, out = [];
+    function r(){ s = (s * 16807) % 2147483647; return s / 2147483647; }
+    for(var i = 0; i < 70; i++) out.push({ x: r() - 0.5, up: r(), spin: r() * 8, c: Math.floor(r() * 3), w: 5 + r() * 6, d: r() });
+    return out;
+  })();
+
+  function planShot(){
+    shot = null;
+    var skin = getSkin(selectedSkinId);
+    shotPlan = (skin.ball && !bossMode && !trackSeed && Math.random() < (IS_BETA ? 1 : SHOT_CHANCE)) ? 4 : 0;
+  }
+  function shotTarget(kind){ var gx = shot ? shot.gx : 0; return kind === 'soccer' ? { x: gx, z: SHOT_Z + 30, y: 42 } : { x: gx, z: SHOT_Z, y: 150 }; }
+
+  function updateShot(dt){
+    shot.t += dt / SHOT_SECS;
+    if(!shot.scored && shot.t >= SHOT_HIT){
+      shot.scored = true;
+      runScore += SHOT_BONUS;
+      scoreNum.textContent = fmtScore(currentScore());
+      showToast(shot.kind === 'soccer' ? L('⚽ גול!!! +10,000 נקודות', '⚽ GOAL!!! +10,000 points') : L('🏀 סל!!! +10,000 נקודות', '🏀 SWISH!!! +10,000 points'));
+    }
+    if(shot.t >= 1) shot = null;
+  }
+
+  // where the ball is, k = 0..1 along its flight (world units)
+  function shotBallPos(k){
+    var e = shotTarget(shot.kind), soccer = shot.kind === 'soccer';
+    var sx = shot.x0 + (soccer ? 14 : 0) * VIEW, sy = shot.y0 + (soccer ? 40 : 206), sz = 12;
+    return {
+      x: sx + (e.x - sx) * k,
+      z: sz + (e.z - sz) * k,
+      y: sy + (e.y - sy) * k + Math.sin(k * Math.PI) * (soccer ? 50 : 170)
+    };
+  }
+
+  // the goal / hoop, sorted in with the rest of the track
+  function drawShotTarget(){
+    var appear = smooth01(0, 0.2, shot.t), sink = (1 - appear) * 140;
+    var t = shot.t, cols = SHOT_COLORS[shot.kind];
+    ctx.save();
+    ctx.globalAlpha = appear;
+    if(shot.kind === 'soccer'){
+      var hw = 125 * VIEW, gh = 92, d = 55, z = SHOT_Z + 20;
+      var bulge = shot.scored ? Math.sin(Math.min(1, (t - SHOT_HIT) / 0.12) * Math.PI) * 22 : 0;
+      function P(x, zz, y){ return project(shot.gx + x, zz, y - sink); }
+      var fl = P(-hw, z, 0), fr = P(hw, z, 0), tl = P(-hw, z, gh), tr = P(hw, z, gh);
+      var bl = P(-hw * 0.9, z + d, 0), br = P(hw * 0.9, z + d, 0), btl = P(-hw * 0.9, z + d, gh * 0.75), btr = P(hw * 0.9, z + d, gh * 0.75);
+      var mid = P(0, z + d + bulge, gh * 0.4);
+      // net: back, roof and sides, see-through
+      ctx.fillStyle = 'rgba(255,255,255,0.18)';
+      ctx.beginPath(); ctx.moveTo(btl.x, btl.y); ctx.quadraticCurveTo(mid.x, mid.y - (btl.y - bl.y) * 0.1, btr.x, btr.y); ctx.lineTo(br.x, br.y); ctx.lineTo(bl.x, bl.y); ctx.closePath(); ctx.fill();
+      ctx.beginPath(); ctx.moveTo(tl.x, tl.y); ctx.lineTo(tr.x, tr.y); ctx.lineTo(btr.x, btr.y); ctx.lineTo(btl.x, btl.y); ctx.closePath(); ctx.fill();
+      ctx.strokeStyle = 'rgba(255,255,255,0.5)'; ctx.lineWidth = Math.max(1, fl.sp * 1.2);
+      for(var i = 0; i <= 10; i++){
+        var a = i / 10, x1 = tl.x + (tr.x - tl.x) * a, x2 = btl.x + (btr.x - btl.x) * a, x3 = bl.x + (br.x - bl.x) * a;
+        ctx.beginPath(); ctx.moveTo(x1, tl.y); ctx.lineTo(x2, btl.y); ctx.quadraticCurveTo(x2 + (mid.x - x2) * 0.2, (btl.y + bl.y) / 2 + (mid.y - (btl.y + bl.y) / 2) * 0.3, x3, bl.y); ctx.stroke();
+      }
+      for(var j = 1; j <= 5; j++){
+        var b = j / 6;
+        ctx.beginPath(); ctx.moveTo(btl.x + (bl.x - btl.x) * b, btl.y + (bl.y - btl.y) * b); ctx.lineTo(btr.x + (br.x - btr.x) * b, btr.y + (br.y - btr.y) * b); ctx.stroke();
+      }
+      // posts and crossbar
+      ctx.lineCap = 'round';
+      ctx.strokeStyle = 'rgba(0,0,0,0.3)'; ctx.lineWidth = Math.max(3, fl.sp * 9);
+      ctx.beginPath(); ctx.moveTo(fl.x + 2, fl.y); ctx.lineTo(tl.x + 2, tl.y + 2); ctx.lineTo(tr.x + 2, tr.y + 2); ctx.lineTo(fr.x + 2, fr.y); ctx.stroke();
+      ctx.strokeStyle = '#ffffff'; ctx.lineWidth = Math.max(2, fl.sp * 7);
+      ctx.beginPath(); ctx.moveTo(fl.x, fl.y); ctx.lineTo(tl.x, tl.y); ctx.lineTo(tr.x, tr.y); ctx.lineTo(fr.x, fr.y); ctx.stroke();
+      // the frame glows sky blue once it's in
+      if(shot.scored){
+        ctx.strokeStyle = 'rgba(117,170,219,' + (0.8 * (1 - (t - SHOT_HIT) / (1 - SHOT_HIT))).toFixed(3) + ')';
+        ctx.lineWidth = Math.max(4, fl.sp * 16);
+        ctx.beginPath(); ctx.moveTo(fl.x, fl.y); ctx.lineTo(tl.x, tl.y); ctx.lineTo(tr.x, tr.y); ctx.lineTo(fr.x, fr.y); ctx.stroke();
+      }
+    } else {
+      var z2 = SHOT_Z;
+      function Q(x, zz, y){ return project(shot.gx + x, zz, y - sink); }
+      var pole0 = Q(0, z2 + 40, 0), pole1 = Q(0, z2 + 40, 196);
+      ctx.strokeStyle = '#5b5f6b'; ctx.lineWidth = Math.max(3, pole0.sp * 10); ctx.lineCap = 'round';
+      ctx.beginPath(); ctx.moveTo(pole0.x, pole0.y); ctx.lineTo(pole1.x, pole1.y); ctx.stroke();
+      var a1 = Q(-50 * VIEW, z2 + 30, 150), a2 = Q(50 * VIEW, z2 + 30, 218);
+      ctx.fillStyle = 'rgba(255,255,255,0.92)'; ctx.fillRect(a1.x, a2.y, a2.x - a1.x, a1.y - a2.y);
+      ctx.strokeStyle = '#d4581b'; ctx.lineWidth = Math.max(1.5, a1.sp * 4); ctx.strokeRect(a1.x, a2.y, a2.x - a1.x, a1.y - a2.y);
+      var s1 = Q(-17 * VIEW, z2 + 29, 156), s2 = Q(17 * VIEW, z2 + 29, 186);
+      ctx.strokeRect(s1.x, s2.y, s2.x - s1.x, s1.y - s2.y);
+      var rimC = Q(0, z2, 150), rx = 24 * VIEW * rimC.scale, ry = rx * 0.32;
+      // net: tapered strings swaying when the ball drops through
+      var sway = shot.scored ? Math.sin((t - SHOT_HIT) * 40) * rx * 0.12 * (1 - (t - SHOT_HIT) / (1 - SHOT_HIT)) : 0;
+      ctx.strokeStyle = 'rgba(255,255,255,0.85)'; ctx.lineWidth = Math.max(1, rimC.sp * 1.4);
+      var netH = 34 * rimC.sp;
+      for(var n = 0; n < 9; n++){
+        var ang = n / 9 * Math.PI * 2, nx = Math.cos(ang) * rx, ny = Math.sin(ang) * ry;
+        ctx.beginPath(); ctx.moveTo(rimC.x + nx, rimC.y + ny); ctx.lineTo(rimC.x + nx * 0.55 + sway, rimC.y + netH + ny * 0.55); ctx.stroke();
+      }
+      ctx.beginPath(); ctx.ellipse(rimC.x + sway, rimC.y + netH, rx * 0.55, ry * 0.55, 0, 0, Math.PI * 2); ctx.stroke();
+      ctx.strokeStyle = '#ff5a1f'; ctx.lineWidth = Math.max(2, rimC.sp * 4.5);
+      ctx.beginPath(); ctx.ellipse(rimC.x, rimC.y, rx, ry, 0, 0, Math.PI * 2); ctx.stroke();
+      if(shot.scored){
+        ctx.strokeStyle = 'rgba(253,185,39,' + (0.9 * (1 - (t - SHOT_HIT) / (1 - SHOT_HIT))).toFixed(3) + ')';
+        ctx.lineWidth = Math.max(4, rimC.sp * 12);
+        ctx.beginPath(); ctx.ellipse(rimC.x, rimC.y, rx * 1.15, ry * 1.4, 0, 0, Math.PI * 2); ctx.stroke();
+      }
+    }
+    ctx.restore();
+  }
+
+  // behind the runner: the world dims and rays burst out around him
+  function drawShotBack(){
+    var t = shot.t, fade = smooth01(0, 0.08, t) * (1 - smooth01(0.9, 1, t));
+    var cols = SHOT_COLORS[shot.kind];
+    ctx.fillStyle = 'rgba(8,12,30,' + (0.24 * fade).toFixed(3) + ')';
+    ctx.fillRect(0, 0, W, H);
+    var c = project(player.x, 0, player.y + 70);
+    ctx.save(); ctx.translate(c.x, c.y); ctx.rotate(t * 0.8);
+    var R = Math.max(W, H);
+    for(var i = 0; i < 18; i++){
+      ctx.fillStyle = hexA(cols[i % 3], 0.07 * fade);
+      ctx.beginPath(); ctx.moveTo(0, 0);
+      ctx.arc(0, 0, R, i / 18 * Math.PI * 2, (i + 0.45) / 18 * Math.PI * 2);
+      ctx.closePath(); ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  // in front: the ball's flight and its trail of stars, GOAL!, confetti
+  function drawShotFront(){
+    var t = shot.t, cols = SHOT_COLORS[shot.kind], soccer = shot.kind === 'soccer';
+    if(t >= SHOT_RELEASE){
+      var u = Math.min(1, (t - SHOT_RELEASE) / (SHOT_HIT - SHOT_RELEASE));
+      var k = soccer ? 1 - (1 - u) * (1 - u) : u;          // a blast for the football, a lob for the hoop
+      // the trail
+      for(var i = 22; i >= 1; i--){
+        var kk = k - i * 0.022;
+        if(kk <= 0 || u >= 1 && i > 22 * (1 - (t - SHOT_HIT) / (1 - SHOT_HIT))) continue;
+        var q = shotBallPos(kk), qp = project(q.x, q.z, q.y);
+        var a = (1 - i / 23);
+        ctx.fillStyle = hexA(cols[i % 3], 0.85 * a);
+        star4(ctx, qp.x + Math.sin(i * 2.1) * 3, qp.y + Math.cos(i * 1.7) * 3, Math.max(1, qp.sp * (2.6 + 3 * a)));
+      }
+      // the ball
+      var pos;
+      if(u < 1) pos = shotBallPos(k);
+      else {
+        var e = shotTarget(shot.kind), after = (t - SHOT_HIT) / (1 - SHOT_HIT);
+        pos = soccer ? { x: e.x, z: e.z + 25 * Math.min(1, after * 4), y: Math.max(10, e.y - after * 60) }
+                     : { x: e.x, z: e.z, y: e.y - Math.min(1, after * 2.5) * 90 };
+      }
+      var bp = project(pos.x, pos.z, pos.y), br = Math.max(3, 11 * bp.sp * 1.2);
+      var gl = ctx.createRadialGradient(bp.x, bp.y, 0, bp.x, bp.y, br * 3.2);
+      gl.addColorStop(0, hexA(cols[0], u < 1 ? 0.55 : 0.2)); gl.addColorStop(1, hexA(cols[0], 0));
+      ctx.fillStyle = gl; ctx.beginPath(); ctx.arc(bp.x, bp.y, br * 3.2, 0, Math.PI * 2); ctx.fill();
+      ctx.save(); ctx.translate(bp.x, bp.y);
+      if(soccer) drawSoccerBall(ctx, br, t * 30, 0.4); else drawBasketball(ctx, br, t * 14, 0.4);
+      ctx.restore();
+    }
+    if(shot.scored){
+      var a2 = (t - SHOT_HIT) / (1 - SHOT_HIT);
+      // confetti in the team's colours
+      SHOT_CONFETTI.forEach(function(cf){
+        var x = W / 2 + cf.x * W * (0.4 + a2 * 0.9), y = H * 0.12 + (cf.up * 0.25 + a2 * (0.6 + cf.d * 0.5)) * H;
+        ctx.save(); ctx.translate(x, y); ctx.rotate(cf.spin + a2 * 10 * (cf.d + 0.5));
+        ctx.fillStyle = cols[cf.c]; ctx.globalAlpha = Math.min(1, (1 - a2) * 3);
+        ctx.fillRect(-cf.w / 2, -cf.w / 4, cf.w, cf.w / 2);
+        ctx.restore();
+      });
+      // GOAL! popping in
+      var pop = Math.min(1, a2 / 0.12), sc = pop < 1 ? 0.4 + pop * 0.8 : 1.2 - Math.min(0.2, (a2 - 0.12) * 0.6);
+      var word = soccer ? L('גול!', 'GOAL!') : L('סל!', 'SWISH!');
+      var fs = Math.min(W * 0.2, 120);
+      ctx.save(); ctx.translate(W / 2, H * 0.3); ctx.scale(sc, sc); ctx.rotate(-0.06);
+      ctx.globalAlpha = Math.min(1, (1 - a2) * 4);
+      ctx.font = LANG === 'en' ? fs + 'px "Suez One", serif' : '900 ' + fs + 'px Rubik, sans-serif';   // Suez One's Hebrew vav reads like a resh ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.lineJoin = 'round'; ctx.lineWidth = fs * 0.14; ctx.strokeStyle = '#141428'; ctx.strokeText(word, 0, 0);
+      var tg = ctx.createLinearGradient(0, -fs / 2, 0, fs / 2);
+      tg.addColorStop(0, cols[1]); tg.addColorStop(0.5, cols[0]); tg.addColorStop(1, cols[2]);
+      ctx.fillStyle = tg; ctx.fillText(word, 0, 0);
+      ctx.textBaseline = 'alphabetic';
+      ctx.restore();
+    }
   }
 
   function drawPlayer(){
@@ -7864,7 +8082,8 @@
     var jv = player.superJump ? SHOE_JUMP_VEL : JUMP_VEL;
     var airT = player.jumping ? Math.max(0, Math.min(1, (jv - player.vy) / (2 * jv))) : 0;
     drawRunnerFigure(ctx, shod ? Object.assign({}, skin, { shoes: '#e8203f', sole: '#ffffff' }) : skin,
-                     { phase: player.legPhase, mode: mode, duck: duckA, t: elapsed, stance: playerStance(), superShoes: shod, air: airT, ground: running ? lift : 0 });
+                     { phase: player.legPhase, mode: mode, duck: duckA, t: elapsed, stance: playerStance(), superShoes: shod, air: airT, ground: running ? lift : 0,
+                       shot: shot ? { kind: shot.kind, p: shot.t } : undefined });
     if(ghost) ctx.globalAlpha = 1;
 
     // wings grow out of the back, which faces the camera -> on top
@@ -8135,6 +8354,7 @@
     letterPickups.forEach(function(L){ if(!L.collected) entities.push({z:L.z, draw:function(){drawLetter(L);}}); });
     scratchCards.forEach(function(sc){ if(!sc.collected) entities.push({z:sc.z, draw:function(){drawScratchTicket(sc);}}); });
     portals.forEach(function(pt){ if(!pt.used) entities.push({z:pt.z, draw:function(){drawPortal(pt);}}); });
+    if(shot) entities.push({ z: SHOT_Z, draw: drawShotTarget });
     entities.sort(function(a,b){ return b.z - a.z; });
     entities.forEach(function(e){ e.draw(); });
 
@@ -8142,7 +8362,9 @@
     drawPet();
     drawEventsFront();
     if(trackSeed) drawDuelGhost(false);
+    if(shot) drawShotBack();
     drawPlayer();
+    if(shot) drawShotFront();
     if(trackSeed) drawDuelGhost(true);
     if(evtIs('tornado')) drawTornadoOver();
     if(evtIs('chaser')) drawChaserBehind();
@@ -8266,6 +8488,7 @@
     bossHp.hidden = !bossMode;
     renderBossHp();
     if(!trackSeed) planEventRun();
+    planShot();
     state = 'playing';
     startOverlay.hidden = true;
     overOverlay.hidden = true;
@@ -8299,7 +8522,7 @@
   // never while the name field is being typed in. Everything worth keeping
   // (coins, skins, name, league) is in localStorage, so a reload loses nothing.
   // 'dev' = a local or preview copy: the updater stays off entirely.
-  var BUILD_VERSION = '20261013-075911';
+  var BUILD_VERSION = '20261013-081046';
   var UPDATE_CHECK_MS = 60000;
   var UPDATE_TRIED_KEY = 'canyonChaseTriedUpdate';
   var pendingSubmits = 0;
