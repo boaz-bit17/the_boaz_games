@@ -5904,6 +5904,326 @@
     return { p: p, sun: sun, night: night, day: day, moon: moon };
   }
 
+  // ---------- the canyon, drawn for real ----------
+  // The home world gets a lifelike canyon: cliff walls with a broken skyline,
+  // red sandstone strata running off toward the vanishing point, desert-
+  // varnish streaks, cracks, warm rim light where the low sun catches the
+  // edges and fallen rocks at their foot; mesas in the haze far away, clouds
+  // that take the colour of the hour, a sandy track with gravel shoulders
+  // and pebbles streaming past underfoot. The walls never change, so they're
+  // painted once into an offscreen canvas (per screen size) and copied in.
+  var canyonWalls = { w: 0, h: 0, c: null };
+  function seeded(seed){
+    var s = seed % 2147483647; if(s <= 0) s += 2147483646;
+    return function(){ s = (s * 16807) % 2147483647; return (s - 1) / 2147483646; };
+  }
+  function canyonWallsCanvas(){
+    if(canyonWalls.c && canyonWalls.w === W && canyonWalls.h === H) return canyonWalls.c;
+    var c = document.createElement('canvas');
+    c.width = Math.round(W * DPR); c.height = Math.round(H * DPR);
+    var g = c.getContext('2d');
+    g.setTransform(DPR, 0, 0, DPR, 0, 0);
+    paintCanyonWall(g, 1, 101);
+    g.save(); g.translate(W, 0); g.scale(-1, 1); paintCanyonWall(g, -1, 202); g.restore();
+    canyonWalls = { w: W, h: H, c: c };
+    return c;
+  }
+  // one wall, drawn as the left one (the right is the same, mirrored, other seed)
+  function paintCanyonWall(g, side, seed){
+    var rnd = seeded(seed);
+    var hY = H * HORIZON_Y_FRAC, gY = H * GROUND_Y_FRAC, vx = W / 2;
+    var topY = hY * 0.55;
+    // the skyline: a broken cliff edge from the screen edge to the horizon
+    var ridge = [{ x: 0, y: topY }];
+    var n = 16;
+    for(var i = 1; i < n; i++){
+      var k = i / n, x = W * 0.46 * k, y = topY + (hY - topY) * k;
+      var lift = (rnd() < 0.3 ? rnd() * 0.12 : rnd() * 0.04) * hY * (1 - k);   // buttes and notches
+      ridge.push({ x: x, y: y - lift });
+      if(rnd() < 0.35) ridge.push({ x: x + W * 0.006, y: y - lift * 0.3 });
+    }
+    ridge.push({ x: W * 0.46, y: hY });
+    var footX = W * 0.10, footY = gY * 1.02;
+    function wallPath(){
+      g.beginPath(); g.moveTo(0, H);
+      ridge.forEach(function(p){ g.lineTo(p.x, p.y); });
+      g.lineTo(footX, footY); g.closePath();
+    }
+    g.save();
+    wallPath(); g.clip();
+    // base: deep red in the shade low down, warmer and lighter up high and
+    // toward the inner edge, where the low sun reaches
+    var base = g.createLinearGradient(0, topY, 0, H);
+    base.addColorStop(0, '#9c4f37'); base.addColorStop(0.45, '#7a3626'); base.addColorStop(1, '#3e1912');
+    g.fillStyle = base; g.fillRect(0, 0, W, H);
+    var lit = g.createLinearGradient(0, 0, W * 0.46, 0);
+    lit.addColorStop(0, 'rgba(255,170,110,0)'); lit.addColorStop(1, 'rgba(255,170,110,0.22)');
+    g.fillStyle = lit; g.fillRect(0, 0, W, H);
+    // strata: horizontal rock layers, which in perspective run toward the
+    // vanishing point
+    var cols = ['#b5583a', '#8f3f2a', '#c46a45', '#7d3423', '#a9522f', '#d07a4e', '#94442e'];
+    var yy = topY - hY * 0.05, band = 0;
+    while(yy < H * 1.3){
+      var th = (H - topY) * (0.008 + rnd() * rnd() * 0.11);
+      g.fillStyle = hexA(cols[Math.floor(rnd() * cols.length)], 0.18 + rnd() * 0.3);
+      g.beginPath(); g.moveTo(0, yy); g.lineTo(vx, hY); g.lineTo(0, yy + th); g.closePath(); g.fill();
+      if(rnd() < 0.3){                                                  // a sunlit ledge on the layer's top
+        g.strokeStyle = 'rgba(255,205,160,' + (0.12 + rnd() * 0.16).toFixed(3) + ')'; g.lineWidth = 1 + rnd() * 1.5;
+        g.beginPath(); g.moveTo(0, yy); g.lineTo(vx, hY); g.stroke();
+      }
+      yy += th; band++;
+    }
+    // desert-varnish streaks running down the face
+    for(var v = 0; v < 26; v++){
+      var sx = rnd() * W * 0.44, sTop = topY + (hY - topY) * (sx / (W * 0.46)) + rnd() * 10;
+      var len = (gY - sTop) * (0.2 + rnd() * 0.6), wv = 1 + rnd() * 3;
+      var vg = g.createLinearGradient(0, sTop, 0, sTop + len);
+      vg.addColorStop(0, 'rgba(30,10,6,' + (0.15 + rnd() * 0.2).toFixed(3) + ')'); vg.addColorStop(1, 'rgba(30,10,6,0)');
+      g.fillStyle = vg; g.fillRect(sx, sTop, wv, len);
+    }
+    // cracks
+    g.strokeStyle = 'rgba(25,8,4,0.45)'; g.lineCap = 'round';
+    for(var cr = 0; cr < 9; cr++){
+      var cx = rnd() * W * 0.38, cy = topY + rnd() * (gY - topY) * 0.8;
+      g.lineWidth = 0.8 + rnd() * 1.4;
+      g.beginPath(); g.moveTo(cx, cy);
+      for(var sg = 0; sg < 5; sg++){ cx += (rnd() - 0.5) * 10; cy += 6 + rnd() * 14; g.lineTo(cx, cy); }
+      g.stroke();
+    }
+    // shade gathering at the foot of the wall
+    var foot = g.createLinearGradient(W * 0.3, 0, footX, footY);
+    foot.addColorStop(0, 'rgba(20,6,3,0)'); foot.addColorStop(1, 'rgba(20,6,3,0.45)');
+    g.fillStyle = foot; g.fillRect(0, hY, W, H - hY);
+    g.restore();
+    // the low sun catching the cliff edge
+    g.strokeStyle = 'rgba(255,178,122,0.55)'; g.lineWidth = 2.2; g.lineJoin = 'round';
+    g.beginPath(); ridge.forEach(function(p, i){ if(i) g.lineTo(p.x, p.y); else g.moveTo(p.x, p.y); }); g.stroke();
+    // fallen rocks along the foot of the wall, bigger closer to us
+    for(var b = 0; b < 22; b++){
+      var t = Math.pow(rnd(), 0.7), bx = W * 0.46 + (footX - W * 0.46) * t - rnd() * 8 * t;
+      var by = hY + (footY - hY) * t, br = (2 + rnd() * 9) * (0.2 + t * 1.2);
+      var rg = g.createRadialGradient(bx - br * 0.3, by - br * 0.5, br * 0.1, bx, by - br * 0.3, br);
+      rg.addColorStop(0, '#b06a4c'); rg.addColorStop(1, '#4a2216');
+      g.fillStyle = 'rgba(20,6,3,0.35)'; g.beginPath(); g.ellipse(bx + br * 0.3, by + br * 0.1, br * 1.1, br * 0.35, 0, 0, Math.PI * 2); g.fill();
+      g.fillStyle = rg; g.beginPath(); g.ellipse(bx, by - br * 0.35, br, br * 0.7, rnd() - 0.5, 0, Math.PI * 2); g.fill();
+    }
+  }
+
+  // far mesas in the haze, coloured from the sky so they sit in the hour
+  var MESAS = (function(){
+    var rnd = seeded(77), far = [], near = [];
+    function range(arr, count, hMin, hMax){
+      var x = -0.05;
+      while(x < 1.05){
+        var w = 0.06 + rnd() * 0.14, h = hMin + rnd() * (hMax - hMin), flat = rnd() < 0.7;
+        arr.push({ x: x, w: w, h: h, flat: flat, slope: 0.15 + rnd() * 0.2 });
+        x += w * (0.7 + rnd() * 0.9);
+      }
+    }
+    range(far, 0, 0.05, 0.13); range(near, 0, 0.03, 0.09);
+    return { far: far, near: near };
+  })();
+  function drawMesas(sky){
+    var hY = H * HORIZON_Y_FRAC;
+    var skyLow = mixRgbHex(mixHex(SKY_DUSK[2], SKY_NIGHT[2], sky.night), SKY_DAY[2], sky.day);
+    var farCol = mixRgbHex(skyLow, '#6a3a52', 0.45), nearCol = mixRgbHex(skyLow, '#4a2232', 0.7);
+    [[MESAS.far, farCol, 1.0], [MESAS.near, nearCol, 0.96]].forEach(function(layer){
+      ctx.fillStyle = layer[1];
+      layer[0].forEach(function(m){
+        var x0 = m.x * W, x1 = (m.x + m.w) * W, top = hY * layer[2] - m.h * hY, sl = m.w * W * m.slope;
+        ctx.beginPath();
+        ctx.moveTo(x0, hY * 1.02);
+        if(m.flat){ ctx.lineTo(x0 + sl, top); ctx.lineTo(x1 - sl, top); }
+        else { ctx.lineTo((x0 + x1) / 2 - sl * 0.3, top); ctx.lineTo((x0 + x1) / 2 + sl * 0.3, top + 3); }
+        ctx.lineTo(x1, hY * 1.02); ctx.closePath(); ctx.fill();
+      });
+    });
+    // haze where the land meets the sky
+    var hz = ctx.createLinearGradient(0, hY * 0.86, 0, hY * 1.02);
+    hz.addColorStop(0, 'rgba(255,255,255,0)'); hz.addColorStop(1, hexA('#ffd9b0', 0.25 * (1 - sky.night)));
+    ctx.fillStyle = hz; ctx.fillRect(0, hY * 0.86, W, hY * 0.16);
+  }
+
+  // soft clouds drifting slowly, lit by the hour
+  var CLOUDS = (function(){
+    var rnd = seeded(31), out = [];
+    for(var i = 0; i < 6; i++){
+      var puffs = [];
+      for(var p = 0; p < 6; p++) puffs.push({ dx: (p - 2.5) * (0.025 + rnd() * 0.02), dy: rnd() * 0.02, r: 0.03 + rnd() * 0.035 });
+      out.push({ x: rnd(), y: 0.08 + rnd() * 0.35, speed: 0.004 + rnd() * 0.006, puffs: puffs, a: 0.5 + rnd() * 0.35 });
+    }
+    return out;
+  })();
+  var cloudSprites = { key: '', list: [] };
+  function drawClouds(sky){
+    var hY = H * HORIZON_Y_FRAC;
+    var key = Math.round(W) + '|' + Math.round(H) + '|' + Math.round(sky.night * 20) + '|' + Math.round(sky.day * 20);
+    if(cloudSprites.key !== key){
+      var lit = mixRgbHex(mixHex('#ffc29a', '#2c3352', sky.night), '#ffffff', sky.day);
+      var shade = mixRgbHex(mixHex('#a2546a', '#141a30', sky.night), '#c8d6e6', sky.day);
+      cloudSprites = { key: key, list: CLOUDS.map(function(cl){
+        var span = 0.2 * W, pad = 0.07 * W, cw = Math.ceil(span + pad * 2), ch = Math.ceil(pad * 2 + 0.03 * hY);
+        var c = document.createElement('canvas'); c.width = Math.ceil(cw * DPR); c.height = Math.ceil(ch * DPR);
+        var g = c.getContext('2d'); g.setTransform(DPR, 0, 0, DPR, 0, 0);
+        var ox = cw / 2, oy = pad;
+        cl.puffs.forEach(function(p){
+          var r = p.r * W * 0.9, px = ox + p.dx * W, py = oy + p.dy * hY;
+          var cg = g.createRadialGradient(px, py + r * 0.4, r * 0.1, px, py, r);
+          cg.addColorStop(0, hexA(shade, 0)); cg.addColorStop(0.6, hexA(shade, cl.a * 0.12)); cg.addColorStop(1, hexA(shade, 0));
+          g.fillStyle = cg; g.beginPath(); g.arc(px, py, r, 0, Math.PI * 2); g.fill();
+          var lg = g.createRadialGradient(px, py - r * 0.3, 0, px, py, r * 0.9);
+          lg.addColorStop(0, hexA(lit, cl.a * 0.95)); lg.addColorStop(0.55, hexA(lit, cl.a * 0.55)); lg.addColorStop(1, hexA(lit, 0));
+          g.fillStyle = lg; g.beginPath(); g.arc(px, py - r * 0.15, r * 0.85, 0, Math.PI * 2); g.fill();
+        });
+        return { c: c, w: cw, h: ch, ox: ox, oy: oy };
+      }) };
+    }
+    CLOUDS.forEach(function(cl, i){
+      var sp = cloudSprites.list[i];
+      var x = (((cl.x + elapsed * cl.speed * 0.25) % 1.3) - 0.15) * W, y = cl.y * hY;
+      ctx.drawImage(sp.c, x - sp.ox, y - sp.oy, sp.w, sp.h);
+    });
+  }
+
+  // the canyon's track: sand with depth, gravel shoulders, ripples, pebbles
+  function drawCanyonGround(topHalfW, edgeHalfW){
+    var horizonY = H * HORIZON_Y_FRAC, groundY = H * GROUND_Y_FRAC;
+    var sand = ctx.createLinearGradient(0, horizonY, 0, H);
+    sand.addColorStop(0, '#e6c08e'); sand.addColorStop(0.35, '#d4a26a'); sand.addColorStop(1, '#c08850');
+    ctx.fillStyle = sand;
+    ctx.beginPath();
+    ctx.moveTo(W/2 - topHalfW, horizonY); ctx.lineTo(W/2 + topHalfW, horizonY);
+    ctx.lineTo(W/2 + edgeHalfW, H); ctx.lineTo(W/2 - edgeHalfW, H);
+    ctx.closePath(); ctx.fill();
+    // darker gravel along both edges
+    [-1, 1].forEach(function(sd){
+      var gg = ctx.createLinearGradient(W/2 + sd * edgeHalfW * 0.82, 0, W/2 + sd * edgeHalfW, 0);
+      gg.addColorStop(0, 'rgba(110,62,32,0)'); gg.addColorStop(1, 'rgba(110,62,32,0.45)');
+      ctx.fillStyle = gg;
+      ctx.beginPath();
+      ctx.moveTo(W/2 + sd * topHalfW * 0.82, horizonY); ctx.lineTo(W/2 + sd * topHalfW, horizonY);
+      ctx.lineTo(W/2 + sd * edgeHalfW, H); ctx.lineTo(W/2 + sd * edgeHalfW * 0.82, H);
+      ctx.closePath(); ctx.fill();
+    });
+    // wind ripples in the sand, scrolling past
+    var off = distance % 55;
+    for(var i = 0; i < 30; i++){
+      var z = i * 55 - off;
+      if(z < -20 || z > ZFAR) continue;
+      var sc = FOCAL / (FOCAL + z), y = horizonY + (groundY - horizonY) * sc, hw = LANE_GAP * 1.45 * sc;
+      ctx.strokeStyle = 'rgba(150,95,50,' + (0.05 + 0.12 * sc).toFixed(3) + ')';
+      ctx.lineWidth = Math.max(1, 2.2 * sc);
+      ctx.beginPath(); ctx.moveTo(W/2 - hw, y);
+      ctx.quadraticCurveTo(W/2 - hw * 0.4, y - 3 * sc, W/2, y); ctx.quadraticCurveTo(W/2 + hw * 0.4, y + 3 * sc, W/2 + hw, y);
+      ctx.stroke();
+      ctx.strokeStyle = 'rgba(255,235,200,' + (0.05 + 0.1 * sc).toFixed(3) + ')';
+      ctx.beginPath(); ctx.moveTo(W/2 - hw, y - 2 * sc); ctx.quadraticCurveTo(W/2, y - 4 * sc, W/2 + hw, y - 2 * sc); ctx.stroke();
+    }
+    // pebbles: each 34-unit slice of track has its own, fixed to the ground
+    var SL = 34, base = Math.floor(distance / SL);
+    for(var j = 0; j < 46; j++){
+      var idx = base + j, zz = idx * SL - distance;   // (out past the track too, onto the canyon floor)
+      if(zz < -30 || zz > ZFAR * 0.8) continue;
+      var r1 = seeded(idx * 7919 + 13), cnt = 1 + Math.floor(r1() * 2);
+      for(var q = 0; q < cnt; q++){
+        var wx = (r1() * 5.4 - 2.7) * LANE_GAP, p = project(wx, zz + r1() * SL, 0);
+        var pr = (1.5 + r1() * 3.5) * p.sp;
+        if(pr < 0.6) continue;
+        ctx.fillStyle = 'rgba(80,45,20,0.35)';
+        ctx.beginPath(); ctx.ellipse(p.x + pr * 0.4, p.y + pr * 0.15, pr * 1.2, pr * 0.45, 0, 0, Math.PI * 2); ctx.fill();
+        var tone = r1() < 0.5;
+        ctx.fillStyle = tone ? '#8a5a38' : '#6a4632';
+        ctx.beginPath(); ctx.ellipse(p.x, p.y - pr * 0.3, pr, pr * 0.65, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = tone ? '#d9b08a' : '#b98a6a';
+        ctx.beginPath(); ctx.ellipse(p.x - pr * 0.25, p.y - pr * 0.5, pr * 0.55, pr * 0.32, 0, 0, Math.PI * 2); ctx.fill();
+      }
+    }
+  }
+
+  // canyon roadside props, in 3D: hoodoo rock pillars, saguaro cacti, torches
+  function drawCanyonDecor(dcr, p, s){
+    var side = dcr.side, lightSide = -side;                // the side facing the middle of the track catches the light
+    if(dcr.type === 'pillar'){
+      var pw = 44 * s, ph = 160 * s, capW = 64 * s, capH = 22 * s;
+      ctx.fillStyle = 'rgba(25,10,5,0.35)';
+      ctx.beginPath(); ctx.ellipse(p.x + lightSide * -6 * s, p.y, pw * 0.95, pw * 0.25, 0, 0, Math.PI * 2); ctx.fill();
+      // the column, narrower in the waist like a hoodoo
+      function colPath(){
+        ctx.beginPath();
+        ctx.moveTo(p.x - pw * 0.55, p.y);
+        ctx.quadraticCurveTo(p.x - pw * 0.28, p.y - ph * 0.5, p.x - pw * 0.42, p.y - ph + capH * 0.6);
+        ctx.lineTo(p.x + pw * 0.42, p.y - ph + capH * 0.6);
+        ctx.quadraticCurveTo(p.x + pw * 0.28, p.y - ph * 0.5, p.x + pw * 0.55, p.y);
+        ctx.closePath();
+      }
+      var cg = ctx.createLinearGradient(p.x - pw / 2, 0, p.x + pw / 2, 0);
+      var litC = '#c87a52', darkC = '#5a2a1a';
+      cg.addColorStop(0, lightSide < 0 ? litC : darkC); cg.addColorStop(1, lightSide < 0 ? darkC : litC);
+      ctx.fillStyle = cg; colPath(); ctx.fill();
+      ctx.save(); colPath(); ctx.clip();
+      for(var b = 0; b < 7; b++){                                   // its own layers of rock
+        var by = p.y - ph * (0.1 + b * 0.12);
+        ctx.fillStyle = b % 2 ? 'rgba(255,190,140,0.12)' : 'rgba(60,20,10,0.15)';
+        ctx.fillRect(p.x - pw, by, pw * 2, ph * 0.05);
+      }
+      ctx.restore();
+      ctx.strokeStyle = 'rgba(30,10,5,0.35)'; ctx.lineWidth = Math.max(1, 1.2 * s); colPath(); ctx.stroke();
+      // the cap rock, harder and wider, balanced on top
+      var capY = p.y - ph;
+      var kg = ctx.createLinearGradient(p.x - capW / 2, 0, p.x + capW / 2, 0);
+      kg.addColorStop(0, lightSide < 0 ? '#a8705a' : '#4a2a20'); kg.addColorStop(1, lightSide < 0 ? '#4a2a20' : '#a8705a');
+      ctx.fillStyle = kg;
+      ctx.beginPath(); ctx.ellipse(p.x, capY + capH * 0.5, capW / 2, capH / 2, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = 'rgba(255,210,170,0.25)';
+      ctx.beginPath(); ctx.ellipse(p.x, capY + capH * 0.25, capW * 0.4, capH * 0.2, 0, 0, Math.PI * 2); ctx.fill();
+    } else if(dcr.type === 'cactus'){
+      // a saguaro: rounded trunk with ribs, two arms bending up
+      var cw = 18 * s, chh = 92 * s;
+      ctx.fillStyle = 'rgba(25,20,5,0.3)';
+      ctx.beginPath(); ctx.ellipse(p.x + lightSide * -5 * s, p.y, cw * 1.4, cw * 0.35, 0, 0, Math.PI * 2); ctx.fill();
+      var sg = ctx.createLinearGradient(p.x - cw, 0, p.x + cw, 0);
+      sg.addColorStop(0, lightSide < 0 ? '#7fa65a' : '#2f4a26'); sg.addColorStop(0.5, '#5a8442'); sg.addColorStop(1, lightSide < 0 ? '#2f4a26' : '#7fa65a');
+      ctx.strokeStyle = sg; ctx.lineCap = 'round';
+      ctx.lineWidth = cw; ctx.beginPath(); ctx.moveTo(p.x, p.y - cw * 0.3); ctx.lineTo(p.x, p.y - chh); ctx.stroke();
+      ctx.lineWidth = cw * 0.72;
+      ctx.beginPath(); ctx.moveTo(p.x - cw * 0.3, p.y - chh * 0.45); ctx.lineTo(p.x - cw * 1.4, p.y - chh * 0.47); ctx.quadraticCurveTo(p.x - cw * 1.75, p.y - chh * 0.5, p.x - cw * 1.7, p.y - chh * 0.75); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(p.x + cw * 0.3, p.y - chh * 0.6); ctx.lineTo(p.x + cw * 1.25, p.y - chh * 0.62); ctx.quadraticCurveTo(p.x + cw * 1.6, p.y - chh * 0.65, p.x + cw * 1.55, p.y - chh * 0.88); ctx.stroke();
+      ctx.strokeStyle = 'rgba(20,40,15,0.45)'; ctx.lineWidth = Math.max(0.6, 0.9 * s);   // the ribs
+      [-0.25, 0, 0.25].forEach(function(o){ ctx.beginPath(); ctx.moveTo(p.x + o * cw, p.y - cw * 0.4); ctx.lineTo(p.x + o * cw, p.y - chh + cw * 0.2); ctx.stroke(); });
+      ctx.fillStyle = 'rgba(255,240,200,0.5)';                            // tiny spines catching the light
+      for(var sp = 0; sp < 8; sp++){ ctx.fillRect(p.x + lightSide * -cw * 0.45, p.y - chh * (0.15 + sp * 0.1), Math.max(0.6, s), Math.max(0.6, s)); }
+    } else if(dcr.type === 'torch'){
+      var postW = 9 * s, postH = 100 * s;
+      // warm light pooled on the ground
+      var flick = 0.75 + Math.sin(elapsed * 11 + dcr.flicker) * 0.2;
+      var pool = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, 80 * s);
+      pool.addColorStop(0, 'rgba(255,170,80,' + (0.28 * flick).toFixed(3) + ')'); pool.addColorStop(1, 'rgba(255,170,80,0)');
+      ctx.fillStyle = pool; ctx.beginPath(); ctx.ellipse(p.x, p.y, 80 * s, 22 * s, 0, 0, Math.PI * 2); ctx.fill();
+      // the post: a rough wooden pole, lit on the side toward the track
+      var wg = ctx.createLinearGradient(p.x - postW / 2, 0, p.x + postW / 2, 0);
+      wg.addColorStop(0, lightSide < 0 ? '#7a4a2a' : '#2a160c'); wg.addColorStop(1, lightSide < 0 ? '#2a160c' : '#7a4a2a');
+      ctx.fillStyle = wg; ctx.fillRect(p.x - postW / 2, p.y - postH, postW, postH);
+      ctx.fillStyle = 'rgba(0,0,0,0.25)'; ctx.fillRect(p.x - postW / 2, p.y - postH * 0.6, postW, 2 * s); ctx.fillRect(p.x - postW / 2, p.y - postH * 0.3, postW, 2 * s);
+      // iron bowl
+      ctx.fillStyle = '#2b2b30';
+      ctx.beginPath(); ctx.moveTo(p.x - 13 * s, p.y - postH); ctx.lineTo(p.x + 13 * s, p.y - postH); ctx.lineTo(p.x + 8 * s, p.y - postH + 9 * s); ctx.lineTo(p.x - 8 * s, p.y - postH + 9 * s); ctx.closePath(); ctx.fill();
+      // the flame, in layers
+      var r = 18 * s * flick, fy = p.y - postH;
+      var glow = ctx.createRadialGradient(p.x, fy - r * 0.6, 0, p.x, fy - r * 0.4, r * 2.4);
+      glow.addColorStop(0, 'rgba(255,200,110,0.55)'); glow.addColorStop(1, 'rgba(255,120,40,0)');
+      ctx.fillStyle = glow; ctx.beginPath(); ctx.arc(p.x, fy - r * 0.4, r * 2.4, 0, Math.PI * 2); ctx.fill();
+      [['#ff5a1f', 1], ['#ffa63d', 0.72], ['#fff1b0', 0.42]].forEach(function(f, i){
+        var fr = r * f[1], sway = Math.sin(elapsed * 9 + dcr.flicker + i) * 2 * s;
+        ctx.fillStyle = f[0];
+        ctx.beginPath();
+        ctx.moveTo(p.x - fr * 0.6, fy);
+        ctx.quadraticCurveTo(p.x - fr * 0.7, fy - fr * 0.9, p.x + sway, fy - fr * 1.9);
+        ctx.quadraticCurveTo(p.x + fr * 0.7, fy - fr * 0.9, p.x + fr * 0.6, fy);
+        ctx.closePath(); ctx.fill();
+      });
+    }
+  }
+
   function drawSky(){
     if(currentWorld !== 'canyon'){ drawWorldSky(); return; }
     var sky = skyState();
@@ -5978,6 +6298,8 @@
       ctx.beginPath(); ctx.arc(W/2,sunY,sunR,0,Math.PI*2); ctx.fill();
       ctx.restore();
     }
+    drawClouds(sky);
+    drawMesas(sky);
   }
 
   // night dims the whole canyon; the strong sun warms it up a little
@@ -6006,10 +6328,13 @@
     // cliff polygons and the road no longer meet, and without this base fill
     // the gaps between them showed through as unpainted wedges
     var floor = ctx.createLinearGradient(0, horizonY, 0, H);
-    floor.addColorStop(0, world().floor[0]);
-    floor.addColorStop(1, world().floor[1]);
+    floor.addColorStop(0, currentWorld === 'canyon' ? '#9a6a46' : world().floor[0]);
+    floor.addColorStop(1, currentWorld === 'canyon' ? '#6a4128' : world().floor[1]);
     ctx.fillStyle = floor;
     ctx.fillRect(0, horizonY, W, H-horizonY);
+
+    // the home canyon: painted walls (see canyonWallsCanvas); the mesas are in the sky
+    if(currentWorld === 'canyon'){ ctx.drawImage(canyonWallsCanvas(), 0, 0, W, H); return; }
 
     // far silhouette band
     ctx.fillStyle = world().band;
@@ -6075,6 +6400,14 @@
     var widthSlope = (botHalfW-topHalfW)/(groundY-horizonY);
     var edgeHalfW = botHalfW + widthSlope*(H-groundY);
 
+    if(currentWorld === 'canyon'){
+      drawCanyonGround(topHalfW, edgeHalfW);
+      ctx.strokeStyle = 'rgba(110,64,30,0.35)'; ctx.lineWidth = 2;
+      [-1,1].forEach(function(side){
+        ctx.beginPath(); ctx.moveTo(W/2 + side*LANE_GAP*0.5*(FOCAL/(FOCAL+ZFAR)), horizonY); ctx.lineTo(W/2 + side*LANE_GAP*0.5, groundY); ctx.stroke();
+      });
+      return;
+    }
     ctx.fillStyle = world().road;
     ctx.beginPath();
     ctx.moveTo(W/2-topHalfW, horizonY);
@@ -6613,6 +6946,7 @@
     if(p.scale <= 0.02) return;
     var s = p.sp;
     if(dcr.type !== 'pillar' && dcr.type !== 'torch' && dcr.type !== 'cactus'){ drawWorldDecor(dcr, p, s); return; }
+    drawCanyonDecor(dcr, p, s); return;
     if(dcr.type === 'pillar'){
       var pw = 40*s, ph = 150*s;
       var grd = ctx.createLinearGradient(p.x-pw/2,p.y-ph,p.x+pw/2,p.y);
@@ -6720,6 +7054,7 @@
 
   // '#rrggbb' + alpha -> 'rgba(...)'
   function hexA(hex, a){
+    if(hex.charAt(0) !== '#'){ var m = hex.match(/[\d.]+/g); return 'rgba(' + m[0] + ',' + m[1] + ',' + m[2] + ',' + a + ')'; }   // rgb(...) too
     var n = parseInt(hex.slice(1), 16);
     return 'rgba(' + ((n>>16)&255) + ',' + ((n>>8)&255) + ',' + (n&255) + ',' + a + ')';
   }
@@ -8574,7 +8909,7 @@
   // never while the name field is being typed in. Everything worth keeping
   // (coins, skins, name, league) is in localStorage, so a reload loses nothing.
   // 'dev' = a local or preview copy: the updater stays off entirely.
-  var BUILD_VERSION = '20261013-171133';
+  var BUILD_VERSION = '20261013-185726';
   var UPDATE_CHECK_MS = 60000;
   var UPDATE_TRIED_KEY = 'canyonChaseTriedUpdate';
   var pendingSubmits = 0;
