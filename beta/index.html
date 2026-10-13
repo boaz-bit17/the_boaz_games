@@ -1644,13 +1644,13 @@
       pants:'#1f4fb4', pantsShade:'#173a86', legs:'shorts', socks:'#ffffff',
       shoes:'#111111', sole:'#ffffff' },
     { id:'magic10', name:L('קוסם הסמבה', 'Samba Magician'), price:20000, ball:'soccer',
-      skinTone:'#b9805a', hair:'#f2d16b', hairStyle:'spiky', headband:'#ffffff',
+      skinTone:'#b9805a', hair:'rgba(40,24,12,0.45)', hairStyle:'mohawk', mohawk:'#f2d16b', tattoo:'rgba(30,30,40,0.55)',
       shirt:'#ffdc02', shirtShade:'#e3bf00', sleeves:'short', collar:'#009b3a',
       number:'10', numberColor:'#1f4fb4',
       pants:'#1f4fb4', pantsShade:'#173a86', legs:'shorts', socks:'#ffffff',
       shoes:'#ff3d7f', sole:'#ffffff' },
     { id:'cannon9', name:L('תותח הסמבה', 'Samba Cannon'), price:20000, ball:'soccer',
-      skinTone:'#8a5a3c', hair:'rgba(25,14,6,0.35)', hairStyle:'short',            // shaved head
+      skinTone:'#8a5a3c', hair:'rgba(25,14,6,0.3)', hairStyle:'tuft',              // shaved and shiny, a tuft up front
       shirt:'#ffdc02', shirtShade:'#e3bf00', sleeves:'short', collar:'#009b3a',
       number:'9', numberColor:'#009b3a',
       pants:'#1f4fb4', pantsShade:'#173a86', legs:'shorts', socks:'#ffffff',
@@ -7276,6 +7276,14 @@
         limb(g, A.sx, A.sy, A.sx + (A.ex-A.sx)*0.45, A.sy + (A.ey-A.sy)*0.45, 10, skin.shirt);
       }
       limb(g, A.ex, A.ey, A.hx, A.hy, 7, fore);
+      if(skin.tattoo){
+        g.strokeStyle = skin.tattoo; g.lineWidth = 1.1; g.lineCap = 'round';
+        for(var ti = 1; ti <= 3; ti++){
+          var tk = ti / 4.2, tx = A.ex + (A.hx - A.ex) * tk, ty = A.ey + (A.hy - A.ey) * tk;
+          g.beginPath(); g.arc(tx, ty, 2.2, ti * 1.3, ti * 1.3 + 3.6); g.stroke();
+        }
+        g.beginPath(); g.moveTo(A.sx + (A.ex - A.sx) * 0.55 - 2, A.sy + (A.ey - A.sy) * 0.55); g.lineTo(A.sx + (A.ex - A.sx) * 0.8 + 2, A.sy + (A.ey - A.sy) * 0.8); g.stroke();
+      }
       g.fillStyle = skin.skinTone;
       g.beginPath(); g.arc(A.hx, A.hy, 3.8, 0, Math.PI*2); g.fill();
     }
@@ -7568,6 +7576,20 @@
         g.quadraticCurveTo(hx - 4 + pSway, hy + 14, hx + pSway*1.4, hy + 22);
         g.quadraticCurveTo(hx + 4 + pSway, hy + 14, hx + 3, hy + 5);
         g.closePath(); g.fill();
+      } else if(skin.hairStyle === 'mohawk'){
+        g.fillStyle = skin.mohawk;
+        g.beginPath();
+        g.moveTo(hx - 3.5, hy + 4);
+        g.lineTo(hx - 4.5, hy - 10); g.lineTo(hx - 2, hy - 19); g.lineTo(hx, hy - 15);
+        g.lineTo(hx + 2, hy - 20); g.lineTo(hx + 4.5, hy - 11); g.lineTo(hx + 3.5, hy + 4);
+        g.closePath(); g.fill();
+        g.strokeStyle = 'rgba(120,80,20,0.45)'; g.lineWidth = 0.8;
+        g.beginPath(); g.moveTo(hx, hy - 14); g.lineTo(hx, hy + 3); g.stroke();
+      } else if(skin.hairStyle === 'tuft'){
+        g.fillStyle = 'rgba(255,255,255,0.32)';                                    // the shine on the shaved head
+        g.beginPath(); g.ellipse(hx - 3.5, hy - 7, 4, 2.6, -0.4, 0, Math.PI * 2); g.fill();
+        g.fillStyle = '#120a06';                                                   // the wedge of hair peeking over the top
+        g.beginPath(); g.moveTo(hx - 4, hy - 11.5); g.quadraticCurveTo(hx, hy - 17, hx + 4, hy - 11.5); g.quadraticCurveTo(hx, hy - 13, hx - 4, hy - 11.5); g.fill();
       } else if(skin.hairStyle === 'curly'){
         g.fillStyle = skin.hair;
         for(var cu = 0; cu < 13; cu++){
@@ -8767,7 +8789,7 @@
   // never while the name field is being typed in. Everything worth keeping
   // (coins, skins, name, league) is in localStorage, so a reload loses nothing.
   // 'dev' = a local or preview copy: the updater stays off entirely.
-  var BUILD_VERSION = '20261013-164209';
+  var BUILD_VERSION = '20261013-164443';
   var UPDATE_CHECK_MS = 60000;
   var UPDATE_TRIED_KEY = 'canyonChaseTriedUpdate';
   var pendingSubmits = 0;
