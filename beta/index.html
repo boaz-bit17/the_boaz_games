@@ -5973,23 +5973,6 @@
       }
       yy += th; band++;
     }
-    // desert-varnish streaks running down the face
-    for(var v = 0; v < 26; v++){
-      var sx = rnd() * W * 0.44, sTop = topY + (hY - topY) * (sx / (W * 0.46)) + rnd() * 10;
-      var len = (gY - sTop) * (0.2 + rnd() * 0.6), wv = 1 + rnd() * 3;
-      var vg = g.createLinearGradient(0, sTop, 0, sTop + len);
-      vg.addColorStop(0, 'rgba(30,10,6,' + (0.15 + rnd() * 0.2).toFixed(3) + ')'); vg.addColorStop(1, 'rgba(30,10,6,0)');
-      g.fillStyle = vg; g.fillRect(sx, sTop, wv, len);
-    }
-    // cracks
-    g.strokeStyle = 'rgba(25,8,4,0.45)'; g.lineCap = 'round';
-    for(var cr = 0; cr < 9; cr++){
-      var cx = rnd() * W * 0.38, cy = topY + rnd() * (gY - topY) * 0.8;
-      g.lineWidth = 0.8 + rnd() * 1.4;
-      g.beginPath(); g.moveTo(cx, cy);
-      for(var sg = 0; sg < 5; sg++){ cx += (rnd() - 0.5) * 10; cy += 6 + rnd() * 14; g.lineTo(cx, cy); }
-      g.stroke();
-    }
     // shade gathering at the foot of the wall
     var foot = g.createLinearGradient(W * 0.3, 0, footX, footY);
     foot.addColorStop(0, 'rgba(20,6,3,0)'); foot.addColorStop(1, 'rgba(20,6,3,0.45)');
@@ -5998,14 +5981,59 @@
     // the low sun catching the cliff edge
     g.strokeStyle = 'rgba(255,178,122,0.55)'; g.lineWidth = 2.2; g.lineJoin = 'round';
     g.beginPath(); ridge.forEach(function(p, i){ if(i) g.lineTo(p.x, p.y); else g.moveTo(p.x, p.y); }); g.stroke();
-    // fallen rocks along the foot of the wall, bigger closer to us
-    for(var b = 0; b < 22; b++){
-      var t = Math.pow(rnd(), 0.7), bx = W * 0.46 + (footX - W * 0.46) * t - rnd() * 8 * t;
-      var by = hY + (footY - hY) * t, br = (2 + rnd() * 9) * (0.2 + t * 1.2);
-      var rg = g.createRadialGradient(bx - br * 0.3, by - br * 0.5, br * 0.1, bx, by - br * 0.3, br);
-      rg.addColorStop(0, '#b06a4c'); rg.addColorStop(1, '#4a2216');
-      g.fillStyle = 'rgba(20,6,3,0.35)'; g.beginPath(); g.ellipse(bx + br * 0.3, by + br * 0.1, br * 1.1, br * 0.35, 0, 0, Math.PI * 2); g.fill();
-      g.fillStyle = rg; g.beginPath(); g.ellipse(bx, by - br * 0.35, br, br * 0.7, rnd() - 0.5, 0, Math.PI * 2); g.fill();
+  }
+
+  // Along both walls, every 70 units of track has its own features, fixed to
+  // the rock -- a varnish streak, a crack, a buttress edge catching the
+  // light, a boulder at the foot -- so they rush toward you as you run and
+  // the canyon reads as moving. A wall is the plane |x| = 0.4W (world units
+  // at the ground line), its foot running down from the vanishing point.
+  function drawWallMotion(){
+    var hY = H * HORIZON_Y_FRAC, gY = H * GROUND_Y_FRAC, topY = hY * 0.55;
+    var SL = 70, base = Math.floor(distance / SL), WX = 0.4 * W;
+    function topAt(x){ var k = Math.max(0, Math.min(1, x / (W * 0.46))); return topY + (hY - topY) * k; }
+    for(var j = 24; j >= -2; j--){
+      var idx = base + j, z = idx * SL - distance;
+      if(z < -FOCAL * 0.6 || z > ZFAR) continue;
+      var s = FOCAL / (FOCAL + z), footY = hY + (gY - hY) * s;
+      [-1, 1].forEach(function(side){
+        var r = seeded(idx * 9973 + (side > 0 ? 17 : 0) + 5);
+        var zz = r() * SL, s2 = FOCAL / (FOCAL + Math.max(-FOCAL * 0.6, z + zz)), fy = hY + (gY - hY) * s2;
+        var xs = W / 2 + side * WX * s2;
+        if(xs < -40 || xs > W + 40) return;
+        var xl = side < 0 ? xs : W - xs;                      // as if on the left wall
+        var top = topAt(xl) + 6, fade = Math.min(1, s2 * 3);
+        var kind = r();
+        ctx.save(); ctx.globalAlpha = fade;
+        if(kind < 0.45){
+          // a dark varnish streak down the face
+          var y0 = top + (fy - top) * r() * 0.3, y1 = y0 + (fy - y0) * (0.4 + r() * 0.5), w = (3 + r() * 9) * s2;
+          var vg = ctx.createLinearGradient(0, y0, 0, y1);
+          vg.addColorStop(0, 'rgba(30,10,6,0.45)'); vg.addColorStop(1, 'rgba(30,10,6,0)');
+          ctx.fillStyle = vg; ctx.fillRect(xs - w / 2, y0, w, y1 - y0);
+        } else if(kind < 0.75){
+          // a buttress edge: a lit face beside a shadowed one
+          var bw = (6 + r() * 10) * s2;
+          ctx.fillStyle = 'rgba(255,175,120,0.22)'; ctx.fillRect(xs - side * bw, top, bw * 0.5, fy - top);
+          ctx.fillStyle = 'rgba(25,8,4,0.3)'; ctx.fillRect(xs - side * bw * 0.5, top, bw * 0.5, fy - top);
+        } else {
+          // a crack, zig-zagging down
+          ctx.strokeStyle = 'rgba(25,8,4,0.6)'; ctx.lineWidth = Math.max(0.8, 2.2 * s2); ctx.lineCap = 'round';
+          var cy = top + (fy - top) * r() * 0.4, cx = xs;
+          ctx.beginPath(); ctx.moveTo(cx, cy);
+          for(var q = 0; q < 6; q++){ cx += (r() - 0.5) * 14 * s2; cy += (fy - top) * (0.05 + r() * 0.08); ctx.lineTo(cx, Math.min(cy, fy)); }
+          ctx.stroke();
+        }
+        // a boulder at the foot of the wall, now and then
+        if(r() < 0.6){
+          var br = (6 + r() * 16) * s2, bx = xs - side * br * (0.3 + r() * 0.6), by = fy;
+          ctx.fillStyle = 'rgba(20,6,3,0.4)'; ctx.beginPath(); ctx.ellipse(bx - side * br * 0.3, by + br * 0.08, br * 1.15, br * 0.33, 0, 0, Math.PI * 2); ctx.fill();
+          var rg = ctx.createRadialGradient(bx + side * br * 0.3, by - br * 0.6, br * 0.1, bx, by - br * 0.35, br);
+          rg.addColorStop(0, '#b67256'); rg.addColorStop(1, '#4a2216');
+          ctx.fillStyle = rg; ctx.beginPath(); ctx.ellipse(bx, by - br * 0.38, br, br * 0.68, (r() - 0.5) * 0.6, 0, Math.PI * 2); ctx.fill();
+        }
+        ctx.restore();
+      });
     }
   }
 
@@ -6334,7 +6362,7 @@
     ctx.fillRect(0, horizonY, W, H-horizonY);
 
     // the home canyon: painted walls (see canyonWallsCanvas); the mesas are in the sky
-    if(currentWorld === 'canyon'){ ctx.drawImage(canyonWallsCanvas(), 0, 0, W, H); return; }
+    if(currentWorld === 'canyon'){ ctx.drawImage(canyonWallsCanvas(), 0, 0, W, H); drawWallMotion(); return; }
 
     // far silhouette band
     ctx.fillStyle = world().band;
@@ -8909,7 +8937,7 @@
   // never while the name field is being typed in. Everything worth keeping
   // (coins, skins, name, league) is in localStorage, so a reload loses nothing.
   // 'dev' = a local or preview copy: the updater stays off entirely.
-  var BUILD_VERSION = '20261013-185726';
+  var BUILD_VERSION = '20261013-203805';
   var UPDATE_CHECK_MS = 60000;
   var UPDATE_TRIED_KEY = 'canyonChaseTriedUpdate';
   var pendingSubmits = 0;
