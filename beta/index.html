@@ -5832,13 +5832,17 @@
   }
 
   function spawnDecor(){
-    var types = world().decor;
+    var types = world().decor, scene = sceneAt(distance + ZFAR);
+    if(scene === 'bridge') return;                       // nothing stands over the abyss
+    if(scene === 'desert') types = ['dune', 'dune', 'shrub', 'shrub', 'butte'];
     [-1,1].forEach(function(side){
+      var type = types[Math.floor(Math.random()*types.length)];
       decor.push({
         side: side,
         z: ZFAR + Math.random()*100,
-        type: types[Math.floor(Math.random()*types.length)],
-        flicker: Math.random()*10
+        type: type,
+        flicker: Math.random()*10,
+        xMul: type === 'butte' ? 4.6 + Math.random()*1.6 : type === 'dune' ? 2.6 + Math.random() : type === 'shrub' ? 2.1 + Math.random()*0.9 : 2.05
       });
     });
   }
@@ -5902,6 +5906,195 @@
     var sun = p < 1400*K ? setting : (p < 3700*K ? 1 - 2 * dawn : -1 + dusk);
     var moon = smooth01(700*K, 800*K, p) * (1 - smooth01(1000*K, 1500*K, p));
     return { p: p, sun: sun, night: night, day: day, moon: moon };
+  }
+
+  // ---------- changing scenery (home world) ----------
+  // The canyon doesn't go on forever: every ~50 seconds of running the
+  // walls end and the track runs out across open desert, then over a rope
+  // bridge above an abyss, then back into the canyon -- round and round.
+  // It's tied to the distance run (a stretch of track IS canyon, desert or
+  // bridge), so a wall really ends at a point up ahead and comes past you,
+  // and a duel's runners see the same thing at the same place.
+  var SCENES = [['canyon', 42000], ['desert', 42000], ['bridge', 42000]];
+  var SCENE_LEN = SCENES.reduce(function(s, x){ return s + x[1]; }, 0);
+  function sceneAt(P){
+    if(currentWorld !== 'canyon') return 'world';
+    var p = ((P % SCENE_LEN) + SCENE_LEN) % SCENE_LEN, acc = 0;
+    for(var k = 0; k < SCENES.length; k++){ acc += SCENES[k][1]; if(p < acc) return SCENES[k][0]; }
+    return 'canyon';
+  }
+  // the stretches of the visible track [zMin, zMax], each with its scenery
+  function sceneSpans(zMin, zMax){
+    var spans = [], z = zMin;
+    while(z < zMax){
+      var p = (((distance + z) % SCENE_LEN) + SCENE_LEN) % SCENE_LEN, acc = 0, k = 0;
+      for(; k < SCENES.length; k++){ if(p < acc + SCENES[k][1]) break; acc += SCENES[k][1]; }
+      var z1 = Math.min(zMax, z + (acc + SCENES[k][1] - p));
+      spans.push({ scene: SCENES[k][0], z0: z, z1: z1, nearEdge: z > zMin, farEdge: z1 < zMax });
+      z = z1;
+    }
+    return spans;
+  }
+  var SCENE_ZMIN = -250;
+  function zScale(z){ return FOCAL / (FOCAL + z); }
+
+  // the canyon walls only where the track is canyon: vertical strips of the
+  // painted walls (on a wall, one depth is one vertical line on screen)
+  function drawCanyonWallsByScene(){
+    var spans = sceneSpans(SCENE_ZMIN, ZFAR), img = canyonWallsCanvas(), hY = H * HORIZON_Y_FRAC, gY = H * GROUND_Y_FRAC;
+    var WX = 0.4 * W;
+    spans.forEach(function(sp){
+      if(sp.scene !== 'canyon') return;
+      var s0 = zScale(sp.z0), s1 = zScale(sp.z1);
+      var inL = sp.farEdge ? W / 2 - WX * s1 : W / 2, outL = sp.nearEdge ? W / 2 - WX * s0 : -10;
+      var inR = sp.farEdge ? W / 2 + WX * s1 : W / 2, outR = sp.nearEdge ? W / 2 + WX * s0 : W + 10;
+      ctx.save();
+      ctx.beginPath(); ctx.rect(outL, 0, inL - outL, H); ctx.rect(inR, 0, outR - inR, H); ctx.clip();
+      ctx.drawImage(img, 0, 0, W, H);
+      ctx.restore();
+      // where the canyon starts up ahead, the cliff's end face looks back at us
+      if(sp.nearEdge){
+        var fy = hY + (gY - hY) * s0;
+        [-1, 1].forEach(function(side){
+          var xIn = W / 2 + side * WX * s0, xOut = W / 2 + side * (WX + 0.9 * W) * s0;
+          var xl = side < 0 ? xIn : W - xIn, k = Math.max(0, Math.min(1, xl / (W * 0.46)));
+          var top = hY * 0.55 + (hY - hY * 0.55) * k;
+          var fg = ctx.createLinearGradient(0, top, 0, fy);
+          fg.addColorStop(0, '#b0603f'); fg.addColorStop(0.5, '#8a4128'); fg.addColorStop(1, '#4a1f12');
+          ctx.fillStyle = fg;
+          ctx.beginPath(); ctx.moveTo(xIn, fy); ctx.lineTo(xIn, top); ctx.lineTo(xOut, top - 4 * s0); ctx.lineTo(xOut, fy); ctx.closePath(); ctx.fill();
+          ctx.strokeStyle = 'rgba(40,12,6,0.25)'; ctx.lineWidth = Math.max(1, 2 * s0);
+          for(var b = 1; b < 6; b++){ var by = top + (fy - top) * b / 6; ctx.beginPath(); ctx.moveTo(xIn, by); ctx.lineTo(xOut, by); ctx.stroke(); }
+          ctx.strokeStyle = 'rgba(255,180,125,0.5)'; ctx.lineWidth = Math.max(1, 2.5 * s0);
+          ctx.beginPath(); ctx.moveTo(xIn, fy); ctx.lineTo(xIn, top); ctx.lineTo(xOut, top - 4 * s0); ctx.stroke();
+        });
+      }
+    });
+  }
+
+  // the rope bridge over the abyss, for the stretches of track that are bridge
+  function drawBridgeSpans(topHalfW, widthSlope){
+    var hY = H * HORIZON_Y_FRAC, gY = H * GROUND_Y_FRAC;
+    function yAt(z){ return hY + (gY - hY) * zScale(z); }
+    function hwAt(y){ return topHalfW + widthSlope * (y - hY); }
+    sceneSpans(SCENE_ZMIN, ZFAR).forEach(function(sp){
+      if(sp.scene !== 'bridge') return;
+      var yN = Math.min(H + 5, yAt(Math.max(sp.z0, -FOCAL * 0.7))), yF = yAt(sp.z1);
+      if(yN <= yF + 0.5) return;
+      // the abyss either side of the track
+      [-1, 1].forEach(function(side){
+        ctx.save();
+        ctx.beginPath();
+        ctx.moveTo(side < 0 ? 0 : W, yF); ctx.lineTo(W / 2 + side * hwAt(yF), yF);
+        ctx.lineTo(W / 2 + side * hwAt(yN), yN); ctx.lineTo(side < 0 ? 0 : W, yN); ctx.closePath();
+        ctx.clip();
+        var ag = ctx.createLinearGradient(0, yF, 0, yN);
+        ag.addColorStop(0, '#5a2c1c'); ag.addColorStop(0.12, '#2a120a'); ag.addColorStop(1, '#0c0503');
+        ctx.fillStyle = ag; ctx.fillRect(0, yF, W, yN - yF);
+        // the far side's cliff face dropping away below its rim
+        if(sp.farEdge){
+          var fh = Math.max(4, (yN - yF) * 0.18);
+          var cf = ctx.createLinearGradient(0, yF, 0, yF + fh);
+          cf.addColorStop(0, '#a0573a'); cf.addColorStop(1, 'rgba(60,24,14,0)');
+          ctx.fillStyle = cf; ctx.fillRect(0, yF, W, fh);
+        }
+        // the river far below, glinting, and mist rising
+        var ry = yF + (yN - yF) * 0.55;
+        ctx.strokeStyle = 'rgba(120,190,220,0.55)'; ctx.lineWidth = 3;
+        ctx.beginPath();
+        for(var rx = 0; rx <= W; rx += 12){ var yy = ry + Math.sin(rx * 0.03 + distance * 0.004) * 6; if(rx) ctx.lineTo(rx, yy); else ctx.moveTo(rx, yy); }
+        ctx.stroke();
+        var mist = ctx.createLinearGradient(0, yF, 0, yN);
+        mist.addColorStop(0, 'rgba(255,230,210,0)'); mist.addColorStop(0.5, 'rgba(255,230,210,0.12)'); mist.addColorStop(1, 'rgba(255,230,210,0)');
+        ctx.fillStyle = mist; ctx.fillRect(0, yF, W, yN - yF);
+        ctx.restore();
+      });
+      // the rims where the ground gives way
+      ctx.strokeStyle = 'rgba(255,190,140,0.55)'; ctx.lineWidth = 2;
+      if(sp.nearEdge){ ctx.beginPath(); ctx.moveTo(0, yN); ctx.lineTo(W, yN); ctx.stroke(); }
+      if(sp.farEdge){ ctx.beginPath(); ctx.moveTo(0, yF); ctx.lineTo(W, yF); ctx.stroke(); }
+      // the deck: planks across, with gaps, and a beam along each side
+      ctx.save();
+      ctx.beginPath(); ctx.moveTo(W / 2 - hwAt(yF), yF); ctx.lineTo(W / 2 + hwAt(yF), yF); ctx.lineTo(W / 2 + hwAt(yN), yN); ctx.lineTo(W / 2 - hwAt(yN), yN); ctx.closePath();
+      ctx.clip();
+      var dg = ctx.createLinearGradient(0, yF, 0, yN);
+      dg.addColorStop(0, '#a87a4c'); dg.addColorStop(1, '#7a4f2c');
+      ctx.fillStyle = dg; ctx.fillRect(0, yF, W, yN - yF);
+      var PL = 16, first = Math.ceil((distance + Math.max(sp.z0, -FOCAL * 0.7)) / PL);
+      for(var pk = first; ; pk++){
+        var pz = pk * PL - distance;
+        if(pz > sp.z1) break;
+        var py = yAt(pz), sc = zScale(pz);
+        ctx.fillStyle = 'rgba(30,15,6,' + (0.25 + 0.3 * sc).toFixed(3) + ')';
+        ctx.fillRect(W / 2 - hwAt(py), py, hwAt(py) * 2, Math.max(1, 2.2 * sc));
+        if(pk % 3 === 0){ ctx.fillStyle = 'rgba(255,220,170,0.12)'; ctx.fillRect(W / 2 - hwAt(py), py - 4 * sc, hwAt(py) * 2, Math.max(1, 1.5 * sc)); }
+      }
+      ctx.restore();
+      [-1, 1].forEach(function(side){
+        ctx.strokeStyle = '#4a2c16'; ctx.lineWidth = 3;
+        ctx.beginPath(); ctx.moveTo(W / 2 + side * hwAt(yF), yF); ctx.lineTo(W / 2 + side * hwAt(yN), yN); ctx.stroke();
+      });
+      // rope railings on posts
+      var PS = 70, firstP = Math.ceil((distance + Math.max(sp.z0, -FOCAL * 0.6)) / PS), posts = [];
+      for(var pi = firstP; ; pi++){
+        var z = pi * PS - distance;
+        if(z > sp.z1) break;
+        posts.push(z);
+      }
+      [-1, 1].forEach(function(side){
+        var wx = side * LANE_GAP * 1.62, prev = null;
+        posts.forEach(function(z){
+          var b = project(wx, z, 0), t = project(wx, z, 46), m = project(wx, z, 24);
+          ctx.strokeStyle = '#3a2210'; ctx.lineWidth = Math.max(1.5, 5 * b.sp); ctx.lineCap = 'round';
+          ctx.beginPath(); ctx.moveTo(b.x, b.y); ctx.lineTo(t.x, t.y); ctx.stroke();
+          if(prev){
+            ctx.strokeStyle = '#c9a26a'; ctx.lineWidth = Math.max(1, 2.2 * b.sp);
+            ctx.beginPath(); ctx.moveTo(prev.t.x, prev.t.y); ctx.quadraticCurveTo((prev.t.x + t.x) / 2, (prev.t.y + t.y) / 2 + 10 * b.sp, t.x, t.y); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(prev.m.x, prev.m.y); ctx.quadraticCurveTo((prev.m.x + m.x) / 2, (prev.m.y + m.y) / 2 + 8 * b.sp, m.x, m.y); ctx.stroke();
+          }
+          prev = { t: t, m: m };
+        });
+      });
+    });
+  }
+
+  // open-desert roadside: sand dunes, dry shrubs, and big buttes further out
+  function drawDesertDecor(dcr, p, s){
+    var lightSide = -dcr.side;
+    if(dcr.type === 'dune'){
+      var dw = 150 * s, dh = 46 * s;
+      var dg = ctx.createLinearGradient(p.x - dw / 2, 0, p.x + dw / 2, 0);
+      dg.addColorStop(0, lightSide < 0 ? '#f0c98e' : '#b07a48'); dg.addColorStop(1, lightSide < 0 ? '#b07a48' : '#f0c98e');
+      ctx.fillStyle = dg;
+      ctx.beginPath(); ctx.moveTo(p.x - dw / 2, p.y);
+      ctx.quadraticCurveTo(p.x - dw * 0.1, p.y - dh * 1.6, p.x + dw * 0.15 * lightSide, p.y - dh);
+      ctx.quadraticCurveTo(p.x + dw * 0.3, p.y - dh * 0.4, p.x + dw / 2, p.y); ctx.closePath(); ctx.fill();
+      ctx.strokeStyle = 'rgba(255,240,210,0.5)'; ctx.lineWidth = Math.max(1, 1.5 * s);
+      ctx.beginPath(); ctx.moveTo(p.x - dw * 0.25, p.y - dh * 0.6); ctx.quadraticCurveTo(p.x - dw * 0.05, p.y - dh * 1.15, p.x + dw * 0.15 * lightSide, p.y - dh); ctx.stroke();
+    } else if(dcr.type === 'shrub'){
+      ctx.fillStyle = 'rgba(40,20,5,0.25)'; ctx.beginPath(); ctx.ellipse(p.x, p.y, 20 * s, 5 * s, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = '#7a5a2e'; ctx.lineWidth = Math.max(1, 1.6 * s); ctx.lineCap = 'round';
+      for(var k = 0; k < 9; k++){
+        var a = -Math.PI * (0.15 + k / 8 * 0.7), len = (16 + (k % 3) * 6) * s;
+        ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.quadraticCurveTo(p.x + Math.cos(a) * len * 0.5, p.y + Math.sin(a) * len * 0.6 - 3 * s, p.x + Math.cos(a) * len, p.y + Math.sin(a) * len); ctx.stroke();
+      }
+      ctx.fillStyle = 'rgba(150,140,70,0.7)';
+      for(var q = 0; q < 6; q++){ var qa = -Math.PI * (0.2 + q * 0.12); ctx.beginPath(); ctx.arc(p.x + Math.cos(qa) * 14 * s, p.y + Math.sin(qa) * 14 * s, 2.2 * s, 0, Math.PI * 2); ctx.fill(); }
+    } else if(dcr.type === 'butte'){
+      var bw = 210 * s, bh = 190 * s, cap = 0.3;
+      ctx.fillStyle = 'rgba(40,15,5,0.3)'; ctx.beginPath(); ctx.ellipse(p.x, p.y, bw * 0.6, bw * 0.12, 0, 0, Math.PI * 2); ctx.fill();
+      var bg = ctx.createLinearGradient(p.x - bw / 2, 0, p.x + bw / 2, 0);
+      bg.addColorStop(0, lightSide < 0 ? '#c4734c' : '#5a2a18'); bg.addColorStop(1, lightSide < 0 ? '#5a2a18' : '#c4734c');
+      ctx.fillStyle = bg;
+      ctx.beginPath(); ctx.moveTo(p.x - bw / 2, p.y);
+      ctx.lineTo(p.x - bw * 0.36, p.y - bh * 0.55); ctx.lineTo(p.x - bw * 0.3, p.y - bh); ctx.lineTo(p.x + bw * 0.3, p.y - bh);
+      ctx.lineTo(p.x + bw * 0.36, p.y - bh * 0.55); ctx.lineTo(p.x + bw / 2, p.y); ctx.closePath(); ctx.fill();
+      ctx.save(); ctx.clip();
+      for(var st = 0; st < 8; st++){ ctx.fillStyle = st % 2 ? 'rgba(255,190,140,0.12)' : 'rgba(60,20,8,0.18)'; ctx.fillRect(p.x - bw, p.y - bh * (0.12 + st * 0.11), bw * 2, bh * 0.05); }
+      ctx.restore();
+      ctx.strokeStyle = 'rgba(255,190,140,0.45)'; ctx.lineWidth = Math.max(1, 2 * s);
+      ctx.beginPath(); ctx.moveTo(p.x - bw * 0.3, p.y - bh); ctx.lineTo(p.x + bw * 0.3, p.y - bh); ctx.stroke();
+    }
   }
 
   // ---------- the canyon, drawn for real ----------
@@ -6001,6 +6194,7 @@
         var zz = r() * SL, s2 = FOCAL / (FOCAL + Math.max(-FOCAL * 0.6, z + zz)), fy = hY + (gY - hY) * s2;
         var xs = W / 2 + side * WX * s2;
         if(xs < -40 || xs > W + 40) return;
+        if(sceneAt(distance + z + zz) !== 'canyon') return;   // no wall here
         var xl = side < 0 ? xs : W - xs;                      // as if on the left wall
         var top = topAt(xl) + 6, fade = Math.min(1, s2 * 3);
         var kind = r();
@@ -6138,6 +6332,7 @@
     for(var i = 0; i < 30; i++){
       var z = i * 55 - off;
       if(z < -20 || z > ZFAR) continue;
+      if(sceneAt(distance + z) === 'bridge') continue;
       var sc = FOCAL / (FOCAL + z), y = horizonY + (groundY - horizonY) * sc, hw = LANE_GAP * 1.45 * sc;
       ctx.strokeStyle = 'rgba(150,95,50,' + (0.05 + 0.12 * sc).toFixed(3) + ')';
       ctx.lineWidth = Math.max(1, 2.2 * sc);
@@ -6152,6 +6347,7 @@
     for(var j = 0; j < 46; j++){
       var idx = base + j, zz = idx * SL - distance;   // (out past the track too, onto the canyon floor)
       if(zz < -30 || zz > ZFAR * 0.8) continue;
+      if(sceneAt(distance + zz) === 'bridge') continue;
       var r1 = seeded(idx * 7919 + 13), cnt = 1 + Math.floor(r1() * 2);
       for(var q = 0; q < cnt; q++){
         var wx = (r1() * 5.4 - 2.7) * LANE_GAP, p = project(wx, zz + r1() * SL, 0);
@@ -6362,7 +6558,7 @@
     ctx.fillRect(0, horizonY, W, H-horizonY);
 
     // the home canyon: painted walls (see canyonWallsCanvas); the mesas are in the sky
-    if(currentWorld === 'canyon'){ ctx.drawImage(canyonWallsCanvas(), 0, 0, W, H); drawWallMotion(); return; }
+    if(currentWorld === 'canyon'){ drawCanyonWallsByScene(); drawWallMotion(); return; }
 
     // far silhouette band
     ctx.fillStyle = world().band;
@@ -6430,6 +6626,7 @@
 
     if(currentWorld === 'canyon'){
       drawCanyonGround(topHalfW, edgeHalfW);
+      drawBridgeSpans(topHalfW, widthSlope);
       ctx.strokeStyle = 'rgba(110,64,30,0.35)'; ctx.lineWidth = 2;
       [-1,1].forEach(function(side){
         ctx.beginPath(); ctx.moveTo(W/2 + side*LANE_GAP*0.5*(FOCAL/(FOCAL+ZFAR)), horizonY); ctx.lineTo(W/2 + side*LANE_GAP*0.5, groundY); ctx.stroke();
@@ -6969,10 +7166,11 @@
   }
 
   function drawDecor(dcr){
-    var worldX = dcr.side * (LANE_GAP*2.05);
+    var worldX = dcr.side * (LANE_GAP*(dcr.xMul || 2.05));
     var p = project(worldX, dcr.z, 0);
     if(p.scale <= 0.02) return;
     var s = p.sp;
+    if(dcr.type === 'dune' || dcr.type === 'shrub' || dcr.type === 'butte'){ drawDesertDecor(dcr, p, s); return; }
     if(dcr.type !== 'pillar' && dcr.type !== 'torch' && dcr.type !== 'cactus'){ drawWorldDecor(dcr, p, s); return; }
     drawCanyonDecor(dcr, p, s); return;
     if(dcr.type === 'pillar'){
@@ -8937,7 +9135,7 @@
   // never while the name field is being typed in. Everything worth keeping
   // (coins, skins, name, league) is in localStorage, so a reload loses nothing.
   // 'dev' = a local or preview copy: the updater stays off entirely.
-  var BUILD_VERSION = '20261013-203805';
+  var BUILD_VERSION = '20261013-204934';
   var UPDATE_CHECK_MS = 60000;
   var UPDATE_TRIED_KEY = 'canyonChaseTriedUpdate';
   var pendingSubmits = 0;
