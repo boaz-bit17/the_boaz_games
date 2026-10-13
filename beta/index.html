@@ -7821,7 +7821,7 @@
   // the hoop: swish). Anywhere else: the keeper dives and saves it (or the
   // ball rattles off the rim). Then the run picks up from the same moment.
   // Not in head to head (the freeze would cost him ground) or the boss fight.
-  var SHOT_CHANCE = 0.45, SHOT_SECS = 2.8, SHOT_BONUS = 1000, SHOT_Z = 300;
+  var SHOT_CHANCE = 0.45, SHOT_SECS = 2.8, SHOT_BONUS = 1000, SHOT_Z = 220;   // close enough to see the keeper
   var SHOT_AIM = 0.18, SHOT_RELEASE = 0.3, SHOT_HIT = 0.74;   // fractions of the shot's own clock
   var AIM_PERIOD = 1.3, AIM_TIMEOUT = 6;                   // the marker's sweep (s), and the wait before it stops by itself
   var GREEN_FROM = 0.39, GREEN_TO = 0.61;
@@ -8075,6 +8075,80 @@
     ctx.restore();
   }
 
+  // the keeper's face, close up in a round frame in the corner (like the
+  // player cards in football games): focused while you aim, wide-eyed and
+  // open-mouthed when it goes in, grinning when he saves it
+  function drawKeeperFace(){
+    if(shot.kind !== 'soccer') return;
+    var t = shot.t, fadeIn = shot.aiming ? smooth01(0, 0.3, shot.aimT) : 1;
+    var fadeOut = 1 - smooth01(0.9, 1, t);
+    if(t < SHOT_AIM - 0.02 && !shot.aiming) return;
+    var mood = !shot.scored ? 'focus' : (shot.good ? 'shock' : 'joy');
+    var R = Math.min(W, H) * 0.13, cx = W - R - 16, cy = R + Math.min(110, H * 0.16);
+    ctx.save();
+    ctx.globalAlpha = fadeIn * fadeOut;
+    ctx.translate(cx, cy);
+    // frame: green ring and a dark backdrop
+    ctx.fillStyle = '#10222e'; ctx.beginPath(); ctx.arc(0, 0, R, 0, Math.PI * 2); ctx.fill();
+    ctx.save(); ctx.beginPath(); ctx.arc(0, 0, R, 0, Math.PI * 2); ctx.clip();
+    var s = R / 60;
+    ctx.scale(s, s);
+    var shake = mood === 'shock' ? Math.sin(t * 400) * 1.2 : 0;
+    ctx.translate(shake, 8);
+    // shirt and shoulders
+    var sg = ctx.createLinearGradient(-60, 30, 60, 60); sg.addColorStop(0, '#c6ff3d'); sg.addColorStop(1, '#78bf18');
+    ctx.fillStyle = sg; ctx.beginPath(); ctx.ellipse(0, 70, 58, 34, 0, Math.PI, Math.PI * 2); ctx.fill(); ctx.fillRect(-58, 70, 116, 40);
+    ctx.fillStyle = '#1d2a38'; ctx.beginPath(); ctx.moveTo(-14, 38); ctx.lineTo(0, 52); ctx.lineTo(14, 38); ctx.closePath(); ctx.fill();   // collar
+    // neck, ears, face
+    ctx.fillStyle = '#d29b74'; ctx.fillRect(-10, 26, 20, 16);
+    ctx.fillStyle = '#d29b74'; ctx.beginPath(); ctx.ellipse(-27, -2, 6, 9, 0, 0, Math.PI * 2); ctx.fill(); ctx.beginPath(); ctx.ellipse(27, -2, 6, 9, 0, 0, Math.PI * 2); ctx.fill();
+    var fg = ctx.createRadialGradient(-8, -10, 4, 0, 0, 34); fg.addColorStop(0, '#f0c39e'); fg.addColorStop(1, '#c98f68');
+    ctx.fillStyle = fg; ctx.beginPath(); ctx.ellipse(0, 0, 26, 32, 0, 0, Math.PI * 2); ctx.fill();
+    // short dark hair, a little swept up
+    ctx.fillStyle = '#2a1a10';
+    ctx.beginPath(); ctx.moveTo(-27, -6); ctx.quadraticCurveTo(-30, -38, -4, -38); ctx.quadraticCurveTo(18, -42, 28, -26); ctx.quadraticCurveTo(29, -14, 27, -6);
+    ctx.quadraticCurveTo(18, -22, 0, -22); ctx.quadraticCurveTo(-18, -22, -27, -6); ctx.fill();
+    // stubble beard along the jaw
+    ctx.fillStyle = 'rgba(42,26,16,0.55)';
+    ctx.beginPath(); ctx.moveTo(-24, 6); ctx.quadraticCurveTo(-22, 30, 0, 33); ctx.quadraticCurveTo(22, 30, 24, 6); ctx.quadraticCurveTo(14, 20, 0, 20); ctx.quadraticCurveTo(-14, 20, -24, 6); ctx.fill();
+    ctx.fillStyle = 'rgba(42,26,16,0.45)'; ctx.beginPath(); ctx.ellipse(0, 12, 10, 3.5, 0, 0, Math.PI * 2); ctx.fill();   // moustache
+    // eyebrows: down and in when focused, up when shocked
+    var browY = mood === 'shock' ? -18 : -13, tilt = mood === 'focus' ? 4 : (mood === 'joy' ? -1 : -3);
+    ctx.strokeStyle = '#24160d'; ctx.lineWidth = 4; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(-18, browY - tilt * 0.5); ctx.lineTo(-6, browY + tilt); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(18, browY - tilt * 0.5); ctx.lineTo(6, browY + tilt); ctx.stroke();
+    // eyes, looking at the shooter
+    var eyeH = mood === 'shock' ? 5.5 : (mood === 'joy' ? 2 : 3.6), look = shot.aiming ? Math.sin(shot.aimT * 2) * 1.5 : 0;
+    [-11, 11].forEach(function(x){
+      ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.ellipse(x, -4, 6, eyeH, 0, 0, Math.PI * 2); ctx.fill();
+      if(mood !== 'joy'){ ctx.fillStyle = '#3a2412'; ctx.beginPath(); ctx.arc(x + look, -4, Math.min(3, eyeH), 0, Math.PI * 2); ctx.fill(); }
+      else { ctx.strokeStyle = '#3a2412'; ctx.lineWidth = 2.4; ctx.beginPath(); ctx.arc(x, -2, 5, Math.PI * 1.15, Math.PI * 1.85); ctx.stroke(); }
+    });
+    // nose
+    ctx.strokeStyle = 'rgba(120,70,45,0.7)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(0, -2); ctx.quadraticCurveTo(-4, 7, 1, 8); ctx.stroke();
+    // mouth
+    if(mood === 'shock'){ ctx.fillStyle = '#4a1a12'; ctx.beginPath(); ctx.ellipse(0, 21, 6, 8, 0, 0, Math.PI * 2); ctx.fill(); }
+    else if(mood === 'joy'){ ctx.fillStyle = '#4a1a12'; ctx.beginPath(); ctx.moveTo(-11, 17); ctx.quadraticCurveTo(0, 30, 11, 17); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = '#fff'; ctx.fillRect(-8, 17, 16, 3); }
+    else { ctx.strokeStyle = '#5a2a1c'; ctx.lineWidth = 2.6; ctx.beginPath(); ctx.moveTo(-8, 20); ctx.lineTo(8, 19); ctx.stroke(); }
+    // the gloves come up into the shot when he celebrates
+    if(mood === 'joy'){
+      [[-44, 30], [44, 30]].forEach(function(gp){ ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.ellipse(gp[0], gp[1] - Math.sin(t * 30) * 3, 14, 16, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = '#ff7a00'; ctx.fillRect(gp[0] - 12, gp[1] + 10, 24, 6); });
+    }
+    ctx.restore();
+    ctx.strokeStyle = mood === 'shock' ? '#d7263d' : (mood === 'joy' ? '#2ecc40' : '#c6ff3d');
+    ctx.lineWidth = Math.max(3, R * 0.07); ctx.beginPath(); ctx.arc(0, 0, R, 0, Math.PI * 2); ctx.stroke();
+    // the label under the frame
+    ctx.fillStyle = 'rgba(10,10,25,0.7)';
+    var lw = R * 1.3, lh = R * 0.34;
+    ctx.beginPath(); ctx.roundRect(-lw / 2, R * 0.82, lw, lh, lh / 2); ctx.fill();
+    ctx.fillStyle = '#ffffff'; ctx.font = 'bold ' + Math.round(lh * 0.62) + 'px Rubik, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(mood === 'shock' ? L('😱 השוער', '😱 Keeper') : (mood === 'joy' ? L('🧤 השוער', '🧤 Keeper') : L('🧤 השוער', '🧤 Keeper')), 0, R * 0.82 + lh / 2);
+    ctx.textBaseline = 'alphabetic';
+    ctx.restore();
+  }
+
   // the power bar: red, green in the middle, orange; the marker sweeps
   // until the tap (then it flashes where it stopped)
   function drawPowerBar(){
@@ -8186,6 +8260,7 @@
       ctx.textBaseline = 'alphabetic';
       ctx.restore();
     }
+    drawKeeperFace();
     drawPowerBar();
   }
 
@@ -8716,7 +8791,7 @@
   // never while the name field is being typed in. Everything worth keeping
   // (coins, skins, name, league) is in localStorage, so a reload loses nothing.
   // 'dev' = a local or preview copy: the updater stays off entirely.
-  var BUILD_VERSION = '20261013-162734';
+  var BUILD_VERSION = '20261013-163014';
   var UPDATE_CHECK_MS = 60000;
   var UPDATE_TRIED_KEY = 'canyonChaseTriedUpdate';
   var pendingSubmits = 0;
