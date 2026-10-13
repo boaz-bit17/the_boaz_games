@@ -1631,6 +1631,42 @@
       number:'23', numberColor:'#552583',
       pants:'#fdb927', pantsShade:'#e09a10', legs:'shorts', socks:'#ffffff',
       shoes:'#552583', sole:'#ffffff', headband:'#552583' },
+    { id:'goal7', name:L('מכונת השערים', 'Goal Machine'), price:30000, ball:'soccer',
+      skinTone:'#d9a47c', hair:'#1e130b', hairStyle:'short',
+      shirt:'#c8102e', shirtShade:'#93091f', sleeves:'short', collar:'#0b6b3a',
+      number:'7', numberColor:'#f2c94c',
+      pants:'#0b6b3a', pantsShade:'#06492a', legs:'shorts', socks:'#c8102e',
+      shoes:'#ffffff', sole:'#c9a227' },
+    { id:'samba10', name:L('אגדת הסמבה', 'Samba Legend'), price:20000, ball:'soccer',
+      skinTone:'#6b4128', hair:'#120a06', hairStyle:'short',
+      shirt:'#ffdc02', shirtShade:'#e3bf00', sleeves:'short', collar:'#009b3a',
+      number:'10', numberColor:'#009b3a',
+      pants:'#1f4fb4', pantsShade:'#173a86', legs:'shorts', socks:'#ffffff',
+      shoes:'#111111', sole:'#ffffff' },
+    { id:'magic10', name:L('קוסם הסמבה', 'Samba Magician'), price:20000, ball:'soccer',
+      skinTone:'#b9805a', hair:'#f2d16b', hairStyle:'spiky', headband:'#ffffff',
+      shirt:'#ffdc02', shirtShade:'#e3bf00', sleeves:'short', collar:'#009b3a',
+      number:'10', numberColor:'#1f4fb4',
+      pants:'#1f4fb4', pantsShade:'#173a86', legs:'shorts', socks:'#ffffff',
+      shoes:'#ff3d7f', sole:'#ffffff' },
+    { id:'cannon9', name:L('תותח הסמבה', 'Samba Cannon'), price:20000, ball:'soccer',
+      skinTone:'#8a5a3c', hair:'rgba(25,14,6,0.35)', hairStyle:'short',            // shaved head
+      shirt:'#ffdc02', shirtShade:'#e3bf00', sleeves:'short', collar:'#009b3a',
+      number:'9', numberColor:'#009b3a',
+      pants:'#1f4fb4', pantsShade:'#173a86', legs:'shorts', socks:'#ffffff',
+      shoes:'#c0c6cf', sole:'#1f4fb4' },
+    { id:'genius10', name:L('הגאון הקטן', 'Little Genius'), price:20000, ball:'soccer',
+      skinTone:'#d6a07a', hair:'#140c07', hairStyle:'curly',
+      shirt:'#75aadb', shirtShade:'#5d93c9', sleeves:'short', collar:'#ffffff',
+      pattern:'vstripes', patternColor:'#ffffff', number:'10', numberColor:'#1b1b3a',
+      pants:'#1b1b3a', pantsShade:'#10102a', legs:'shorts', socks:'#ffffff',
+      shoes:'#111111', sole:'#ffffff' },
+    { id:'orange14', name:L('המאסטר הכתום', 'Orange Master'), price:20000, ball:'soccer',
+      skinTone:'#e6b896', hair:'#6b4423', hairStyle:'long',
+      shirt:'#ff6a00', shirtShade:'#d65400', sleeves:'short', collar:'#111111',
+      number:'14', numberColor:'#111111',
+      pants:'#ffffff', pantsShade:'#d9d9d9', legs:'shorts', socks:'#ff6a00',
+      shoes:'#111111', sole:'#ffffff' },
     { id:'surfer',   name:L('גולש צינורות', 'Barrel Surfer'), price:0, exclusive:'scratch',
       skinTone:'#c98b5e', hair:'#ecc766', hairStyle:'spiky',
       shirt:'#1fa3b8', shirtShade:'#127486', sleeves:'short',
@@ -7312,6 +7348,10 @@
     torsoPath(); g.fill();
     // a cape hides the back, so its pattern goes on the cape instead
     decorate(torsoPath, -102, -60, !skin.cape);
+    if(skin.collar && !skin.cape){
+      g.strokeStyle = skin.collar; g.lineWidth = 3.2; g.lineCap = 'round';
+      g.beginPath(); g.moveTo(-9.5, -100.5); g.quadraticCurveTo(0, -97, 9.5, -100.5); g.stroke();
+    }
     if(skin.number && !skin.cape){
       g.font = 'bold 17px Rubik, Arial, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
       g.lineWidth = 3; g.strokeStyle = 'rgba(255,255,255,0.85)'; g.strokeText(skin.number, 0, -80);
@@ -7528,6 +7568,17 @@
         g.quadraticCurveTo(hx - 4 + pSway, hy + 14, hx + pSway*1.4, hy + 22);
         g.quadraticCurveTo(hx + 4 + pSway, hy + 14, hx + 3, hy + 5);
         g.closePath(); g.fill();
+      } else if(skin.hairStyle === 'curly'){
+        g.fillStyle = skin.hair;
+        for(var cu = 0; cu < 13; cu++){
+          var ca = Math.PI * 0.85 + cu / 12 * Math.PI * 1.3;
+          g.beginPath(); g.arc(hx + Math.cos(ca) * 10.5, hy - 2 + Math.sin(ca) * 11.5, 3.6, 0, Math.PI * 2); g.fill();
+        }
+        for(var cv2 = 0; cv2 < 5; cv2++){                                           // down to the collar at the back
+          g.beginPath(); g.arc(hx - 8 + cv2 * 4, hy + 6 + (cv2 % 2) * 1.5, 3.3, 0, Math.PI * 2); g.fill();
+        }
+        g.fillStyle = 'rgba(255,255,255,0.08)';
+        for(var cs2 = 0; cs2 < 6; cs2++){ g.beginPath(); g.arc(hx - 7 + cs2 * 3, hy - 9 + (cs2 % 2) * 3, 1.2, 0, Math.PI * 2); g.fill(); }
       } else if(skin.hairStyle === 'spiky'){
         g.fillStyle = skin.hair;
         g.beginPath();
@@ -8716,7 +8767,7 @@
   // never while the name field is being typed in. Everything worth keeping
   // (coins, skins, name, league) is in localStorage, so a reload loses nothing.
   // 'dev' = a local or preview copy: the updater stays off entirely.
-  var BUILD_VERSION = '20261013-163406';
+  var BUILD_VERSION = '20261013-164209';
   var UPDATE_CHECK_MS = 60000;
   var UPDATE_TRIED_KEY = 'canyonChaseTriedUpdate';
   var pendingSubmits = 0;
