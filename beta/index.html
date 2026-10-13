@@ -1644,7 +1644,8 @@
       pants:'#1f4fb4', pantsShade:'#173a86', legs:'shorts', socks:'#ffffff',
       shoes:'#111111', sole:'#ffffff' },
     { id:'magic10', name:L('קוסם הסמבה', 'Samba Magician'), price:20000, ball:'soccer',
-      skinTone:'#b9805a', hair:'rgba(40,24,12,0.45)', hairStyle:'mohawk', mohawk:'#f2d16b', tattoo:'rgba(30,30,40,0.55)',
+      skinTone:'#b9805a', hair:'#2a1a0e', hairStyle:'blondtop', blond:'#f3d36e', headband:'#ffffff',
+      tattoo:'rgba(30,30,40,0.55)', neckTattoo:'rgba(30,30,40,0.7)',
       shirt:'#ffdc02', shirtShade:'#e3bf00', sleeves:'short', collar:'#009b3a',
       number:'10', numberColor:'#1f4fb4',
       pants:'#1f4fb4', pantsShade:'#173a86', legs:'shorts', socks:'#ffffff',
@@ -7576,6 +7577,22 @@
         g.quadraticCurveTo(hx - 4 + pSway, hy + 14, hx + pSway*1.4, hy + 22);
         g.quadraticCurveTo(hx + 4 + pSway, hy + 14, hx + 3, hy + 5);
         g.closePath(); g.fill();
+      } else if(skin.hairStyle === 'blondtop'){
+        var bg2 = g.createLinearGradient(0, hy - 18, 0, hy - 3);
+        bg2.addColorStop(0, '#fff1b8'); bg2.addColorStop(0.6, skin.blond); bg2.addColorStop(1, '#b8892f');
+        g.fillStyle = bg2;
+        g.beginPath();
+        g.moveTo(hx - 9.5, hy - 3);
+        g.quadraticCurveTo(hx - 12, hy - 13, hx - 7, hy - 16);
+        g.quadraticCurveTo(hx - 5, hy - 20, hx - 1, hy - 17.5);
+        g.quadraticCurveTo(hx + 2, hy - 21, hx + 5, hy - 17);
+        g.quadraticCurveTo(hx + 11, hy - 16, hx + 9.5, hy - 3);
+        g.quadraticCurveTo(hx, hy - 7, hx - 9.5, hy - 3);
+        g.closePath(); g.fill();
+        g.strokeStyle = 'rgba(150,105,30,0.55)'; g.lineWidth = 0.8;              // the texture of the styled top
+        [[-5, -15, -3, -6], [-1, -16, 0, -7], [3, -16, 3, -7], [6, -14, 5, -6]].forEach(function(s){
+          g.beginPath(); g.moveTo(hx + s[0], hy + s[1]); g.quadraticCurveTo(hx + s[0] - 1.5, hy + (s[1] + s[3]) / 2, hx + s[2], hy + s[3]); g.stroke();
+        });
       } else if(skin.hairStyle === 'mohawk'){
         g.fillStyle = skin.mohawk;
         g.beginPath();
@@ -7621,6 +7638,13 @@
         limb(g, hx + 2, hy - 1, hx + 7, hy + 7 + tail, 2.2, skin.headband);
         limb(g, hx + 2, hy - 1, hx + 9, hy + 4 - tail, 2.2, skin.headband);
       }
+    }
+
+    if(skin.neckTattoo){
+      g.strokeStyle = skin.neckTattoo; g.lineWidth = 0.9; g.lineCap = 'round';
+      g.beginPath(); g.moveTo(hx - 4.5, hy + 10); g.quadraticCurveTo(hx - 2, hy + 8.5, hx, hy + 10); g.quadraticCurveTo(hx + 2, hy + 11.5, hx + 4.5, hy + 10); g.stroke();
+      g.beginPath(); g.moveTo(hx - 3, hy + 12.3); g.lineTo(hx + 3, hy + 12.3); g.stroke();
+      g.fillStyle = skin.neckTattoo; star4(g, hx, hy + 7.6, 0.75);
     }
 
     // head extras sit on top of whatever covers the head
@@ -8789,7 +8813,7 @@
   // never while the name field is being typed in. Everything worth keeping
   // (coins, skins, name, league) is in localStorage, so a reload loses nothing.
   // 'dev' = a local or preview copy: the updater stays off entirely.
-  var BUILD_VERSION = '20261013-164443';
+  var BUILD_VERSION = '20261013-164952';
   var UPDATE_CHECK_MS = 60000;
   var UPDATE_TRIED_KEY = 'canyonChaseTriedUpdate';
   var pendingSubmits = 0;
