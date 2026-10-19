@@ -3016,7 +3016,11 @@
     var now = Date.now();
     var first = tourneyByIndex(0).start;
     var k0 = Math.floor((now - first) / (TOURNEY_EVERY * 24 * 3600000));
-    var list = [k0 - 1, k0, k0 + 1, k0 + 2].filter(function(k){ return k >= 0; }).map(tourneyByIndex);
+    // never two tournaments at once: a round that would start while the
+    // world tournament runs is skipped (the world one is set to start after
+    // the current round ends)
+    var list = [k0 - 1, k0, k0 + 1, k0 + 2, k0 + 3].filter(function(k){ return k >= 0; }).map(tourneyByIndex)
+      .filter(function(t){ return !(worldT && t.start >= worldT.start && t.start < worldT.end); });
     var cur = null, next = null, last = null;
     list.forEach(function(t){
       if(t.start <= now && now < t.end) cur = t;
@@ -3485,6 +3489,7 @@
       if(rows && rows[0]) worldT = { id: rows[0].id, start: Date.parse(rows[0].starts_at), end: Date.parse(rows[0].ends_at) };
       else if(rows) worldT = null;
       renderWorldBanner();
+      renderTourneyBanner();
     });
   }
   function fetchWorldRows(){
@@ -9556,7 +9561,7 @@
   // never while the name field is being typed in. Everything worth keeping
   // (coins, skins, name, league) is in localStorage, so a reload loses nothing.
   // 'dev' = a local or preview copy: the updater stays off entirely.
-  var BUILD_VERSION = '20261019-214941';
+  var BUILD_VERSION = '20261019-215400';
   var UPDATE_CHECK_MS = 60000;
   var UPDATE_TRIED_KEY = 'canyonChaseTriedUpdate';
   var pendingSubmits = 0;
