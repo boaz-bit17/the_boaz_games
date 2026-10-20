@@ -3557,9 +3557,12 @@
     if(now < worldT.end + 3 * 86400000) return 'over';
     return null;
   }
+  // the beta copy runs its own test tournaments (ids starting "beta"); the
+  // real game never sees them
+  var TEST_ROWS = location.pathname.indexOf('/beta/') !== -1 ? 'id=like.beta*' : 'id=not.like.beta*';
   function fetchWorld(){
     if(!isOnlineBoard) return Promise.resolve();
-    return sbGet('world_tournaments?select=id,starts_at,ends_at&order=starts_at.desc&limit=1').then(function(rows){
+    return sbGet('world_tournaments?select=id,starts_at,ends_at&' + TEST_ROWS + '&order=starts_at.desc&limit=1').then(function(rows){
       if(rows && rows[0]) worldT = { id: rows[0].id, start: Date.parse(rows[0].starts_at), end: Date.parse(rows[0].ends_at) };
       else if(rows) worldT = null;
       renderWorldBanner();
@@ -3711,7 +3714,12 @@
 
   // ---- time: Israel wall-clock -> ms
   function israelAt(y, m, d, h, mi){ var g = Date.UTC(y, m, d, h, mi); return g - jerusalemOffsetMin(g - 180 * 60000) * 60000; }
+  var SURF_TEST_DAY = 20 * 60000;
   function surfDay(i){
+    if(surfT.fast){
+      var o = surfT.fast + i * SURF_TEST_DAY;
+      return { i: i, label: surfClock(o), open: o, close: o + SURF_TEST_DAY };
+    }
     var dt = new Date(Date.UTC(surfT.y, surfT.m, surfT.d + i)), y = dt.getUTCFullYear(), m = dt.getUTCMonth(), d = dt.getUTCDate();
     var wed = dt.getUTCDay() === 3;
     return { i: i, label: d + '.' + (m + 1), open: israelAt(y, m, d, wed ? 15 : 13, wed ? 30 : 45), close: israelAt(y, m, d, 21, 0) };
@@ -3722,7 +3730,7 @@
     catch(e){ var dd = new Date(ms); o.hour = pad2(dd.getHours()); o.minute = pad2(dd.getMinutes()); }
     return (o.hour === '24' ? '00' : o.hour) + ':' + o.minute;
   }
-  function surfStartMs(){ return surfT ? israelAt(surfT.y, surfT.m, surfT.d, 0, 0) : 0; }
+  function surfStartMs(){ return surfT ? (surfT.fast || israelAt(surfT.y, surfT.m, surfT.d, 0, 0)) : 0; }
   function surfEndMs(){ return surfT ? surfDay(SURF_DAYS - 1).close : 0; }
   function surfPhase(){
     if(!surfT) return null;
@@ -3859,10 +3867,15 @@
   // ---- server
   function fetchSurf(){
     if(!isOnlineBoard) return Promise.resolve();
-    return sbGet('surf_seasons?select=id,start_day&order=start_day.desc&limit=1').then(function(rows){
+    return sbGet('surf_seasons?select=id,start_day,starts_at&' + TEST_ROWS + '&order=start_day.desc&limit=1').then(function(rows){
       if(rows && rows[0]){
         var p = String(rows[0].start_day).split('-');
         surfT = { id: rows[0].id, y: +p[0], m: +p[1] - 1, d: +p[2] };
+        // a beta test season with a start time runs fast: a heat every 3 minutes
+        if(rows[0].starts_at && /^beta/.test(rows[0].id)){
+          surfT.fast = Date.parse(rows[0].starts_at);
+          SURF_SLOT = 3 * 60000; SURF_GRACE = 60000; SURF_EARLY = 60000; SURF_LATE = 6 * 60000;
+        }
       } else if(rows) surfT = null;
       if(!surfT || !surfPhase()) return;
       return Promise.all([
@@ -10172,7 +10185,7 @@
   // never while the name field is being typed in. Everything worth keeping
   // (coins, skins, name, league) is in localStorage, so a reload loses nothing.
   // 'dev' = a local or preview copy: the updater stays off entirely.
-  var BUILD_VERSION = '20261020-081424';
+  var BUILD_VERSION = '20261020-082543';
   var UPDATE_CHECK_MS = 60000;
   var UPDATE_TRIED_KEY = 'canyonChaseTriedUpdate';
   var pendingSubmits = 0;
