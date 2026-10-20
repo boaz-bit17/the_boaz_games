@@ -3795,7 +3795,7 @@
             var hasReal = hm.some(function(sf){ return !sf.bot; });
             var results = surfResults[key] || {};
             var allIn = hm.every(function(sf){ return sf.bot || results[nameKey(sf.name)] !== undefined; });
-            var status = now < at ? 'soon' : (!hasReal ? (now >= at + SURF_GRACE ? 'done' : 'live')
+            var status = hasReal && allIn ? 'done' : now < at ? 'soon' : (!hasReal ? (now >= at + SURF_GRACE ? 'done' : 'live')
                        : (allIn || now >= at + SURF_LATE) ? 'done' : 'live');
             if(status !== 'done') allDone = false;
             var rows = hm.map(function(sf){
@@ -3949,7 +3949,7 @@
     });
     if(s.bots.length) lines.push('🤖 ' + s.bots.map(function(b){ return b.name; }).join(', ') + (s.bots.length > 1 ? L(' (בוטים) מוכנים\n', ' (bots) ready\n') : L(' (בוט) מוכן\n', ' (bot) ready\n')));
     var left = Math.max(0, Math.ceil((s.at + SURF_GRACE - Date.now()) / 1000));
-    lines.push('\n' + (Date.now() < s.at ? L('המקצה מתחיל ב-', 'The heat starts at ') + surfClock(s.at)
+    lines.push('\n' + (Date.now() < s.at ? L('מתחילים ברגע שכולם כאן (המקצה ב-' + surfClock(s.at) + ')', 'Starting as soon as everyone\'s in (heat at ' + surfClock(s.at) + ')')
                                          : L('מתחילים כשכולם כאן, או בעוד ', 'Starting when everyone\'s in, or in ') + Math.floor(left / 60) + ':' + pad2(left % 60)));
     duelSay(lines, true);
   }
@@ -3971,7 +3971,8 @@
     if(!d || !d.surf || d.started || d.going || !duelRoom) return;
     var now = Date.now(), here = surfHere(d);
     var meIn = here.some(function(p){ return p.id === surfMyId(); });
-    if(!meIn || now < d.surf.at) return;
+    if(!meIn) return;
+    // everyone's in: go right away, even before the heat's time
     if(here.length < d.surf.reals.length && now < d.surf.at + SURF_GRACE) return;
     // the best-seeded player who's here starts it for everyone
     var hostId = d.surf.seedOrder.filter(function(id){ return here.some(function(p){ return p.id === id; }); })[0];
@@ -10185,7 +10186,7 @@
   // never while the name field is being typed in. Everything worth keeping
   // (coins, skins, name, league) is in localStorage, so a reload loses nothing.
   // 'dev' = a local or preview copy: the updater stays off entirely.
-  var BUILD_VERSION = '20261020-082543';
+  var BUILD_VERSION = '20261020-161252';
   var UPDATE_CHECK_MS = 60000;
   var UPDATE_TRIED_KEY = 'canyonChaseTriedUpdate';
   var pendingSubmits = 0;
