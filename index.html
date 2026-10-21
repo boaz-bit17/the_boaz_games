@@ -3549,8 +3549,14 @@
   var worldClaimBtn = document.getElementById('worldClaimBtn');
   var worldClaimResult = document.getElementById('worldClaimResult');
 
+  // never two tournaments at once: if the world tournament and the surf tour
+  // ever overlap, the one that starts first runs and the other doesn't show
+  function worldSurfClash(){
+    return !!(worldT && surfT && worldT.start < surfEndMs() && surfStartMs() < worldT.end);
+  }
   function worldPhase(){
     if(!worldT) return null;
+    if(worldSurfClash() && surfStartMs() <= worldT.start) return null;
     var now = Date.now();
     if(now < worldT.start) return 'soon';
     if(now < worldT.end) return 'on';
@@ -3566,6 +3572,7 @@
       if(rows && rows[0]) worldT = { id: rows[0].id, start: Date.parse(rows[0].starts_at), end: Date.parse(rows[0].ends_at) };
       else if(rows) worldT = null;
       renderWorldBanner();
+      renderSurfBanner();
       renderTourneyBanner();
     });
   }
@@ -3734,6 +3741,7 @@
   function surfEndMs(){ return surfT ? surfDay(SURF_DAYS - 1).close : 0; }
   function surfPhase(){
     if(!surfT) return null;
+    if(worldSurfClash() && worldT.start < surfStartMs()) return null;
     var now = Date.now();
     if(now < surfStartMs()) return 'soon';
     if(now < surfEndMs()) return 'on';
@@ -3896,7 +3904,7 @@
           });
         }
       });
-    }).then(function(){ surfState = surfCompute(); renderSurfBanner(); renderTourneyBanner(); });
+    }).then(function(){ surfState = surfCompute(); renderSurfBanner(); renderWorldBanner(); renderTourneyBanner(); });
   }
   function surfJoin(){
     var name = playerNick();
@@ -10186,7 +10194,7 @@
   // never while the name field is being typed in. Everything worth keeping
   // (coins, skins, name, league) is in localStorage, so a reload loses nothing.
   // 'dev' = a local or preview copy: the updater stays off entirely.
-  var BUILD_VERSION = '20261021-183744';
+  var BUILD_VERSION = '20261021-184249';
   var UPDATE_CHECK_MS = 60000;
   var UPDATE_TRIED_KEY = 'canyonChaseTriedUpdate';
   var pendingSubmits = 0;
