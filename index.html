@@ -651,6 +651,7 @@
     line-height:1.35;
   }
   .tourney-banner:active{ transform:translateY(1px); }
+  .fly-badge.star-badge{ background:linear-gradient(180deg,#fff6c9,#f5c542); border-color:rgba(120,80,0,.45); color:#4a2a00; }
   .tourney-status{
     font-size:13px; font-weight:700; color:#0c3c5c;
     background:rgba(255,255,255,.45);
@@ -889,6 +890,7 @@
       </div>
     </div>
     <div class="fly-badge" id="flyBadge" hidden>🪶 <span id="flyTimeNum">0</span>s</div>
+    <div class="fly-badge star-badge" id="starBadge" hidden></div>
     <div class="fly-badge shoe-badge" id="shoeBadge" hidden>👟 <span id="shoeTimeNum">0</span>s</div>
     <div class="fly-badge" id="eventBadge" hidden></div>
     <div class="duel-bar" id="duelBar" hidden><span id="duelMe"></span><span class="vs">VS</span><span id="duelOpp"></span></div>
@@ -4926,6 +4928,7 @@
     sneakers = [];
     shoeTimer = 25 + Math.random()*10;
     shot = null; shotPlan = 0;
+    star = null; starUsed = false; smashBits = []; lastJumpTap = 0; starShake = 0;
     chests = [];
     decor = [];
     dustParticles = [];
@@ -4963,9 +4966,14 @@
     player.lane = target;
   }
 
-  function jump(){
+  function jump(held){
     if(shot){ shotStop(); return; }          // during the super shot every control stops the power bar
     if(state !== 'playing') return;
+    if(!held){
+      var tapAt = performance.now();
+      if(tapAt - lastJumpTap < STAR_TAP_MS && tryStarPower()){ lastJumpTap = 0; return; }
+      lastJumpTap = tapAt;
+    }
     if(player.flying) return;
     if(player.jumping) return;
     player.jumping = true;
@@ -5082,7 +5090,230 @@
   }
 
   // ---------- collision ----------
+  // ---------- star power ----------
+  // Running as one of the three stars (Ball Wizard, Goal Machine, Hoop King)?
+  // Once a run, a double tap calls in the other two: they burst out right
+  // beside you and sprint ahead in the other two lanes, you speed up to run
+  // with them, and for STAR_SECS everything that reaches them is smashed to
+  // pieces -- nothing can hit you meanwhile. Then you ease back to your own
+  // pace and they race off into the distance. Not in a boss run.
+  var STAR_SKINS = ['wizard10', 'goal7', 'hoops23'], STAR_SECS = 6, STAR_TAP_MS = 340;
+  var STAR_AHEAD = 160;                 // how far in front of you they run
+  var STAR_BOOST = 1.75;                // your speed while they're out
+  var STAR_CLEAR_Z = 900;               // when it ends, what's this close is smashed too
+  var star = null, starUsed = false, lastJumpTap = 0, smashBits = [], starShake = 0;
+  var starBadge = document.getElementById('starBadge');
+  function starSkinOn(){ return STAR_SKINS.indexOf(selectedSkinId) !== -1; }
+  function tryStarPower(){
+    if(!starSkinOn() || starUsed || bossMode || state !== 'playing') return false;
+    starUsed = true;
+    var ids = STAR_SKINS.filter(function(id){ return id !== selectedSkinId; });
+    star = { t: 0, ended: false, allies: ids.map(function(id){ return { id: id, x: player.x, z: 0, kick: 0 }; }) };
+    showToast(L('⭐ כוח כוכבים! ', '⭐ Star power! ') + getSkin(ids[0]).name + L(' ו', ' & ') + getSkin(ids[1]).name + L(' באים!', ' are here!'));
+    return true;
+  }
+  function starActive(){ return !!star && star.t < STAR_SECS; }
+  // 0..1: how much of the extra speed you have (up fast, down over the last 0.8s)
+  function starBoost(){
+    if(!star) return 0;
+    var t = star.t;
+    if(t < 0.5) return t / 0.5;
+    if(t < STAR_SECS - 0.8) return 1;
+    return t < STAR_SECS ? (STAR_SECS - t) / 0.8 : 0;
+  }
+
+  // what an obstacle is made of, so it breaks into the right pieces
+  var SMASH_MAT = {
+    stone:  { cols: ['#a8765a', '#86563c', '#c4927a', '#64402c'], dust: '200,160,120', h: 34 },
+    wood:   { cols: ['#b07a42', '#8a5a2a', '#cf9c5e', '#6a4320'], dust: '190,150,105', h: 110 },
+    hazard: { cols: ['#f2c230', '#1e1e1e', '#ececec', '#b07a42'], dust: '190,160,120', h: 60 },
+    metal:  { cols: ['#9aa1a9', '#626970', '#c4ccd4', '#8a5a2a'], dust: '170,160,150', h: 55 },
+    leaf:   { cols: ['#3f8f3a', '#2c6e2a', '#6cb04a', '#6a4320'], dust: '150,180,110', h: 110 },
+    fire:   { cols: ['#ffd447', '#ff8a1e', '#ff4d1a', '#3a2a22'], dust: '120,110,105', h: 60, glow: true },
+    ice:    { cols: ['#eaf8ff', '#a8dcf5', '#ffffff', '#7fbfe0'], dust: '235,248,255', h: 50 },
+    space:  { cols: ['#a3a9c2', '#6a6f88', '#cfd2e4', '#7a4fc8'], dust: '190,180,230', h: 50 },
+    sea:    { cols: ['#e8735a', '#f2a07a', '#3fb5a8', '#d9c08a'], dust: '200,235,240', h: 50 }
+  };
+  function smashMat(ob){
+    var w = ob.world && ob.world !== 'canyon' ? ob.world : null;
+    if(w === 'ice' || w === 'space' || w === 'sea') return SMASH_MAT[w];
+    switch(ob.type){
+      case 'barrier': return SMASH_MAT.hazard;
+      case 'beam': return w === 'jungle' ? SMASH_MAT.leaf : SMASH_MAT.wood;
+      case 'vines': return SMASH_MAT.leaf;
+      case 'cart': return SMASH_MAT.metal;
+      case 'fire': return SMASH_MAT.fire;
+      default: return SMASH_MAT.stone;
+    }
+  }
+  // yours: you ran through it, so the pieces fly on ahead of you
+  function smashObstacle(ob, yours){
+    var x = LANES[ob.lane] || 0, m = smashMat(ob), hi = ob.type === 'beam' || ob.type === 'vines', push = yours ? speed + 250 : 0;
+    if(smashBits.length > 260) smashBits.splice(0, smashBits.length - 200);
+    // chunks: jagged pieces, kicked forward and out, tumbling, bouncing on the track
+    for(var k = 0; k < 15; k++){
+      var n = 5 + Math.floor(Math.random() * 3), pts = [];
+      for(var v = 0; v < n; v++) pts.push(0.55 + Math.random() * 0.45);
+      smashBits.push({ x: x + (Math.random() - 0.5) * 70, z: ob.z + (Math.random() - 0.5) * 30,
+        y: (hi ? 70 : 6) + Math.random() * m.h,
+        vx: (Math.random() - 0.5) * 640, vz: 150 + Math.random() * 520 + push, vy: 180 + Math.random() * 560,
+        size: (k < 4 ? 16 : 7) + Math.random() * 12, rot: Math.random() * 6.3, spin: (Math.random() - 0.5) * 16,
+        pts: pts, col: m.cols[k % m.cols.length], glow: m.glow && k % 2 === 0, life: 1.6 + Math.random() * 0.5 });
+    }
+    // a cloud of dust where it stood
+    for(var d = 0; d < 6; d++){
+      smashBits.push({ dust: true, x: x + (Math.random() - 0.5) * 90, z: ob.z + (Math.random() - 0.5) * 40, y: 10 + Math.random() * (m.h * 0.8),
+        vx: (Math.random() - 0.5) * 120, vy: 40 + Math.random() * 60, r: 18 + Math.random() * 16, col: m.dust, life: 1 });
+    }
+    starShake = Math.max(starShake, 0.22);
+  }
+  // mine: what's in your own lane you smash yourself, when it reaches you
+  function smashAll(maxZ, mine){
+    for(var i = obstacles.length - 1; i >= 0; i--){
+      var ob = obstacles[i];
+      if(ob.z > (ob.lane === player.lane && mine ? COLLIDE_Z + 30 : maxZ) || ob.z < -20) continue;
+      if(ob.type === 'chasm'){ ob.resolved = true; continue; }   // a hole can't be smashed: you fly over it with them
+      var yours = ob.lane === player.lane && mine;
+      smashObstacle(ob, yours);
+      if(yours){ starShake = 0.4; obstacles.splice(i, 1); continue; }
+      var near = star.allies[0], best = 1e9;
+      star.allies.forEach(function(a){ var dd = Math.abs(a.x - (LANES[ob.lane] || 0)); if(dd < best){ best = dd; near = a; } });
+      near.kick = 1;
+      obstacles.splice(i, 1);
+    }
+  }
+  function updateStar(dt){
+    starShake = Math.max(0, starShake - dt * 1.2);
+    for(var b = smashBits.length - 1; b >= 0; b--){
+      var sb = smashBits[b];
+      sb.life -= dt * (sb.dust ? 0.9 : 1);
+      if(sb.life <= 0){ smashBits.splice(b, 1); continue; }
+      if(sb.dust){ sb.x += sb.vx * dt; sb.y += sb.vy * dt; sb.vy *= 1 - dt * 2; sb.r += dt * 60; sb.z -= speed * dt * 0.85; continue; }
+      sb.x += sb.vx * dt; sb.z += (sb.vz - speed) * dt; sb.y += sb.vy * dt; sb.vy -= 1700 * dt;
+      sb.rot += sb.spin * dt;
+      if(sb.y < 0){
+        sb.y = 0; sb.vy = Math.abs(sb.vy) > 140 ? -sb.vy * 0.32 : 0;
+        sb.vx *= 0.55; sb.vz *= 0.45; sb.spin *= 0.5;      // it hits the track and skids
+      }
+    }
+    if(!star) return;
+    star.t += dt;
+    var others = [0, 1, 2].filter(function(l){ return l !== player.lane; });
+    star.allies.forEach(function(a, i){
+      a.x += (LANES[others[i]] - a.x) * Math.min(1, dt * 10);
+      a.kick = Math.max(0, a.kick - dt * 4);
+      if(star.t < STAR_SECS){
+        var goal = STAR_AHEAD * Math.min(1, star.t / 0.45) + Math.sin(star.t * 5 + i * 2) * 14;
+        a.z += (goal - a.z) * Math.min(1, dt * 9);
+      } else a.z += speed * 2.2 * dt;          // time's up: they race away
+    });
+    if(star.t < STAR_SECS){
+      // whatever reaches them is smashed -- in every lane, yours included
+      smashAll(Math.max(140, Math.min(star.allies[0].z, star.allies[1].z)) + 70, true);
+    } else if(!star.ended){
+      star.ended = true;
+      smashAll(STAR_CLEAR_Z);                  // a clear stretch to get your own pace back
+    }
+    if(star.t > STAR_SECS && star.allies.every(function(a){ return a.z > ZFAR; })) star = null;
+  }
+  function renderStarBadge(){
+    var on = starActive(), ready = starSkinOn() && !starUsed && !bossMode;
+    starBadge.hidden = !(on || ready);
+    if(on) starBadge.textContent = '⭐ ' + Math.ceil(STAR_SECS - star.t) + 's';
+    else if(ready) starBadge.textContent = L('⭐ לחיצה כפולה = כוח כוכבים', '⭐ Double tap = star power');
+  }
+  function drawStarAlly(a){
+    if(a.z > ZFAR) return;
+    var p = project(a.x, Math.max(-20, a.z), 0);
+    if(p.scale <= 0.03) return;
+    var fade = star.t > STAR_SECS ? Math.max(0, 1 - (a.z - STAR_AHEAD) / (ZFAR * 0.7)) : Math.min(1, star.t / 0.2);
+    ctx.save();
+    ctx.translate(p.x, p.y);
+    var sc = p.sp * 1.2;
+    ctx.scale(sc, sc);
+    ctx.globalAlpha = fade;
+    // golden glow, bigger when they've just smashed something
+    var gr = 78 + a.kick * 40;
+    var gg = ctx.createRadialGradient(0, -62, 0, 0, -62, gr);
+    gg.addColorStop(0, 'rgba(255,220,90,' + (0.5 + a.kick * 0.3).toFixed(3) + ')'); gg.addColorStop(1, 'rgba(255,200,60,0)');
+    ctx.fillStyle = gg; ctx.beginPath(); ctx.arc(0, -62, gr, 0, Math.PI * 2); ctx.fill();
+    // speed lines streaming back toward us
+    ctx.strokeStyle = 'rgba(255,240,170,0.8)'; ctx.lineWidth = 3; ctx.lineCap = 'round';
+    for(var k = 0; k < 6; k++){
+      var f = (elapsed * 5 + k / 6) % 1, sx = (k % 2 ? 1 : -1) * (26 + (k % 3) * 9);
+      ctx.globalAlpha = fade * (1 - f);
+      ctx.beginPath(); ctx.moveTo(sx, -20 - k * 16 + f * 10); ctx.lineTo(sx * 1.25, -10 - k * 16 + f * 60); ctx.stroke();
+    }
+    ctx.globalAlpha = fade;
+    drawRunnerFigure(ctx, getSkin(a.id), { phase: elapsed * 18, mode: 'run', duck: 0, t: elapsed });
+    ctx.font = 'bold 15px Rubik, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.lineWidth = 4; ctx.strokeStyle = 'rgba(40,20,0,0.85)'; ctx.fillStyle = '#ffd447';
+    var tag = '⭐ ' + getSkin(a.id).name;
+    ctx.strokeText(tag, 0, -150); ctx.fillText(tag, 0, -150);
+    ctx.restore();
+  }
+  // the rush of running at their speed: streaks flying out from the vanishing point
+  function drawStarRush(k){
+    var cx = W / 2, cy = H * HORIZON_Y_FRAC, R = Math.max(W, H);
+    ctx.save();
+    ctx.lineCap = 'round';
+    for(var i = 0; i < 22; i++){
+      var ang = i * 2.399 + 0.3, f = (elapsed * 2.6 + i * 0.137) % 1;
+      var r0 = R * (0.18 + f * 0.55), r1 = r0 + R * (0.06 + f * 0.16);
+      ctx.strokeStyle = 'rgba(255,248,215,' + (0.32 * k * f).toFixed(3) + ')';
+      ctx.lineWidth = 1 + f * 3;
+      ctx.beginPath(); ctx.moveTo(cx + Math.cos(ang) * r0, cy + Math.sin(ang) * r0 * 0.7);
+      ctx.lineTo(cx + Math.cos(ang) * r1, cy + Math.sin(ang) * r1 * 0.7); ctx.stroke();
+    }
+    ctx.restore();
+  }
+  function drawSmashBits(){
+    // dust first, the chunks over it
+    smashBits.forEach(function(sb){
+      if(!sb.dust || sb.z < -FOCAL * 0.6) return;
+      var p = project(sb.x, sb.z, sb.y);
+      if(p.scale <= 0.02) return;
+      var r = sb.r * p.sp * 1.9, a = Math.min(1, sb.life) * 0.75 * Math.max(0, Math.min(1, (sb.z + 20) / 120));
+      var g = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, r);
+      g.addColorStop(0, 'rgba(' + sb.col + ',' + a.toFixed(3) + ')'); g.addColorStop(1, 'rgba(' + sb.col + ',0)');
+      ctx.fillStyle = g; ctx.beginPath(); ctx.arc(p.x, p.y, r, 0, Math.PI * 2); ctx.fill();
+    });
+    smashBits.forEach(function(sb){
+      if(sb.dust || sb.z < -FOCAL * 0.6) return;
+      var p = project(sb.x, sb.z, sb.y);
+      if(p.scale <= 0.02) return;
+      var s = Math.min(sb.size * p.sp, 30 * VIEW), near = Math.max(0, Math.min(1, (sb.z + 30) / 110));   // fades as it flies past us
+      if(s < 0.6 || near <= 0) return;
+      // its shadow on the track
+      var gp = project(sb.x, sb.z, 0);
+      ctx.globalAlpha = near * Math.min(1, sb.life) * 0.3 / (1 + sb.y * 0.01);
+      ctx.fillStyle = '#1a0d08';
+      ctx.beginPath(); ctx.ellipse(gp.x, gp.y, s * 0.9, s * 0.28, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.globalAlpha = near * Math.min(1, sb.life * 1.5);
+      ctx.save();
+      ctx.translate(p.x, p.y); ctx.rotate(sb.rot);
+      if(sb.glow){ ctx.shadowColor = sb.col; ctx.shadowBlur = s * 1.5; }
+      ctx.fillStyle = sb.col;
+      ctx.beginPath();
+      for(var v = 0; v < sb.pts.length; v++){
+        var an = v / sb.pts.length * Math.PI * 2, rr = s * sb.pts[v];
+        if(v) ctx.lineTo(Math.cos(an) * rr, Math.sin(an) * rr * 0.8); else ctx.moveTo(Math.cos(an) * rr, Math.sin(an) * rr * 0.8);
+      }
+      ctx.closePath(); ctx.fill();
+      ctx.shadowBlur = 0;
+      // a dark edge and a lit top face, so it reads as a solid piece
+      ctx.strokeStyle = 'rgba(20,10,5,0.45)'; ctx.lineWidth = Math.max(0.6, s * 0.12);
+      ctx.stroke();
+      ctx.fillStyle = 'rgba(255,255,255,0.22)';
+      ctx.beginPath(); ctx.moveTo(-s * 0.5, -s * 0.15); ctx.lineTo(s * 0.1, -s * 0.6); ctx.lineTo(s * 0.55, -s * 0.2); ctx.closePath(); ctx.fill();
+      ctx.restore();
+    });
+    ctx.globalAlpha = 1;
+  }
+
   function evaluateCollision(ob){
+    if(starActive()) return true; // the stars smash the way clear
     if(player.flying) return true; // feather power-up: brief invincible flight
     if(evtIs('ghost')) return true; // ghost event: you drift right through
     if(ob.lane !== player.lane) return true; // different lane, always safe
@@ -5202,6 +5433,7 @@
     // so the run keeps getting harder deep into a long game instead of leveling off
     speed = Math.min(900, 480 + difficultyProgress()*0.17);
     if(bossMode) speed = Math.min(BOSS_SPEED_MAX, speed * BOSS_SPEED_MULT);
+    if(star) speed *= 1 + (STAR_BOOST - 1) * starBoost();   // running with the stars
     distance += speed*dt;
 
     // lane interpolation
@@ -5256,6 +5488,8 @@
       if(evtIs('chaser')){ spawnGap = Math.max(0.3, spawnGap * 0.6); bossThrow = 0.35; }   // he throws extra
       spawnTimer = spawnGap;
     }
+
+    updateStar(dt);
 
     // obstacles
     for(var i=obstacles.length-1;i>=0;i--){
@@ -5406,6 +5640,7 @@
     coinNum.textContent = coinCount;
     flyBadge.hidden = !player.flying;
     shoeBadge.hidden = !(player.shoes > 0);
+    renderStarBadge();
     if(player.shoes > 0) shoeTimeNum.textContent = Math.ceil(player.shoes);
     if(player.flying) flyTimeNum.textContent = Math.max(0, Math.ceil(player.flyTimer));
   }
@@ -8946,6 +9181,8 @@
 
   function draw(){
     ctx.clearRect(0,0,W,H);
+    var shake = starShake > 0 && state === 'playing';
+    if(shake){ ctx.save(); ctx.translate(W/2 + (Math.random() - 0.5) * starShake * 36, H/2 + (Math.random() - 0.5) * starShake * 26); ctx.scale(1.03, 1.03); ctx.translate(-W/2, -H/2); }
     // the flip event turns the whole world upside down
     var flipped = worldFlipped() && state === 'playing';
     if(flipped){ ctx.save(); ctx.translate(0, H); ctx.scale(1, -1); }
@@ -8968,9 +9205,12 @@
     scratchCards.forEach(function(sc){ if(!sc.collected) entities.push({z:sc.z, draw:function(){drawScratchTicket(sc);}}); });
     portals.forEach(function(pt){ if(!pt.used) entities.push({z:pt.z, draw:function(){drawPortal(pt);}}); });
     if(shot) entities.push({ z: SHOT_Z, draw: drawShotTarget });
+    if(star) star.allies.forEach(function(a){ entities.push({ z: a.z, draw: function(){ drawStarAlly(a); } }); });
     entities.sort(function(a,b){ return b.z - a.z; });
     entities.forEach(function(e){ e.draw(); });
 
+    if(smashBits.length) drawSmashBits();
+    if(star && starBoost() > 0 && state === 'playing') drawStarRush(starBoost());
     drawFootPuffs();
     drawPet();
     drawEventsFront();
@@ -8995,6 +9235,7 @@
     ctx.fillStyle = vg;
     ctx.fillRect(0,0,W,H);
     if(flipped) ctx.restore();
+    if(shake) ctx.restore();
   }
 
   // ---------- main loop ----------
@@ -9023,7 +9264,7 @@
     switch(e.key){
       case 'ArrowLeft': case 'a': case 'A': laneMove(-1); e.preventDefault(); break;
       case 'ArrowRight': case 'd': case 'D': laneMove(1); e.preventDefault(); break;
-      case 'ArrowUp': case 'w': case 'W': case ' ': jump(); e.preventDefault(); break;
+      case 'ArrowUp': case 'w': case 'W': case ' ': jump(e.repeat); e.preventDefault(); break;
       case 'ArrowDown': case 's': case 'S': duckStart(); e.preventDefault(); break;
     }
   }, {passive:false});
@@ -9135,7 +9376,7 @@
   // never while the name field is being typed in. Everything worth keeping
   // (coins, skins, name, league) is in localStorage, so a reload loses nothing.
   // 'dev' = a local or preview copy: the updater stays off entirely.
-  var BUILD_VERSION = '20261013-204934';
+  var BUILD_VERSION = '20261021-182723';
   var UPDATE_CHECK_MS = 60000;
   var UPDATE_TRIED_KEY = 'canyonChaseTriedUpdate';
   var pendingSubmits = 0;
