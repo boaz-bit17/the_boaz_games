@@ -651,6 +651,37 @@
     line-height:1.35;
   }
   .tourney-banner:active{ transform:translateY(1px); }
+  /* ---------- surf tour ---------- */
+  .tourney-banner.surf-banner{ background:linear-gradient(135deg,#00b4d8,#0077b6 55%,#023e8a); border-color:rgba(2,40,80,.5); text-shadow:0 1px 2px rgba(0,0,0,.35); }
+  .tourney-banner.surf-banner.is-now{ background:linear-gradient(135deg,#ff3b3b,#c8102e 60%,#7a0c22); animation:surfPulse 1s ease-in-out infinite; }
+  @keyframes surfPulse{ 0%,100%{ transform:scale(1); } 50%{ transform:scale(1.03); } }
+  .surf-join{ margin:0 0 12px; text-align:center; }
+  .surf-join .boss-go, .surf-go{ width:100%; margin-top:8px; }
+  .surf-mine{ background:linear-gradient(135deg,#e0f7ff,#b6e6f7); border:2px solid rgba(12,60,92,.3); border-radius:12px; padding:8px 10px; margin:0 0 12px; }
+  .surf-mine .mission-title{ margin-bottom:4px; }
+  .surf-heat{ background:rgba(255,255,255,.45); border:1px solid rgba(12,60,92,.2); border-radius:10px; padding:6px 8px; margin:0 0 6px; }
+  .surf-heat.is-live{ border-color:#c8102e; box-shadow:0 0 0 2px rgba(200,16,46,.25); }
+  .surf-heat-label{ font-size:11px; font-weight:800; color:#0c3c5c; margin-bottom:2px; }
+  .surf-heat-row{ display:grid; grid-template-columns:1fr auto; gap:8px; align-items:center; font-size:13px; padding:3px 4px; border-radius:6px; }
+  .surf-heat-row.is-you{ background:rgba(255,212,71,.5); font-weight:800; }
+  .surf-heat-row.is-through .surf-heat-total::after{ content:' ✅'; }
+  .surf-heat-row.is-out{ opacity:.5; }
+  .surf-heat-name{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .surf-heat-total{ font-weight:800; direction:ltr; }
+  .surf-round-title{ font-weight:800; font-size:13px; margin:10px 0 4px; color:var(--ink); }
+  .surf-draw{ margin-top:12px; }
+  #surfTable{ margin-top:4px; }
+  /* ---------- world tournament ---------- */
+  .tourney-banner.world-banner{ background:linear-gradient(135deg,#f2b705,#c0392b 55%,#6c1b8a); border-color:rgba(70,20,10,.5); text-shadow:0 1px 2px rgba(0,0,0,.4); }
+  .world-prizes{ display:grid; gap:6px; margin:0 0 12px; }
+  .world-prize{ font-weight:700; font-size:13px; line-height:1.4; border-radius:10px; padding:7px 10px; border:1px solid rgba(0,0,0,.15); color:#2a150f; }
+  .world-prize.p1{ background:linear-gradient(135deg,#fff3b0,#f5c542); }
+  .world-prize.p2{ background:linear-gradient(135deg,#f4f6f8,#c4ccd4); }
+  .world-prize.p3{ background:linear-gradient(135deg,#ffe0c2,#d79a63); }
+  .world-claim{ margin:0 0 12px; text-align:center; }
+  .world-claim .boss-go{ width:100%; }
+  #worldClaimResult{ white-space:pre-line; margin-top:8px; }
+  .world-star-note{ font-size:13px; margin:10px 0 4px; }
   .fly-badge.star-badge{ background:linear-gradient(180deg,#fff6c9,#f5c542); border-color:rgba(120,80,0,.45); color:#4a2a00; }
   .tourney-status{
     font-size:13px; font-weight:700; color:#0c3c5c;
@@ -910,6 +941,8 @@
       </div>
       <button class="boss-banner" id="bossBtn" type="button" hidden></button>
       <button class="boss-banner thu-chest-btn" id="thuChestBtn" type="button" hidden></button>
+      <button class="tourney-banner surf-banner" id="surfBanner" type="button" hidden></button>
+      <button class="tourney-banner world-banner" id="worldBanner" type="button" hidden></button>
       <button class="tourney-banner" id="tourneyBanner" type="button" hidden></button>
       <div class="wallet-row">
         <span class="wallet-amt"><span class="coin-dot"></span><span id="walletNum">0</span></span>
@@ -1140,6 +1173,52 @@
     </div>
   </div>
 
+  <div class="overlay" id="surfOverlay" hidden>
+    <div class="tablet">
+      <h1>🏄 סבב הגלישה</h1>
+      <p class="tagline">4 תחרויות · מקצים חיים ראש בראש, כל יום מ-13:45 (ברביעי מ-15:30) · המשחק אומר לך מתי המקצה שלך ונגד מי</p>
+      <div class="tourney-status" id="surfStatus"></div>
+      <div class="surf-join" id="surfJoin"></div>
+      <div class="world-claim" id="surfClaim" hidden>
+        <button class="boss-banner boss-go" id="surfClaimBtn" type="button"></button>
+        <div class="chest-open-result pass-claim-result" id="surfClaimResult" hidden></div>
+      </div>
+      <div class="surf-mine" id="surfMineBox" hidden>
+        <div class="mission-title" id="surfMineTitle"></div>
+        <div id="surfMineList"></div>
+      </div>
+      <div class="world-prizes">
+        <div class="world-prize p1">🥇 אלוף הסבב: הסקינים "מלך האוויר" ו"אגדת הצינור"</div>
+        <div class="world-prize p2">🥈 מקום 2: הסקין "מלך האוויר"</div>
+      </div>
+      <div class="mission-title">טבלת הסבב</div>
+      <div class="leaderboard-list" id="surfTable"></div>
+      <div class="surf-draw" id="surfDraw"></div>
+      <p class="mission-sub">כל תחרות: שמינית גמר (מקצים של 4, שניים עולים), רבע גמר, חצי גמר וגמר (אחד על אחד) -- שלב אחד בכל יום. בכל מקצה כולם רצים יחד באותו מסלול, ומי שעושה יותר נקודות עולה. מי שלא מגיע -- מפסיד. כל מקום נותן נקודות לטבלה: ניצחון 10,000 · גמר 7,800 · חצי גמר 6,085 · רבע גמר 4,745 · שמינית 3,320 / 1,330. התחרות האחרונה שווה פי 1.5.</p>
+      <button class="back-btn" id="closeSurfBtn" type="button">חזרה</button>
+    </div>
+  </div>
+
+  <div class="overlay" id="worldOverlay" hidden>
+    <div class="tablet">
+      <h1>🌍 טורניר עולמי</h1>
+      <p class="tagline">10 ימים · כולם נגד כולם · סכום כל הריצות שלך</p>
+      <div class="tourney-status" id="worldStatus"></div>
+      <div class="world-prizes">
+        <div class="world-prize p1">🥇 מקום 1: תיבה מיוחדת + שלושת סקיני הכוכבים (קוסם הכדור, מכונת השערים, מלך הסלים) + 💎 7 יהלומים</div>
+        <div class="world-prize p2">🥈 מקום 2: 2 תיבות מיוחדות + סקין כוכב אחד מהשלושה, אקראי</div>
+        <div class="world-prize p3">🥉 מקום 3: תיבה מיוחדת</div>
+      </div>
+      <div class="world-claim" id="worldClaim" hidden>
+        <button class="boss-banner boss-go" id="worldClaimBtn" type="button"></button>
+        <div class="chest-open-result pass-claim-result" id="worldClaimResult" hidden></div>
+      </div>
+      <div class="leaderboard-list" id="worldList"></div>
+      <p class="mission-sub world-star-note">⭐ כוח כוכבים: רצים עם קוסם הכדור, מכונת השערים או מלך הסלים? לחיצה כפולה בריצה (פעם אחת בכל ריצה) -- שני הכוכבים האחרים מגיעים לצידך, רצים מהר מאוד ושוברים כל מה שבדרך!</p>
+      <button class="back-btn" id="closeWorldBtn" type="button">חזרה</button>
+    </div>
+  </div>
+
   <div class="overlay" id="tourneyOverlay" hidden>
     <div class="tablet">
       <h1>רגולר נגד גופי</h1>
@@ -1225,6 +1304,18 @@
     : (/^(he|iw)\b/i.test(navigator.language || '') ? 'he' : 'en');
   function L(he, en){ return LANG === 'en' ? en : he; }
   var I18N_HTML = {
+   "🏄 סבב הגלישה": "🏄 Surf Tour",
+   "4 תחרויות · מקצים חיים ראש בראש, כל יום מ-13:45 (ברביעי מ-15:30) · המשחק אומר לך מתי המקצה שלך ונגד מי": "4 events · live head-to-head heats, every day from 13:45 (Wednesday from 15:30) · the game tells you when your heat is and who you race",
+   "🥇 אלוף הסבב: הסקינים \"מלך האוויר\" ו\"אגדת הצינור\"": "🥇 Tour champion: the Air King and Pipe Legend skins",
+   "🥈 מקום 2: הסקין \"מלך האוויר\"": "🥈 2nd place: the Air King skin",
+   "טבלת הסבב": "Tour table",
+   "כל תחרות: שמינית גמר (מקצים של 4, שניים עולים), רבע גמר, חצי גמר וגמר (אחד על אחד) -- שלב אחד בכל יום. בכל מקצה כולם רצים יחד באותו מסלול, ומי שעושה יותר נקודות עולה. מי שלא מגיע -- מפסיד. כל מקום נותן נקודות לטבלה: ניצחון 10,000 · גמר 7,800 · חצי גמר 6,085 · רבע גמר 4,745 · שמינית 3,320 / 1,330. התחרות האחרונה שווה פי 1.5.": "Every event: round of 16 (heats of 4, two go through), quarterfinals, semifinals and the final (one on one) -- one round a day. In every heat everyone races together on the same track, and the higher score goes through. No-shows lose. Every place earns tour points: win 10,000 · final 7,800 · semifinal 6,085 · quarterfinal 4,745 · round of 16 3,320 / 1,330. The last event is worth 1.5x.",
+   "🌍 טורניר עולמי": "🌍 World Tournament",
+   "10 ימים · כולם נגד כולם · סכום כל הריצות שלך": "10 days · everyone against everyone · the total of all your runs",
+   "🥇 מקום 1: תיבה מיוחדת + שלושת סקיני הכוכבים (קוסם הכדור, מכונת השערים, מלך הסלים) + 💎 7 יהלומים": "🥇 1st place: a special chest + all three star skins (Ball Wizard, Goal Machine, Hoop King) + 💎 7 diamonds",
+   "🥈 מקום 2: 2 תיבות מיוחדות + סקין כוכב אחד מהשלושה, אקראי": "🥈 2nd place: 2 special chests + one of the three star skins, at random",
+   "🥉 מקום 3: תיבה מיוחדת": "🥉 3rd place: a special chest",
+   "⭐ כוח כוכבים: רצים עם קוסם הכדור, מכונת השערים או מלך הסלים? לחיצה כפולה בריצה (פעם אחת בכל ריצה) -- שני הכוכבים האחרים מגיעים לצידך, רצים מהר מאוד ושוברים כל מה שבדרך!": "⭐ Star power: running as Ball Wizard, Goal Machine or Hoop King? Double tap during a run (once per run) -- the other two stars show up beside you, run super fast and smash everything in the way!",
    "מרדף בקניון · Canyon Surfers": "Canyon Surfers",
    "ניקוד": "Score",
    "שיא": "Best",
@@ -1705,6 +1796,23 @@
       surfboard:'#7fffd4', boardStripe:'#ff5ab4',
       aura:'#ff5ab4', sparkle:'#fff4c2',
       splash:'#ff5ab4', boardGlow:'#ff5ab4' },
+    // ---- surf tour prizes: pro-surfer looks under our own names.
+    // Air King: the Brazilian champion -- tanned, dark curls, the yellow
+    // leader's jersey over black boardshorts, a white board with green.
+    { id:'airking', name:L('מלך האוויר', 'Air King'), price:0, exclusive:'surftour', rides:true,
+      skinTone:'#c08a5e', hair:'#2e1c10', hairStyle:'curly',
+      shirt:'#ffd21f', shirtShade:'#e0b000', sleeves:'short',
+      pants:'#17181b', pantsShade:'#0a0a0c', legs:'shorts',
+      shoes:'#c08a5e', sole:'#9a6a44',
+      rideBoard:'#ffffff', rideStripe:'#00a03c', boardGlow:'#ffd21f', splash:'#7fe3ff', sparkle:'#fff4b0' },
+    // Pipe Legend: the Hawaiian -- sun-bleached sandy hair, a full black
+    // wetsuit, a white board with a red stripe.
+    { id:'pipelegend', name:L('אגדת הצינור', 'Pipe Legend'), price:0, exclusive:'surftour', rides:true,
+      skinTone:'#e2ab80', hair:'#d1aa6a', hairStyle:'short',
+      shirt:'#141619', shirtShade:'#08090a', sleeves:'long',
+      pants:'#141619', pantsShade:'#08090a', legs:'long',
+      shoes:'#e2ab80', sole:'#b98a52',
+      rideBoard:'#f6f3ea', rideStripe:'#c8102e', boardGlow:'#7fe3ff', splash:'#bfe9ff', sparkle:'#ffffff' },
     // the Thursday boss prize: rides its board instead of running
     { id:'bossslayer', name:L('קוטל הבוס', 'Boss Slayer'),   price:0, exclusive:'boss', rides:true,
       skinTone:'#c98b5e', hair:'#ffffff', hairStyle:'spiky',
@@ -2290,7 +2398,7 @@
       // battle-pass skins: only this season's (and ones you've earned)
       if(skin.exclusive === 'pass' && !owned && skin.id !== passSeason().skinId) return;
       var card = document.createElement('div');
-      card.className = 'skin-card' + (skin.price >= 10000 || skin.exclusive === 'tournament' || skin.exclusive === 'boss' || skin.exclusive === 'pass' ? ' is-premium' : '');
+      card.className = 'skin-card' + (skin.price >= 10000 || skin.exclusive === 'tournament' || skin.exclusive === 'boss' || skin.exclusive === 'pass' || skin.exclusive === 'surftour' ? ' is-premium' : '');
 
       // mini preview of the actual runner in this outfit, mid-stride
       var preview = document.createElement('canvas');
@@ -2318,7 +2426,8 @@
         btn.classList.add('is-locked');
         btn.textContent = skin.exclusive === 'tournament' ? L('🏆 רק מהטורניר', '🏆 Tournament only')
           : skin.exclusive === 'pass' ? L('🎫 שלב 30 בבאטל פס', '🎫 Battle pass tier 30')
-          : skin.exclusive === 'boss' ? L('☠️ רק מניצחון על הבוס', '☠️ Beat the boss') : L('🎟️ רק מכרטיס גירוד', '🎟️ Scratch card only');
+          : skin.exclusive === 'boss' ? L('☠️ רק מניצחון על הבוס', '☠️ Beat the boss')
+          : skin.exclusive === 'surftour' ? L('🏄 רק מסבב הגלישה', '🏄 Surf tour only') : L('🎟️ רק מכרטיס גירוד', '🎟️ Scratch card only');
         btn.disabled = true;
       } else if(!owned){
         var afford = wallet >= skin.price;
@@ -2906,6 +3015,7 @@
   var TOURNEY_DAYS = 6;                           // each tournament lasts 6 days
   var TOURNEY_EVERY = 20;                         // a new one starts every 20 days
   var TOURNEY_FIRST = { y: 2026, m: 8, d: 29 };   // the first: 29.9.2026 (months are 0-based)
+  var TOURNEY_SKIP = ['t2'];                      // called off, once: the one of 8.11.2026
   var TOURNEY_REPEAT_COINS = 5000;
   var TOURNEY_KEY = 'canyonChaseTourneyV1';
   var TEAM_NAMES = { regular: L('רגולר', 'Regular'), goofy: L('גופי', 'Goofy') };
@@ -2978,7 +3088,13 @@
     var now = Date.now();
     var first = tourneyByIndex(0).start;
     var k0 = Math.floor((now - first) / (TOURNEY_EVERY * 24 * 3600000));
-    var list = [k0 - 1, k0, k0 + 1, k0 + 2].filter(function(k){ return k >= 0; }).map(tourneyByIndex);
+    // never two tournaments at once: a round that would start while the
+    // world tournament runs is skipped (the world one is set to start after
+    // the current round ends)
+    var list = [k0 - 1, k0, k0 + 1, k0 + 2, k0 + 3].filter(function(k){ return k >= 0; }).map(tourneyByIndex)
+      .filter(function(t){ return TOURNEY_SKIP.indexOf(t.id) === -1 &&
+                                  !(worldT && t.start >= worldT.start && t.start < worldT.end) &&
+                                  !(surfT && t.start >= surfStartMs() && t.start < surfEndMs()); });
     var cur = null, next = null, last = null;
     list.forEach(function(t){
       if(t.start <= now && now < t.end) cur = t;
@@ -3410,6 +3526,693 @@
     refreshTourneyBanner();
   }
   tourneyBanner.addEventListener('click', openTourney);
+
+  // ---------- world tournament ----------
+  // Every player against every player for 10 days: the total of all your runs
+  // in that window. It starts when a row goes into world_tournaments
+  // (id, starts_at, ends_at -- added by hand in Supabase); world_standings
+  // adds up the scores table over that window, per name. Prizes, claimed on
+  // this device once it's over: 1st -- a special chest, Ball Wizard, Goal
+  // Machine, Hoop King and 7 diamonds; 2nd -- two special chests and one of
+  // those three skins at random; 3rd -- a special chest. The banner shows
+  // from the moment it's announced until 3 days after it ends.
+  var WORLD_KEY = 'canyonChaseWorldV1', WORLD_STAR_SKINS = ['wizard10', 'goal7', 'hoops23'];
+  var worldSave = { claimed: {} };
+  try { var ws0 = JSON.parse(localStorage.getItem(WORLD_KEY) || 'null'); if(ws0 && ws0.claimed) worldSave = ws0; } catch(e){}
+  function saveWorld(){ try { localStorage.setItem(WORLD_KEY, JSON.stringify(worldSave)); } catch(e){} }
+  var worldT = null, worldRows = null;
+  var worldBanner = document.getElementById('worldBanner');
+  var worldOverlay = document.getElementById('worldOverlay');
+  var worldStatus = document.getElementById('worldStatus');
+  var worldList = document.getElementById('worldList');
+  var worldClaim = document.getElementById('worldClaim');
+  var worldClaimBtn = document.getElementById('worldClaimBtn');
+  var worldClaimResult = document.getElementById('worldClaimResult');
+
+  function worldPhase(){
+    if(!worldT) return null;
+    var now = Date.now();
+    if(now < worldT.start) return 'soon';
+    if(now < worldT.end) return 'on';
+    if(now < worldT.end + 3 * 86400000) return 'over';
+    return null;
+  }
+  // the beta copy runs its own test tournaments (ids starting "beta"); the
+  // real game never sees them
+  var TEST_ROWS = location.pathname.indexOf('/beta/') !== -1 ? 'id=like.beta*' : 'id=not.like.beta*';
+  function fetchWorld(){
+    if(!isOnlineBoard) return Promise.resolve();
+    return sbGet('world_tournaments?select=id,starts_at,ends_at&' + TEST_ROWS + '&order=starts_at.desc&limit=1').then(function(rows){
+      if(rows && rows[0]) worldT = { id: rows[0].id, start: Date.parse(rows[0].starts_at), end: Date.parse(rows[0].ends_at) };
+      else if(rows) worldT = null;
+      renderWorldBanner();
+      renderTourneyBanner();
+    });
+  }
+  function fetchWorldRows(){
+    if(!worldT) return Promise.resolve(null);
+    return sbGet('world_standings?select=name,total,runs&tid=eq.' + encodeURIComponent(worldT.id) + '&order=total.desc&limit=50').then(function(rows){
+      if(rows) worldRows = rows;
+      return worldRows;
+    });
+  }
+  function worldMyPlace(){
+    if(!worldRows) return 0;
+    var me = playerNick();
+    for(var i = 0; i < worldRows.length; i++) if(me && sameName(worldRows[i].name, me)) return i + 1;
+    return 0;
+  }
+  function renderWorldBanner(){
+    var ph = worldPhase();
+    worldBanner.hidden = !ph;
+    if(!ph) return;
+    if(ph === 'soon') worldBanner.textContent = L('🌍 טורניר עולמי מתחיל בעוד ', '🌍 World tournament starts in ') + timeLeft(worldT.start - Date.now()) + L('! לחץ לפרטים', '! Tap for details');
+    else if(ph === 'on'){
+      var pl = worldMyPlace();
+      worldBanner.textContent = L('🌍 טורניר עולמי! נגמר בעוד ', '🌍 World tournament! Ends in ') + timeLeft(worldT.end - Date.now()) +
+        (pl ? L(' · אתה במקום ', ' · you\'re #') + pl : L(' · לחץ לטבלה', ' · tap for the table'));
+    } else {
+      var claimable = worldClaimable();
+      worldBanner.textContent = claimable ? L('🌍 הטורניר העולמי נגמר — יש לך פרס! 🎁', '🌍 The world tournament is over — you have a prize! 🎁')
+                                          : L('🌍 הטורניר העולמי נגמר — לחץ לתוצאות', '🌍 The world tournament is over — tap for results');
+    }
+  }
+  function worldClaimable(){
+    return worldPhase() === 'over' && worldRows && !worldSave.claimed[worldT.id] && worldMyPlace() >= 1 && worldMyPlace() <= 3;
+  }
+  function renderWorld(){
+    var ph = worldPhase();
+    if(ph === 'soon') worldStatus.textContent = L('⏳ מתחיל בעוד ', '⏳ Starts in ') + timeLeft(worldT.start - Date.now()) + L(' · 10 ימים · כל הריצות נספרות', ' · 10 days · every run counts');
+    else if(ph === 'on') worldStatus.textContent = L('🟢 פעיל · נגמר בעוד ', '🟢 On now · ends in ') + timeLeft(worldT.end - Date.now()) + L(' · כל ריצה מוסיפה לסכום שלך', ' · every run adds to your total');
+    else if(ph === 'over') worldStatus.textContent = L('🏁 הטורניר נגמר! אלה התוצאות:', '🏁 It\'s over! The results:');
+    else worldStatus.textContent = L('אין טורניר עולמי כרגע', 'No world tournament right now');
+    worldList.innerHTML = '';
+    var rows = worldRows || [], me = playerNick();
+    if(!rows.length){
+      worldList.innerHTML = '<div class="leaderboard-empty">' + (ph === 'soon' ? L('עוד לא התחיל', 'Not started yet') : L('עוד אין ריצות — תהיה הראשון!', 'No runs yet — be the first!')) + '</div>';
+    }
+    var medals = ['🥇', '🥈', '🥉'];
+    rows.slice(0, 30).forEach(function(r, i){
+      var row = document.createElement('div');
+      row.className = 'leaderboard-row' + (i === 0 ? ' is-top' : '') + (me && sameName(r.name, me) ? ' is-you' : '');
+      var rank = document.createElement('div'); rank.className = 'leaderboard-rank'; rank.textContent = medals[i] || (i + 1);
+      var name = document.createElement('div'); name.className = 'leaderboard-name'; name.textContent = r.name;
+      var sc = document.createElement('div'); sc.className = 'leaderboard-score'; sc.textContent = fmtScore(+r.total || 0);
+      row.appendChild(rank); row.appendChild(name); row.appendChild(sc);
+      worldList.appendChild(row);
+    });
+    var place = worldMyPlace(), claimed = worldT && worldSave.claimed[worldT.id];
+    worldClaim.hidden = !(ph === 'over' && place >= 1 && place <= 3);
+    worldClaimBtn.hidden = !!claimed;
+    if(!worldClaim.hidden) worldClaimBtn.textContent = L('🎁 קבל את הפרס של מקום ', '🎁 Claim your prize for place ') + place;
+    if(claimed && worldClaimResult.hidden){ worldClaimResult.hidden = false; worldClaimResult.textContent = L('✅ קיבלת את הפרס של מקום ', '✅ You got the prize for place ') + claimed; }
+  }
+  // what a place wins; returns the lines to show
+  function claimWorldPrize(place){
+    var lines = [];
+    function giveSkin(id){
+      if(ownedSkins.indexOf(id) === -1){ ownedSkins.push(id); lines.push(L('🎨 הסקין "', '🎨 The skin "') + getSkin(id).name + '"'); }
+      else { wallet += 20000; lines.push(L('🪙 +20,000 (הסקין "', '🪙 +20,000 (you already had "') + getSkin(id).name + L('" כבר היה לך)', '")')); }
+    }
+    var chests = place === 1 ? 1 : place === 2 ? 2 : 1;
+    for(var c = 0; c < chests; c++) lines.push('🎁 ' + openPassChest());
+    if(place === 1){
+      WORLD_STAR_SKINS.forEach(giveSkin);
+      diamonds += 7; saveBoss(); renderDiamonds(); lines.push(L('💎 +7 יהלומים', '💎 +7 diamonds'));
+    } else if(place === 2){
+      var notYet = WORLD_STAR_SKINS.filter(function(id){ return ownedSkins.indexOf(id) === -1; });
+      var pool = notYet.length ? notYet : WORLD_STAR_SKINS;
+      giveSkin(pool[Math.floor(Math.random() * pool.length)]);
+    }
+    worldSave.claimed[worldT.id] = place; saveWorld();
+    saveProgress(); updateWalletDisplays();
+    return lines;
+  }
+  worldClaimBtn.addEventListener('click', function(){
+    if(!worldClaimable()) return;
+    var lines = claimWorldPrize(worldMyPlace());
+    worldClaimBtn.hidden = true;
+    worldClaimResult.hidden = false;
+    worldClaimResult.textContent = lines.join('\n');
+    renderWorldBanner();
+  });
+  function openWorld(){
+    startOverlay.hidden = true;
+    worldOverlay.hidden = false;
+    worldClaimResult.hidden = true;
+    renderWorld();
+    fetchWorld().then(fetchWorldRows).then(renderWorld);
+  }
+  worldBanner.addEventListener('click', openWorld);
+  document.getElementById('closeWorldBtn').addEventListener('click', function(){
+    worldOverlay.hidden = true;
+    startOverlay.hidden = false;
+    renderWorldBanner();
+  });
+  fetchWorld().then(fetchWorldRows).then(renderWorldBanner);
+  setInterval(function(){ if(!startOverlay.hidden) fetchWorld().then(fetchWorldRows).then(renderWorldBanner); }, 60000);
+
+  // ---------- surf tour ----------
+  // A pro-surfing-style season: 4 events, 4 days each (16 days in a row),
+  // one round a day -- round of 16 (heats of 4, two go through), quarter-
+  // finals, semifinals and the final (one on one). Every heat is a live
+  // race at its own time (from 13:45 Israel time, Wednesday from 15:30,
+  // one every SURF_SLOT minutes): the heat's players race head to head on
+  // the same track, bots fill the empty seats and run with them, and the
+  // best score goes through. Miss your heat and the others go through.
+  // Every place earns tour points (the last event is worth 1.5x); the most
+  // points by the end is the champion. Starts when a row goes into
+  // surf_seasons (id, start_day -- added by hand in Supabase). Prizes,
+  // claimed on this device after the season: 1st -- both surf-pro skins,
+  // 2nd -- Air King.
+  var SURF_KEY = 'canyonChaseSurfV2';
+  var SURF_DAYS = 16, SURF_DRAW = 16;
+  var SURF_SLOT = 10 * 60000;          // a heat every 10 minutes
+  var SURF_GRACE = 3 * 60000;          // the room is open this long, then it starts with whoever is there
+  var SURF_EARLY = 2 * 60000;          // you can come in this early
+  var SURF_LATE = 25 * 60000;          // results not in by then: that player didn't show
+  var SURF_BOT_TOP = 150000, SURF_ROUND_MULT = [1, 1.12, 1.25, 1.4];
+  var SURF_PTS = { win: 10000, second: 7800, semi: 6085, quarter: 4745, r16third: 3320, r16fourth: 1330 };
+  var SURF_EVENTS = [
+    { name: L('🌵 תחרות הקניון', '🌵 Canyon Pro'), world: 'canyon', mult: 1 },
+    { name: L('🧊 תחרות הקרח', '🧊 Ice Pro'), world: 'ice', mult: 1 },
+    { name: L('🌴 תחרות הג\'ונגל', '🌴 Jungle Pro'), world: 'jungle', mult: 1 },
+    { name: L('🌊 גמר הים · פי 1.5', '🌊 Sea Finals · 1.5x'), world: 'sea', mult: 1.5 }
+  ];
+  var SURF_ROUNDS = [L('שמינית גמר', 'Round of 16'), L('רבע גמר', 'Quarterfinals'), L('חצי גמר', 'Semifinals'), L('גמר', 'Final')];
+  var SURF_BOT_NAMES = [L('קאי','Kai'), L('נואה','Noa'), L('מאיה','Maya'), L('לני','Leni'), L('טאמה','Tama'), L('קואה','Koa'), L('ריו','Rio'), L('אלה','Ella'),
+    L('ז\'ואאו','João'), L('מילה','Mila'), L('איקאיקה','Ikaika'), L('סול','Sol'), L('לואנה','Luana'), L('פדרו','Pedro'), L('נלה','Nela'), L('טאי','Tai'),
+    L('מאלו','Malu'), L('אורי','Ori'), L('קיילני','Kailani'), L('דני','Dani'), L('נאלו','Nalu'), L('ליה','Lia'), L('קאנואה','Kanoa'), L('איה','Aya'),
+    L('ברונו','Bruno'), L('זואי','Zoe'), L('מקאנה','Makana'), L('יאן','Jan'), L('פואה','Pua'), L('תום','Tom'), L('לילו','Lilo'), L('אדם','Adam')];
+  var SURF_BOT_SKINS = ['surfer', 'wavelord', 'reefshark', 'stormrider', 'icewave', 'sunsetpro', 'coralqueen', 'tsunami', 'lavasurf', 'ember'];
+  var SURF_PRIZE_1 = ['airking', 'pipelegend'], SURF_PRIZE_2 = ['airking'];
+
+  var surfSave = { reg: {}, claimed: {} };
+  try { var ss0 = JSON.parse(localStorage.getItem(SURF_KEY) || 'null'); if(ss0 && ss0.reg) surfSave = Object.assign(surfSave, ss0); } catch(e){}
+  function saveSurf(){ try { localStorage.setItem(SURF_KEY, JSON.stringify(surfSave)); } catch(e){} }
+  var surfT = null, surfRoster = null, surfResults = {}, surfState = null, surfJoinMsg = '';
+
+  // ---- time: Israel wall-clock -> ms
+  function israelAt(y, m, d, h, mi){ var g = Date.UTC(y, m, d, h, mi); return g - jerusalemOffsetMin(g - 180 * 60000) * 60000; }
+  var SURF_TEST_DAY = 20 * 60000;
+  function surfDay(i){
+    if(surfT.fast){
+      var o = surfT.fast + i * SURF_TEST_DAY;
+      return { i: i, label: surfClock(o), open: o, close: o + SURF_TEST_DAY };
+    }
+    var dt = new Date(Date.UTC(surfT.y, surfT.m, surfT.d + i)), y = dt.getUTCFullYear(), m = dt.getUTCMonth(), d = dt.getUTCDate();
+    var wed = dt.getUTCDay() === 3;
+    return { i: i, label: d + '.' + (m + 1), open: israelAt(y, m, d, wed ? 15 : 13, wed ? 30 : 45), close: israelAt(y, m, d, 21, 0) };
+  }
+  function surfClock(ms){
+    var o = {};
+    try { new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Jerusalem', hour: '2-digit', minute: '2-digit', hour12: false }).formatToParts(new Date(ms)).forEach(function(p){ o[p.type] = p.value; }); }
+    catch(e){ var dd = new Date(ms); o.hour = pad2(dd.getHours()); o.minute = pad2(dd.getMinutes()); }
+    return (o.hour === '24' ? '00' : o.hour) + ':' + o.minute;
+  }
+  function surfStartMs(){ return surfT ? (surfT.fast || israelAt(surfT.y, surfT.m, surfT.d, 0, 0)) : 0; }
+  function surfEndMs(){ return surfT ? surfDay(SURF_DAYS - 1).close : 0; }
+  function surfPhase(){
+    if(!surfT) return null;
+    var now = Date.now();
+    if(now < surfStartMs()) return 'soon';
+    if(now < surfEndMs()) return 'on';
+    if(now < surfEndMs() + 3 * 86400000) return 'over';
+    return null;
+  }
+  function surfMe(){ return surfT ? surfSave.reg[surfT.id] || null : null; }
+  function surfMyId(){ return surfMe() ? 'p:' + nameKey(surfMe()) : ''; }
+
+  // ---- bots: the same numbers on every phone (seeded by season/heat/bot)
+  function surfHash(s){ var h = 2166136261; for(var i = 0; i < s.length; i++){ h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; }
+  function surfBotFinal(bot, heatKey, r){
+    var rng = mulberry32(surfHash(surfT.id + '|' + heatKey + '|' + bot.id));
+    return Math.round(bot.skill * SURF_ROUND_MULT[r] * (0.55 + rng() * 0.9) / 10) * 10;
+  }
+  // how a run goes over time (measured on the real game): ~65 t^2 points,
+  // ~680 then 900 units of track a second
+  function surfBotScoreAt(sec){ return 65 * sec * sec; }
+  function surfBotDistAt(sec){ return sec < 30 ? 480 * sec + 6.7 * sec * sec : 20430 + 900 * (sec - 30); }
+
+  // ---- the whole season, worked out from the sign-ups and the heat results
+  function surfCompute(){
+    if(!surfT) return null;
+    var now = Date.now(), pts = {}, people = {};
+    function who(sf){ if(!people[sf.id]){ people[sf.id] = sf; pts[sf.id] = 0; } return people[sf.id]; }
+    function award(sf, p, ev){ pts[sf.id] = (pts[sf.id] || 0) + Math.round(p * ev.mult); }
+    var roster = (surfRoster || []).slice(), events = [];
+    for(var e = 0; e < SURF_EVENTS.length; e++){
+      var ev = SURF_EVENTS[e], first = surfDay(e * 4);
+      // who's in: everyone signed up before the event's first heat
+      var cut = Math.min(now, first.open);
+      var reals = roster.filter(function(p){ return Date.parse(p.created_at) < cut; })
+        .map(function(p){ return who({ id: 'p:' + nameKey(p.name), name: p.name, bot: false }); });
+      reals.sort(function(a, b){ return (pts[b.id] || 0) - (pts[a.id] || 0); });
+      var poolN = Math.max(1, Math.ceil(reals.length / SURF_DRAW)), pools = [];
+      for(var p = 0; p < poolN; p++) pools.push([]);
+      reals.forEach(function(sf, i){ pools[i % poolN].push(sf); });
+      var evOut = { ev: ev, e: e, pools: [], done: false };
+      pools.forEach(function(members, pi){
+        // bots fill the seats, spread over the whole range of strengths
+        var need = SURF_DRAW - members.length;
+        for(var k = 0; k < need; k++){
+          var j = need === 1 ? 8 : Math.round(k * (SURF_DRAW - 1) / (need - 1));
+          var bn = SURF_BOT_NAMES[(pi * SURF_DRAW + j) % SURF_BOT_NAMES.length] + (pi ? ' ' + (pi + 1) : '');
+          members.push(who({ id: 'b' + pi + ':' + j, name: bn, bot: true, skill: SURF_BOT_TOP * Math.pow(0.85, j),
+                             sk: SURF_BOT_SKINS[(pi * 7 + j) % SURF_BOT_SKINS.length] }));
+        }
+        members.sort(function(a, b){ return (pts[b.id] || 0) - (pts[a.id] || 0) || (b.skill || 60000) - (a.skill || 60000) || (a.id < b.id ? -1 : 1); });
+        var seedOf = {};
+        members.forEach(function(sf, i){ seedOf[sf.id] = i; });
+        var heats = [0, 1, 2, 3].map(function(h){ return [members[h], members[7 - h], members[8 + h], members[15 - h]]; });
+        var rounds = [];
+        for(var r = 0; r < 4; r++){
+          var day = surfDay(e * 4 + r), adv = r === 0 ? 2 : 1, allDone = true;
+          var heatRows = heats.map(function(hm, hi){
+            var key = e + '-' + r + '-' + pi + '-' + hi;
+            // this pool's heats come after the earlier pools' ones
+            var at = day.open + (pi * heats.length + hi) * SURF_SLOT;
+            var hasReal = hm.some(function(sf){ return !sf.bot; });
+            var results = surfResults[key] || {};
+            var allIn = hm.every(function(sf){ return sf.bot || results[nameKey(sf.name)] !== undefined; });
+            var status = hasReal && allIn ? 'done' : now < at ? 'soon' : (!hasReal ? (now >= at + SURF_GRACE ? 'done' : 'live')
+                       : (allIn || now >= at + SURF_LATE) ? 'done' : 'live');
+            if(status !== 'done') allDone = false;
+            var rows = hm.map(function(sf){
+              var sc = null;
+              if(sf.bot){ if(status === 'done') sc = surfBotFinal(sf, key, r); }     // shown once the heat is over
+              else if(results[nameKey(sf.name)] !== undefined) sc = results[nameKey(sf.name)];
+              return { sf: sf, score: sc, absent: status === 'done' && sc === null };
+            });
+            rows.sort(function(a, b){ return (b.score === null ? -1 : b.score) - (a.score === null ? -1 : a.score) || seedOf[a.sf.id] - seedOf[b.sf.id]; });
+            return { key: key, at: at, status: status, rows: rows, adv: adv, members: hm };
+          });
+          rounds.push({ r: r, day: day, heats: heatRows, done: allDone });
+          if(!allDone) break;
+          // points for whoever is out, and the next round's heats
+          if(r === 0){
+            heatRows.forEach(function(h){ award(h.rows[2].sf, SURF_PTS.r16third, ev); award(h.rows[3].sf, SURF_PTS.r16fourth, ev); });
+            var w = heatRows.map(function(h){ return h.rows[0].sf; }), u = heatRows.map(function(h){ return h.rows[1].sf; });
+            heats = [[w[0], u[1]], [w[1], u[0]], [w[2], u[3]], [w[3], u[2]]];
+          } else if(r < 3){
+            heatRows.forEach(function(h){ award(h.rows[1].sf, r === 1 ? SURF_PTS.quarter : SURF_PTS.semi, ev); });
+            var ws = heatRows.map(function(h){ return h.rows[0].sf; });
+            heats = r === 1 ? [[ws[0], ws[1]], [ws[2], ws[3]]] : [[ws[0], ws[1]]];
+          } else {
+            award(heatRows[0].rows[0].sf, SURF_PTS.win, ev); award(heatRows[0].rows[1].sf, SURF_PTS.second, ev);
+          }
+        }
+        evOut.pools.push({ rounds: rounds });
+      });
+      evOut.done = evOut.pools.every(function(pl){ return pl.rounds.length === 4 && pl.rounds[3].done; });
+      events.push(evOut);
+      if(!evOut.done) break;            // later events can't be drawn yet
+    }
+    var table = Object.keys(people).map(function(id){ return { sf: people[id], pts: pts[id] || 0 }; })
+      .sort(function(a, b){ return b.pts - a.pts || (a.sf.bot === b.sf.bot ? 0 : a.sf.bot ? 1 : -1); });
+    return { events: events, table: table };
+  }
+
+  // your latest heat: { evo, rd, heat, pos, out }
+  function surfMine(st){
+    var id = surfMyId(), found = null;
+    if(!id || !st) return null;
+    st.events.forEach(function(evo){
+      evo.pools.forEach(function(pl){
+        pl.rounds.forEach(function(rd){
+          rd.heats.forEach(function(h){
+            h.rows.forEach(function(row, pos){
+              if(row.sf.id === id) found = { evo: evo, rd: rd, heat: h, pos: pos, out: h.status === 'done' && pos >= h.adv };
+            });
+          });
+        });
+      });
+    });
+    return found;
+  }
+  function surfMyPlace(st){
+    var id = surfMyId();
+    if(!id || !st) return 0;
+    for(var i = 0; i < st.table.length; i++) if(st.table[i].sf.id === id) return i + 1;
+    return 0;
+  }
+  // can you go in now? (from a couple of minutes before until it starts)
+  function surfCanEnter(m){
+    if(!m || m.out || m.heat.status === 'done') return false;
+    var now = Date.now();
+    if(now < m.heat.at - SURF_EARLY || now >= m.heat.at + SURF_GRACE) return false;
+    return (surfResults[m.heat.key] || {})[nameKey(surfMe())] === undefined;
+  }
+
+  // ---- server
+  function fetchSurf(){
+    if(!isOnlineBoard) return Promise.resolve();
+    return sbGet('surf_seasons?select=id,start_day,starts_at&' + TEST_ROWS + '&order=start_day.desc,starts_at.desc&limit=1').then(function(rows){
+      if(rows && rows[0]){
+        var p = String(rows[0].start_day).split('-');
+        surfT = { id: rows[0].id, y: +p[0], m: +p[1] - 1, d: +p[2] };
+        // a beta test season with a start time runs fast: a heat every 3 minutes
+        if(rows[0].starts_at && /^beta/.test(rows[0].id)){
+          surfT.fast = Date.parse(rows[0].starts_at);
+          SURF_SLOT = 3 * 60000; SURF_GRACE = 60000; SURF_EARLY = 60000; SURF_LATE = 6 * 60000;
+        }
+      } else if(rows) surfT = null;
+      if(!surfT || !surfPhase()) return;
+      return Promise.all([
+        sbGet('surf_players?select=name,created_at&season=eq.' + encodeURIComponent(surfT.id) + '&order=created_at.asc&limit=1000'),
+        sbGet('surf_results?select=heat,name,score&season=eq.' + encodeURIComponent(surfT.id) + '&order=created_at.asc&limit=5000')
+      ]).then(function(res){
+        if(res[0]){
+          var seen = {};
+          surfRoster = res[0].filter(function(p){ var k = nameKey(p.name); if(seen[k]) return false; seen[k] = 1; return true; });
+          var me = surfMe();
+          if(me && !seen[nameKey(me)]){ delete surfSave.reg[surfT.id]; saveSurf(); }    // the server is the truth
+        }
+        if(res[1]){
+          surfResults = {};
+          res[1].forEach(function(row){
+            var h = surfResults[row.heat] = surfResults[row.heat] || {}, k = nameKey(row.name);
+            if(h[k] === undefined) h[k] = +row.score || 0;      // the first result counts
+          });
+        }
+      });
+    }).then(function(){ surfState = surfCompute(); renderSurfBanner(); renderTourneyBanner(); });
+  }
+  function surfJoin(){
+    var name = playerNick();
+    if(!name){ surfJoinMsg = L('✏️ קודם תכתוב את השם שלך במסך הראשי', '✏️ Type your name on the main screen first'); renderSurf(); return; }
+    surfJoinMsg = L('נרשם...', 'Signing up...'); renderSurf();
+    fetch(SUPABASE_URL + '/rest/v1/surf_players', { method: 'POST', headers: supabaseHeaders(), body: JSON.stringify({ season: surfT.id, name: name }) })
+      .then(function(res){
+        // 409: that name is already on the list -- same name, same player
+        if(res.ok || res.status === 409){
+          surfSave.reg[surfT.id] = name; saveSurf();
+          surfJoinMsg = L('✅ נרשמת לסבב בשם "' + name + '"!', '✅ You\'re on the tour as "' + name + '"!');
+        } else surfJoinMsg = L('⚠️ ההרשמה לא הצליחה, נסה שוב', '⚠️ Sign-up failed, try again');
+        return fetchSurf();
+      })
+      .catch(function(){ surfJoinMsg = L('⚠️ אין חיבור, נסה שוב', '⚠️ No connection, try again'); })
+      .then(renderSurf);
+  }
+  function surfPostResult(heatKey, score){
+    if(!isOnlineBoard || !surfT || !surfMe()) return;
+    var h = surfResults[heatKey] = surfResults[heatKey] || {};
+    if(h[nameKey(surfMe())] === undefined) h[nameKey(surfMe())] = score;
+    fetch(SUPABASE_URL + '/rest/v1/surf_results', { method: 'POST', headers: supabaseHeaders(),
+      body: JSON.stringify({ season: surfT.id, heat: heatKey, name: surfMe(), score: score }) })
+      .catch(function(){}).then(function(){ setTimeout(fetchSurf, 1500); });
+  }
+
+  // ---- going into your heat: a live room, like head to head
+  function surfEnterHeat(){
+    var m = surfMine(surfState);
+    if(!surfCanEnter(m)) return;
+    if(!sameName(surfMe(), playerNick())){ playerName = surfMe(); playerNameInput.value = playerName; saveName(); }
+    surfOverlay.hidden = true;
+    startOverlay.hidden = true;
+    duelOverlay.hidden = false;
+    duelNameRow.hidden = true;
+    var others = m.heat.members.filter(function(sf){ return sf.id !== surfMyId(); });
+    duelEnterRoom('surf-' + surfT.id + '-' + m.heat.key, false, null);
+    duel.surf = { key: m.heat.key, r: m.rd.r, adv: m.heat.adv, at: m.heat.at, world: m.evo.ev.world,
+                  reals: m.heat.members.filter(function(sf){ return !sf.bot; }).map(function(sf){ return { id: sf.id, name: sf.name }; }),
+                  bots: m.heat.members.filter(function(sf){ return sf.bot; }).map(function(sf){ return { id: 'bot-' + sf.id, name: sf.name, bot: 1, fin: surfBotFinal(sf, m.heat.key, m.rd.r), sk: sf.sk }; }),
+                  seedOrder: m.heat.members.map(function(sf){ return sf.id; }), vs: others.map(function(sf){ return sf.name; }) };
+    surfRoomSay(duel);
+  }
+  function surfRoomSay(d){
+    var s = d.surf, here = (d.members || []).map(function(mm){ return nameKey(mm.name || ''); });
+    var lines = [L('🏄 המקצה שלך: ', '🏄 Your heat: ') + SURF_ROUNDS[s.r] + '\n' + L('נגד ', 'vs ') + s.vs.join(', ') + '\n\n'];
+    s.reals.forEach(function(p){
+      if(p.id === surfMyId()) return;
+      lines.push((here.indexOf(nameKey(p.name)) !== -1 ? '✅ ' : '⏳ ') + p.name + '\n');
+    });
+    if(s.bots.length) lines.push('🤖 ' + s.bots.map(function(b){ return b.name; }).join(', ') + (s.bots.length > 1 ? L(' (בוטים) מוכנים\n', ' (bots) ready\n') : L(' (בוט) מוכן\n', ' (bot) ready\n')));
+    var left = Math.max(0, Math.ceil((s.at + SURF_GRACE - Date.now()) / 1000));
+    lines.push('\n' + (Date.now() < s.at ? L('מתחילים ברגע שכולם כאן (המקצה ב-' + surfClock(s.at) + ')', 'Starting as soon as everyone\'s in (heat at ' + surfClock(s.at) + ')')
+                                         : L('מתחילים כשכולם כאן, או בעוד ', 'Starting when everyone\'s in, or in ') + Math.floor(left / 60) + ':' + pad2(left % 60)));
+    duelSay(lines, true);
+  }
+  // presence changed in a heat room: start when everyone's in (or time's up)
+  function surfRoomSync(d, all){
+    if(all[0] && all.some(function(mm){ return mm.started; })){
+      duelLeaveRoom(); duel = null;
+      duelSay(L('המקצה שלך כבר התחיל בלעדיך 😕', 'Your heat already started without you 😕'));
+      return;
+    }
+    surfRoomSay(d);
+    surfMaybeGo(d);
+  }
+  function surfHere(d){
+    var names = (d.members || []).map(function(mm){ return nameKey(mm.name || ''); });
+    return d.surf.reals.filter(function(p){ return names.indexOf(nameKey(p.name)) !== -1; });
+  }
+  function surfMaybeGo(d){
+    if(!d || !d.surf || d.started || d.going || !duelRoom) return;
+    var now = Date.now(), here = surfHere(d);
+    var meIn = here.some(function(p){ return p.id === surfMyId(); });
+    if(!meIn) return;
+    // everyone's in: go right away, even before the heat's time
+    if(here.length < d.surf.reals.length && now < d.surf.at + SURF_GRACE) return;
+    // the best-seeded player who's here starts it for everyone
+    var hostId = d.surf.seedOrder.filter(function(id){ return here.some(function(p){ return p.id === id; }); })[0];
+    if(hostId !== surfMyId()) return;
+    d.host = true;
+    duelGo(d);
+  }
+  setInterval(function(){
+    if(duel && duel.surf && !duel.started){ surfRoomSay(duel); surfMaybeGo(duel); }
+    if(duel && duel.surf && !duel.started && Date.now() > duel.surf.at + SURF_GRACE + 15000 && !duel.going){
+      // nobody started it (we're not the host and the host never came): too late
+      duelLeaveRoom(); duel = null; duelSay(L('המקצה לא התחיל. נסה שוב או חזור לתפריט.', 'The heat didn\'t start. Try again or go back.'));
+    }
+  }, 1000);
+  // the line-up the host sends: the players who came, plus the bots
+  function surfGoPlayers(d, all){
+    var here = surfHere(d).map(function(p){ return nameKey(p.name); });
+    var people = all.filter(function(mm){ return here.indexOf(nameKey(mm.name || '')) !== -1; })
+      .map(function(mm){ return { id: mm.id, name: (mm.id === duelMyId ? playerNick() : mm.name) || L('שחקן', 'Player') }; });
+    return people.concat(d.surf.bots);
+  }
+  // a bot in the race: runs beside you on the shared clock, falls at its score
+  function surfBotTick(d, o, now){
+    if(!d.goAt || now < d.goAt || o.final !== null) return;
+    var sec = (now - d.goAt) / 1000, sc = Math.min(o.bot.fin, Math.round(surfBotScoreAt(sec) / 10) * 10);
+    var rng = mulberry32(surfHash(o.id + '|' + Math.floor(sec / 1.6)));
+    o.st = { id: o.id, l: Math.floor(rng() * 3), y: 0, dk: 0, f: 0, dist: Math.round(surfBotDistAt(sec)), sc: sc, al: sc < o.bot.fin ? 1 : 0, sk: o.bot.sk, t: now };
+    o.seen = now;
+    if(sc >= o.bot.fin && o.final === null){ o.final = o.bot.fin; if(state === 'playing') showToast('🤖 ' + o.name + L(' נפל — ', ' fell — ') + fmtScore(o.bot.fin)); }
+  }
+  // heats of 4 send two through: decide by place, once it's settled
+  function surfCheck(d){
+    var opps = duelOppList(d), mine = d.myFinal, adv = d.surf.adv;
+    var allDone = opps.every(function(o){ return o.final !== null; });
+    if(mine !== null){
+      var above = opps.filter(function(o){ return duelOppScore(o) > mine; }).length;
+      if(above >= adv) return duelDecide('lose');
+      if(allDone) return duelDecide('win');
+    } else if(allDone && state === 'playing'){
+      var better = opps.filter(function(o){ return o.final >= currentScore(); }).length;
+      if(better < adv) return duelDecide('win');
+    }
+  }
+  function surfResultText(d){
+    var rows = duelStandings(d), place = 1;
+    rows.forEach(function(r, i){ if(r.me) place = i + 1; });
+    return d.result === 'win' ? L('🏄 עלית לשלב הבא! (מקום ' + place + ' במקצה)', '🏄 You\'re through! (place ' + place + ' in the heat)')
+                              : L('😕 הודחת במקצה (מקום ' + place + '). נתראה בתחרות הבאה!', '😕 Out in this heat (place ' + place + '). See you at the next event!');
+  }
+
+  // ---- start-screen banner
+  var surfBanner = document.getElementById('surfBanner');
+  var surfOverlay = document.getElementById('surfOverlay');
+  function surfOppNames(m){ return m.heat.members.filter(function(sf){ return sf.id !== surfMyId(); }).map(function(sf){ return sf.name; }).join(', '); }
+  function renderSurfBanner(){
+    var ph = surfPhase();
+    surfBanner.hidden = !ph;
+    surfBanner.classList.remove('is-now');
+    if(!ph) return;
+    var me = surfMe(), m = surfMine(surfState), now = Date.now();
+    if(ph === 'over'){
+      var pl = surfMyPlace(surfState), can = pl >= 1 && pl <= 2 && !surfSave.claimed[surfT.id];
+      surfBanner.textContent = can ? L('🏄 סבב הגלישה נגמר — יש לך פרס! 🎁', '🏄 The surf tour is over — you have a prize! 🎁')
+                                   : L('🏄 סבב הגלישה נגמר — לחץ לתוצאות', '🏄 The surf tour is over — tap for results');
+      return;
+    }
+    if(!me){
+      surfBanner.textContent = ph === 'soon'
+        ? L('🏄 סבב הגלישה מתחיל ב-' + surfDay(0).label + '! לחץ כאן להרשמה', '🏄 The surf tour starts ' + surfDay(0).label + '! Tap here to sign up')
+        : L('🏄 סבב הגלישה פתוח! לחץ כאן להרשמה', '🏄 The surf tour is on! Tap here to sign up');
+      return;
+    }
+    if(!m){ surfBanner.textContent = L('🏄 רשום לסבב! המקצים מתחילים ב-' + surfDay(0).label, '🏄 You\'re on the tour! Heats start ' + surfDay(0).label); return; }
+    var rn = SURF_ROUNDS[m.rd.r], h = m.heat;
+    if(surfCanEnter(m)){
+      surfBanner.classList.add('is-now');
+      surfBanner.textContent = L('🔴 המקצה שלך מתחיל עכשיו! לחץ כאן להיכנס', '🔴 Your heat is starting now! Tap here to go in') + ' · ' + rn;
+    } else if(m.out){
+      var nextEv = m.evo.e < 3 ? surfDay((m.evo.e + 1) * 4) : null;
+      surfBanner.textContent = L('🏄 הודחת ב' + rn, '🏄 Out in the ' + rn) + (nextEv ? L(' · התחרות הבאה ב-' + nextEv.label, ' · next event ' + nextEv.label) : '') + L(' · לחץ לטבלה', ' · tap for the table');
+    } else if(h.status === 'soon'){
+      var today = surfClockDay(now) === surfClockDay(h.at);
+      surfBanner.textContent = L('🏄 ' + rn + ': ' + (today ? 'היום' : 'ב-' + m.rd.day.label) + ' ב-' + surfClock(h.at) + ' נגד ' + surfOppNames(m),
+                                 '🏄 ' + rn + ': ' + (today ? 'today' : m.rd.day.label) + ' at ' + surfClock(h.at) + ' vs ' + surfOppNames(m));
+    } else if(h.status === 'live'){
+      surfBanner.textContent = L('🏄 המקצה שלך רץ עכשיו · לחץ לתוצאות', '🏄 Your heat is running · tap for results');
+    } else {
+      surfBanner.textContent = L('🏄 עלית שלב! לחץ לראות נגד מי', '🏄 You\'re through! Tap to see who\'s next');
+    }
+  }
+  function surfClockDay(ms){ return new Date(ms + jerusalemOffsetMin(ms) * 60000).toISOString().slice(0, 10); }
+
+  // ---- the tour screen
+  function surfRowEl(row, adv, i, mine, done){
+    var el = document.createElement('div');
+    el.className = 'surf-heat-row' + (mine ? ' is-you' : '') + (done && i < adv ? ' is-through' : '') + (done && i >= adv ? ' is-out' : '');
+    var nm = document.createElement('span'); nm.className = 'surf-heat-name';
+    nm.textContent = (row.sf.bot ? '🤖 ' : '🏄 ') + row.sf.name;
+    var tot = document.createElement('span'); tot.className = 'surf-heat-total';
+    tot.textContent = row.absent ? L('לא הגיע', 'no-show') : row.score === null ? '—' : fmtScore(row.score);
+    el.appendChild(nm); el.appendChild(tot);
+    return el;
+  }
+  function surfHeatBox(h, hi, me){
+    var box = document.createElement('div'); box.className = 'surf-heat' + (h.status === 'live' ? ' is-live' : '');
+    var ht = document.createElement('div'); ht.className = 'surf-heat-label';
+    ht.textContent = L('מקצה ', 'Heat ') + (hi + 1) + ' · ' + surfClock(h.at) + (h.status === 'live' ? L(' · 🔴 עכשיו', ' · 🔴 now') : '');
+    box.appendChild(ht);
+    h.rows.forEach(function(row, i){ box.appendChild(surfRowEl(row, h.adv, i, me && row.sf.id === surfMyId(), h.status === 'done')); });
+    return box;
+  }
+  function renderSurf(){
+    var st = surfState, ph = surfPhase(), me = surfMe(), m = surfMine(st);
+    var status = document.getElementById('surfStatus');
+    var cur = st && st.events.length ? st.events[st.events.length - 1] : null;
+    var curRd = cur && cur.pools[0] && cur.pools[0].rounds.length ? cur.pools[0].rounds[cur.pools[0].rounds.length - 1] : null;
+    if(ph === 'soon') status.textContent = L('⏳ מתחיל ב-' + surfDay(0).label + ' · המקצה הראשון ב-' + surfClock(surfDay(0).open), '⏳ Starts ' + surfDay(0).label + ' · first heat at ' + surfClock(surfDay(0).open));
+    else if(ph === 'over') status.textContent = L('🏁 העונה נגמרה! הנה הטבלה הסופית', '🏁 The season is over! The final table');
+    else if(cur && curRd) status.textContent = cur.ev.name + ' · ' + SURF_ROUNDS[curRd.r] + ' · ' + curRd.day.label;
+    else status.textContent = L('אין סבב כרגע', 'No tour right now');
+
+    // sign up
+    var join = document.getElementById('surfJoin');
+    join.innerHTML = '';
+    var lastOpen = surfT ? surfDay((SURF_EVENTS.length - 1) * 4).open : 0;
+    if(!me && ph && ph !== 'over' && Date.now() < lastOpen){
+      var jb = document.createElement('button'); jb.type = 'button'; jb.className = 'boss-banner boss-go';
+      jb.textContent = L('🏄 הירשם לסבב בשם "' + (playerNick() || '?') + '"', '🏄 Join the tour as "' + (playerNick() || '?') + '"');
+      jb.addEventListener('click', surfJoin);
+      join.appendChild(jb);
+    }
+    if(surfJoinMsg){ var jm = document.createElement('div'); jm.className = 'mission-sub'; jm.textContent = surfJoinMsg; join.appendChild(jm); }
+
+    // your heat: when, against whom, and the way in
+    var mineBox = document.getElementById('surfMineBox'), mineList = document.getElementById('surfMineList'), mineTitle = document.getElementById('surfMineTitle');
+    mineList.innerHTML = '';
+    mineBox.hidden = !m;
+    if(m){
+      mineTitle.textContent = L('המקצה שלך · ', 'Your heat · ') + m.evo.ev.name + ' · ' + SURF_ROUNDS[m.rd.r] + ' · ' + m.rd.day.label + L(' בשעה ', ' at ') + surfClock(m.heat.at) +
+        (m.rd.r === 0 ? L(' · שניים עולים', ' · top 2 go through') : L(' · המנצח עולה', ' · winner goes through'));
+      m.heat.rows.forEach(function(row, i){ mineList.appendChild(surfRowEl(row, m.heat.adv, i, row.sf.id === surfMyId(), m.heat.status === 'done')); });
+      if(surfCanEnter(m)){
+        var go = document.createElement('button'); go.type = 'button'; go.className = 'boss-banner boss-go surf-go';
+        go.textContent = L('🔴 היכנס למקצה עכשיו!', '🔴 Go into your heat now!');
+        go.addEventListener('click', surfEnterHeat);
+        mineList.appendChild(go);
+      }
+      var note = document.createElement('div'); note.className = 'mission-sub';
+      note.textContent = m.out ? L('הודחת הפעם. התחרות הבאה מתחילה מחדש עם כולם!', 'You\'re out this time. The next event starts fresh for everyone!')
+        : m.heat.status === 'soon' ? L('תהיה כאן ב-' + surfClock(m.heat.at) + '! תוכל להיכנס 2 דקות לפני. כולם רצים יחד באותו מסלול, ראש בראש. מי שלא מגיע — מפסיד.', 'Be here at ' + surfClock(m.heat.at) + '! You can go in 2 minutes early. Everyone races together on the same track, head to head. No-shows lose.')
+        : m.heat.status === 'live' ? L('המקצה רץ עכשיו.', 'The heat is running now.')
+        : L('עלית לשלב הבא!', 'You\'re through to the next round!');
+      mineList.appendChild(note);
+    }
+
+    // the draw of the current event (your pool)
+    var drawEl = document.getElementById('surfDraw');
+    drawEl.innerHTML = '';
+    if(cur){
+      var pool = cur.pools[0];
+      cur.pools.forEach(function(pl){ pl.rounds.forEach(function(rd){ rd.heats.forEach(function(h){ if(h.rows.some(function(x){ return x.sf.id === surfMyId(); })) pool = pl; }); }); });
+      var hd = document.createElement('div'); hd.className = 'mission-title'; hd.textContent = cur.ev.name;
+      drawEl.appendChild(hd);
+      pool.rounds.forEach(function(rd){
+        var rt = document.createElement('div'); rt.className = 'surf-round-title'; rt.textContent = SURF_ROUNDS[rd.r] + ' · ' + rd.day.label;
+        drawEl.appendChild(rt);
+        rd.heats.forEach(function(h, hi){ drawEl.appendChild(surfHeatBox(h, hi, me)); });
+      });
+    }
+
+    // the tour table
+    var tbl = document.getElementById('surfTable');
+    tbl.innerHTML = '';
+    var rows = st ? st.table.filter(function(x){ return x.pts > 0 || !x.sf.bot; }) : [];
+    if(!rows.length) tbl.innerHTML = '<div class="leaderboard-empty">' + L('עוד אין נקודות', 'No points yet') + '</div>';
+    var medals = ['🥇', '🥈', '🥉'], myPlace = surfMyPlace(st);
+    rows.forEach(function(x, i){
+      if(i >= 20 && x.sf.id !== surfMyId()) return;
+      var row = document.createElement('div');
+      row.className = 'leaderboard-row' + (i === 0 ? ' is-top' : '') + (x.sf.id === surfMyId() ? ' is-you' : '');
+      var rk = document.createElement('div'); rk.className = 'leaderboard-rank'; rk.textContent = medals[i] || (i + 1);
+      var nm = document.createElement('div'); nm.className = 'leaderboard-name'; nm.textContent = (x.sf.bot ? '🤖 ' : '') + x.sf.name;
+      var sc = document.createElement('div'); sc.className = 'leaderboard-score'; sc.textContent = fmtScore(x.pts);
+      row.appendChild(rk); row.appendChild(nm); row.appendChild(sc);
+      tbl.appendChild(row);
+    });
+
+    // the prize
+    var claim = document.getElementById('surfClaim'), cb = document.getElementById('surfClaimBtn'), cr = document.getElementById('surfClaimResult');
+    var claimed = surfT && surfSave.claimed[surfT.id];
+    claim.hidden = !(ph === 'over' && myPlace >= 1 && myPlace <= 2);
+    cb.hidden = !!claimed;
+    if(!claim.hidden) cb.textContent = L('🎁 קבל את הפרס של מקום ', '🎁 Claim your prize for place ') + myPlace;
+    if(claimed){ cr.hidden = false; if(!cr.textContent) cr.textContent = L('✅ קיבלת את הפרס של מקום ', '✅ You got the prize for place ') + claimed; }
+  }
+  function surfClaimPrize(){
+    var place = surfMyPlace(surfState);
+    if(surfPhase() !== 'over' || surfSave.claimed[surfT.id] || place < 1 || place > 2) return;
+    var lines = [], prize = place === 1 ? SURF_PRIZE_1 : SURF_PRIZE_2;
+    prize.forEach(function(id){
+      if(ownedSkins.indexOf(id) === -1){ ownedSkins.push(id); lines.push(L('🏄 הסקין "', '🏄 The skin "') + getSkin(id).name + '"'); }
+      else { wallet += 20000; lines.push(L('🪙 +20,000 (הסקין "', '🪙 +20,000 (you already had "') + getSkin(id).name + L('" כבר היה לך)', '")')); }
+    });
+    selectedSkinId = prize[0];
+    surfSave.claimed[surfT.id] = place; saveSurf();
+    saveProgress(); updateWalletDisplays();
+    var cr = document.getElementById('surfClaimResult');
+    cr.hidden = false; cr.textContent = lines.join('\n');
+    document.getElementById('surfClaimBtn').hidden = true;
+    renderSurfBanner();
+  }
+  document.getElementById('surfClaimBtn').addEventListener('click', surfClaimPrize);
+  function openSurf(){
+    // the heat is on right now: straight in
+    if(surfCanEnter(surfMine(surfState))){ surfEnterHeat(); return; }
+    startOverlay.hidden = true;
+    surfOverlay.hidden = false;
+    surfJoinMsg = '';
+    document.getElementById('surfClaimResult').textContent = '';
+    document.getElementById('surfClaimResult').hidden = true;
+    renderSurf();
+    fetchSurf().then(renderSurf);
+  }
+  surfBanner.addEventListener('click', openSurf);
+  document.getElementById('closeSurfBtn').addEventListener('click', function(){
+    surfOverlay.hidden = true;
+    startOverlay.hidden = false;
+    renderSurfBanner();
+  });
+  // heats come and go by the clock: keep the banner and screen current
+  var surfLastFetch = 0;
+  setInterval(function(){
+    if(!surfT) return;
+    var now = Date.now(), m = surfMine(surfState), near = m && Math.abs(now - m.heat.at) < 30 * 60000;
+    if(now - surfLastFetch > (near ? 15000 : 60000) && (!startOverlay.hidden || !surfOverlay.hidden)){ surfLastFetch = now; fetchSurf().then(function(){ if(!surfOverlay.hidden) renderSurf(); }); }
+    else { surfState = surfCompute(); renderSurfBanner(); if(!surfOverlay.hidden) renderSurf(); }
+  }, 5000);
+  fetchSurf();
+
+
   closeTourneyBtn.addEventListener('click', closeTourney);
 
   // game-over line: did this run count for the team?
@@ -4061,6 +4864,7 @@
         if(duelRoom !== ch || duel !== d || d.started) return;
         var all = duelMembers(ch);
         d.members = all;
+        if(d.surf){ surfRoomSync(d, all); return; }
         if(d.expect){
           var o = all.filter(function(m){ return m.id === d.expect; })[0];
           if(!o || !host) return;
@@ -4135,7 +4939,7 @@
     if(!d || d.started || d.going || !duelRoom) return;
     var all = d.members.slice(0, DUEL_MAX);
     if(d.expect) all = all.filter(function(m){ return m.id === duelMyId || m.id === d.expect; });
-    var players = all.map(function(m){ return { id: m.id, name: (m.id === duelMyId ? playerNick() : m.name) || L('שחקן', 'Player') }; });
+    var players = d.surf ? surfGoPlayers(d, all) : all.map(function(m){ return { id: m.id, name: (m.id === duelMyId ? playerNick() : m.name) || L('שחקן', 'Player') }; });
     if(players.length < 2) return;
     d.going = true;
     d.rtt = {};
@@ -4166,7 +4970,7 @@
     players.forEach(function(p, i){
       var lane = lanes[i % lanes.length];
       if(p.id === duelMyId){ d.startLane = lane; return; }
-      d.opps[p.id] = { id: p.id, name: p.name || L('שחקן', 'Player'), st: null, seen: Date.now(), final: null, left: false, gx: LANES[lane] };
+      d.opps[p.id] = { id: p.id, name: p.name || L('שחקן', 'Player'), st: null, seen: Date.now(), final: null, left: false, gx: LANES[lane], bot: p.bot ? p : null };
       d.order.push(p.id);
     });
   }
@@ -4186,11 +4990,13 @@
     duelOverlay.hidden = true;
     beginRun(false, seed);
     if(d.startLane !== undefined){ player.lane = d.startLane; player.x = LANES[d.startLane]; }
+    if(d.surf && d.surf.world !== 'canyon'){ currentWorld = d.surf.world; decor = []; }
     state = 'countdown';
     duelBar.hidden = false;
     duelBanner.hidden = true;
     duelHudShown = ''; duelHud();
     var goAt = Date.now() + Math.max(500, ms || DUEL_COUNTDOWN*1000);
+    d.goAt = goAt;
     duelCount.hidden = false;
     duelCount.textContent = Math.ceil((goAt - Date.now()) / 1000);
     var iv = setInterval(function(){
@@ -4226,9 +5032,10 @@
         id: duelMyId, l: player.lane, y: Math.round(player.y), dk: player.ducking ? 1 : 0, f: player.flying ? 1 : 0,
         dist: Math.round(distance), sc: alive ? currentScore() : d.myFinal, al: alive ? 1 : 0, sk: selectedSkinId, w: currentWorld } });
     }
+    duelOppList(d).forEach(function(o){ if(o.bot) surfBotTick(d, o, now); });
     if(state !== 'countdown'){
       duelOppList(d).forEach(function(o){
-        if(o.final === null && now - o.seen > DUEL_SILENT_MS){
+        if(o.final === null && !o.bot && now - o.seen > DUEL_SILENT_MS){
           o.final = -1; o.left = true;              // gone: out of the running
           if(state === 'playing' || state === 'watch') showToast(o.name + L(' יצא מהקרב', ' left the match'));
         }
@@ -4243,6 +5050,7 @@
   function duelCheck(){
     var d = duel;
     if(!d || !d.started || d.result) return;
+    if(d.surf) return surfCheck(d);
     var opps = duelOppList(d);
     var allDone = opps.every(function(o){ return o.final !== null; });
     var bestDone = -1;
@@ -4258,6 +5066,7 @@
   }
 
   function duelResultText(d){
+    if(d.surf) return surfResultText(d);
     var opps = duelOppList(d), lead = duelLeader(d);
     var solo = opps.length === 1;
     if(d.left) return solo ? opps[0].name + L(' יצא מהקרב — ניצחת! 🏆', ' left the match — you win! 🏆') : L('כולם יצאו מהקרב — ניצחת! 🏆', 'Everyone left — you win! 🏆');
@@ -4275,7 +5084,7 @@
     var opps = duelOppList(d);
     d.result = res;
     d.left = res === 'win' && opps.every(function(o){ return o.left; });
-    if(res === 'win'){
+    if(res === 'win' && !d.surf){
       var second = duelLeader(d);
       duelRecordWin(playerNick(), second ? second.name : L('יריב', 'Opponent'));
     }
@@ -4312,7 +5121,7 @@
     var d = duel;
     if(!d || !d.started || overOverlay.hidden) return;
     duelBanner.hidden = false;
-    duelAgainBtn.hidden = false;
+    duelAgainBtn.hidden = !!d.surf;
     duelBanner.classList.toggle('is-win', d.result === 'win');
     duelBanner.classList.toggle('is-lose', d.result === 'lose');
     var running = duelOppList(d).filter(function(o){ return o.final === null && o.st; });
@@ -4334,6 +5143,7 @@
     if(d.myFinal === null){
       d.myFinal = score;
       if(duelRoom) duelRoom.send({ type: 'broadcast', event: 'end', payload: { id: duelMyId, sc: score } });
+      if(d.surf) surfPostResult(d.surf.key, score);
     }
     duelCheck();
     duelShowBanner();
@@ -9376,7 +10186,7 @@
   // never while the name field is being typed in. Everything worth keeping
   // (coins, skins, name, league) is in localStorage, so a reload loses nothing.
   // 'dev' = a local or preview copy: the updater stays off entirely.
-  var BUILD_VERSION = '20261021-182723';
+  var BUILD_VERSION = '20261020-161409';
   var UPDATE_CHECK_MS = 60000;
   var UPDATE_TRIED_KEY = 'canyonChaseTriedUpdate';
   var pendingSubmits = 0;
