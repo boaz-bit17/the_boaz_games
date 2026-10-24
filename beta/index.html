@@ -5454,8 +5454,19 @@
     // the water: one fragment shader for the wave and the sea
     var WU = { uDeep: { value: new T.Color() }, uFace: { value: new T.Color() }, uGlow: { value: new T.Color(0x2fe0b8) }, uSkyC: { value: new T.Color() }, uSkyTop: { value: new T.Color() },
                uFog: { value: new T.Color() }, uSunC: { value: new T.Color(0xfff2d0) }, uSunDir: { value: SUN },
-               uCam: { value: new T.Vector3() }, uT: { value: 0 }, uH: { value: 3 }, uAmp: { value: 0.7 } };
-    var WATER_FS = 'uniform vec3 uDeep; uniform vec3 uFace; uniform vec3 uGlow; uniform vec3 uSkyC; uniform vec3 uSkyTop; uniform vec3 uFog; uniform vec3 uSunC; uniform vec3 uSunDir; uniform vec3 uCam; uniform float uT; uniform float uH;\n' +
+               uCam: { value: new T.Vector3() }, uT: { value: 0 }, uH: { value: 3 }, uAmp: { value: 0.7 },
+               uTexFace: { value: null }, uTexSea: { value: null }, uTexFoam: { value: null }, uTex: { value: 0 } };
+    // real water photos (made for the game), loaded in the background; the
+    // shader works without them until they arrive
+    var texLoader = new T.TextureLoader(), texLeft = 3;
+    [['uTexFace', 'tex/surf-face.jpg'], ['uTexSea', 'tex/surf-sea.jpg'], ['uTexFoam', 'tex/surf-foam.jpg']].forEach(function(tx){
+      texLoader.load(tx[1], function(t){
+        t.wrapS = t.wrapT = T.RepeatWrapping; t.encoding = T.sRGBEncoding; t.anisotropy = Math.min(8, r.capabilities.getMaxAnisotropy());
+        WU[tx[0]].value = t; if(--texLeft === 0) WU.uTex.value = 1;
+      });
+    });
+    var WATER_FS = 'uniform sampler2D uTexFace; uniform sampler2D uTexSea; uniform sampler2D uTexFoam; uniform float uTex;\n' +
+      'uniform vec3 uDeep; uniform vec3 uFace; uniform vec3 uGlow; uniform vec3 uSkyC; uniform vec3 uSkyTop; uniform vec3 uFog; uniform vec3 uSunC; uniform vec3 uSunDir; uniform vec3 uCam; uniform float uT; uniform float uH;\n' +
       'varying vec3 vW; varying vec3 vN; varying float vFoam; varying float vThin;\n' + NOISE +
       'void main(){\n' +
       ' vec3 V = normalize(uCam - vW); vec3 N = normalize(vN); float inside = 0.0; if(dot(N, V) < 0.0){ N = -N; inside = 1.0; }\n' +
@@ -5470,6 +5481,13 @@
       ' float h = clamp(vW.y / uH, 0.0, 1.0);\n' +
       // the body of the water: deep below, brighter up the face
       ' vec3 base = mix(uDeep, uFace, smoothstep(0.0, 0.95, h));\n' +
+      ' float upright = 1.0 - smoothstep(0.55, 0.9, abs(normalize(vN).y));\n' +
+      ' vec3 tFace = texture2D(uTexFace, vec2(vW.x * 0.11 - uT * 0.02, vW.y * 0.2 - uT * 0.05)).rgb;\n' +
+      ' vec3 tSea = texture2D(uTexSea, vW.xz * 0.06 + vec2(uT * 0.006, uT * 0.01)).rgb;\n' +
+      ' vec3 tw = mix(tSea, tFace, upright);\n' +
+      ' float tl = dot(tw, vec3(0.3, 0.59, 0.11));\n' +
+      ' vec3 photo = mix(tw * (base / max(vec3(0.03), vec3(0.05, 0.22, 0.22))) * 0.55, base * (0.45 + 1.6 * tl), 0.5);\n' +
+      ' base = mix(base, photo, 0.85 * uTex * (1.0 - 0.3 * step(vThin, -0.5)));\n' +
       // reflection of the sky, by angle
       ' vec3 R = reflect(-V, N); vec3 skyR = mix(uSkyC, uSkyTop, pow(clamp(R.y, 0.0, 1.0), 0.6));\n' +
       ' float fres = 0.03 + 0.97 * pow(1.0 - max(dot(N, V), 0.0), 5.0);\n' +
@@ -5489,6 +5507,10 @@
       ' float pt = smoothstep(0.68, 0.82, fbm(vec3(vW.x * 0.3 + uT * 0.02, vW.z * 0.3, 3.0)));\n' +
       ' f = max(f, pt * lace * 0.45 * det * (1.0 - smoothstep(0.3, 0.8, h)));\n' +
       ' vec3 foamC = mix(vec3(0.62, 0.74, 0.8), vec3(0.97, 0.99, 1.0), 0.55 + 0.45 * b2) * (0.85 + 0.15 * max(dot(N, uSunDir), 0.0));\n' +
+      ' vec3 tFoam = texture2D(uTexFoam, vec2(vW.x * 0.22 + vW.z * 0.1, vW.y * 0.3 + vW.z * 0.15 - uT * 0.12)).rgb;\n' +
+      ' float fl = dot(tFoam, vec3(0.3, 0.59, 0.11));\n' +
+      ' foamC = mix(foamC, tFoam * 1.08, uTex);\n' +
+      ' f = mix(f, clamp(f * (0.35 + 1.2 * smoothstep(0.3, 0.8, fl)), 0.0, 1.0), uTex);\n' +
       ' col = mix(col, foamC, f);\n' +
       ' col = mix(col, uFog, smoothstep(140.0, 900.0, length(uCam - vW)));\n' +
       ' gl_FragColor = vec4(col, 1.0);' + OUT;
@@ -11992,7 +12014,7 @@
   // never while the name field is being typed in. Everything worth keeping
   // (coins, skins, name, league) is in localStorage, so a reload loses nothing.
   // 'dev' = a local or preview copy: the updater stays off entirely.
-  var BUILD_VERSION = '20261024-154639';
+  var BUILD_VERSION = '20261024-155844';
   var UPDATE_CHECK_MS = 60000;
   var UPDATE_TRIED_KEY = 'canyonChaseTriedUpdate';
   var pendingSubmits = 0;
