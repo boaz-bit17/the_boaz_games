@@ -4677,12 +4677,13 @@
       var a = sg.air;
       a.y += a.vy * dt; a.vy -= 2.7 * dt;
       sg.x += a.vx * dt;
-      if(sg.hold){ a.rot += SG_SPIN * dt; }
+      var Ja = sgJoyVec();
+      if(Math.abs(Ja.x) > 0.35) a.rot += SG_SPIN * dt * (Ja.x < 0 ? -1 : 1);
       if(a.y <= 0 && a.vy < 0){
         // back on the face: straight enough?
-        var r = a.rot % (Math.PI * 2), off = Math.min(r, Math.PI * 2 - r), tol = 0.55 + 0.12 * up.balance;
+        var TAU = Math.PI * 2, r = ((a.rot % TAU) + TAU) % TAU, off = Math.min(r, TAU - r), tol = 0.55 + 0.12 * up.balance;
         if(off > tol){ sg.h = 1; sgWipe('pearl'); return; }
-        var flips = Math.round(a.rot / (Math.PI * 2)), airT = sg.t - a.t0;
+        var flips = Math.round(Math.abs(a.rot) / (Math.PI * 2)), airT = sg.t - a.t0;
         sg.phase = 'ride'; sg.h = 0.93; sg.th = -0.75; sg.v = Math.max(300, a.vx * 0.95);
         sgScore(flips >= 2 ? L('סלטה כפולה!', 'Double flip!') : flips === 1 ? L('סלטה!', 'Flip!') : L('קפיצה!', 'Air!'), 300 + 250 * airT + 700 * flips);
         sgSplash(2);
@@ -4692,7 +4693,8 @@
     }
 
     // riding the face
-    var target = sg.hold ? 1.0 : -0.95;
+    var J = sgJoyVec();
+    var target = J.on ? Math.max(-0.95, Math.min(1.05, -J.y * 1.1)) : -0.3;
     sg.th += (target - sg.th) * Math.min(1, dt * 4.6);
     // far out on the shoulder the wave has no push left
     var push = Math.max(0.25, Math.min(1, 1 - (gap - 900) / 700));
@@ -4702,7 +4704,13 @@
     var vmax = 720 * (1 + 0.06 * up.speed);
     sg.v = Math.max(200, Math.min(vmax, sg.v));
     sg.h += Math.sin(sg.th) * sg.v * dt / F;
-    sg.x += (0.55 + 0.45 * Math.cos(sg.th)) * sg.v * dt;     // the wave carries you along even as you climb
+    // back on the stick turns you back toward the curl (a cutback), forward pumps
+    var fwdK = 1 + Math.min(0, J.x) * 1.4;
+    sg.x += fwdK * (0.55 + 0.45 * Math.cos(sg.th)) * sg.v * dt;     // the wave carries you along even as you climb
+    if(J.x < -0.4){ sg.cutT = (sg.cutT || 0) + dt; sg.v -= 90 * Math.abs(J.x) * dt; }
+    else { if((sg.cutT || 0) > 0.35 && sg.h > 0.3) { sgScore(L('קאטבק', 'Cutback'), 170 + sg.v * 0.15); sgFan(); } sg.cutT = 0; }
+    if(J.x > 0.4 && sg.h > 0.2 && sg.h < 0.85) sg.v += 70 * J.x * dt;
+    if(sg.h > 0.9 && sg.th > 0.6) sg.lipT = sg.t;          // hitting the lip vertically
     if(sg.h < 0){ sg.h = 0; if(sg.th < 0) sg.th *= 0.5; }
     sg.trail = sg.trail || [];
     sg.trail.push({ x: sg.x, h: sg.h });
@@ -4714,12 +4722,16 @@
     var sign = sg.th > 0.15 ? 1 : sg.th < -0.15 ? -1 : sg.prevSign;
     if(sign !== sg.prevSign){
       if(sign > 0 && sg.h < 0.3 && sg.v > 260) sgScore(L('פנייה תחתונה', 'Bottom turn'), 80 + sg.v * 0.12);
-      if(sign < 0 && sg.h > 0.78 && sg.v > 220){ sgScore(L('סנאפ', 'Snap'), 120 + sg.v * 0.15); sgFan(); }
+      if(sign < 0 && sg.h > 0.78 && sg.v > 220){
+        // straight up into the lip and straight back down: off the lip
+        var olt = sg.t - (sg.lipT || -9) < 0.5;
+        sgScore(olt ? L('אוף דה ליפ!', 'Off the lip!') : L('סנאפ', 'Snap'), olt ? 280 + sg.v * 0.2 : 120 + sg.v * 0.15); sgFan();
+      }
       sg.prevSign = sign;
     }
     // off the lip with speed: into the air
     if(sg.h >= 1){
-      if(sg.th > 0.4 && sg.v > 360){
+      if(sg.th > 0.4 && sg.v > 360 && J.y < -0.5){
         var lift = (1 + 0.1 * up.air);
         sg.phase = 'air';
         sg.air = { y: 0, vy: Math.sin(sg.th) * sg.v / F * 1.25 * lift, vx: Math.cos(sg.th) * sg.v * 1.05, rot: 0, t0: sg.t };
@@ -5185,6 +5197,7 @@
   function sgDraw(){
     if(!sg.spot) return;
     ctx.clearRect(0, 0, W, H);
+    if(sg3.state === 'ready'){ var p3 = sg3Render(); sgHud(p3.sx, p3.sy, p3.sc); return; }
     sgDrawScene();
     var gm = sgFaceGeom(), K = sgK(), rider = sgItem(SG_RIDERS, sgSave.rider), board = sgItem(SG_BOARDS, sgSave.board);
     var sx = gm.sx, sy, lean;
@@ -5215,10 +5228,13 @@
     var sc = Math.max(0.35, gm.faceH * sg.spot.man / 80);
     ctx.scale(sc, sc);
     var vest = (sg.phase === 'wipe' || sg.phase === 'over') && sg.spot.id === 'naz' ? Math.min(1, (sg.wipe ? sg.wipe.t : 1) * 1.5) : 0;
-    sgDrawRider(ctx, rider, board, lean, sg.hold && sg.phase === 'ride' ? 0.2 : 0.6, vest);
+    sgDrawRider(ctx, rider, board, lean, sgJoyVec().y < -0.3 && sg.phase === 'ride' ? 0.2 : 0.6, vest);
     ctx.restore();
 
-    // HUD: score, best, the chain, the moves as they happen
+    sgHud(sx, sy, sc);
+  }
+  // the numbers and words over the ride (2D and 3D), and the joystick
+  function sgHud(sx, sy, sc){
     ctx.textAlign = 'center';
     ctx.font = 'bold 34px Suez One, Rubik, sans-serif';
     ctx.lineWidth = 6; ctx.strokeStyle = 'rgba(0,30,50,0.6)'; ctx.fillStyle = '#ffffff';
@@ -5244,14 +5260,25 @@
     if(sg.hint > 0 && sg.phase !== 'tow'){
       ctx.globalAlpha = Math.min(1, sg.hint);
       ctx.font = 'bold 16px Rubik, sans-serif'; ctx.fillStyle = '#ffffff';
-      var hn = L('לחץ והחזק = לעלות על הגל · עזוב = לרדת ולצבור מהירות', 'Hold = climb the wave · let go = drop and gain speed');
+      var hn = L('גרור את האצבע: ⬆️ לעלות · ⬇️ לרדת ולצבור מהירות · ⬅️ קאטבק', 'Drag: ⬆️ climb · ⬇️ drop for speed · ⬅️ cutback');
       ctx.strokeText(hn, W / 2, H - 28); ctx.fillText(hn, W / 2, H - 28);
       ctx.globalAlpha = 1;
     }
     if(sg.phase === 'air'){
       ctx.font = 'bold 15px Rubik, sans-serif'; ctx.fillStyle = '#ffd447';
-      var at = L('החזק כדי להסתובב · עזוב כדי לנחות ישר', 'Hold to flip · let go to land straight');
+      var at = L('הזז ⬅️➡️ כדי להסתובב · עזוב כדי לנחות ישר', 'Move ⬅️➡️ to flip · let go to land straight');
       ctx.strokeText(at, W / 2, H - 28); ctx.fillText(at, W / 2, H - 28);
+    }
+    var jj = sgJoy();
+    if(jj.on){
+      ctx.fillStyle = 'rgba(255,255,255,0.16)'; ctx.strokeStyle = 'rgba(255,255,255,0.55)'; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(jj.bx, jj.by, SG_JOY_R, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = 'rgba(255,255,255,0.7)'; ctx.beginPath(); ctx.arc(jj.bx + jj.x * SG_JOY_R, jj.by + jj.y * SG_JOY_R, 24, 0, Math.PI * 2); ctx.fill();
+    } else if(sg.hint > 0 && sg.phase !== 'menu'){
+      ctx.globalAlpha = Math.min(1, sg.hint) * 0.6;
+      ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(W * 0.2, H * 0.72, SG_JOY_R, 0, Math.PI * 2); ctx.stroke();
+      ctx.fillStyle = 'rgba(255,255,255,0.6)'; ctx.beginPath(); ctx.arc(W * 0.2, H * 0.72 - SG_JOY_R * 0.6 * Math.abs(Math.sin(sg.t * 2)), 22, 0, Math.PI * 2); ctx.fill();
+      ctx.globalAlpha = 1;
     }
   }
   function sgFrame(dt){
@@ -5259,8 +5286,425 @@
     sgDraw();
   }
 
-  // ---- input while surfing
-  function sgHold(on){ if(sg.active) sg.hold = on && (sg.phase === 'ride' || sg.phase === 'air'); }
+  // ---- input while surfing: a joystick, like in Brawl Stars -- touch
+  // anywhere and drag: up climbs, down drops for speed, back (left) carves a
+  // cutback, forward pumps. In the air, left/right flips. Arrow keys too.
+  var SG_JOY_R = 55;
+  function sgJoy(){ return sg.joy || (sg.joy = {}); }
+  function sgJoyStart(px, py){
+    var r = canvas.getBoundingClientRect(), j = sgJoy();
+    j.on = true; j.bx = px - r.left; j.by = py - r.top; j.x = 0; j.y = 0;
+  }
+  function sgJoyMove(px, py){
+    var j = sgJoy(); if(!j.on) return;
+    var r = canvas.getBoundingClientRect(), dx = px - r.left - j.bx, dy = py - r.top - j.by, d = Math.sqrt(dx * dx + dy * dy), k = d > SG_JOY_R ? SG_JOY_R / d : 1;
+    j.x = dx * k / SG_JOY_R; j.y = dy * k / SG_JOY_R;
+  }
+  function sgJoyEnd(){ var j = sgJoy(); j.on = false; j.x = 0; j.y = 0; }
+  function sgJoyKey(key, down){
+    var j = sgJoy(), v = down ? 1 : 0;
+    if(key === 'ArrowUp' || key === 'w' || key === 'W' || key === ' ') j.ku = v;
+    else if(key === 'ArrowDown' || key === 's' || key === 'S') j.kd = v;
+    else if(key === 'ArrowLeft' || key === 'a' || key === 'A') j.kl = v;
+    else if(key === 'ArrowRight' || key === 'd' || key === 'D') j.kr = v;
+    else return false;
+    return true;
+  }
+  function sgJoyVec(){
+    var j = sgJoy(), x = (j.x || 0) + (j.kr || 0) - (j.kl || 0), y = (j.y || 0) + (j.kd || 0) - (j.ku || 0);
+    return { x: Math.max(-1, Math.min(1, x)), y: Math.max(-1, Math.min(1, y)), on: !!(j.on || j.ku || j.kd || j.kl || j.kr) };
+  }
+
+  // ---------- the surf game in 3D (three.js, loaded when you go surfing) ----------
+  // The same ride as the 2D game, drawn as a real wave: a mesh whose cross-
+  // section is a breaking-wave profile that changes along the beach -- a
+  // plain swell ahead, the lip pitching out near the curl (a barrel when it
+  // throws), collapsed foam behind -- with a water shader (sky reflection,
+  // sun glints, light through the thin lip, streaks, lace foam), foam and
+  // spray particles, the board's wake, and a 3D surfer standing on the face.
+  // If three.js can't load, the 2D drawing carries on.
+  var SG3_LIB = 'https://cdn.jsdelivr.net/npm/three@0.149.0/build/three.min.js';
+  var SG3_M = 1 / 40;                                   // game units -> metres
+  var SG3_H = { pool: 2.7, olga: 3, pipe: 4.2, naz: 10 };  // wave height (m)
+  var sg3 = { state: 'none' };
+  function sg3Load(){
+    if(sg3.state !== 'none') return;
+    if(!window.WebGLRenderingContext){ sg3.state = 'failed'; return; }
+    sg3.state = 'loading';
+    var s = document.createElement('script');
+    s.src = SG3_LIB;
+    s.onload = function(){ try { sg3Init(); sg3.state = 'ready'; } catch(e){ sg3.state = 'failed'; if(window.console) console.warn('surf 3D off:', e); } };
+    s.onerror = function(){ sg3.state = 'failed'; };
+    document.head.appendChild(s);
+  }
+  function sg3Hide(){ if(sg3.cv) sg3.cv.style.display = 'none'; }
+
+  // the wave's cross-section (z toward the beach/camera, y up), in wave
+  // heights: an unbroken swell (CP0), a pitching barrel (CP1), and broken
+  // foam (CPC). 0 back trough, 2 crest, 4 lip tip, 7 face top, 10 trough
+  var SG3_CP0 = [[-3.2,-0.05],[-1.6,0.35],[0,1],[0.08,0.99],[0.12,0.96],[0.13,0.93],[0.14,0.9],[0.16,0.86],[0.45,0.45],[0.95,0.1],[2.2,-0.05]];
+  var SG3_CP1 = [[-3.2,-0.05],[-1.6,0.38],[-0.1,1.0],[0.6,1.04],[1.15,0.1],[0.88,0.5],[0.5,0.8],[0.22,0.72],[0.34,0.36],[0.9,0.08],[2.2,-0.05]];
+  var SG3_CPC = [[-3.2,-0.05],[-1.6,0.22],[-0.3,0.5],[0.1,0.56],[0.45,0.48],[0.5,0.42],[0.45,0.4],[0.5,0.35],[0.75,0.22],[1.15,0.06],[2.2,-0.05]];
+  var SG3_SEG = 6, SG3_ROWS = (SG3_CP0.length - 1) * SG3_SEG + 1, SG3_COLS = 120;
+  function sg3Cr(a, b, c, d, t){ var t2 = t * t, t3 = t2 * t; return 0.5 * ((2 * b) + (-a + c) * t + (2 * a - 5 * b + 4 * c - d) * t2 + (-a + 3 * b - 3 * c + d) * t3); }
+  // the profile at a spot along the wave -> rows of [z, y] in metres
+  function sg3Profile(b, c, Hm, out){
+    var P = [];
+    for(var i = 0; i < SG3_CP0.length; i++){
+      var z = SG3_CP0[i][0] + (SG3_CP1[i][0] - SG3_CP0[i][0]) * b, y = SG3_CP0[i][1] + (SG3_CP1[i][1] - SG3_CP0[i][1]) * b;
+      z += (SG3_CPC[i][0] - z) * c; y += (SG3_CPC[i][1] - y) * c;
+      P.push([z * Hm, y * Hm]);
+    }
+    var k = 0;
+    for(var s = 0; s < P.length - 1; s++){
+      var p0 = P[Math.max(0, s - 1)], p1 = P[s], p2 = P[s + 1], p3 = P[Math.min(P.length - 1, s + 2)];
+      for(var j = 0; j < SG3_SEG; j++){
+        var t = j / SG3_SEG;
+        out[k][0] = sg3Cr(p0[0], p1[0], p2[0], p3[0], t); out[k][1] = sg3Cr(p0[1], p1[1], p2[1], p3[1], t); k++;
+      }
+    }
+    out[k][0] = P[P.length - 1][0]; out[k][1] = P[P.length - 1][1];
+    return out;
+  }
+  // how far the wave has broken at x (metres): b = lip pitching, c = collapsed
+  function sg3Break(xm, Hm){
+    var cm = sg.curl * SG3_M, d = xm - cm, b = 0, c = 0;
+    if(d >= 0) b = Math.max(0, 1 - d / (Hm * 2.6));
+    else { b = 1; c = Math.min(1, -d / (Hm * 1.4)); }
+    if(sg.throwT > 0 && d >= 0){
+      // the barrel opens and closes gradually at its far end, and as it starts/stops
+      var L3 = sg.throwLen * SG3_M, fadeLen = Hm * 1.6;
+      var tb = d < L3 - fadeLen ? 1 : Math.max(0, 1 - (d - (L3 - fadeLen)) / fadeLen);
+      b = Math.max(b, tb * Math.min(1, sg.throwT * 1.5));
+    }
+    for(var i = 0; i < sg.closeouts.length; i++){
+      var q = sg.closeouts[i]; if(q.done) continue;
+      var dq = Math.abs(xm - q.x * SG3_M); if(dq < Hm * 3) b = Math.max(b, 1 - dq / (Hm * 3));
+    }
+    b = b * b * (3 - 2 * b);
+    return [b, c];
+  }
+  var sg3Cache = { H: 0, m: {} };
+  function sg3ProfileQ(b, c, Hm){
+    if(sg3Cache.H !== Hm) sg3Cache = { H: Hm, m: {} };
+    var key = Math.round(b * 20) * 32 + Math.round(c * 20), pr = sg3Cache.m[key];
+    if(!pr){ pr = []; for(var i = 0; i < SG3_ROWS; i++) pr.push([0, 0]); sg3Profile(Math.round(b * 20) / 20, Math.round(c * 20) / 20, Hm, pr); sg3Cache.m[key] = pr; }
+    return pr;
+  }
+  function sg3RowForH(h){ var top = 7 * SG3_SEG, low = 9.5 * SG3_SEG; return low - h * (low - top); }
+
+  function sg3Init(){
+    var T = window.THREE;
+    var cv = document.createElement('canvas'); cv.id = 'game3d';
+    cv.style.cssText = 'position:absolute;inset:0;display:none;width:100%;height:100%';
+    stage.insertBefore(cv, canvas);
+    var r = new T.WebGLRenderer({ canvas: cv, antialias: true });
+    r.setPixelRatio(Math.min(1.5, window.devicePixelRatio || 1));
+    var scene = new T.Scene(), cam = new T.PerspectiveCamera(36, 1, 0.1, 3000);
+    // the sky: a gradient dome
+    var skyMat = new T.ShaderMaterial({ side: T.BackSide, depthWrite: false,
+      uniforms: { uTop: { value: new T.Color() }, uHz: { value: new T.Color() } },
+      vertexShader: 'varying vec3 vP; void main(){ vP = position; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
+      fragmentShader: 'uniform vec3 uTop; uniform vec3 uHz; varying vec3 vP; void main(){ float h = clamp(normalize(vP).y * 2.4, 0.0, 1.0); gl_FragColor = vec4(mix(uHz, uTop, h), 1.0); }' });
+    var sky = new T.Mesh(new T.SphereGeometry(1500, 24, 16), skyMat); scene.add(sky);
+    // the water
+    var NOISE = 'float hs(vec3 p){ p = fract(p * 0.3183099 + 0.1); p *= 17.0; return fract(p.x * p.y * p.z * (p.x + p.y + p.z)); }' +
+      'float ns(vec3 x){ vec3 i = floor(x); vec3 f = fract(x); f = f * f * (3.0 - 2.0 * f);' +
+      ' return mix(mix(mix(hs(i), hs(i + vec3(1,0,0)), f.x), mix(hs(i + vec3(0,1,0)), hs(i + vec3(1,1,0)), f.x), f.y),' +
+      '            mix(mix(hs(i + vec3(0,0,1)), hs(i + vec3(1,0,1)), f.x), mix(hs(i + vec3(0,1,1)), hs(i + vec3(1,1,1)), f.x), f.y), f.z); }' +
+      'float fbm(vec3 p){ float v = 0.0; float a = 0.5; for(int i = 0; i < 3; i++){ v += a * ns(p); p *= 2.03; a *= 0.5; } return v; }';
+    var wm = new T.ShaderMaterial({ side: T.DoubleSide,
+      uniforms: { uDeep: { value: new T.Color() }, uFace: { value: new T.Color() }, uGlow: { value: new T.Color(0x7fffd4) }, uSkyC: { value: new T.Color() },
+                  uFog: { value: new T.Color() }, uSunC: { value: new T.Color(0xfff4d6) }, uSunDir: { value: new T.Vector3(-0.3, 0.75, 0.6).normalize() },
+                  uCam: { value: new T.Vector3() }, uT: { value: 0 }, uH: { value: 3 } },
+      vertexShader: 'attribute float foam; attribute float thin; varying vec3 vW; varying vec3 vN; varying float vFoam; varying float vThin;' +
+        'void main(){ vec4 w = modelMatrix * vec4(position, 1.0); vW = w.xyz; vN = normalize(mat3(modelMatrix) * normal); vFoam = foam; vThin = thin; gl_Position = projectionMatrix * viewMatrix * w; }',
+      fragmentShader: 'uniform vec3 uDeep; uniform vec3 uFace; uniform vec3 uGlow; uniform vec3 uSkyC; uniform vec3 uFog; uniform vec3 uSunC; uniform vec3 uSunDir; uniform vec3 uCam; uniform float uT; uniform float uH;' +
+        'varying vec3 vW; varying vec3 vN; varying float vFoam; varying float vThin;' + NOISE +
+        'void main(){' +
+        ' vec3 V = normalize(uCam - vW); vec3 N = normalize(vN); if(dot(N, V) < 0.0) N = -N;' +
+        ' float n1 = fbm(vec3(vW.x * 0.12 + uT * 0.05, vW.y * 1.4, vW.z * 1.4));' +
+        ' float n2 = fbm(vec3(vW.x * 0.8, vW.y * 0.8 + uT * 0.35, vW.z * 0.8 - uT * 0.2));' +
+        ' N = normalize(N + vec3((n2 - 0.5) * 0.25, (n1 - 0.5) * 0.3, (n1 - 0.5) * 0.3));' +
+        ' float h = clamp(vW.y / uH, 0.0, 1.0);' +
+        ' vec3 col = mix(uDeep, uFace, smoothstep(0.0, 0.95, h));' +
+        ' col += uGlow * vThin * (0.55 + 0.45 * n1) * 0.55;' +
+        ' float fres = pow(1.0 - max(dot(N, V), 0.0), 4.0);' +
+        ' col = mix(col, uSkyC, fres * 0.6);' +
+        ' col += uSunC * pow(max(dot(reflect(-uSunDir, N), V), 0.0), 140.0) * 1.3;' +
+        ' col += smoothstep(0.6, 0.8, n1) * 0.07 - smoothstep(0.42, 0.25, n1) * 0.05;' +
+        ' float lace = smoothstep(0.4, 0.62, n2);' +
+        ' float f = clamp(vFoam * 1.35 - (1.0 - lace) * 0.65, 0.0, 1.0);' +
+        ' col = mix(col, vec3(0.94, 0.97, 1.0) * (0.8 + 0.2 * n2), f);' +
+        ' col = mix(col, uFog, smoothstep(140.0, 900.0, length(uCam - vW)));' +
+        ' gl_FragColor = vec4(col, 1.0); }' });
+    // the wave mesh
+    var nV = SG3_COLS * SG3_ROWS, pos = new Float32Array(nV * 3), foam = new Float32Array(nV), thin = new Float32Array(nV), idx = [];
+    for(var cI = 0; cI < SG3_COLS - 1; cI++) for(var rI = 0; rI < SG3_ROWS - 1; rI++){
+      var a = cI * SG3_ROWS + rI, b2 = a + SG3_ROWS;
+      idx.push(a, b2, a + 1, b2, b2 + 1, a + 1);
+    }
+    var geo = new T.BufferGeometry();
+    geo.setAttribute('position', new T.BufferAttribute(pos, 3));
+    geo.setAttribute('foam', new T.BufferAttribute(foam, 1));
+    geo.setAttribute('thin', new T.BufferAttribute(thin, 1));
+    geo.setIndex(idx);
+    var wave = new T.Mesh(geo, wm); wave.frustumCulled = false; scene.add(wave);
+    // the open sea around it
+    var og = new T.PlaneGeometry(4000, 4000, 1, 1); og.rotateX(-Math.PI / 2);
+    og.setAttribute('foam', new T.BufferAttribute(new Float32Array(4), 1));
+    og.setAttribute('thin', new T.BufferAttribute(new Float32Array(4), 1));
+    var ocean = new T.Mesh(og, wm); ocean.position.y = -0.06; scene.add(ocean);
+    // light for the solid things
+    scene.add(new T.HemisphereLight(0xffffff, 0x2a5566, 0.85));
+    var sun = new T.DirectionalLight(0xffffff, 0.9); sun.position.set(-30, 60, 50); scene.add(sun);
+    // foam and spray: soft round sprites
+    var sc2 = document.createElement('canvas'); sc2.width = sc2.height = 64;
+    var sg2 = sc2.getContext('2d'), rg = sg2.createRadialGradient(32, 32, 2, 32, 32, 31);
+    rg.addColorStop(0, 'rgba(255,255,255,1)'); rg.addColorStop(0.5, 'rgba(250,253,255,0.85)'); rg.addColorStop(1, 'rgba(230,245,250,0)');
+    sg2.fillStyle = rg; sg2.fillRect(0, 0, 64, 64);
+    var sprite = new T.CanvasTexture(sc2);
+    function particles(n, size, opacity){
+      var p = new Float32Array(n * 3); for(var i = 0; i < n * 3; i++) p[i] = -9999;
+      var g = new T.BufferGeometry(); g.setAttribute('position', new T.BufferAttribute(p, 3));
+      var m = new T.PointsMaterial({ size: size, map: sprite, transparent: true, depthWrite: false, opacity: opacity, sizeAttenuation: true });
+      var pts = new T.Points(g, m); pts.frustumCulled = false; scene.add(pts);
+      return { pts: pts, pos: p, vel: new Float32Array(n * 3), life: new Float32Array(n), n: n, next: 0 };
+    }
+    var billows = particles(420, 2, 0.85), spray = particles(500, 0.35, 0.95);
+    // the wake: a ribbon laid on the face
+    var WK = 60, wpos = new Float32Array(WK * 2 * 3), widx = [];
+    for(var w = 0; w < WK - 1; w++){ var w0 = w * 2; widx.push(w0, w0 + 1, w0 + 2, w0 + 1, w0 + 3, w0 + 2); }
+    var wgeo = new T.BufferGeometry(); wgeo.setAttribute('position', new T.BufferAttribute(wpos, 3));
+    var walpha = new Float32Array(WK * 2); wgeo.setAttribute('alpha', new T.BufferAttribute(walpha, 1)); wgeo.setIndex(widx);
+    var wmat = new T.ShaderMaterial({ transparent: true, depthWrite: false, side: T.DoubleSide,
+      vertexShader: 'attribute float alpha; varying float vA; void main(){ vA = alpha; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
+      fragmentShader: 'varying float vA; void main(){ gl_FragColor = vec4(1.0, 1.0, 1.0, vA); }' });
+    var wake = new T.Mesh(wgeo, wmat); wake.frustumCulled = false; scene.add(wake);
+    // the surfer, the jet ski, hazards
+    var rider = sg3MakeRider(T); scene.add(rider.g);
+    var ski = new T.Group();
+    var hull = new T.Mesh(new T.BoxGeometry(2.8, 0.6, 1.1), new T.MeshStandardMaterial({ color: 0xffcc00, roughness: 0.4 })); hull.position.y = 0.3; ski.add(hull);
+    var seat = new T.Mesh(new T.BoxGeometry(1, 0.35, 0.6), new T.MeshStandardMaterial({ color: 0x222222 })); seat.position.set(-0.3, 0.75, 0); ski.add(seat);
+    ski.visible = false; scene.add(ski);
+    var jellyMat = new T.MeshStandardMaterial({ color: 0xe4a0ff, transparent: true, opacity: 0.8, roughness: 0.2, emissive: 0x6a2a80 });
+    var rockMat = new T.MeshStandardMaterial({ color: 0x4a3c30, roughness: 0.95, flatShading: true });
+    var haz = [];
+    for(var hz = 0; hz < 10; hz++){
+      var jm = new T.Mesh(new T.SphereGeometry(0.35, 12, 8, 0, Math.PI * 2, 0, Math.PI / 2), jellyMat);
+      var rm = new T.Mesh(new T.DodecahedronGeometry(0.9, 0), rockMat);
+      jm.visible = rm.visible = false; scene.add(jm); scene.add(rm);
+      haz.push({ j: jm, r: rm });
+    }
+    var rows = []; for(var q = 0; q < SG3_ROWS; q++) rows.push([0, 0]);
+    sg3 = Object.assign(sg3, { T: T, cv: cv, r: r, scene: scene, cam: cam, skyMat: skyMat, wm: wm, geo: geo, pos: pos, foam: foam, thin: thin,
+      billows: billows, spray: spray, wpos: wpos, walpha: walpha, wgeo: wgeo, WK: WK, rider: rider, ski: ski, haz: haz, rows: rows,
+      camP: new T.Vector3(), camL: new T.Vector3(), spotId: '', w: 0, h: 0, last: 0 });
+  }
+
+  // a person from capsules: hips, bent legs, a torso leaning over the front
+  // knee, arms out; posed every frame
+  function sg3MakeRider(T){
+    var g = new T.Group(), body = new T.Group(); g.add(body);
+    function mat(c){ return new T.MeshStandardMaterial({ color: c, roughness: 0.65 }); }
+    var board = new T.Mesh(new T.SphereGeometry(1, 28, 10), mat(0xff7a3d)); board.scale.set(0.95, 0.04, 0.25); body.add(board);
+    var stripe = new T.Mesh(new T.BoxGeometry(1.6, 0.012, 0.03), mat(0xffffff)); stripe.position.y = 0.037; body.add(stripe);
+    var fin = new T.Mesh(new T.BoxGeometry(0.14, 0.14, 0.015), mat(0x222222)); fin.position.set(-0.8, -0.08, 0); body.add(fin);
+    var suitM = mat(0x1d9bf0), skinM = mat(0xf1c7a0), hairM = mat(0x7a4a22), accM = mat(0xffd400);
+    function cap(r, m){ var me = new T.Mesh(new T.CapsuleGeometry(r, 1, 4, 10), m); body.add(me); return me; }
+    var parts = { thighB: cap(0.075, suitM), shinB: cap(0.06, suitM), thighF: cap(0.08, suitM), shinF: cap(0.065, suitM),
+      torso: cap(0.15, suitM), stripe: cap(0.03, accM), uArmB: cap(0.05, suitM), fArmB: cap(0.045, skinM), uArmF: cap(0.05, suitM), fArmF: cap(0.045, skinM) };
+    var head = new T.Mesh(new T.SphereGeometry(0.12, 16, 12), skinM); body.add(head);
+    var hair = new T.Mesh(new T.SphereGeometry(0.128, 16, 10, 0, Math.PI * 2, 0, Math.PI * 0.55), hairM); body.add(hair);
+    var vest = new T.Mesh(new T.SphereGeometry(0.3, 14, 10), mat(0xffcc00)); vest.visible = false; body.add(vest);
+    return { g: g, body: body, board: board, stripe: stripe, parts: parts, head: head, hair: hair, vest: vest, suitM: suitM, skinM: skinM, hairM: hairM, accM: accM };
+  }
+  // a capsule from a to b (its length is 1 + 2r along y)
+  function sg3Limb(T, m, a, b){
+    var d = new T.Vector3().subVectors(b, a), len = d.length();
+    m.position.copy(a).addScaledVector(d, 0.5);
+    m.scale.set(1, Math.max(0.05, len - 0.1), 1);
+    m.quaternion.setFromUnitVectors(new T.Vector3(0, 1, 0), d.normalize());
+  }
+  function sg3Pose(k, look){
+    var T = sg3.T, R = sg3.rider, P = R.parts, V = function(x, y, z){ return new T.Vector3(x, y, z); };
+    var hip = V(-0.02, 0.86 - 0.24 * k, 0), kneeB = V(-0.27, 0.46 - 0.1 * k, 0.07), kneeF = V(0.24, 0.48 - 0.1 * k, -0.06);
+    var footB = V(-0.36, 0.06, 0.09), footF = V(0.33, 0.06, -0.07);
+    var sh = V(0.1 + 0.12 * k, 1.42 - 0.3 * k, 0), hd = V(sh.x + 0.1, sh.y + 0.24, 0);
+    var elB = V(sh.x - 0.25, sh.y - 0.15, 0.2), haB = V(sh.x - 0.5, sh.y - 0.32, 0.28), elF = V(sh.x + 0.25, sh.y - 0.06, -0.18), haF = V(sh.x + 0.5, sh.y - 0.12, -0.26);
+    sg3Limb(T, P.thighB, hip, kneeB); sg3Limb(T, P.shinB, kneeB, footB);
+    sg3Limb(T, P.thighF, hip, kneeF); sg3Limb(T, P.shinF, kneeF, footF);
+    sg3Limb(T, P.torso, hip, sh); sg3Limb(T, P.stripe, V(hip.x + 0.02, hip.y, -0.13), V(sh.x + 0.02, sh.y, -0.13));
+    sg3Limb(T, P.uArmB, sh, elB); sg3Limb(T, P.fArmB, elB, haB); sg3Limb(T, P.uArmF, sh, elF); sg3Limb(T, P.fArmF, elF, haF);
+    R.head.position.copy(hd); R.hair.position.copy(hd).add(V(-0.02, 0.02, 0)); R.hair.rotation.z = 0.5;
+    R.vest.position.set((hip.x + sh.x) / 2, (hip.y + sh.y) / 2, 0);
+  }
+
+  // one frame: rebuild the wave around the surfer, move everything, render.
+  // Returns where the surfer is on screen (for the floating texts)
+  function sg3Render(){
+    var T = sg3.T, spot = sg.spot, Hm = SG3_H[spot.id] || 3, now = performance.now() / 1000;
+    var dtR = Math.min(0.05, now - (sg3.last || now)); sg3.last = now;
+    sg3.cv.style.display = 'block';
+    if(sg3.w !== W || sg3.h !== H){ sg3.r.setSize(W, H, false); sg3.cam.aspect = W / H; sg3.cam.updateProjectionMatrix(); sg3.w = W; sg3.h = H; }
+    if(sg3.spotId !== spot.id){
+      sg3.spotId = spot.id;
+      sg3.skyMat.uniforms.uTop.value.set(spot.sky[0]); sg3.skyMat.uniforms.uHz.value.set(spot.sky[1]);
+      var U = sg3.wm.uniforms;
+      U.uDeep.value.set(spot.face[1]).multiplyScalar(0.7); U.uFace.value.set(spot.face[0]); U.uSkyC.value.set(spot.sky[1]); U.uFog.value.set(spot.sky[1]);
+      U.uH.value = Hm;
+      sg3.r.setClearColor(spot.sky[1]);
+    }
+    var U2 = sg3.wm.uniforms; U2.uT.value = now % 1000;
+    var sx = sg.x * SG3_M, rows = sg3.rows, pos = sg3.pos, foam = sg3.foam, thin = sg3.thin;
+    var x0 = sx - Hm * 9 - 30, span = Hm * 22 + 110, dx = span / (SG3_COLS - 1);
+    for(var c = 0; c < SG3_COLS; c++){
+      var xm = x0 + c * dx, br = sg3Break(xm, Hm);
+      rows = sg3ProfileQ(br[0], br[1], Hm);
+      for(var r = 0; r < SG3_ROWS; r++){
+        var i = c * SG3_ROWS + r;
+        pos[i * 3] = xm; pos[i * 3 + 1] = rows[r][1]; pos[i * 3 + 2] = rows[r][0];
+        var lipZone = r >= 12 && r <= 22 ? 1 : 0;      // light through the thin top of the wave only
+        // white only right at the lip's edge while it throws; the rest stays clear water
+        foam[i] = Math.min(1, br[1] * 1.1 + (r >= 23 && r <= 26 ? Math.max(0, br[0] - 0.8) * 2.5 : 0) + (r > 56 && br[1] > 0 ? 0.4 : 0));
+        thin[i] = lipZone ? (0.35 + 0.35 * br[0]) * (1 - br[1]) : (r > 22 && r <= 30 ? 0.15 * br[0] : 0);
+      }
+    }
+    sg3.geo.attributes.position.needsUpdate = true; sg3.geo.attributes.foam.needsUpdate = true; sg3.geo.attributes.thin.needsUpdate = true;
+    var nrmA = sg3.geo.attributes.normal ? sg3.geo.attributes.normal.array : null;
+    if(!nrmA){ nrmA = new Float32Array(pos.length); sg3.geo.setAttribute('normal', new T.BufferAttribute(nrmA, 3)); }
+    for(var nc = 0; nc < SG3_COLS; nc++){
+      var cA = Math.max(0, nc - 1), cB = Math.min(SG3_COLS - 1, nc + 1);
+      for(var nr = 0; nr < SG3_ROWS; nr++){
+        var rA = Math.max(0, nr - 1), rB = Math.min(SG3_ROWS - 1, nr + 1), ii = (nc * SG3_ROWS + nr) * 3;
+        var ia = (nc * SG3_ROWS + rA) * 3, ib = (nc * SG3_ROWS + rB) * 3, ic = (cA * SG3_ROWS + nr) * 3, id = (cB * SG3_ROWS + nr) * 3;
+        var ry = pos[ib + 1] - pos[ia + 1], rz = pos[ib + 2] - pos[ia + 2], cx2 = pos[id] - pos[ic], cy = pos[id + 1] - pos[ic + 1], cz = pos[id + 2] - pos[ic + 2];
+        // cross(row step, column step)
+        var nx = ry * cz - rz * cy, ny = rz * cx2, nz = -ry * cx2, nl = Math.sqrt(nx * nx + ny * ny + nz * nz) || 1;
+        nrmA[ii] = nx / nl; nrmA[ii + 1] = ny / nl; nrmA[ii + 2] = nz / nl;
+      }
+    }
+    sg3.geo.attributes.normal.needsUpdate = true;
+
+    // where the surfer is: on the face at h, at the lip in the air
+    var brS = sg3Break(sx, Hm); rows = sg3ProfileQ(brS[0], brS[1], Hm);
+    function faceAt(h){
+      var fr = sg3RowForH(Math.max(0, Math.min(1, h))), r0 = Math.floor(fr), r1 = Math.min(SG3_ROWS - 1, r0 + 1), f = fr - r0;
+      return [rows[r0][0] + (rows[r1][0] - rows[r0][0]) * f, rows[r0][1] + (rows[r1][1] - rows[r0][1]) * f];
+    }
+    var X = new T.Vector3(1, 0, 0), p, fwd, up, flip = 0;
+    var hh = sg.phase === 'air' ? 1 : sg.phase === 'wipe' || sg.phase === 'over' ? Math.max(0, (sg.wipe ? sg.wipe.h : 0) - (sg.wipe ? sg.wipe.t : 1) * 0.8) : (sg.h || 0);
+    var a0 = faceAt(hh), a1 = faceAt(Math.min(1, hh + 0.05)), a2 = faceAt(Math.max(0, hh - 0.05));
+    var tUp = new T.Vector3(0, a1[1] - a2[1], a1[0] - a2[0]).normalize();
+    var nrm = new T.Vector3().crossVectors(X, tUp).normalize();
+    if(nrm.y < 0) nrm.negate();
+    p = new T.Vector3(sx, a0[1], a0[0]);
+    if(sg.phase === 'air' && sg.air){
+      var lip = faceAt(1);
+      p.set(sx, lip[1] + sg.air.y * Hm * 0.9, lip[0]);
+      var pitch = Math.atan2(sg.air.vy * 2.2, 1);
+      fwd = new T.Vector3(Math.cos(pitch), Math.sin(pitch), 0); up = new T.Vector3(-Math.sin(pitch), Math.cos(pitch), 0);
+      flip = sg.air.rot;
+    } else {
+      var th = sg.th || 0;
+      fwd = new T.Vector3().addScaledVector(X, Math.cos(th)).addScaledVector(tUp, Math.sin(th)).normalize();
+      up = nrm.clone();
+    }
+    var side = new T.Vector3().crossVectors(fwd, up).normalize();
+    up = new T.Vector3().crossVectors(side, fwd).normalize();
+    var m4 = new T.Matrix4().makeBasis(fwd, up, side);
+    var R = sg3.rider;
+    R.g.position.copy(p).addScaledVector(up, 0.03);
+    R.g.quaternion.setFromRotationMatrix(m4);
+    R.body.rotation.set(0, 0, 0);
+    if(flip) R.body.rotation.z = -flip;
+    if(sg.phase === 'wipe' || sg.phase === 'over'){ var wt = sg.wipe ? sg.wipe.t : 1; R.body.rotation.set(wt * 5, 0, wt * 7); R.g.position.y -= Math.min(1, wt) * 0.8; }
+    // colours of the chosen board and surfer
+    var rd = sgItem(SG_RIDERS, sgSave.rider), bd = sgItem(SG_BOARDS, sgSave.board);
+    if(R.key !== rd.id + bd.id){
+      R.key = rd.id + bd.id;
+      R.suitM.color.set(rd.suit); R.skinM.color.set(rd.skin); R.hairM.color.set(rd.hair); R.accM.color.set(rd.accent);
+      R.board.material.color.set(bd.deck); R.stripe.material.color.set(bd.stripe);
+      R.board.material.emissive = new T.Color(bd.glow ? 0x332200 : 0x000000);
+    }
+    sg3Pose(sg.phase === 'ride' && (sg.joy && sg.joy.y < -0.3) ? 0.25 : 0.65);
+    R.vest.visible = (sg.phase === 'wipe' || sg.phase === 'over') && spot.id === 'naz';
+    if(R.vest.visible){ var vs = Math.min(1, (sg.wipe ? sg.wipe.t : 1) * 1.5); R.vest.scale.set(vs, vs * 1.2, vs); }
+    // the jet ski at Nazaré
+    sg3.ski.visible = sg.phase === 'tow';
+    if(sg3.ski.visible){ sg3.ski.position.set(sx + 7, 0, a0[0] + 0.5); }
+
+    // particles: foam boiling up where the lip lands, spray off the board
+    function step(P, dt, grav){
+      for(var k = 0; k < P.n; k++){
+        if(P.life[k] <= 0) continue;
+        P.life[k] -= dt;
+        if(P.life[k] <= 0){ P.pos[k * 3 + 1] = -9999; continue; }
+        P.vel[k * 3 + 1] -= grav * dt;
+        P.pos[k * 3] += P.vel[k * 3] * dt; P.pos[k * 3 + 1] += P.vel[k * 3 + 1] * dt; P.pos[k * 3 + 2] += P.vel[k * 3 + 2] * dt;
+      }
+      P.pts.geometry.attributes.position.needsUpdate = true;
+    }
+    function emit(P, x, y, z, vx, vy, vz, life){
+      var k = P.next; P.next = (P.next + 1) % P.n;
+      P.pos[k * 3] = x; P.pos[k * 3 + 1] = y; P.pos[k * 3 + 2] = z; P.vel[k * 3] = vx; P.vel[k * 3 + 1] = vy; P.vel[k * 3 + 2] = vz; P.life[k] = life;
+    }
+    var cm = sg.curl * SG3_M, impactZ = SG3_CP1[4][0] * Hm * 0.9;
+    sg3.billows.pts.material.size = Hm * 0.85;
+    for(var e = 0; e < 7; e++) emit(sg3.billows, cm - Math.random() * Hm * 1.2, Hm * (0.15 + Math.random() * 0.25), impactZ * (0.6 + Math.random() * 0.5),
+      -Math.random() * 3 - 1, (1.5 + Math.random() * 3) * Math.sqrt(Hm / 3), (Math.random() - 0.3) * 2, 1.2 + Math.random() * 1.4);
+    for(var e2 = 0; e2 < 5; e2++) emit(sg3.spray, cm - Math.random() * 2, Hm * 0.35, impactZ * (0.6 + Math.random() * 0.5),
+      -Math.random() * 4, (3 + Math.random() * 6) * Math.sqrt(Hm / 3), (Math.random() - 0.2) * 3, 0.8 + Math.random() * 0.6);
+    // spray from the board: the 2D game's spray list says when
+    if(sg.spray.length > (sg3.lastSpray || 0)){
+      var nNew = Math.min(60, sg.spray.length - (sg3.lastSpray || 0));
+      for(var e3 = 0; e3 < nNew; e3++) emit(sg3.spray, p.x - fwd.x * 0.8, p.y + 0.1, p.z + 0.1, -fwd.x * (2 + Math.random() * 4) + (Math.random() - 0.5) * 2, 2 + Math.random() * 5, nrm.z * (1 + Math.random() * 3), 0.6 + Math.random() * 0.6);
+    }
+    sg3.lastSpray = sg.spray.length;
+    step(sg3.billows, dtR, 2.2); step(sg3.spray, dtR, 9.8);
+
+    // the wake on the face
+    var tr = sg.trail || [], WK = sg3.WK, wp = sg3.wpos, wa = sg3.walpha;
+    for(var w = 0; w < WK; w++){
+      var ti = tr.length - WK + w, o = w * 6;
+      if(ti < 0){ wa[w * 2] = wa[w * 2 + 1] = 0; continue; }
+      var pt = tr[ti], bw = sg3Break(pt.x * SG3_M, Hm);
+      rows = sg3ProfileQ(bw[0], bw[1], Hm);
+      var q0 = faceAt(pt.h), age = w / WK, half = 0.06 + 0.12 * age;
+      wp[o] = pt.x * SG3_M; wp[o + 1] = q0[1] + half; wp[o + 2] = q0[0] - half * 0.6 + 0.04;
+      wp[o + 3] = pt.x * SG3_M; wp[o + 4] = q0[1] - half; wp[o + 5] = q0[0] + half * 0.6 + 0.04;
+      wa[w * 2] = wa[w * 2 + 1] = 0.55 * age;
+    }
+    sg3.wgeo.attributes.position.needsUpdate = true; sg3.wgeo.attributes.alpha.needsUpdate = true;
+
+    // hazards on the face
+    var hz = 0;
+    sg.hazards.forEach(function(z){
+      if(hz >= sg3.haz.length) return;
+      var H3 = sg3.haz[hz++], zx = z.x * SG3_M, bz = sg3Break(zx, Hm);
+      rows = sg3ProfileQ(bz[0], bz[1], Hm);
+      var q1 = faceAt(z.kind === 'jelly' ? z.h : 0.03);
+      H3.j.visible = z.kind === 'jelly'; H3.r.visible = z.kind !== 'jelly';
+      (z.kind === 'jelly' ? H3.j : H3.r).position.set(zx, q1[1] + (z.kind === 'jelly' ? 0.05 : -0.2), q1[0] + 0.15);
+    });
+    for(; hz < sg3.haz.length; hz++){ sg3.haz[hz].j.visible = sg3.haz[hz].r.visible = false; }
+
+    // the camera: on the beach, looking at the face, a little ahead
+    var portrait = W < H, dist = (Hm * 2.7 + 6) * (portrait ? 1.5 : 1);
+    var camWant = new T.Vector3(sx - Hm * 0.2, Hm * 0.32 + 0.7, Hm * 2.2 + dist);
+    var lookWant = new T.Vector3(sx - Hm * (portrait ? 0.1 : 0.5), Hm * 0.55, Hm * 0.2);
+    // a new wave (or a new spot): the camera starts in place instead of flying over
+    if(!sg3.camInit || sg3.camRun !== sg.spot.id + ':' + (sg.t < 0.2) || sg.t < 0.2){ sg3.camP.copy(camWant); sg3.camL.copy(lookWant); sg3.camInit = true; }
+    sg3.camRun = sg.spot.id + ':' + (sg.t < 0.2);
+    sg3.camP.lerp(camWant, Math.min(1, dtR * 4)); sg3.camL.lerp(lookWant, Math.min(1, dtR * 5));
+    sg3.cam.position.copy(sg3.camP); sg3.cam.lookAt(sg3.camL);
+    U2.uCam.value.copy(sg3.cam.position);
+    sg3.r.render(sg3.scene, sg3.cam);
+    // where the surfer's head is on screen
+    var sp = p.clone().addScaledVector(up, 1.5).project(sg3.cam);
+    var foot = p.clone().project(sg3.cam);
+    return { sx: (sp.x + 1) / 2 * W, sy: (1 - foot.y) / 2 * H, sc: Math.abs((foot.y - sp.y) / 2 * H) / 105 * 1.1 };
+  }
 
   // ---- screens: the spots, the shop, after a wipeout
   var sgMenu = document.getElementById('sgMenu'), sgShop = document.getElementById('sgShop'), sgOver = document.getElementById('sgOver');
@@ -5284,6 +5728,7 @@
   function sgOpenMenu(){
     sg = { active: true, phase: 'menu', spot: SG_SPOTS[0], t: 0, x: 0, curl: -400, h: 0.4, th: 0, v: 400, texts: [], spray: [], hazards: [], closeouts: [], throwT: 0, tube: 0, chain: 0, chainT: 0, score: 0, best: 0, hint: 0 };
     state = 'surfgame';
+    sg3Load();
     startOverlay.hidden = true; hud.hidden = true; overOverlay.hidden = true;
     sgOver.hidden = true; sgShop.hidden = true;
     sgRenderMenu();
@@ -5291,6 +5736,7 @@
   }
   function sgLeave(){
     sg = { active: false, phase: 'menu' };
+    sg3Hide();
     sgMenu.hidden = true; sgOver.hidden = true; sgShop.hidden = true;
     state = 'start';
     startOverlay.hidden = false;
@@ -11203,7 +11649,7 @@
     // typing in a text box (name, room code): the keys belong to the text, not the runner
     var tag = e.target && e.target.tagName;
     if(tag === 'INPUT' || tag === 'TEXTAREA') return;
-    if(sg.active){ if(['ArrowUp', 'w', 'W', ' '].indexOf(e.key) !== -1){ sgHold(true); e.preventDefault(); } return; }
+    if(sg.active){ if(sgJoyKey(e.key, true)) e.preventDefault(); return; }
     switch(e.key){
       case 'ArrowLeft': case 'a': case 'A': laneMove(-1); e.preventDefault(); break;
       case 'ArrowRight': case 'd': case 'D': laneMove(1); e.preventDefault(); break;
@@ -11212,7 +11658,7 @@
     }
   }, {passive:false});
   window.addEventListener('keyup', function(e){
-    if(sg.active){ if(['ArrowUp', 'w', 'W', ' '].indexOf(e.key) !== -1) sgHold(false); return; }
+    if(sg.active){ sgJoyKey(e.key, false); return; }
     if(['ArrowDown','s','S'].indexOf(e.key) !== -1) duckEnd();
   });
 
@@ -11239,12 +11685,13 @@
   }, {passive:true, once:true});
 
   canvas.addEventListener('touchstart', function(e){
-    if(sg.active){ sgHold(true); return; }
+    if(sg.active){ var t0 = e.changedTouches[0]; sgJoyStart(t0.clientX, t0.clientY); return; }
     var tt = e.changedTouches[0];
     touch = {x:tt.clientX, y:tt.clientY, fired:false};
   }, {passive:true});
 
   canvas.addEventListener('touchmove', function(e){
+    if(sg.active){ var tm = e.changedTouches[0]; sgJoyMove(tm.clientX, tm.clientY); return; }
     if(!touch || touch.fired) return;
     var tt = e.changedTouches[0];
     var dx = tt.clientX - touch.x;
@@ -11255,7 +11702,7 @@
   }, {passive:true});
 
   canvas.addEventListener('touchend', function(e){
-    if(sg.active){ sgHold(false); return; }
+    if(sg.active){ sgJoyEnd(); return; }
     if(!touch) return;
     if(!touch.fired){
       var tt = e.changedTouches[0];
@@ -11270,9 +11717,10 @@
     touch = null;
   }, {passive:true});
 
-  canvas.addEventListener('touchcancel', function(){ touch = null; sgHold(false); }, {passive:true});
-  canvas.addEventListener('mousedown', function(){ if(sg.active) sgHold(true); });
-  window.addEventListener('mouseup', function(){ if(sg.active) sgHold(false); });
+  canvas.addEventListener('touchcancel', function(){ touch = null; sgJoyEnd(); }, {passive:true});
+  canvas.addEventListener('mousedown', function(e){ if(sg.active) sgJoyStart(e.clientX, e.clientY); });
+  window.addEventListener('mousemove', function(e){ if(sg.active) sgJoyMove(e.clientX, e.clientY); });
+  window.addEventListener('mouseup', function(){ if(sg.active) sgJoyEnd(); });
 
   function hideHint(){ swipeHint.style.display='none'; }
 
@@ -11324,7 +11772,7 @@
   // never while the name field is being typed in. Everything worth keeping
   // (coins, skins, name, league) is in localStorage, so a reload loses nothing.
   // 'dev' = a local or preview copy: the updater stays off entirely.
-  var BUILD_VERSION = '20261024-111309';
+  var BUILD_VERSION = '20261024-112603';
   var UPDATE_CHECK_MS = 60000;
   var UPDATE_TRIED_KEY = 'canyonChaseTriedUpdate';
   var pendingSubmits = 0;
