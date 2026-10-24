@@ -651,6 +651,26 @@
     line-height:1.35;
   }
   .tourney-banner:active{ transform:translateY(1px); }
+  /* ---------- daily streak & badges ---------- */
+  .tourney-banner.streak-banner{ background:linear-gradient(135deg,#ff9a1f,#e8590c 60%,#b8320a); border-color:rgba(90,30,0,.5); text-shadow:0 1px 2px rgba(0,0,0,.35);
+    font-size:13px; padding:6px 10px; margin-bottom:10px; }
+  .tourney-banner.streak-banner.is-missed{ background:linear-gradient(135deg,#ff3b3b,#a10f2b); animation:surfPulse 1s ease-in-out infinite; }
+  .streak-strip{ display:grid; grid-template-columns:repeat(7,1fr); gap:4px; margin:6px 0; }
+  .streak-day{ background:rgba(255,255,255,.5); border:1px solid rgba(0,0,0,.15); border-radius:8px; padding:5px 2px; text-align:center; font-size:10px; line-height:1.3; }
+  .streak-day.is-done{ background:#c9f2c7; }
+  .streak-day.is-today{ border:2px solid #e8590c; background:#ffe3c2; }
+  .streak-day-n{ font-weight:800; }
+  .streak-day-r{ direction:ltr; }
+  #streakInfo{ margin-bottom:12px; }
+  .badge-grid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(130px,1fr)); gap:8px; margin:8px 0 12px; }
+  .badge-card{ background:rgba(255,255,255,.4); border:1px solid rgba(0,0,0,.12); border-radius:12px; padding:8px 6px; text-align:center; }
+  .badge-card:not(.is-got) .badge-icon{ filter:grayscale(1); opacity:.45; }
+  .badge-card.is-got{ background:linear-gradient(135deg,#fff3b0,#f5c542); border-color:rgba(120,80,0,.4); }
+  .badge-icon{ font-size:28px; line-height:1.2; }
+  .badge-name{ font-weight:800; font-size:13px; }
+  .badge-desc{ font-size:11px; opacity:.85; }
+  .badge-prog{ font-size:11px; margin-top:4px; font-weight:700; }
+  #progressBanner{ white-space:pre-line; }
   /* ---------- surf tour ---------- */
   .tourney-banner.surf-banner{ background:linear-gradient(135deg,#00b4d8,#0077b6 55%,#023e8a); border-color:rgba(2,40,80,.5); text-shadow:0 1px 2px rgba(0,0,0,.35); }
   .tourney-banner.surf-banner.is-now{ background:linear-gradient(135deg,#ff3b3b,#c8102e 60%,#7a0c22); animation:surfPulse 1s ease-in-out infinite; }
@@ -944,6 +964,7 @@
       <button class="tourney-banner surf-banner" id="surfBanner" type="button" hidden></button>
       <button class="tourney-banner world-banner" id="worldBanner" type="button" hidden></button>
       <button class="tourney-banner" id="tourneyBanner" type="button" hidden></button>
+      <button class="tourney-banner streak-banner" id="streakBtn" type="button"></button>
       <div class="wallet-row">
         <span class="wallet-amt"><span class="coin-dot"></span><span id="walletNum">0</span></span>
         <span class="wallet-amt diamond-amt" hidden>💎 <span class="diamondNum">0</span></span>
@@ -951,6 +972,7 @@
         <button class="shop-btn" id="leaderboardBtn" type="button">🏆 שיאים</button>
         <button class="shop-btn" id="leagueBtn" type="button">🏅 ליגות</button>
         <button class="shop-btn" id="missionsBtn" type="button">🎯 משימות</button>
+        <button class="shop-btn" id="badgesBtn" type="button">🏅 תגים</button>
         <button class="shop-btn duel-btn" id="duelBtn" type="button" hidden>⚔️ ראש בראש</button>
         <button class="shop-btn pass-btn" id="passBtn" type="button">🎫 באטל פס</button>
       </div>
@@ -997,6 +1019,7 @@
         <span class="best-num" id="finalBest">0</span>
       </div>
       <div class="league-banner" id="leagueBanner" hidden></div>
+      <div class="league-banner" id="progressBanner" hidden></div>
       <div class="chest-open" id="chestOpenBox" hidden>
         <div class="chest-open-lead">מצאת <span id="chestCountNum">0</span> תיבות אוצר בדרך!</div>
         <button class="chest-click" id="openChestBtn" type="button" aria-label="פתח תיבה">
@@ -1173,6 +1196,20 @@
     </div>
   </div>
 
+  <div class="overlay" id="badgesOverlay" hidden>
+    <div class="tablet">
+      <h1>🏅 תגים ורצף</h1>
+      <p class="tagline">שחק כל יום כדי לשמור על הרצף, ואסוף תגים בדרך</p>
+      <div class="mission-title">🔥 הרצף היומי</div>
+      <div class="streak-strip" id="streakStrip"></div>
+      <div class="mission-sub" id="streakInfo"></div>
+      <div class="tourney-status" id="kmTotal"></div>
+      <div class="mission-title" id="badgeCount"></div>
+      <div class="badge-grid" id="badgeGrid"></div>
+      <button class="back-btn" id="closeBadgesBtn" type="button">חזרה</button>
+    </div>
+  </div>
+
   <div class="overlay" id="surfOverlay" hidden>
     <div class="tablet">
       <h1>🏄 סבב הגלישה</h1>
@@ -1304,6 +1341,10 @@
     : (/^(he|iw)\b/i.test(navigator.language || '') ? 'he' : 'en');
   function L(he, en){ return LANG === 'en' ? en : he; }
   var I18N_HTML = {
+   "🏅 תגים": "🏅 Badges",
+   "🏅 תגים ורצף": "🏅 Badges & Streak",
+   "שחק כל יום כדי לשמור על הרצף, ואסוף תגים בדרך": "Play every day to keep your streak, and collect badges on the way",
+   "🔥 הרצף היומי": "🔥 Daily streak",
    "🏄 סבב הגלישה": "🏄 Surf Tour",
    "4 תחרויות · מקצים חיים ראש בראש, כל יום מ-13:45 (ברביעי מ-15:30) · המשחק אומר לך מתי המקצה שלך ונגד מי": "4 events · live head-to-head heats, every day from 13:45 (Wednesday from 15:30) · the game tells you when your heat is and who you race",
    "🥇 אלוף הסבב: הסקינים \"מלך האוויר\" ו\"אגדת הצינור\"": "🥇 Tour champion: the Air King and Pipe Legend skins",
@@ -3938,6 +3979,7 @@
     duelOverlay.hidden = false;
     duelNameRow.hidden = true;
     var others = m.heat.members.filter(function(sf){ return sf.id !== surfMyId(); });
+    if(m.rd.r === 3 && !prog.stats.surfFinal){ prog.stats.surfFinal = 1; saveProg(); }
     duelEnterRoom('surf-' + surfT.id + '-' + m.heat.key, false, null);
     duel.surf = { key: m.heat.key, r: m.rd.r, adv: m.heat.adv, at: m.heat.at, world: m.evo.ev.world,
                   reals: m.heat.members.filter(function(sf){ return !sf.bot; }).map(function(sf){ return { id: sf.id, name: sf.name }; }),
@@ -4216,6 +4258,181 @@
     else { surfState = surfCompute(); renderSurfBanner(); if(!surfOverlay.hidden) renderSurf(); }
   }, 5000);
   fetchSurf();
+
+  // ---------- daily streak & badges ----------
+  // Streak: finish at least one run a day (Israel days) and the reward grows
+  // through a 7-day week, then the week starts over (the count keeps going).
+  // Missed exactly one day? One diamond fixes it, before your next run.
+  // Badges: milestones for distance, score, duels and tournaments, powers
+  // and worlds, the streak and your skin collection -- each pays once.
+  var PROG_KEY = 'canyonChaseProgressV1';
+  var STREAK_REWARDS = [{ coins: 500 }, { coins: 1000 }, { coins: 1500 }, { diamonds: 1 }, { coins: 2500 }, { coins: 3000 }, { chest: 1 }];
+  var KM_UNITS = 50000;                 // a "kilometre" of track
+  var prog = { streak: { last: '', day: 0, count: 0, best: 0 }, badges: {}, stats: { dist: 0, wins: 0, goals: 0, smashed: 0, worlds: {}, surfFinal: 0, boss: 0 } };
+  try {
+    var pg0 = JSON.parse(localStorage.getItem(PROG_KEY) || 'null');
+    if(pg0){ prog.streak = Object.assign(prog.streak, pg0.streak || {}); prog.badges = pg0.badges || {}; prog.stats = Object.assign(prog.stats, pg0.stats || {}); }
+  } catch(e){}
+  function saveProg(){ try { localStorage.setItem(PROG_KEY, JSON.stringify(prog)); } catch(e){} }
+  function dayGap(a, b){ return Math.round((Date.parse(b + 'T12:00:00Z') - Date.parse(a + 'T12:00:00Z')) / 86400000); }
+  function dayBefore(key){ return new Date(Date.parse(key + 'T12:00:00Z') - 86400000).toISOString().slice(0, 10); }
+
+  // 'new' (never played), 'done' (played today), 'ready' (played yesterday),
+  // 'missed' (missed exactly one day -- fixable), 'broken'
+  function streakStatus(){
+    var s = prog.streak;
+    if(!s.last) return 'new';
+    var gap = dayGap(s.last, israelDay().key);
+    return gap <= 0 ? 'done' : gap === 1 ? 'ready' : gap === 2 ? 'missed' : 'broken';
+  }
+  function streakRewardText(rw){
+    return rw.coins ? '🪙 +' + fmtScore(rw.coins) : rw.diamonds ? '💎 +' + rw.diamonds : L('🎁 תיבה מיוחדת', '🎁 a special chest');
+  }
+  function streakNextDay(){ var st = streakStatus(); return st === 'ready' ? prog.streak.day % 7 + 1 : st === 'done' ? prog.streak.day % 7 + 1 : 1; }
+  // one diamond keeps the streak alive across a single missed day
+  function streakRepair(){
+    if(streakStatus() !== 'missed') return;
+    if(diamonds < 1){ showToast(L('💎 אין לך יהלום לתיקון הרצף', '💎 You have no diamond to fix the streak')); return; }
+    diamonds -= 1; saveBoss(); renderDiamonds();
+    prog.streak.last = dayBefore(israelDay().key);
+    saveProg();
+    showToast(L('🔥 הרצף תוקן! שחק היום כדי להמשיך', '🔥 Streak fixed! Play today to keep it going'));
+    renderStreakBtn();
+  }
+  // a run just ended: today counts. Returns the line for the game-over screen
+  function streakRunEnded(){
+    var st = streakStatus(), s = prog.streak;
+    if(st === 'done') return '';
+    if(st === 'ready'){ s.day = s.day % 7 + 1; s.count += 1; }
+    else { s.day = 1; s.count = 1; }
+    s.last = israelDay().key;
+    s.best = Math.max(s.best || 0, s.count);
+    var rw = STREAK_REWARDS[s.day - 1], got;
+    if(rw.coins){ wallet += rw.coins; got = '🪙 +' + fmtScore(rw.coins) + L(' מטבעות', ' coins'); }
+    else if(rw.diamonds){ diamonds += rw.diamonds; saveBoss(); renderDiamonds(); got = '💎 +' + rw.diamonds + L(' יהלום', ' diamond'); }
+    else got = '🎁 ' + openPassChest();
+    saveProg(); saveProgress(); updateWalletDisplays();
+    return L('🔥 יום ' + s.day + ' ברצף' + (s.count > 7 ? ' (' + s.count + ' ימים בסך הכול)' : '') + '! ', '🔥 Day ' + s.day + ' of your streak' + (s.count > 7 ? ' (' + s.count + ' days in all)' : '') + '! ') + got;
+  }
+  var streakBtn = document.getElementById('streakBtn');
+  function renderStreakBtn(){
+    var st = streakStatus(), s = prog.streak, next = STREAK_REWARDS[streakNextDay() - 1];
+    streakBtn.classList.toggle('is-missed', st === 'missed');
+    if(st === 'missed') streakBtn.textContent = L('😱 פספסת אתמול! לחץ כאן לתקן את הרצף ב-💎1', '😱 You missed yesterday! Tap here to fix your streak for 💎1');
+    else if(st === 'done') streakBtn.textContent = L('🔥 רצף ' + s.count + ' ימים ✅ · מחר תקבל ', '🔥 ' + s.count + '-day streak ✅ · tomorrow: ') + streakRewardText(next);
+    else if(st === 'ready') streakBtn.textContent = L('🔥 רצף ' + s.count + ' ימים · שחק היום וקבל ', '🔥 ' + s.count + '-day streak · play today for ') + streakRewardText(next);
+    else streakBtn.textContent = L('🔥 התחל רצף! שחק היום וקבל ', '🔥 Start a streak! Play today for ') + streakRewardText(STREAK_REWARDS[0]);
+  }
+  streakBtn.addEventListener('click', function(){ if(streakStatus() === 'missed') streakRepair(); else openBadges(); });
+
+  // ---- badges
+  function km(){ return Math.floor(prog.stats.dist / KM_UNITS); }
+  function kmText(units){ var k = units / KM_UNITS; return (k < 10 ? k.toFixed(1) : fmtScore(Math.floor(k))) + L(' ק"מ', ' km'); }
+  var BADGES = [
+    { id: 'km1',    icon: '👟', name: L('צעד ראשון', 'First Steps'),      desc: L('רוץ 1 ק"מ בסך הכול', 'Run 1 km in all'),          goal: 1,       val: km, reward: { coins: 500 } },
+    { id: 'km10',   icon: '🏃', name: L('רץ למרחקים', 'Distance Runner'), desc: L('רוץ 10 ק"מ בסך הכול', 'Run 10 km in all'),        goal: 10,      val: km, reward: { coins: 2000 } },
+    { id: 'km100',  icon: '🌍', name: L('מסביב לקניון', 'Canyon Explorer'), desc: L('רוץ 100 ק"מ בסך הכול', 'Run 100 km in all'),     goal: 100,     val: km, reward: { diamonds: 2 } },
+    { id: 's50k',   icon: '⭐', name: L('50 אלף', '50K'),                  desc: L('50,000 נקודות בריצה אחת', '50,000 points in one run'),   goal: 50000,   val: function(){ return best; }, reward: { coins: 500 } },
+    { id: 's100k',  icon: '🌟', name: L('100 אלף', '100K'),                desc: L('100,000 נקודות בריצה אחת', '100,000 points in one run'), goal: 100000,  val: function(){ return best; }, reward: { coins: 1000 } },
+    { id: 's500k',  icon: '💫', name: L('חצי מיליון', 'Half a Million'),    desc: L('500,000 נקודות בריצה אחת', '500,000 points in one run'), goal: 500000,  val: function(){ return best; }, reward: { coins: 3000 } },
+    { id: 's1m',    icon: '👑', name: L('מיליונר', 'Millionaire'),          desc: L('מיליון נקודות בריצה אחת', 'A million points in one run'), goal: 1000000, val: function(){ return best; }, reward: { diamonds: 3 } },
+    { id: 'win1',   icon: '⚔️', name: L('ניצחון ראשון', 'First Win'),       desc: L('נצח בראש בראש או במקצה', 'Win a head-to-head or a heat'), goal: 1,  val: function(){ return prog.stats.wins; }, reward: { coins: 1000 } },
+    { id: 'win5',   icon: '🏆', name: L('לוחם', 'Fighter'),                 desc: L('5 ניצחונות בראש בראש או במקצים', '5 head-to-head or heat wins'), goal: 5, val: function(){ return prog.stats.wins; }, reward: { coins: 3000 } },
+    { id: 'final',  icon: '🏄', name: L('גמרניסט', 'Finalist'),             desc: L('הגע לגמר בסבב הגלישה', 'Reach a final on the surf tour'), goal: 1, val: function(){ return prog.stats.surfFinal; }, reward: { diamonds: 2 } },
+    { id: 'boss',   icon: '☠️', name: L('קוטל הבוס', 'Boss Slayer'),        desc: L('נצח את הבוס של יום חמישי', 'Beat the Thursday boss'), goal: 1,     val: function(){ return prog.stats.boss; }, reward: { diamonds: 2 } },
+    { id: 'goal',   icon: '⚽', name: L('בול בחיבורים', 'Top Corner'),       desc: L('תבקיע בבעיטת העל', 'Score with the super shot'), goal: 1,          val: function(){ return prog.stats.goals; }, reward: { coins: 1000 } },
+    { id: 'smash',  icon: '💥', name: L('שובר הכול', 'Wrecking Ball'),      desc: L('שבור 20 מכשולים בכוח כוכבים', 'Smash 20 obstacles with star power'), goal: 20, val: function(){ return prog.stats.smashed; }, reward: { coins: 2000 } },
+    { id: 'worlds', icon: '🌀', name: L('מטייל העולמות', 'World Traveler'), desc: L('בקר בכל 5 העולמות', 'Visit all 5 worlds'), goal: 5,            val: function(){ return Object.keys(prog.stats.worlds).length; }, reward: { coins: 2000 } },
+    { id: 'st3',    icon: '🔥', name: L('3 ימים ברצף', '3-Day Streak'),     desc: L('שחק 3 ימים ברצף', 'Play 3 days in a row'), goal: 3,      val: function(){ return prog.streak.best || 0; }, reward: { coins: 1000 } },
+    { id: 'st7',    icon: '🔥', name: L('שבוע ברצף', '7-Day Streak'),       desc: L('שחק 7 ימים ברצף', 'Play 7 days in a row'), goal: 7,      val: function(){ return prog.streak.best || 0; }, reward: { diamonds: 1 } },
+    { id: 'st14',   icon: '🔥', name: L('שבועיים ברצף', '14-Day Streak'),   desc: L('שחק 14 ימים ברצף', 'Play 14 days in a row'), goal: 14,   val: function(){ return prog.streak.best || 0; }, reward: { diamonds: 2 } },
+    { id: 'st30',   icon: '🔥', name: L('חודש ברצף', '30-Day Streak'),      desc: L('שחק 30 ימים ברצף', 'Play 30 days in a row'), goal: 30,   val: function(){ return prog.streak.best || 0; }, reward: { diamonds: 5 } },
+    { id: 'sk10',   icon: '🎨', name: L('אספן', 'Collector'),               desc: L('אסוף 10 סקינים', 'Own 10 skins'), goal: 10,             val: function(){ return ownedSkins.length; }, reward: { coins: 2000 } },
+    { id: 'sk20',   icon: '🖼️', name: L('אספן על', 'Super Collector'),      desc: L('אסוף 20 סקינים', 'Own 20 skins'), goal: 20,             val: function(){ return ownedSkins.length; }, reward: { diamonds: 2 } }
+  ];
+  function badgeRewardText(rw){ return rw.coins ? '🪙 +' + fmtScore(rw.coins) : '💎 +' + rw.diamonds; }
+  // award whatever was just reached; returns the new ones' lines
+  function checkBadges(){
+    var lines = [];
+    BADGES.forEach(function(b){
+      if(prog.badges[b.id] || b.val() < b.goal) return;
+      prog.badges[b.id] = israelDay().key;
+      if(b.reward.coins) wallet += b.reward.coins;
+      else { diamonds += b.reward.diamonds; saveBoss(); renderDiamonds(); }
+      lines.push(L('🏅 תג חדש: ', '🏅 New badge: ') + b.icon + ' ' + b.name + ' (' + badgeRewardText(b.reward) + ')');
+    });
+    if(lines.length){ saveProg(); saveProgress(); updateWalletDisplays(); }
+    return lines;
+  }
+  function noteWorld(w){ if(w && !prog.stats.worlds[w]){ prog.stats.worlds[w] = 1; saveProg(); } }
+
+  // ---- the game-over screen: streak + new badges
+  var progressBanner = document.getElementById('progressBanner');
+  function progressRunEnded(dist){
+    prog.stats.dist += Math.max(0, Math.round(dist || 0));
+    noteWorld(currentWorld);
+    if(bossWonThisRun) prog.stats.boss += 1;
+    saveProg();
+    var lines = [L('📏 בריצה הזו רצת ', '📏 This run: ') + kmText(dist || 0)], sl = streakRunEnded();
+    if(sl) lines.push(sl);
+    lines = lines.concat(checkBadges());
+    progressBanner.textContent = lines.join('\n');
+    progressBanner.hidden = !lines.length;
+    renderStreakBtn();
+  }
+
+  // ---- the badges screen (with the streak week)
+  var badgesOverlay = document.getElementById('badgesOverlay');
+  function renderBadges(){
+    var strip = document.getElementById('streakStrip');
+    strip.innerHTML = '';
+    var st = streakStatus(), s = prog.streak;
+    var doneUpTo = st === 'done' || st === 'ready' ? s.day : 0;
+    STREAK_REWARDS.forEach(function(rw, i){
+      var el = document.createElement('div');
+      el.className = 'streak-day' + (i < doneUpTo ? ' is-done' : '') + (i === (st === 'done' ? s.day - 1 : streakNextDay() - 1) ? ' is-today' : '');
+      var d = document.createElement('div'); d.className = 'streak-day-n'; d.textContent = L('יום ', 'Day ') + (i + 1);
+      var r = document.createElement('div'); r.className = 'streak-day-r'; r.textContent = i < doneUpTo ? '✅' : streakRewardText(rw);
+      el.appendChild(d); el.appendChild(r);
+      strip.appendChild(el);
+    });
+    document.getElementById('streakInfo').textContent =
+      L('🔥 רצף נוכחי: ' + (st === 'broken' || st === 'new' ? 0 : s.count) + ' ימים · הכי ארוך: ' + (s.best || 0), '🔥 Current streak: ' + (st === 'broken' || st === 'new' ? 0 : s.count) + ' days · longest: ' + (s.best || 0)) +
+      (st === 'missed' ? L(' · פספסת אתמול — אפשר לתקן ב-💎1 במסך הראשי', ' · you missed yesterday — fix it for 💎1 on the main screen') : '');
+    var grid = document.getElementById('badgeGrid');
+    grid.innerHTML = '';
+    var got = 0;
+    BADGES.forEach(function(b){
+      var have = !!prog.badges[b.id], v = Math.min(b.goal, b.val());
+      if(have) got++;
+      var el = document.createElement('div'); el.className = 'badge-card' + (have ? ' is-got' : '');
+      var ic = document.createElement('div'); ic.className = 'badge-icon'; ic.textContent = b.icon;
+      var nm = document.createElement('div'); nm.className = 'badge-name'; nm.textContent = b.name;
+      var ds = document.createElement('div'); ds.className = 'badge-desc'; ds.textContent = b.desc;
+      var pr = document.createElement('div'); pr.className = 'badge-prog';
+      pr.textContent = have ? '✅ ' + badgeRewardText(b.reward) : (b.goal >= 1000 ? fmtShort(v) + ' / ' + fmtShort(b.goal) : v + ' / ' + b.goal) + ' · ' + badgeRewardText(b.reward);
+      el.appendChild(ic); el.appendChild(nm); el.appendChild(ds); el.appendChild(pr);
+      grid.appendChild(el);
+    });
+    document.getElementById('kmTotal').textContent = L('📏 רצת בסך הכול ', '📏 You have run ') + kmText(prog.stats.dist) + L('', ' in all');
+    document.getElementById('badgeCount').textContent = L('🏅 תגים: ' + got + ' מתוך ' + BADGES.length, '🏅 Badges: ' + got + ' of ' + BADGES.length);
+  }
+  function openBadges(){
+    checkBadges();
+    renderBadges();
+    startOverlay.hidden = true;
+    badgesOverlay.hidden = false;
+  }
+  document.getElementById('badgesBtn').addEventListener('click', openBadges);
+  document.getElementById('closeBadgesBtn').addEventListener('click', function(){
+    badgesOverlay.hidden = true;
+    startOverlay.hidden = false;
+    renderStreakBtn();
+  });
+  renderStreakBtn();
+  // the day can turn over while the start screen is open
+  setInterval(function(){ if(!startOverlay.hidden) renderStreakBtn(); }, 60000);
+
 
 
   closeTourneyBtn.addEventListener('click', closeTourney);
@@ -5089,6 +5306,7 @@
     var opps = duelOppList(d);
     d.result = res;
     d.left = res === 'win' && opps.every(function(o){ return o.left; });
+    if(res === 'win'){ prog.stats.wins += 1; saveProg(); }
     if(res === 'win' && !d.surf){
       var second = duelLeader(d);
       duelRecordWin(playerNick(), second ? second.name : L('יריב', 'Opponent'));
@@ -5963,6 +6181,7 @@
   }
   // yours: you ran through it, so the pieces fly on ahead of you
   function smashObstacle(ob, yours){
+    prog.stats.smashed += 1;
     var x = LANES[ob.lane] || 0, m = smashMat(ob), hi = ob.type === 'beam' || ob.type === 'vines', push = yours ? speed + 250 : 0;
     if(smashBits.length > 260) smashBits.splice(0, smashBits.length - 200);
     // chunks: jagged pieces, kicked forward and out, tumbling, bouncing on the track
@@ -6201,6 +6420,7 @@
     saveProgress();
     updateWalletDisplays();
     showTourneyRunResult(recordScore(playerName.trim() || L('שחקן', 'Player'), scoreVal), scoreVal);
+    progressRunEnded(distance);
     checkLeaguePromotion(scoreVal);
     earnedCoins.textContent = totalEarned;
     finalScore.textContent = fmtScore(scoreVal);
@@ -6522,6 +6742,7 @@
       if(!pt.used && pt.lane === player.lane && pt.z <= COLLIDE_Z + 10 && pt.z > -30){
         pt.used = true;
         currentWorld = pt.dest;
+        noteWorld(pt.dest);
         worldFlash = 0.6;
         decor = [];                     // the new world's roadside starts fresh
         // a breather: nothing that would reach you within the next second
@@ -9334,6 +9555,7 @@
     if(!shot.scored && shot.t >= SHOT_HIT){
       shot.scored = true;
       if(shot.good){
+        prog.stats.goals += 1;
         runScore += SHOT_BONUS;
         scoreNum.textContent = fmtScore(currentScore());
         showToast(shot.kind === 'soccer' ? L('⚽ גול!!! +1,000 נקודות', '⚽ GOAL!!! +1,000 points') : L('🏀 סל!!! +1,000 נקודות', '🏀 SWISH!!! +1,000 points'));
@@ -10191,7 +10413,7 @@
   // never while the name field is being typed in. Everything worth keeping
   // (coins, skins, name, league) is in localStorage, so a reload loses nothing.
   // 'dev' = a local or preview copy: the updater stays off entirely.
-  var BUILD_VERSION = '20261024-093818';
+  var BUILD_VERSION = '20261024-100116';
   var UPDATE_CHECK_MS = 60000;
   var UPDATE_TRIED_KEY = 'canyonChaseTriedUpdate';
   var pendingSubmits = 0;
