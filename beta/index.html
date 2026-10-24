@@ -5652,6 +5652,7 @@
   // hair, arms with hands, feet on a shaped shortboard; posed every frame
   function sg3MakeRider(T){
     var g = new T.Group(), body = new T.Group(); g.add(body);
+    body.scale.z = -1;            // the pose is built chest to +z; the wave is on -z, and a surfer faces it
     function mat(c, rough){ return new T.MeshStandardMaterial({ color: c, roughness: rough === undefined ? 0.6 : rough }); }
     // the board: a real outline (pointed nose, rounded tail), rails, a little
     // rocker, a stringer down the middle and three fins
@@ -5677,8 +5678,9 @@
     function ball(r, m, sx, sy, sz){ var me = new T.Mesh(new T.SphereGeometry(r, 20, 14), m); me.scale.set(sx || 1, sy || 1, sz || 1); body.add(me); return me; }
     var parts = { thighB: cap(0.08, suitM), shinB: cap(0.062, suitM), thighF: cap(0.085, suitM), shinF: cap(0.066, suitM),
       torso: cap(0.13, suitM), stripe: cap(0.025, accM), uArmB: cap(0.052, suitM), fArmB: cap(0.045, suitM), uArmF: cap(0.052, suitM), fArmF: cap(0.045, suitM), neck: cap(0.05, skinM) };
-    var extra = { chest: ball(0.2, suitM, 1, 1.05, 0.8), hips: ball(0.15, suitM, 1.1, 0.9, 1), handB: ball(0.05, skinM, 1, 0.8, 1.2), handF: ball(0.05, skinM, 1, 0.8, 1.2),
-      footB: ball(0.07, skinM, 1.9, 0.6, 1), footF: ball(0.07, skinM, 1.9, 0.6, 1) };
+    var extra = { chest: ball(0.2, suitM, 1.05, 1.05, 0.72), hips: ball(0.15, suitM, 1.15, 0.9, 0.85), handB: ball(0.05, skinM, 1, 0.8, 1.2), handF: ball(0.05, skinM, 1, 0.8, 1.2),
+      footB: ball(0.07, skinM, 1, 0.6, 1.9), footF: ball(0.07, skinM, 1, 0.6, 1.9),
+      kneeB: ball(0.074, suitM), kneeF: ball(0.077, suitM), elB: ball(0.05, suitM), elF: ball(0.05, suitM), shB: ball(0.07, suitM), shF: ball(0.07, suitM) };
     var head = ball(0.115, skinM, 1, 1.12, 0.95);
     var hair = ball(0.124, hairM, 1.05, 0.95, 1.0); hair.geometry = new T.SphereGeometry(0.124, 20, 12, 0, Math.PI * 2, 0, Math.PI * 0.6);
     var vest = ball(0.3, mat(0xffcc00, 0.4)); vest.visible = false;
@@ -5693,14 +5695,30 @@
   }
   function sg3Pose(k, look){
     var T = sg3.T, R = sg3.rider, P = R.parts, X = R.extra, V = function(x, y, z){ return new T.Vector3(x, y, z); };
-    var hip = V(-0.02, 0.86 - 0.24 * k, 0), kneeB = V(-0.27, 0.46 - 0.1 * k, 0.07), kneeF = V(0.24, 0.48 - 0.1 * k, -0.06);
-    var footB = V(-0.36, 0.08, 0.09), footF = V(0.33, 0.08, -0.07);
-    var sh = V(0.1 + 0.12 * k, 1.4 - 0.3 * k, 0), nk = V(sh.x + 0.05, sh.y + 0.1, 0), hd = V(sh.x + 0.1, sh.y + 0.25, 0);
-    var shB = V(sh.x - 0.03, sh.y - 0.02, 0.17), shF = V(sh.x + 0.03, sh.y - 0.02, -0.17);
-    var elB = V(sh.x - 0.27, sh.y - 0.16, 0.3), haB = V(sh.x - 0.52, sh.y - 0.33, 0.36), elF = V(sh.x + 0.26, sh.y - 0.07, -0.3), haF = V(sh.x + 0.52, sh.y - 0.12, -0.36);
+    // a real stance: sideways, feet across the board a bit wider than the
+    // shoulders, a deep crouch with the knees driven forward over the toes and
+    // in toward each other, hips back over the heels, the torso leaning out
+    // over the toe side, head up looking at the nose
+    function joint(a, b, l1, l2, pole){           // where the knee/elbow goes (two-bone IK)
+      var d = V(0, 0, 0).subVectors(b, a), len = Math.min(d.length(), l1 + l2 - 0.002); d.normalize();
+      var along = (l1 * l1 - l2 * l2 + len * len) / (2 * len), up = Math.sqrt(Math.max(0, l1 * l1 - along * along));
+      var p = pole.clone().addScaledVector(d, -pole.dot(d)).normalize();
+      return a.clone().addScaledVector(d, along).addScaledVector(p, up);
+    }
+    var footB = V(-0.42, 0.08, -0.01), footF = V(0.24, 0.08, 0.02);
+    var hip = V(-0.09, 0.84 - 0.42 * k, -0.05 - 0.05 * k);
+    var kneeB = joint(hip, footB, 0.44, 0.44, V(0.35, 0, 1)), kneeF = joint(hip, footF, 0.44, 0.44, V(-0.3, 0, 1));
+    var lean = 0.12 + 0.55 * k;                    // the torso tips over the toes as you crouch
+    var sh = V(hip.x + 0.05 + 0.06 * k, hip.y + 0.5 * Math.cos(lean), hip.z + 0.5 * Math.sin(lean));
+    var nk = V(sh.x + 0.03, sh.y + 0.09, sh.z + 0.02), hd = V(sh.x + 0.06, sh.y + 0.22, sh.z + 0.02 - 0.04 * k);
+    // shoulders along the board, opened a little toward the nose
+    var shF = V(sh.x + 0.16, sh.y - 0.03, sh.z - 0.06), shB = V(sh.x - 0.16, sh.y - 0.03, sh.z + 0.06);
+    // the front hand leads low over the nose, the back hand trails low behind, toward the face
+    var haF = V(shF.x + 0.42, shF.y - 0.3, shF.z + 0.16), haB = V(shB.x - 0.34, shB.y - 0.36, shB.z + 0.24);
+    var elF = joint(shF, haF, 0.29, 0.27, V(0, -0.4, -1)), elB = joint(shB, haB, 0.29, 0.27, V(-0.3, -0.2, -1));
     sg3Limb(T, P.thighB, hip, kneeB); sg3Limb(T, P.shinB, kneeB, footB);
     sg3Limb(T, P.thighF, hip, kneeF); sg3Limb(T, P.shinF, kneeF, footF);
-    sg3Limb(T, P.torso, hip, sh); sg3Limb(T, P.stripe, V(hip.x + 0.03, hip.y + 0.05, -0.15), V(sh.x + 0.02, sh.y - 0.05, -0.16));
+    sg3Limb(T, P.torso, hip, sh); sg3Limb(T, P.stripe, V(hip.x + 0.02, hip.y + 0.05, hip.z + 0.12), V(sh.x + 0.02, sh.y - 0.05, sh.z + 0.15));
     sg3Limb(T, P.neck, sh, nk);
     sg3Limb(T, P.uArmB, shB, elB); sg3Limb(T, P.fArmB, elB, haB); sg3Limb(T, P.uArmF, shF, elF); sg3Limb(T, P.fArmF, elF, haF);
     var dChest = V(0, 0, 0).subVectors(sh, hip).normalize();
@@ -5708,8 +5726,9 @@
     X.hips.position.copy(hip);
     X.handB.position.copy(haB); X.handF.position.copy(haF);
     X.footB.position.copy(footB); X.footF.position.copy(footF);
-    R.head.position.copy(hd); R.head.rotation.z = -0.25;
-    R.hair.position.copy(hd).add(V(-0.02, 0.025, 0)); R.hair.rotation.z = 0.45;
+    X.kneeB.position.copy(kneeB); X.kneeF.position.copy(kneeF); X.elB.position.copy(elB); X.elF.position.copy(elF); X.shB.position.copy(shB); X.shF.position.copy(shF); X.footF.rotation.y = -0.6; X.footB.rotation.y = -0.1;
+    R.head.position.copy(hd); R.head.rotation.set(0, 0.25, -0.2);
+    R.hair.position.copy(hd).add(V(-0.025, 0.025, -0.01)); R.hair.rotation.set(0, 0, 0.45);
     R.vest.position.copy(hip).lerp(sh, 0.6);
   }
 
@@ -12014,7 +12033,7 @@
   // never while the name field is being typed in. Everything worth keeping
   // (coins, skins, name, league) is in localStorage, so a reload loses nothing.
   // 'dev' = a local or preview copy: the updater stays off entirely.
-  var BUILD_VERSION = '20261024-155844';
+  var BUILD_VERSION = '20261024-162444';
   var UPDATE_CHECK_MS = 60000;
   var UPDATE_TRIED_KEY = 'canyonChaseTriedUpdate';
   var pendingSubmits = 0;
