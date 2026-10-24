@@ -671,6 +671,8 @@
   .sg-judge b{ display:block; font-family:'Suez One',serif; font-size:18px; }
   .sg-judge.is-out{ opacity:.4; text-decoration:line-through; }
   #sgOverMoves{ text-align:center; margin:0 0 8px; }
+  .sg-cam-btn{ position:absolute; top:12px; right:12px; z-index:6; width:46px; height:46px; border-radius:50%; border:2px solid rgba(255,255,255,.7);
+    background:rgba(0,30,50,.45); font-size:22px; cursor:pointer; }
   .sg-row{ display:flex; gap:8px; }
   .sg-row .go-btn{ margin:0; }
   /* ---------- daily streak & badges ---------- */
@@ -947,6 +949,7 @@
 
 <div id="stage">
   <canvas id="game"></canvas>
+  <button class="sg-cam-btn" id="sgCamBtn" type="button" hidden>🎥</button>
 
   <div class="hud" id="hud" hidden>
     <div class="hud-panel">
@@ -4621,7 +4624,8 @@
       lip:   L('השפה נפלה עליך בתוך הצינור!', 'The lip landed on you in the barrel!'),
       reef:  L('פגעת בשונית!', 'You hit the reef!'),
       jelly: L('נעקצת ממדוזה!', 'Stung by a jellyfish!'),
-      close: L('הגל נסגר עליך!', 'The wave closed out on you!')
+      close: L('הגל נסגר עליך!', 'The wave closed out on you!'),
+      swallow: L('לא היית מהיר מספיק — הצינור בלע אותך!', 'Not fast enough — the barrel swallowed you!')
     };
     document.getElementById('sgOverTitle').textContent = completed ? L('🏄 סיימת את הגל!', '🏄 You rode it out!') : L('🌊 נפלת!', '🌊 Wipeout!');
     document.getElementById('sgOverReason').textContent = completed ? L('רכבת על הגל עד הסוף — השופטים אוהבים את זה', 'You rode the wave to the end — the judges love that')
@@ -4654,7 +4658,7 @@
     if(sg.phase === 'over') return;
     // the curl peels on, a little faster all the time
     var curlV = Math.min(SG_CURL_MAX, SG_CURL0 + sg.t * SG_CURL_RAMP) * spot.curl;
-    if(sg.throwT > 0) curlV *= 0.82;
+    if(sg.throwT > 0) curlV *= 1.05;            // a throwing barrel chases you down the line
     if(sg.phase === 'tow'){
       // Nazaré: the jet ski pulls you across the flat water into the giant
       sg.towT -= dt; sg.v = 660; sg.h = Math.max(0, sg.h - dt * 0.5); sg.th = 0;
@@ -4710,7 +4714,12 @@
     sg.x += fwdK * (0.55 + 0.45 * Math.cos(sg.th)) * sg.v * dt;     // the wave carries you along even as you climb
     if(J.x < -0.4){ sg.cutT = (sg.cutT || 0) + dt; sg.v -= 90 * Math.abs(J.x) * dt; }
     else { if((sg.cutT || 0) > 0.35 && sg.h > 0.3) { sgScore(L('קאטבק', 'Cutback'), 170 + sg.v * 0.15); sgFan(); } sg.cutT = 0; }
-    if(J.x > 0.4 && sg.h > 0.2 && sg.h < 0.85) sg.v += 70 * J.x * dt;
+    if(J.x > 0.4 && sg.h > 0.2 && sg.h < 0.85) sg.v += 40 * J.x * dt;
+    var ps = J.y < -0.35 ? -1 : J.y > 0.35 ? 1 : 0;
+    if(ps && ps !== sg.pumpSign){
+      if(sg.t - (sg.pumpT || -9) < 0.75 && sg.h > 0.15 && sg.h < 0.92){ sg.v += 48; sg.pumps = (sg.pumps || 0) + 1; if(Math.random() < 0.5) sgSplash(1); }
+      sg.pumpSign = ps; sg.pumpT = sg.t;
+    }
     if(sg.h > 0.9 && sg.th > 0.6) sg.lipT = sg.t;          // hitting the lip vertically
     if(sg.h < 0){ sg.h = 0; if(sg.th < 0) sg.th *= 0.5; }
     sg.trail = sg.trail || [];
@@ -4757,13 +4766,12 @@
         if(sg.h > 0.86 + 0.02 * up.balance){ sg.lipT2 = (sg.lipT2 || 0) + dt; if(sg.lipT2 > 0.3){ sgWipe('lip'); return; } }
         else sg.lipT2 = 0;
         sg.tube += dt; sg.score += Math.round(dt * 320);
-        sg.v = Math.max(sg.v, 400);                  // the barrel carries you
       }
       if((!inTube || sg.throwT <= 0) && sg.tube > 0) sgSpit();
     } else if(sg.tube > 0) sgSpit();
 
     // the curl caught you
-    if(gap < (sg.throwT > 0 && sg.h > 0.18 ? 30 : 60)){ sgWipe('falls'); return; }
+    if(gap < 55){ sgWipe(sg.tube > 0 ? 'swallow' : 'falls'); return; }
 
     // a little score for the speed itself
     sg.score += sg.v * dt * 0.03;
@@ -5206,7 +5214,11 @@
   function sgDraw(){
     if(!sg.spot) return;
     ctx.clearRect(0, 0, W, H);
-    if(sg3.state === 'ready'){ var p3 = sg3Render(); sgHud(p3.sx, p3.sy, p3.sc); return; }
+    if(sg3.state === 'ready'){
+      var p3 = sg3Render(); sgHud(p3.sx, p3.sy, p3.sc);
+      document.getElementById('sgCamBtn').hidden = !(sg.phase === 'ride' || sg.phase === 'air' || sg.phase === 'tow' || sg.phase === 'done');
+      return;
+    }
     sgDrawScene();
     var gm = sgFaceGeom(), K = sgK(), rider = sgItem(SG_RIDERS, sgSave.rider), board = sgItem(SG_BOARDS, sgSave.board);
     var sx = gm.sx, sy, lean;
@@ -5269,7 +5281,7 @@
     if(sg.hint > 0 && sg.phase !== 'tow'){
       ctx.globalAlpha = Math.min(1, sg.hint);
       ctx.font = 'bold 16px Rubik, sans-serif'; ctx.fillStyle = '#ffffff';
-      var hn = L('גרור את האצבע: ⬆️ לעלות · ⬇️ לרדת ולצבור מהירות · ⬅️ קאטבק', 'Drag: ⬆️ climb · ⬇️ drop for speed · ⬅️ cutback');
+      var hn = L('גרור: ⬆️ לעלות · ⬇️ לרדת · ⬆️⬇️ מהר = פמפום ומהירות · ⬅️ קאטבק', 'Drag: ⬆️ climb · ⬇️ drop · ⬆️⬇️ fast = pump for speed · ⬅️ cutback');
       ctx.strokeText(hn, W / 2, H - 28); ctx.fillText(hn, W / 2, H - 28);
       ctx.globalAlpha = 1;
     }
@@ -5335,7 +5347,7 @@
   var SG3_LIB = 'https://cdn.jsdelivr.net/npm/three@0.149.0/build/three.min.js';
   var SG3_M = 1 / 40;                                   // game units -> metres
   var SG3_H = { pool: 2.7, olga: 3, pipe: 4.2, naz: 10 };  // wave height (m)
-  var sg3 = { state: 'none' };
+  var sg3 = { state: 'none', pov: true };
   function sg3Load(){
     if(sg3.state !== 'none') return;
     if(!window.WebGLRenderingContext){ sg3.state = 'failed'; return; }
@@ -5346,7 +5358,7 @@
     s.onerror = function(){ sg3.state = 'failed'; };
     document.head.appendChild(s);
   }
-  function sg3Hide(){ if(sg3.cv) sg3.cv.style.display = 'none'; }
+  function sg3Hide(){ if(sg3.cv) sg3.cv.style.display = 'none'; document.getElementById('sgCamBtn').hidden = true; }
 
   // the wave's cross-section (z toward the beach/camera, y up), in wave
   // heights: an unbroken swell (CP0), a pitching barrel (CP1), and broken
@@ -5519,6 +5531,7 @@
     var board = new T.Mesh(new T.SphereGeometry(1, 28, 10), mat(0xff7a3d)); board.scale.set(0.95, 0.04, 0.25); body.add(board);
     var stripe = new T.Mesh(new T.BoxGeometry(1.6, 0.012, 0.03), mat(0xffffff)); stripe.position.y = 0.037; body.add(stripe);
     var fin = new T.Mesh(new T.BoxGeometry(0.14, 0.14, 0.015), mat(0x222222)); fin.position.set(-0.8, -0.08, 0); body.add(fin);
+    g.userData.fin = fin;
     var suitM = mat(0x1d9bf0), skinM = mat(0xf1c7a0), hairM = mat(0x7a4a22), accM = mat(0xffd400);
     function cap(r, m){ var me = new T.Mesh(new T.CapsuleGeometry(r, 1, 4, 10), m); body.add(me); return me; }
     var parts = { thighB: cap(0.075, suitM), shinB: cap(0.06, suitM), thighF: cap(0.08, suitM), shinF: cap(0.065, suitM),
@@ -5526,7 +5539,7 @@
     var head = new T.Mesh(new T.SphereGeometry(0.12, 16, 12), skinM); body.add(head);
     var hair = new T.Mesh(new T.SphereGeometry(0.128, 16, 10, 0, Math.PI * 2, 0, Math.PI * 0.55), hairM); body.add(hair);
     var vest = new T.Mesh(new T.SphereGeometry(0.3, 14, 10), mat(0xffcc00)); vest.visible = false; body.add(vest);
-    return { g: g, body: body, board: board, stripe: stripe, parts: parts, head: head, hair: hair, vest: vest, suitM: suitM, skinM: skinM, hairM: hairM, accM: accM };
+    return { g: g, body: body, board: board, stripe: stripe, fin: fin, parts: parts, head: head, hair: hair, vest: vest, suitM: suitM, skinM: skinM, hairM: hairM, accM: accM };
   }
   // a capsule from a to b (its length is 1 + 2r along y)
   function sg3Limb(T, m, a, b){
@@ -5637,6 +5650,8 @@
       R.board.material.color.set(bd.deck); R.stripe.material.color.set(bd.stripe);
       R.board.material.emissive = new T.Color(bd.glow ? 0x332200 : 0x000000);
     }
+    var povNow = sg3.pov && (sg.phase === 'ride' || sg.phase === 'air' || sg.phase === 'tow' || sg.phase === 'done');
+    R.body.children.forEach(function(ch){ if(ch !== R.board && ch !== R.stripe && ch !== R.fin) ch.visible = !povNow; });
     sg3Pose(sg.tube > 0.1 ? 0.95 : sg.phase === 'ride' && (sg.joy && sg.joy.y < -0.3) ? 0.25 : 0.65);
     R.vest.visible = (sg.phase === 'wipe' || sg.phase === 'over') && spot.id === 'naz';
     if(R.vest.visible){ var vs = Math.min(1, (sg.wipe ? sg.wipe.t : 1) * 1.5); R.vest.scale.set(vs, vs * 1.2, vs); }
@@ -5714,12 +5729,29 @@
     if(!sg3.camInit || sg3.camRun !== sg.spot.id + ':' + (sg.t < 0.2) || sg.t < 0.2){ sg3.camP.copy(camWant); sg3.camL.copy(lookWant); sg3.camInit = true; }
     sg3.camRun = sg.spot.id + ':' + (sg.t < 0.2);
     sg3.camP.lerp(camWant, Math.min(1, dtR * 4)); sg3.camL.lerp(lookWant, Math.min(1, dtR * 5));
-    sg3.cam.position.copy(sg3.camP); sg3.cam.lookAt(sg3.camL);
+    if(povNow){
+      var eye = p.clone().addScaledVector(up, 1.42).addScaledVector(fwd, -0.25);
+      var dir = fwd.clone().addScaledVector(up, -0.3).normalize();
+      if(sg.phase === 'air') dir = new T.Vector3(1, -0.25, 0).normalize();
+      var tgt = eye.clone().addScaledVector(dir, 10);
+      if(!sg3.povE || sg.t < 0.2){ sg3.povE = eye.clone(); sg3.povT = tgt.clone(); }
+      sg3.povE.lerp(eye, Math.min(1, dtR * 14)); sg3.povT.lerp(tgt, Math.min(1, dtR * 7));
+      sg3.cam.position.copy(sg3.povE);
+      sg3.cam.up.copy(new T.Vector3(0, 1, 0).lerp(up, 0.45).normalize());
+      sg3.cam.lookAt(sg3.povT);
+      sg3.camP.copy(camWant); sg3.camL.copy(lookWant);       // ready to cut back to the beach view
+    } else {
+      sg3.cam.up.set(0, 1, 0);
+      sg3.cam.position.copy(sg3.camP); sg3.cam.lookAt(sg3.camL);
+    }
+    var fovWant = povNow ? 74 : 36;
+    if(sg3.cam.fov !== fovWant){ sg3.cam.fov = fovWant; sg3.cam.updateProjectionMatrix(); }
     U2.uCam.value.copy(sg3.cam.position);
     sg3.r.render(sg3.scene, sg3.cam);
     // where the surfer's head is on screen
     var sp = p.clone().addScaledVector(up, 1.5).project(sg3.cam);
     var foot = p.clone().project(sg3.cam);
+    if(povNow) return { sx: W / 2, sy: H * 0.62, sc: 1.2 };
     return { sx: (sp.x + 1) / 2 * W, sy: (1 - foot.y) / 2 * H, sc: Math.abs((foot.y - sp.y) / 2 * H) / 105 * 1.1 };
   }
 
@@ -5793,6 +5825,11 @@
     });
   }
   document.getElementById('sgEnterBtn').addEventListener('click', sgOpenMenu);
+  sg3.pov = sgSave.pov !== false;
+  document.getElementById('sgCamBtn').addEventListener('click', function(e){
+    e.stopPropagation(); sg3.pov = !sg3.pov; sgSave.pov = sg3.pov; sgStore();
+    sgAddText(sg3.pov ? L('🎥 מצלמה: מהעיניים של הגולש', '🎥 Camera: the surfer\'s eyes') : L('🎥 מצלמה: מהחוף', '🎥 Camera: from the beach'), '#bfe9ff');
+  });
   document.getElementById('sgBackBtn').addEventListener('click', sgLeave);
   document.getElementById('sgShopBtn').addEventListener('click', function(){ sgMenu.hidden = true; sgRenderShop(); sgShop.hidden = false; });
   document.getElementById('sgShopBack').addEventListener('click', function(){ sgShop.hidden = true; sgRenderMenu(); sgMenu.hidden = false; });
@@ -11789,7 +11826,7 @@
   // never while the name field is being typed in. Everything worth keeping
   // (coins, skins, name, league) is in localStorage, so a reload loses nothing.
   // 'dev' = a local or preview copy: the updater stays off entirely.
-  var BUILD_VERSION = '20261024-113810';
+  var BUILD_VERSION = '20261024-120109';
   var UPDATE_CHECK_MS = 60000;
   var UPDATE_TRIED_KEY = 'canyonChaseTriedUpdate';
   var pendingSubmits = 0;
