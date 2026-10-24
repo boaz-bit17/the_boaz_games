@@ -4710,7 +4710,7 @@
     sg.v = Math.max(200, Math.min(vmax, sg.v));
     sg.h += Math.sin(sg.th) * sg.v * dt / F;
     // back on the stick turns you back toward the curl (a cutback), forward pumps
-    var fwdK = 1 + Math.min(0, J.x) * 1.4;
+    var fwdK = 1 + Math.min(0, J.x) * 1.4, prevX = sg.x;
     sg.x += fwdK * (0.55 + 0.45 * Math.cos(sg.th)) * sg.v * dt;     // the wave carries you along even as you climb
     if(J.x < -0.4){ sg.cutT = (sg.cutT || 0) + dt; sg.v -= 90 * Math.abs(J.x) * dt; }
     else { if((sg.cutT || 0) > 0.35 && sg.h > 0.3) { sgScore(L('קאטבק', 'Cutback'), 170 + sg.v * 0.15); sgFan(); } sg.cutT = 0; }
@@ -4763,15 +4763,18 @@
       var inTube = gap < sg.throwLen;               // low or high, under the lip is inside
       if(inTube){
         // only staying jammed up against the lip takes you out, not a brush
-        if(sg.h > 0.86 + 0.02 * up.balance){ sg.lipT2 = (sg.lipT2 || 0) + dt; if(sg.lipT2 > 0.3){ sgWipe('lip'); return; } }
-        else sg.lipT2 = 0;
+        // a tunnel with room to move: the lip overhead just stops you climbing
+        if(sg.h > 0.72){ sg.h = 0.72; if(sg.th > 0) sg.th *= 0.5; }
+        // the barrel carries you along nearly at its own pace -- only stalling
+        // (pulling back) lets it catch you; pumping gets you out ahead
+        if(J.x > -0.3 && sg.x - prevX < curlV * 0.97 * dt) sg.x = prevX + curlV * 0.97 * dt;
         sg.tube += dt; sg.score += Math.round(dt * 320);
       }
       if((!inTube || sg.throwT <= 0) && sg.tube > 0) sgSpit();
     } else if(sg.tube > 0) sgSpit();
 
     // the curl caught you
-    if(gap < 55){ sgWipe(sg.tube > 0 ? 'swallow' : 'falls'); return; }
+    if(gap < (sg.tube > 0 ? 35 : 55)){ sgWipe(sg.tube > 0 ? 'swallow' : 'falls'); return; }
 
     // a little score for the speed itself
     sg.score += sg.v * dt * 0.03;
@@ -5364,7 +5367,7 @@
   // heights: an unbroken swell (CP0), a pitching barrel (CP1), and broken
   // foam (CPC). 0 back trough, 2 crest, 4 lip tip, 7 face top, 10 trough
   var SG3_CP0 = [[-3.2,-0.05],[-1.6,0.35],[0,1],[0.08,0.99],[0.12,0.96],[0.13,0.93],[0.14,0.9],[0.16,0.86],[0.45,0.45],[0.95,0.1],[2.2,-0.05]];
-  var SG3_CP1 = [[-3.2,-0.05],[-1.6,0.38],[-0.1,1.0],[0.6,1.04],[1.15,0.1],[0.88,0.5],[0.5,0.8],[0.22,0.72],[0.34,0.36],[0.9,0.08],[2.2,-0.05]];
+  var SG3_CP1 = [[-3.2,-0.05],[-1.6,0.4],[-0.1,1.05],[0.8,1.14],[1.45,0.05],[1.1,0.55],[0.62,0.95],[0.22,0.74],[0.34,0.36],[0.9,0.08],[2.2,-0.05]];
   var SG3_CPC = [[-3.2,-0.05],[-1.6,0.22],[-0.3,0.5],[0.1,0.56],[0.45,0.48],[0.5,0.42],[0.45,0.4],[0.5,0.35],[0.75,0.22],[1.15,0.06],[2.2,-0.05]];
   var SG3_SEG = 6, SG3_ROWS = (SG3_CP0.length - 1) * SG3_SEG + 1, SG3_COLS = 120;
   function sg3Cr(a, b, c, d, t){ var t2 = t * t, t3 = t2 * t; return 0.5 * ((2 * b) + (-a + c) * t + (2 * a - 5 * b + 4 * c - d) * t2 + (-a + 3 * b - 3 * c + d) * t3); }
@@ -5730,9 +5733,12 @@
     sg3.camRun = sg.spot.id + ':' + (sg.t < 0.2);
     sg3.camP.lerp(camWant, Math.min(1, dtR * 4)); sg3.camL.lerp(lookWant, Math.min(1, dtR * 5));
     if(povNow){
-      var eye = p.clone().addScaledVector(up, 1.42).addScaledVector(fwd, -0.25);
+      // crouched low inside a barrel, so the eyes stay inside the tunnel
+      var eyeH = 1.42 - Math.min(1, sg.tube * 4) * 0.55;
+      var eye = p.clone().addScaledVector(up, eyeH).addScaledVector(fwd, -0.25);
       var dir = fwd.clone().addScaledVector(up, -0.3).normalize();
       if(sg.phase === 'air') dir = new T.Vector3(1, -0.25, 0).normalize();
+      if(sg.tube > 0.05) dir = fwd.clone().addScaledVector(up, -0.06).normalize();
       var tgt = eye.clone().addScaledVector(dir, 10);
       if(!sg3.povE || sg.t < 0.2){ sg3.povE = eye.clone(); sg3.povT = tgt.clone(); }
       sg3.povE.lerp(eye, Math.min(1, dtR * 14)); sg3.povT.lerp(tgt, Math.min(1, dtR * 7));
@@ -11826,7 +11832,7 @@
   // never while the name field is being typed in. Everything worth keeping
   // (coins, skins, name, league) is in localStorage, so a reload loses nothing.
   // 'dev' = a local or preview copy: the updater stays off entirely.
-  var BUILD_VERSION = '20261024-120109';
+  var BUILD_VERSION = '20261024-150528';
   var UPDATE_CHECK_MS = 60000;
   var UPDATE_TRIED_KEY = 'canyonChaseTriedUpdate';
   var pendingSubmits = 0;
