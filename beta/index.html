@@ -5365,7 +5365,7 @@
   // If three.js can't load, the 2D drawing carries on.
   var SG3_LIB = 'https://cdn.jsdelivr.net/npm/three@0.149.0/build/three.min.js';
   var SG3_M = 1 / 40;                                   // game units -> metres
-  var SG3_H = { pool: 2.7, olga: 3, pipe: 4.2, naz: 10 };  // wave height (m)
+  var SG3_H = { pool: 3.1, olga: 3.3, pipe: 4.4, naz: 10 };  // wave height (m)
   var sg3 = { state: 'none', camMode: 'chase' };
   function sg3Load(){
     if(sg3.state !== 'none') return;
@@ -5384,6 +5384,8 @@
   // foam (CPC). 0 back trough, 2 crest, 4 lip tip, 7 face top, 10 trough
   var SG3_CP0 = [[-3.2,-0.05],[-1.6,0.35],[0,1],[0.08,0.99],[0.12,0.96],[0.13,0.93],[0.14,0.9],[0.17,0.85],[0.42,0.44],[0.92,0.1],[2.2,-0.05]];
   var SG3_CP1 = [[-3.2,-0.05],[-1.6,0.4],[-0.1,1.05],[0.8,1.14],[1.38,0.24],[1.12,0.62],[0.62,0.96],[0.22,0.74],[0.34,0.36],[0.9,0.08],[2.2,-0.05]];
+  // the pocket: the face stands near vertical, the lip thrown out high over it
+  var SG3_CPM = [[-3.2,-0.05],[-1.6,0.38],[-0.05,1.05],[0.55,1.13],[0.98,0.8],[0.8,0.86],[0.42,0.96],[0.18,0.84],[0.26,0.4],[0.8,0.08],[2.2,-0.05]];
   var SG3_CPC = [[-3.2,-0.05],[-1.6,0.22],[-0.3,0.5],[0.1,0.56],[0.45,0.48],[0.5,0.42],[0.45,0.4],[0.5,0.35],[0.75,0.22],[1.15,0.06],[2.2,-0.05]];
   var SG3_SEG = 6, SG3_ROWS = (SG3_CP0.length - 1) * SG3_SEG + 1, SG3_COLS = 120;
   function sg3Cr(a, b, c, d, t){ var t2 = t * t, t3 = t2 * t; return 0.5 * ((2 * b) + (-a + c) * t + (2 * a - 5 * b + 4 * c - d) * t2 + (-a + 3 * b - 3 * c + d) * t3); }
@@ -5391,7 +5393,9 @@
   function sg3Profile(b, c, Hm, out, s){
     var P = [];
     for(var i = 0; i < SG3_CP0.length; i++){
-      var z = SG3_CP0[i][0] + (SG3_CP1[i][0] - SG3_CP0[i][0]) * b, y = SG3_CP0[i][1] + (SG3_CP1[i][1] - SG3_CP0[i][1]) * b;
+      // swell -> pocket (b 0.5) -> closed barrel (b 1)
+      var A = b < 0.5 ? SG3_CP0 : SG3_CPM, Bp = b < 0.5 ? SG3_CPM : SG3_CP1, f = b < 0.5 ? b * 2 : (b - 0.5) * 2;
+      var z = A[i][0] + (Bp[i][0] - A[i][0]) * f, y = A[i][1] + (Bp[i][1] - A[i][1]) * f;
       z += (SG3_CPC[i][0] - z) * c; y += (SG3_CPC[i][1] - y) * c;
       P.push([z * Hm * (s || 1), y * Hm * (s || 1)]);
     }
@@ -5413,19 +5417,20 @@
     else { b = 1; c = Math.min(1, -d / (Hm * 1.4)); }
     if(sg.throwT > 0 && d >= 0){
       // the barrel opens and closes gradually at its far end, and as it starts/stops
-      // closed deep inside, opening up toward the mouth, then the steep face
-      var L3 = sg.throwLen * SG3_M;
-      var tb = d < L3 * 0.35 ? 1 : d < L3 ? 1 - 0.42 * (d - L3 * 0.35) / (L3 * 0.65) : 0.58 * Math.exp(-(d - L3) / (Hm * 1.2));
+      // closed deep inside, opening toward the mouth; past it the pocket
+      // still stands tall with its lip thrown out, then the shoulder softens
+      var L3 = sg.throwLen * SG3_M, Lp = Hm * 2.5;
+      var tb = d < L3 * 0.3 ? 1 : d < L3 ? 1 - 0.38 * (d - L3 * 0.3) / (L3 * 0.7)
+             : d < L3 + Lp ? 0.62 - 0.12 * (d - L3) / Lp : 0.5 * Math.exp(-(d - L3 - Lp) / (Hm * 2.5));
       b = Math.max(b, tb * Math.min(1, sg.throwT * 1.5));
     }
     // past the barrel the face stays steep and feathering, softening slowly,
     // and the wave gets smaller toward the end of the line (s = size)
     var s = 1;
     if(d >= 0){
-      var Lb = (sg.throwT > 0 ? sg.throwLen : 200) * SG3_M;
-      b = Math.max(b, 0.32 * Math.exp(-Math.max(0, d - Lb) / (Hm * 4)));
-      var tp = Math.min(1, Math.max(0, (d - Lb) / (Hm * 14)));
-      s = 1 - 0.4 * tp * tp * (3 - 2 * tp);
+      var Lb = (sg.throwT > 0 ? sg.throwLen : 200) * SG3_M + Hm * 2.5;
+      var tp = Math.min(1, Math.max(0, (d - Lb) / (Hm * 12)));
+      s = 1 - 0.55 * tp * tp * (3 - 2 * tp);                 // the shoulder: lower and lower
     }
     for(var i = 0; i < sg.closeouts.length; i++){
       var q = sg.closeouts[i]; if(q.done) continue;
@@ -6018,28 +6023,21 @@
     } else if(chaseNow){
       // behind the surfer and a little above, a touch out from the face,
       // looking down the line: the surfer, the wall of the wave, what's coming
-      var inT = Math.min(1, sg.tube * 4);
-      var back = (2.6 + Hm * 0.35) * (1 - 0.35 * inT);
-      sg3.camPsi = sg.t < 0.2 ? 0 : (sg3.camPsi || 0) + ((sg.psi || 0) - (sg3.camPsi || 0)) * Math.min(1, dtR * 6);
-      var cps = Math.cos(sg3.camPsi);
-      // low by the water out in front of the face, looking up at the wave
-      var ce = new T.Vector3(p.x - back * cps, 0.55 + Hm * 0.14 + p.y * 0.3, p.z + 2.0 + Hm * 0.75);
-      var ct = new T.Vector3(p.x + (3 + Hm * 0.7) * cps, p.y * 0.65 + Hm * 0.32, p.z - Hm * 0.2);
-      if(inT > 0){
-        var cmT = sg.curl * SG3_M, midZ = Hm * 0.78;
-        var tubeE = new T.Vector3(Math.max(p.x - 1.6 - Hm * 0.3, cmT + Hm * 0.3), Math.min(Hm * 0.62, Math.max(p.y + 0.9, Hm * 0.4)), p.z + (midZ - p.z) * 0.6);
-        ce.lerp(tubeE, inT); ct.lerp(new T.Vector3(p.x + 3 + Hm * 0.6, p.y + 0.5, p.z + (midZ - p.z) * 0.3), inT);
-      }
+      // filmed from the channel like the clip: low by the water, out in
+      // front of the face and a little ahead of the surfer, looking back
+      // into the pocket -- the wave fills the screen, the barrel opens to us
+      var trough = Hm * 2.2 * (brS[2] || 1);
+      var ce = new T.Vector3(p.x + 2.0 + Hm * 1.3, 0.45 + Hm * 0.1, trough + 1.0 + Hm * 0.95);
+      var ct = new T.Vector3(p.x - Hm * 0.45, Hm * 0.45 + p.y * 0.25, Math.min(p.z, trough) - Hm * 0.3);
       if(!sg3.chE || sg.t < 0.2){ sg3.chE = ce.clone(); sg3.chT = ct.clone(); }
-      var turning = Math.min(1, Math.abs(Math.sin(sg3.camPsi)) * 1.5 + Math.abs((sg.psi || 0) - sg3.camPsi) + (cps < 0 ? 1 : 0));
-      sg3.chE.lerp(ce, Math.min(1, dtR * (6 + 14 * turning))); sg3.chT.lerp(ct, Math.min(1, dtR * (6 + 14 * turning)));
+      sg3.chE.lerp(ce, Math.min(1, dtR * 5)); sg3.chT.lerp(ct, Math.min(1, dtR * 6));
       sg3.cam.up.set(0, 1, 0); sg3.cam.position.copy(sg3.chE); sg3.cam.lookAt(sg3.chT);
       sg3.camP.copy(camWant); sg3.camL.copy(lookWant);
     } else {
       sg3.cam.up.set(0, 1, 0);
       sg3.cam.position.copy(sg3.camP); sg3.cam.lookAt(sg3.camL);
     }
-    var fovWant = povNow ? 74 : chaseNow ? 62 + 10 * Math.min(1, sg.tube * 4) : 36;
+    var fovWant = povNow ? 74 : chaseNow ? 60 : 36;
     if(sg3.cam.fov !== fovWant){ sg3.cam.fov = fovWant; sg3.cam.updateProjectionMatrix(); }
     U2.uCam.value.copy(sg3.cam.position);
     sg3.oceanNear.position.set(Math.round(sg3.cam.position.x / 4.67) * 4.67, 0, Math.round(sg3.cam.position.z / 4.67) * 4.67);
@@ -12124,7 +12122,7 @@
   // never while the name field is being typed in. Everything worth keeping
   // (coins, skins, name, league) is in localStorage, so a reload loses nothing.
   // 'dev' = a local or preview copy: the updater stays off entirely.
-  var BUILD_VERSION = '20261024-230311';
+  var BUILD_VERSION = '20261024-231551';
   var UPDATE_CHECK_MS = 60000;
   var UPDATE_TRIED_KEY = 'canyonChaseTriedUpdate';
   var pendingSubmits = 0;
