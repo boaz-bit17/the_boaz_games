@@ -5350,7 +5350,7 @@
   var SG3_LIB = 'https://cdn.jsdelivr.net/npm/three@0.149.0/build/three.min.js';
   var SG3_M = 1 / 40;                                   // game units -> metres
   var SG3_H = { pool: 2.7, olga: 3, pipe: 4.2, naz: 10 };  // wave height (m)
-  var sg3 = { state: 'none', pov: true };
+  var sg3 = { state: 'none', camMode: 'chase' };
   function sg3Load(){
     if(sg3.state !== 'none') return;
     if(!window.WebGLRenderingContext){ sg3.state = 'failed'; return; }
@@ -5459,6 +5459,8 @@
         ' col += smoothstep(0.6, 0.8, n1) * 0.07 - smoothstep(0.42, 0.25, n1) * 0.05;' +
         ' float lace = smoothstep(0.4, 0.62, n2);' +
         ' float f = clamp(vFoam * 1.35 - (1.0 - lace) * 0.65, 0.0, 1.0);' +
+        ' float pt = smoothstep(0.6, 0.76, fbm(vec3(vW.x * 0.2 + uT * 0.02, vW.z * 0.2, 3.0)));' +
+        ' f = max(f, pt * lace * 0.75 * (1.0 - smoothstep(0.3, 0.8, h)));' +
         ' col = mix(col, vec3(0.94, 0.97, 1.0) * (0.8 + 0.2 * n2), f);' +
         ' col = mix(col, uFog, smoothstep(140.0, 900.0, length(uCam - vW)));' +
         ' gl_FragColor = vec4(col, 1.0); }' });
@@ -5507,6 +5509,7 @@
     var wake = new T.Mesh(wgeo, wmat); wake.frustumCulled = false; scene.add(wake);
     // the surfer, the jet ski, hazards
     var rider = sg3MakeRider(T); scene.add(rider.g);
+    var shore = sg3MakeShore(T); scene.add(shore.g);
     var ski = new T.Group();
     var hull = new T.Mesh(new T.BoxGeometry(2.8, 0.6, 1.1), new T.MeshStandardMaterial({ color: 0xffcc00, roughness: 0.4 })); hull.position.y = 0.3; ski.add(hull);
     var seat = new T.Mesh(new T.BoxGeometry(1, 0.35, 0.6), new T.MeshStandardMaterial({ color: 0x222222 })); seat.position.set(-0.3, 0.75, 0); ski.add(seat);
@@ -5522,10 +5525,54 @@
     }
     var rows = []; for(var q = 0; q < SG3_ROWS; q++) rows.push([0, 0]);
     sg3 = Object.assign(sg3, { T: T, cv: cv, r: r, scene: scene, cam: cam, skyMat: skyMat, wm: wm, geo: geo, pos: pos, foam: foam, thin: thin,
-      billows: billows, spray: spray, wpos: wpos, walpha: walpha, wgeo: wgeo, WK: WK, rider: rider, ski: ski, haz: haz, rows: rows,
+      billows: billows, spray: spray, shore: shore, wpos: wpos, walpha: walpha, wgeo: wgeo, WK: WK, rider: rider, ski: ski, haz: haz, rows: rows,
       camP: new T.Vector3(), camL: new T.Vector3(), spotId: '', w: 0, h: 0, last: 0 });
   }
 
+  // the coast: a strip of sand, a ridge of hills behind it, landmarks per spot
+  function sg3MakeShore(T){
+    var g = new T.Group();
+    var sandM = new T.MeshStandardMaterial({ color: 0xe8d3a8, roughness: 1 });
+    var sand = new T.Mesh(new T.BoxGeometry(4000, 1.2, 40), sandM); sand.position.set(1000, 0.3, 200); g.add(sand);
+    var hg = new T.PlaneGeometry(4000, 1, 240, 1), hp = hg.attributes.position;
+    for(var i = 0; i < hp.count; i++){
+      var x = hp.getX(i);
+      hp.setY(i, hp.getY(i) > 0 ? 20 + 13 * Math.sin(x * 0.004) + 8 * Math.sin(x * 0.013 + 1) + 4 * Math.sin(x * 0.037 + 2) : -2);
+    }
+    hg.computeVertexNormals();
+    var hillM = new T.MeshStandardMaterial({ color: 0x5f8f4a, roughness: 1, side: T.DoubleSide });
+    var hills = new T.Mesh(hg, hillM); hills.position.set(1000, 0, 236); g.add(hills);
+    var props = new T.Group(); g.add(props);
+    return { g: g, sandM: sandM, hillM: hillM, hills: hills, props: props };
+  }
+  function sg3SetShore(T, S, id){
+    var C = { pool: [0xc9c2b6, 0x9b9387, 0.6], olga: [0xe8d3a8, 0xc9a979, 0.9], pipe: [0xf2dba5, 0x3b7a3a, 1.8], naz: [0xb9a58a, 0x8b4a3a, 1.6] }[id] || [0xe8d3a8, 0x5f8f4a, 1];
+    S.sandM.color.setHex(C[0]); S.hillM.color.setHex(C[1]); S.hills.scale.y = C[2];
+    while(S.props.children.length) S.props.remove(S.props.children[0]);
+    function m(c){ return new T.MeshStandardMaterial({ color: c, roughness: 0.8 }); }
+    if(id === 'olga'){
+      // the power station's two striped stacks up the coast
+      [180, 215].forEach(function(x){
+        var st = new T.Mesh(new T.CylinderGeometry(2.6, 3.4, 80, 16), m(0xf2f2f2)); st.position.set(x, 40, 228); S.props.add(st);
+        for(var b = 0; b < 4; b++){ var band = new T.Mesh(new T.CylinderGeometry(2.75 - b * 0.1, 2.85 - b * 0.1, 6, 16), m(0xd23a2a)); band.position.set(x, 76 - b * 16, 228); S.props.add(band); }
+      });
+    } else if(id === 'naz'){
+      // the fort and lighthouse on the red cliff
+      var tw = new T.Mesh(new T.CylinderGeometry(3, 3.4, 14, 16), m(0xf3efe6)); tw.position.set(160, 52, 232); S.props.add(tw);
+      var tp = new T.Mesh(new T.CylinderGeometry(3.6, 3.6, 3, 16), m(0xc0392b)); tp.position.set(160, 60, 232); S.props.add(tp);
+      var fort = new T.Mesh(new T.BoxGeometry(30, 10, 14), m(0xe0d6c4)); fort.position.set(150, 42, 236); S.props.add(fort);
+    } else if(id === 'pipe'){
+      // palms along the sand
+      for(var p = 0; p < 26; p++){
+        var px = -100 + p * 23 + (p % 3) * 5, trunk = new T.Mesh(new T.CylinderGeometry(0.3, 0.45, 11, 6), m(0x6b4f2a));
+        trunk.position.set(px, 6, 205); trunk.rotation.z = 0.15 * Math.sin(p); S.props.add(trunk);
+        var crown = new T.Mesh(new T.ConeGeometry(4, 2.5, 7), m(0x2f7d32)); crown.position.set(px + 0.8 * Math.sin(p), 12, 205); S.props.add(crown);
+      }
+    } else if(id === 'pool'){
+      // the pool's concrete edge and buildings
+      for(var q = 0; q < 14; q++){ var bl = new T.Mesh(new T.BoxGeometry(18, 12 + (q % 4) * 6, 14), m(q % 2 ? 0xd8d2c6 : 0xc2b8a8)); bl.position.set(-60 + q * 40, 8, 214); S.props.add(bl); }
+    }
+  }
   // a person from capsules: hips, bent legs, a torso leaning over the front
   // knee, arms out; posed every frame
   function sg3MakeRider(T){
@@ -5579,6 +5626,7 @@
       U.uDeep.value.set(spot.face[1]).multiplyScalar(0.7); U.uFace.value.set(spot.face[0]); U.uSkyC.value.set(spot.sky[1]); U.uFog.value.set(spot.sky[1]);
       U.uH.value = Hm;
       sg3.r.setClearColor(spot.sky[1]);
+      sg3SetShore(T, sg3.shore, spot.id);
     }
     var U2 = sg3.wm.uniforms; U2.uT.value = now % 1000;
     var sx = sg.x * SG3_M, rows = sg3.rows, pos = sg3.pos, foam = sg3.foam, thin = sg3.thin;
@@ -5653,7 +5701,9 @@
       R.board.material.color.set(bd.deck); R.stripe.material.color.set(bd.stripe);
       R.board.material.emissive = new T.Color(bd.glow ? 0x332200 : 0x000000);
     }
-    var povNow = sg3.pov && (sg.phase === 'ride' || sg.phase === 'air' || sg.phase === 'tow' || sg.phase === 'done');
+    var riding3 = sg.phase === 'ride' || sg.phase === 'air' || sg.phase === 'tow' || sg.phase === 'done';
+    var povNow = sg3.camMode === 'pov' && riding3;
+    var chaseNow = sg3.camMode === 'chase' && (riding3 || sg.phase === 'wipe' || sg.phase === 'over');
     R.body.children.forEach(function(ch){ if(ch !== R.board && ch !== R.stripe && ch !== R.fin) ch.visible = !povNow; });
     sg3Pose(sg.tube > 0.1 ? 0.95 : sg.phase === 'ride' && (sg.joy && sg.joy.y < -0.3) ? 0.25 : 0.65);
     R.vest.visible = (sg.phase === 'wipe' || sg.phase === 'over') && spot.id === 'naz';
@@ -5746,11 +5796,22 @@
       sg3.cam.up.copy(new T.Vector3(0, 1, 0).lerp(up, 0.45).normalize());
       sg3.cam.lookAt(sg3.povT);
       sg3.camP.copy(camWant); sg3.camL.copy(lookWant);       // ready to cut back to the beach view
+    } else if(chaseNow){
+      // behind the surfer and a little above, a touch out from the face,
+      // looking down the line: the surfer, the wall of the wave, what's coming
+      var inT = Math.min(1, sg.tube * 4);
+      var back = (3.2 + Hm * 0.45) * (1 - 0.35 * inT), high = (1.7 + Hm * 0.3) * (1 - 0.5 * inT);
+      var ce = new T.Vector3(p.x - back, Math.max(0.6, p.y + high), p.z + (1.0 + Hm * 0.35) * (1 - 0.6 * inT));
+      var ct = new T.Vector3(p.x + 4 + Hm * 0.8, p.y + 0.5, p.z - Hm * 0.1);
+      if(!sg3.chE || sg.t < 0.2){ sg3.chE = ce.clone(); sg3.chT = ct.clone(); }
+      sg3.chE.lerp(ce, Math.min(1, dtR * 6)); sg3.chT.lerp(ct, Math.min(1, dtR * 6));
+      sg3.cam.up.set(0, 1, 0); sg3.cam.position.copy(sg3.chE); sg3.cam.lookAt(sg3.chT);
+      sg3.camP.copy(camWant); sg3.camL.copy(lookWant);
     } else {
       sg3.cam.up.set(0, 1, 0);
       sg3.cam.position.copy(sg3.camP); sg3.cam.lookAt(sg3.camL);
     }
-    var fovWant = povNow ? 74 : 36;
+    var fovWant = povNow ? 74 : chaseNow ? 58 : 36;
     if(sg3.cam.fov !== fovWant){ sg3.cam.fov = fovWant; sg3.cam.updateProjectionMatrix(); }
     U2.uCam.value.copy(sg3.cam.position);
     sg3.r.render(sg3.scene, sg3.cam);
@@ -5831,10 +5892,12 @@
     });
   }
   document.getElementById('sgEnterBtn').addEventListener('click', sgOpenMenu);
-  sg3.pov = sgSave.pov !== false;
+  var SG3_CAMS = ['chase', 'pov', 'beach'];
+  sg3.camMode = SG3_CAMS.indexOf(sgSave.cam) !== -1 ? sgSave.cam : 'chase';
   document.getElementById('sgCamBtn').addEventListener('click', function(e){
-    e.stopPropagation(); sg3.pov = !sg3.pov; sgSave.pov = sg3.pov; sgStore();
-    sgAddText(sg3.pov ? L('🎥 מצלמה: מהעיניים של הגולש', '🎥 Camera: the surfer\'s eyes') : L('🎥 מצלמה: מהחוף', '🎥 Camera: from the beach'), '#bfe9ff');
+    e.stopPropagation();
+    sg3.camMode = SG3_CAMS[(SG3_CAMS.indexOf(sg3.camMode) + 1) % SG3_CAMS.length]; sgSave.cam = sg3.camMode; sgStore();
+    sgAddText(sg3.camMode === 'chase' ? L('🎥 מצלמה: מאחורי הגולש', '🎥 Camera: behind the surfer') : sg3.camMode === 'pov' ? L('🎥 מצלמה: מהעיניים של הגולש', '🎥 Camera: the surfer\'s eyes') : L('🎥 מצלמה: מהחוף', '🎥 Camera: from the beach'), '#bfe9ff');
   });
   document.getElementById('sgBackBtn').addEventListener('click', sgLeave);
   document.getElementById('sgShopBtn').addEventListener('click', function(){ sgMenu.hidden = true; sgRenderShop(); sgShop.hidden = false; });
@@ -11832,7 +11895,7 @@
   // never while the name field is being typed in. Everything worth keeping
   // (coins, skins, name, league) is in localStorage, so a reload loses nothing.
   // 'dev' = a local or preview copy: the updater stays off entirely.
-  var BUILD_VERSION = '20261024-150528';
+  var BUILD_VERSION = '20261024-151203';
   var UPDATE_CHECK_MS = 60000;
   var UPDATE_TRIED_KEY = 'canyonChaseTriedUpdate';
   var pendingSubmits = 0;
