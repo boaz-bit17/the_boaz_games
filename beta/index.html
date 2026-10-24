@@ -4552,7 +4552,7 @@
     { id: 'gold',    name: L('זהב', 'Gold'),          price: 3000,  deck: '#ffd447', stripe: '#b8860b', glow: '#fff1a8' }
   ];
   var SG_RIDERS = [
-    { id: 'grom',    name: L('הגרום', 'The Grom'),              price: 0,     skin: '#f1c7a0', hair: '#7a4a22', suit: '#17191d', accent: '#1d9bf0' },
+    { id: 'grom',    name: L('הגרום', 'The Grom'),              price: 0,     skin: '#f1c7a0', hair: '#7a4a22', suit: '#1d9bf0', accent: '#ffd400' },
     { id: 'local',   name: L('המקומי של אולגה', 'Olga Local'),  price: 500,   skin: '#d9a47c', hair: '#2a1a10', suit: '#15171b', accent: '#2f6fe0' },
     { id: 'aloha',   name: L('אלוהה', 'Aloha'),                  price: 1000,  skin: '#b97a56', hair: '#1a0f08', suit: '#e23b3b', accent: '#ffd2e0' },
     { id: 'charger', name: L('רוכב הענקים', 'Big-Wave Charger'), price: 1600,  skin: '#e8c19e', hair: '#d9b26a', suit: '#2b2f36', accent: '#ff7a00' },
@@ -5373,130 +5373,9 @@
     sg3.state = 'loading';
     var s = document.createElement('script');
     s.src = SG3_LIB;
-    s.onload = function(){ try { sg3Init(); sg3.state = 'ready'; sg3LoadHuman(); } catch(e){ sg3.state = 'failed'; if(window.console) console.warn('surf 3D off:', e); } };
+    s.onload = function(){ try { sg3Init(); sg3.state = 'ready'; } catch(e){ sg3.state = 'failed'; if(window.console) console.warn('surf 3D off:', e); } };
     s.onerror = function(){ sg3.state = 'failed'; };
     document.head.appendChild(s);
-  }
-  // the real surfer body (see sg3AttachHuman)
-  var SG3_GLTF = 'https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/loaders/GLTFLoader.js';
-  var SG3_HUMAN = 'https://cdn.jsdelivr.net/gh/mrdoob/three.js@r147/examples/models/gltf/Xbot.glb';
-  function sg3LoadHuman(){
-    var s = document.createElement('script');
-    s.src = SG3_GLTF;
-    s.onload = function(){
-      if(!sg3.T.GLTFLoader) return;
-      fetch(SG3_HUMAN).then(function(r){ if(!r.ok) throw new Error(r.status); return r.arrayBuffer(); }).then(function(buf){
-        new sg3.T.GLTFLoader().parse(buf, '', function(gl){ try { sg3AttachHuman(gl.scene); } catch(e){ if(window.console) console.warn('surfer body off:', e); } });
-      }).catch(function(e){ if(window.console) console.warn('surfer body off:', e); });
-    };
-    document.head.appendChild(s);
-  }
-  function sg3AttachHuman(model){
-    var T = sg3.T, R = sg3.rider, B = {}, meshes = [];
-    model.traverse(function(o){
-      if(o.isBone) B[o.name.replace('mixamorig', '')] = o;
-      if(o.isMesh){ o.frustumCulled = false; meshes.push(o); }
-    });
-    if(!B.Hips || !B.LeftUpLeg || !B.RightArm) return;
-    // the model faces +z with its left at +x: turn it to face the board's nose
-    var holder = new T.Group(); holder.add(model); holder.rotation.y = Math.PI / 2;
-    // a boy's build (bind pose: metres, y up, facing +z, arms out along x)
-    function band(y, a, b, c, d){ return Math.max(0, Math.min(1, (y - a) / (b - a), (d - y) / (d - c))); }
-    meshes.forEach(function(m){
-      var ps = m.geometry.attributes.position;
-      for(var i = 0; i < ps.count; i++){
-        var x = ps.getX(i), y = ps.getY(i), z = ps.getZ(i), ax = Math.abs(x);
-        var torso = 1 - Math.max(0, Math.min(1, (ax - 0.18) / 0.12));     // not the arms
-        var seat = band(y, 0.78, 0.9, 1.02, 1.12) * (1 - Math.max(0, Math.min(1, (ax - 0.2) / 0.06)));
-        if(z < 0.0) z *= 1 - 0.3 * seat;                                    // flatter seat
-        x *= 1 - 0.1 * seat;                                                // narrower hips
-        x *= 1 + 0.06 * band(y, 1.02, 1.1, 1.18, 1.24) * torso;             // straighter waist
-        x *= 1 + 0.13 * band(y, 1.2, 1.3, 1.45, 1.52) * torso;              // broad shoulders and chest
-        var chest = band(y, 1.22, 1.3, 1.4, 1.46);
-        if(z > 0.06) z = 0.06 + (z - 0.06) * (1 - 0.4 * chest);            // flat chest
-        ps.setXYZ(i, x, y, z);
-      }
-      ps.needsUpdate = true; m.geometry.computeVertexNormals();
-    });
-    meshes.forEach(function(m){
-      m.material = new T.MeshStandardMaterial({ vertexColors: true, roughness: m.name.indexOf('Joints') >= 0 ? 0.35 : 0.5, metalness: 0 });
-      // which part of the body each vertex belongs to, by the bone that moves it most
-      var g = m.geometry, si = g.attributes.skinIndex, sw = g.attributes.skinWeight, ps = g.attributes.position, n = ps.count;
-      var part = new Uint8Array(n), hy0 = 1e9, hy1 = -1e9, hz = 0, hn = 0;
-      for(var i = 0; i < n; i++){
-        var best = 0, bw = -1;
-        for(var k = 0; k < 4; k++){ var w = k === 0 ? sw.getX(i) : k === 1 ? sw.getY(i) : k === 2 ? sw.getZ(i) : sw.getW(i); if(w > bw){ bw = w; best = k === 0 ? si.getX(i) : k === 1 ? si.getY(i) : k === 2 ? si.getZ(i) : si.getW(i); } }
-        var nm = m.skeleton.bones[best].name;
-        part[i] = /Head|Neck/.test(nm) ? 1 : /Hand/.test(nm) ? 2 : 0;
-        if(part[i] === 1 && /Head/.test(nm)){ hy0 = Math.min(hy0, ps.getY(i)); hy1 = Math.max(hy1, ps.getY(i)); hz += ps.getZ(i); hn++; }
-      }
-      hz /= Math.max(1, hn);
-      for(var j = 0; j < n; j++) if(part[j] === 1){ var t = (ps.getY(j) - hy0) / Math.max(1e-6, hy1 - hy0);
-        if(t > 0.66 || (t > 0.3 && ps.getZ(j) < hz - (hy1 - hy0) * 0.12)) part[j] = 3; }    // hair: the top and the back of the head
-      g.setAttribute('color', new T.BufferAttribute(new Float32Array(n * 3), 3));
-      m.userData.part = part; m.userData.joints = m.name.indexOf('Joints') >= 0;
-    });
-    // the doll comes off the board (the vest for Nazaré stays)
-    [R.head, R.hair].concat(Object.keys(R.parts).map(function(k){ return R.parts[k]; }), Object.keys(R.extra).map(function(k){ return R.extra[k]; }))
-      .forEach(function(o){ R.body.remove(o); });
-    R.body.add(holder);
-    var rest = {}; Object.keys(B).forEach(function(k){ rest[k] = B[k].quaternion.clone(); });
-    model.updateMatrixWorld(true);
-    function dist(a, b){ return new T.Vector3().setFromMatrixPosition(B[a].matrixWorld).distanceTo(new T.Vector3().setFromMatrixPosition(B[b].matrixWorld)); }
-    R.human = { holder: holder, model: model, B: B, rest: rest, meshes: meshes, thigh: dist('LeftUpLeg', 'LeftLeg'), shin: dist('LeftLeg', 'LeftFoot') };
-    R.key = '';                                         // repaint in the chosen surfer's colours
-  }
-  // paint the body: wetsuit, skin on the face and hands, hair
-  function sg3HumanColors(H, rd){
-    var T = sg3.T, cs = [new T.Color(rd.suit), new T.Color(rd.skin), new T.Color(rd.skin), new T.Color(rd.hair)];
-    H.meshes.forEach(function(m){
-      var col = m.geometry.attributes.color, part = m.userData.part;
-      for(var i = 0; i < part.length; i++){ var c = m.userData.joints && part[i] === 0 ? cs[0].clone().multiplyScalar(0.7) : cs[part[i]]; col.setXYZ(i, c.r, c.g, c.b); }
-      col.needsUpdate = true;
-    });
-  }
-  // aim each bone so it points the way the doll's limb points (rider space)
-  function sg3HumanPose(H, P){
-    var T = sg3.T, R = sg3.rider, B = H.B, body = R.body;
-    Object.keys(H.rest).forEach(function(k){ B[k].quaternion.copy(H.rest[k]); });
-    // hips onto the doll's hip point (the model's hips sit at (0, 1.04, 0.02) facing +z)
-    H.holder.position.set(P.hip.x - 0.021, P.hip.y - 1.04, P.hip.z);
-    R.g.updateMatrixWorld(true);
-    var bq = new T.Quaternion(); body.getWorldQuaternion(bq);
-    function dirW(a, b){ return new T.Vector3().subVectors(b, a).normalize().applyQuaternion(bq); }
-    function aim(name, childName, d){
-      var bone = B[name], child = B[childName]; if(!bone || !child) return;
-      bone.updateWorldMatrix(true, true);
-      var bp = new T.Vector3().setFromMatrixPosition(bone.matrixWorld), cp = new T.Vector3().setFromMatrixPosition(child.matrixWorld);
-      var q = new T.Quaternion().setFromUnitVectors(cp.sub(bp).normalize(), d);
-      var bw = new T.Quaternion(); bone.getWorldQuaternion(bw);
-      var pw = new T.Quaternion(); bone.parent.getWorldQuaternion(pw);
-      bone.quaternion.copy(pw.invert().multiply(q.multiply(bw)));
-      bone.updateWorldMatrix(false, true);
-    }
-    var up = dirW(P.hip, P.sh);
-    aim('Spine', 'Spine1', up); aim('Spine1', 'Spine2', up); aim('Spine2', 'Neck', up);
-    aim('Neck', 'Head', dirW(P.nk, P.hd)); aim('Head', 'HeadTop_End', dirW(P.nk, P.hd));
-    // left = the front side (toward the nose)
-    // knees from the body's own leg lengths: hips where the pose puts them, ankles just over the deck
-    function leg(upName, kneeName, foot){
-      var hipP = body.worldToLocal(new T.Vector3().setFromMatrixPosition(B[upName].matrixWorld));
-      var ft = new T.Vector3(foot.x, 0.14, foot.z), d = new T.Vector3().subVectors(ft, hipP), len = Math.min(d.length(), H.thigh + H.shin - 0.005); d.normalize();
-      var along = (H.thigh * H.thigh - H.shin * H.shin + len * len) / (2 * len), rise = Math.sqrt(Math.max(0, H.thigh * H.thigh - along * along));
-      var pole = new T.Vector3(1, 0, 0); pole.addScaledVector(d, -pole.dot(d)).normalize();
-      var knee = hipP.clone().addScaledVector(d, along).addScaledVector(pole, rise);
-      aim(upName, kneeName, dirW(hipP, knee)); aim(kneeName, upName === 'LeftUpLeg' ? 'LeftFoot' : 'RightFoot', dirW(knee, ft));
-    }
-    leg('LeftUpLeg', 'LeftLeg', P.footF); leg('RightUpLeg', 'RightLeg', P.footB);
-    var toes = new T.Vector3(1, -0.12, 0).normalize().applyQuaternion(bq);
-    aim('LeftFoot', 'LeftToeBase', toes); aim('RightFoot', 'RightToeBase', toes);
-    var dn = new T.Vector3(0, -0.14, 0);
-    aim('LeftArm', 'LeftForeArm', dirW(P.shF, P.elF.clone().add(dn))); aim('LeftForeArm', 'LeftHand', dirW(P.elF, P.haF.clone().add(dn)));
-    aim('RightArm', 'RightForeArm', dirW(P.shB, P.elB.clone().add(dn))); aim('RightForeArm', 'RightHand', dirW(P.elB, P.haB.clone().add(dn)));
-    // stand the feet on the deck
-    var fl = body.worldToLocal(new T.Vector3().setFromMatrixPosition(B.LeftFoot.matrixWorld));
-    var fr = body.worldToLocal(new T.Vector3().setFromMatrixPosition(B.RightFoot.matrixWorld));
-    H.holder.position.y += Math.max(0, 0.12 - Math.min(fl.y, fr.y));
   }
   function sg3Hide(){ if(sg3.cv) sg3.cv.style.display = 'none'; document.getElementById('sgCamBtn').hidden = true; }
 
@@ -5875,7 +5754,6 @@
     R.head.position.copy(hd); R.head.rotation.z = -0.25;
     R.hair.position.copy(hd).add(V(-0.02, 0.025, 0)); R.hair.rotation.z = 0.45;
     R.vest.position.copy(hip).lerp(sh, 0.6);
-    if(R.human) sg3HumanPose(R.human, { hip: hip, kneeB: kneeB, kneeF: kneeF, footB: footB, footF: footF, sh: sh, nk: nk, hd: hd, shB: shB, shF: shF, elB: elB, elF: elF, haB: haB, haF: haF });
   }
 
   // one frame: rebuild the wave around the surfer, move everything, render.
@@ -5979,7 +5857,6 @@
     if(R.key !== rd.id + bd.id){
       R.key = rd.id + bd.id;
       R.suitM.color.set(rd.suit); R.skinM.color.set(rd.skin); R.hairM.color.set(rd.hair); R.accM.color.set(rd.accent);
-      if(R.human) sg3HumanColors(R.human, rd);
       R.board.material.color.set(bd.deck); R.stripe.material.color.set(bd.stripe);
       R.board.material.emissive = new T.Color(bd.glow ? 0x332200 : 0x000000);
     }
@@ -12222,7 +12099,7 @@
   // never while the name field is being typed in. Everything worth keeping
   // (coins, skins, name, league) is in localStorage, so a reload loses nothing.
   // 'dev' = a local or preview copy: the updater stays off entirely.
-  var BUILD_VERSION = '20261024-223247';
+  var BUILD_VERSION = '20261024-223524';
   var UPDATE_CHECK_MS = 60000;
   var UPDATE_TRIED_KEY = 'canyonChaseTriedUpdate';
   var pendingSubmits = 0;
