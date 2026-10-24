@@ -4591,7 +4591,7 @@
     var mult = Math.min(4, 1 + 0.5 * (sg.chain - 1)), same = name === sg.lastMove ? 0.5 : 1;
     var got = Math.round(pts * mult * same / 10) * 10;
     sg.score += got; sg.lastMove = name;
-    sg.moves.push(name.replace(/ [0-9.]+ ?(שנ׳|s)$/, ''));
+    sg.moves.push(name.replace(/ [0-9.]+ ?(שנ׳|s)$/, '').replace(/^🌀 /, ''));
     sgAddText(name + (mult > 1 ? '  x' + mult : ''), mult > 1 ? '#ffd447' : '#ffffff');
   }
   function sgWipe(reason){
@@ -4654,6 +4654,7 @@
     if(sg.phase === 'over') return;
     // the curl peels on, a little faster all the time
     var curlV = Math.min(SG_CURL_MAX, SG_CURL0 + sg.t * SG_CURL_RAMP) * spot.curl;
+    if(sg.throwT > 0) curlV *= 0.82;
     if(sg.phase === 'tow'){
       // Nazaré: the jet ski pulls you across the flat water into the giant
       sg.towT -= dt; sg.v = 660; sg.h = Math.max(0, sg.h - dt * 0.5); sg.th = 0;
@@ -4745,21 +4746,21 @@
     // the barrel: now and then the lip throws over a stretch ahead of the curl
     sg.nextThrow -= dt;
     if(sg.throwT <= 0 && sg.nextThrow <= 0){
-      if(Math.random() < spot.barrel + 0.15){ sg.throwT = 2.5 + Math.random() * 2.5; sg.throwLen = 260 + Math.random() * 160; }
+      if(Math.random() < spot.barrel + 0.15){ sg.throwT = 2.8 + Math.random() * 2.7; sg.throwLen = 340 + Math.random() * 200; }
       sg.nextThrow = 3 + Math.random() * 4;
     }
     if(sg.throwT > 0){
       sg.throwT -= dt;
-      var inTube = gap < sg.throwLen && sg.h > 0.18;
+      var inTube = gap < sg.throwLen;               // low or high, under the lip is inside
       if(inTube){
-        if(sg.h > 0.8 - 0.03 * up.balance){ sgWipe('lip'); return; }
+        // only staying jammed up against the lip takes you out, not a brush
+        if(sg.h > 0.86 + 0.02 * up.balance){ sg.lipT2 = (sg.lipT2 || 0) + dt; if(sg.lipT2 > 0.3){ sgWipe('lip'); return; } }
+        else sg.lipT2 = 0;
         sg.tube += dt; sg.score += Math.round(dt * 320);
+        sg.v = Math.max(sg.v, 400);                  // the barrel carries you
       }
-      if((!inTube || sg.throwT <= 0) && sg.tube > 0){
-        if(sg.tube > 0.5) sgScore(L('צינור! ', 'Barrel! ') + sg.tube.toFixed(1) + L(' שנ׳', 's'), 250 + 450 * sg.tube);
-        sg.tube = 0;
-      }
-    } else if(sg.tube > 0){ if(sg.tube > 0.5) sgScore(L('צינור!', 'Barrel!'), 250 + 450 * sg.tube); sg.tube = 0; }
+      if((!inTube || sg.throwT <= 0) && sg.tube > 0) sgSpit();
+    } else if(sg.tube > 0) sgSpit();
 
     // the curl caught you
     if(gap < (sg.throwT > 0 && sg.h > 0.18 ? 30 : 60)){ sgWipe('falls'); return; }
@@ -4775,6 +4776,14 @@
       var a = -Math.PI * (0.55 + Math.random() * 0.4), sp = (260 + Math.random() * 420) * K;
       sg.spray.push({ x: -30 * K, y: -6 * K, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, life: 1.1 + Math.random() * 0.4, r: 1.5 + Math.random() * 3.5 });
     }
+  }
+  function sgSpit(){
+    if(sg.tube > 0.5){
+      sgScore(L('🌀 הצינור ירק אותך החוצה! ', '🌀 Spat out of the barrel! ') + sg.tube.toFixed(1) + L(' שנ׳', 's'), 400 + 600 * sg.tube);
+      sg.v = Math.min(900, sg.v + 160);
+      sgSplash(4); sgFan();
+    }
+    sg.tube = 0; sg.lipT2 = 0;
   }
   function sgSplash(n){
     var K = sgK();
@@ -5565,6 +5574,7 @@
         var i = c * SG3_ROWS + r;
         pos[i * 3] = xm; pos[i * 3 + 1] = rows[r][1]; pos[i * 3 + 2] = rows[r][0];
         var lipZone = r >= 12 && r <= 22 ? 1 : 0;      // light through the thin top of the wave only
+        if(br[0] > 0.85 && r > 22 && r <= 32) lipZone = 0.6;   // the curtain of a barrel, lit from behind
         // white only right at the lip's edge while it throws; the rest stays clear water
         foam[i] = Math.min(1, br[1] * 1.1 + (r >= 23 && r <= 26 ? Math.max(0, br[0] - 0.8) * 2.5 : 0) + (r > 56 && br[1] > 0 ? 0.4 : 0));
         thin[i] = lipZone ? (0.35 + 0.35 * br[0]) * (1 - br[1]) : (r > 22 && r <= 30 ? 0.15 * br[0] : 0);
@@ -5627,7 +5637,7 @@
       R.board.material.color.set(bd.deck); R.stripe.material.color.set(bd.stripe);
       R.board.material.emissive = new T.Color(bd.glow ? 0x332200 : 0x000000);
     }
-    sg3Pose(sg.phase === 'ride' && (sg.joy && sg.joy.y < -0.3) ? 0.25 : 0.65);
+    sg3Pose(sg.tube > 0.1 ? 0.95 : sg.phase === 'ride' && (sg.joy && sg.joy.y < -0.3) ? 0.25 : 0.65);
     R.vest.visible = (sg.phase === 'wipe' || sg.phase === 'over') && spot.id === 'naz';
     if(R.vest.visible){ var vs = Math.min(1, (sg.wipe ? sg.wipe.t : 1) * 1.5); R.vest.scale.set(vs, vs * 1.2, vs); }
     // the jet ski at Nazaré
@@ -5693,6 +5703,13 @@
     var portrait = W < H, dist = (Hm * 2.7 + 6) * (portrait ? 1.5 : 1);
     var camWant = new T.Vector3(sx - Hm * 0.2, Hm * 0.32 + 0.7, Hm * 2.2 + dist);
     var lookWant = new T.Vector3(sx - Hm * (portrait ? 0.1 : 0.5), Hm * 0.55, Hm * 0.2);
+    var inBarrel = sg.tube > 0.12 && sg.throwT > 0;
+    sg3.tubeK = (sg3.tubeK || 0) + ((inBarrel ? 1 : 0) - (sg3.tubeK || 0)) * Math.min(1, dtR * (inBarrel ? 2.5 : 1.8));
+    if(sg3.tubeK > 0.01){
+      var mouthX = (sg.curl + sg.throwLen) * SG3_M + Hm * 2.2, tk = sg3.tubeK * sg3.tubeK * (3 - 2 * sg3.tubeK);
+      camWant.lerp(new T.Vector3(mouthX, Hm * 0.5, Hm * 1.35), tk);
+      lookWant.lerp(new T.Vector3(sx - Hm * 0.6, Hm * 0.42, Hm * 0.42), tk);
+    }
     // a new wave (or a new spot): the camera starts in place instead of flying over
     if(!sg3.camInit || sg3.camRun !== sg.spot.id + ':' + (sg.t < 0.2) || sg.t < 0.2){ sg3.camP.copy(camWant); sg3.camL.copy(lookWant); sg3.camInit = true; }
     sg3.camRun = sg.spot.id + ':' + (sg.t < 0.2);
@@ -11772,7 +11789,7 @@
   // never while the name field is being typed in. Everything worth keeping
   // (coins, skins, name, league) is in localStorage, so a reload loses nothing.
   // 'dev' = a local or preview copy: the updater stays off entirely.
-  var BUILD_VERSION = '20261024-112603';
+  var BUILD_VERSION = '20261024-113707';
   var UPDATE_CHECK_MS = 60000;
   var UPDATE_TRIED_KEY = 'canyonChaseTriedUpdate';
   var pendingSubmits = 0;
