@@ -1202,6 +1202,7 @@
       <div class="mission-title">🔥 הרצף היומי</div>
       <div class="streak-strip" id="streakStrip"></div>
       <div class="mission-sub" id="streakInfo"></div>
+      <div class="tourney-status" id="kmTotal"></div>
       <div class="mission-title" id="badgeCount"></div>
       <div class="badge-grid" id="badgeGrid"></div>
       <button class="back-btn" id="closeBadgesBtn" type="button">חזרה</button>
@@ -4326,6 +4327,7 @@
 
   // ---- badges
   function km(){ return Math.floor(prog.stats.dist / KM_UNITS); }
+  function kmText(units){ var k = units / KM_UNITS; return (k < 10 ? k.toFixed(1) : fmtScore(Math.floor(k))) + L(' ק"מ', ' km'); }
   var BADGES = [
     { id: 'km1',    icon: '👟', name: L('צעד ראשון', 'First Steps'),      desc: L('רוץ 1 ק"מ בסך הכול', 'Run 1 km in all'),          goal: 1,       val: km, reward: { coins: 500 } },
     { id: 'km10',   icon: '🏃', name: L('רץ למרחקים', 'Distance Runner'), desc: L('רוץ 10 ק"מ בסך הכול', 'Run 10 km in all'),        goal: 10,      val: km, reward: { coins: 2000 } },
@@ -4371,7 +4373,7 @@
     noteWorld(currentWorld);
     if(bossWonThisRun) prog.stats.boss += 1;
     saveProg();
-    var lines = [], sl = streakRunEnded();
+    var lines = [L('📏 בריצה הזו רצת ', '📏 This run: ') + kmText(dist || 0)], sl = streakRunEnded();
     if(sl) lines.push(sl);
     lines = lines.concat(checkBadges());
     progressBanner.textContent = lines.join('\n');
@@ -4412,6 +4414,7 @@
       el.appendChild(ic); el.appendChild(nm); el.appendChild(ds); el.appendChild(pr);
       grid.appendChild(el);
     });
+    document.getElementById('kmTotal').textContent = L('📏 רצת בסך הכול ', '📏 You have run ') + kmText(prog.stats.dist) + L('', ' in all');
     document.getElementById('badgeCount').textContent = L('🏅 תגים: ' + got + ' מתוך ' + BADGES.length, '🏅 Badges: ' + got + ' of ' + BADGES.length);
   }
   function openBadges(){
@@ -10410,7 +10413,7 @@
   // never while the name field is being typed in. Everything worth keeping
   // (coins, skins, name, league) is in localStorage, so a reload loses nothing.
   // 'dev' = a local or preview copy: the updater stays off entirely.
-  var BUILD_VERSION = '20261024-095320';
+  var BUILD_VERSION = '20261024-095835';
   var UPDATE_CHECK_MS = 60000;
   var UPDATE_TRIED_KEY = 'canyonChaseTriedUpdate';
   var pendingSubmits = 0;
