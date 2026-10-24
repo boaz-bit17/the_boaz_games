@@ -666,6 +666,11 @@
   .sg-card-cv{ width:96px; height:70px; display:block; margin:0 auto; }
   .sg-card-sub{ font-size:11px; opacity:.85; margin-bottom:4px; }
   .sg-over-score{ font-family:'Suez One',serif; font-size:44px; text-align:center; }
+  .sg-judges{ display:flex; gap:6px; justify-content:center; margin:4px 0 10px; }
+  .sg-judge{ background:#0b3d5c; color:#fff; border-radius:8px; padding:4px 8px; text-align:center; min-width:48px; font-size:10px; }
+  .sg-judge b{ display:block; font-family:'Suez One',serif; font-size:18px; }
+  .sg-judge.is-out{ opacity:.4; text-decoration:line-through; }
+  #sgOverMoves{ text-align:center; margin:0 0 8px; }
   .sg-row{ display:flex; gap:8px; }
   .sg-row .go-btn{ margin:0; }
   /* ---------- daily streak & badges ---------- */
@@ -1217,7 +1222,7 @@
   <div class="overlay" id="sgMenu" hidden>
     <div class="tablet">
       <h1>🌊 משחק הגלישה</h1>
-      <p class="tagline">בחר חוף, תפוס גל, ועשה כמה שיותר נקודות</p>
+      <p class="tagline">בחר חוף, תפוס גל, והשופטים ייתנו לך ציון מ-0 עד 10</p>
       <div class="sg-shells" id="sgShells"></div>
       <div class="sg-spots" id="sgSpots"></div>
       <button class="shop-btn" id="sgShopBtn" type="button">🛒 חנות הגלישה</button>
@@ -1241,13 +1246,14 @@
 
   <div class="overlay" id="sgOver" hidden>
     <div class="tablet">
-      <h1>🌊 נפלת!</h1>
+      <h1 id="sgOverTitle">🌊 נפלת!</h1>
       <p class="tagline" id="sgOverReason"></p>
-      <div class="final-lbl">הניקוד שלך</div>
+      <div class="sg-judges" id="sgJudges"></div>
+      <div class="final-lbl">ציון הגל</div>
       <div class="sg-over-score" id="sgOverScore">0</div>
+      <div class="mission-sub" id="sgOverMoves"></div>
       <div class="league-banner" id="sgOverBest"></div>
       <div class="sg-shells" id="sgOverShells"></div>
-      <div class="league-banner" id="sgOverUnlock" hidden></div>
       <div class="sg-row">
         <button class="go-btn" id="sgAgainBtn" type="button">🔁 עוד גל</button>
         <button class="go-btn sg-enter" id="sgSpotsBtn" type="button">🏝️ חופים</button>
@@ -1402,13 +1408,14 @@
   var I18N_HTML = {
    "🌊 מעבר למשחק גלישה": "🌊 Go to the surf game",
    "🌊 משחק הגלישה": "🌊 The Surf Game",
-   "בחר חוף, תפוס גל, ועשה כמה שיותר נקודות": "Pick a spot, catch a wave, and score as many points as you can",
+   "בחר חוף, תפוס גל, והשופטים ייתנו לך ציון מ-0 עד 10": "Pick a spot, catch a wave, and the judges score it from 0 to 10",
    "🛒 חנות הגלישה": "🛒 Surf shop",
    "⬅ חזרה למשחק הריצה": "⬅ Back to the running game",
    "🏄 גלשנים": "🏄 Boards",
    "🧍 גולשים": "🧍 Surfers",
    "⬆️ שדרוגים": "⬆️ Upgrades",
    "🌊 נפלת!": "🌊 Wipeout!",
+   "ציון הגל": "Wave score",
    "🔁 עוד גל": "🔁 Another wave",
    "🏝️ חופים": "🏝️ Spots",
    "🏅 תגים": "🏅 Badges",
@@ -4512,51 +4519,51 @@
   // section. Points until you wipe out; a best per spot. Its own money
   // (shells) buys boards, surfers and upgrades.
   var SG_KEY = 'canyonSurfGameV1';
-  var sgSave = { shells: 0, boards: ['foam'], board: 'foam', riders: ['grom'], rider: 'grom', up: { speed: 0, air: 0, balance: 0 }, best: {} };
+  var sgSave = { shells: 0, boards: ['foam'], board: 'foam', riders: ['grom'], rider: 'grom', up: { speed: 0, air: 0, balance: 0 }, best: {}, best10: {} };
   try {
     var sg0 = JSON.parse(localStorage.getItem(SG_KEY) || 'null');
-    if(sg0){ sgSave = Object.assign(sgSave, sg0); sgSave.up = Object.assign({ speed: 0, air: 0, balance: 0 }, sg0.up || {}); sgSave.best = sg0.best || {}; }
+    if(sg0){ sgSave = Object.assign(sgSave, sg0); sgSave.up = Object.assign({ speed: 0, air: 0, balance: 0 }, sg0.up || {}); sgSave.best = sg0.best || {}; sgSave.best10 = sg0.best10 || {}; }
   } catch(e){}
   function sgStore(){ try { localStorage.setItem(SG_KEY, JSON.stringify(sgSave)); } catch(e){} }
 
   var SG_SPOTS = [
-    { id: 'pool', emoji: '🏊', name: L('בריכת הגלים', 'The Wave Pool'), need: 0, curl: 1, size: 0.45, barrel: 0.12, hazard: null,
+    { id: 'pool', emoji: '🏊', name: L('בריכת הגלים', 'The Wave Pool'), dur: 28, man: 0.62, need: 0, curl: 1, size: 0.45, barrel: 0.12, hazard: null,
       desc: L('גלים מושלמים, אחד אחרי השני. המקום ללמוד.', 'Perfect waves, one after another. The place to learn.'),
       sky: ['#5fb8ff', '#d9f1ff'], sea: ['#29c3cf', '#0b6d86'], face: ['#7fe6e0', '#14889c'] },
-    { id: 'olga', emoji: '🇮🇱', name: L('חוף אולגה', 'Olga Beach'), need: 2500, curl: 1.08, size: 0.55, barrel: 0.2, hazard: 'jelly',
+    { id: 'olga', emoji: '🇮🇱', name: L('חוף אולגה', 'Olga Beach'), dur: 30, man: 0.58, need: 0, curl: 1.08, size: 0.55, barrel: 0.2, hazard: 'jelly',
       desc: L('הבית! גלים של הים התיכון, ושימו לב למדוזות.', 'Home! Mediterranean waves, and watch out for jellyfish.'),
       sky: ['#6cc0ff', '#fff0d2'], sea: ['#2a9fd6', '#0a4f80'], face: ['#6fd0ef', '#0f5f96'] },
-    { id: 'pipe', emoji: '🌺', name: L('פייפליין, הוואי', 'Pipeline, Hawaii'), need: 6000, curl: 1.2, size: 0.72, barrel: 0.6, hazard: 'reef',
+    { id: 'pipe', emoji: '🌺', name: L('פייפליין, הוואי', 'Pipeline, Hawaii'), dur: 24, man: 0.42, need: 0, curl: 1.2, size: 0.72, barrel: 0.6, hazard: 'reef',
       desc: L('גל הצינור הכי מפורסם בעולם, מעל שונית חדה.', 'The most famous barrel in the world, over a sharp reef.'),
       sky: ['#3fa2ff', '#ffe1b8'], sea: ['#1b9ec4', '#06456e'], face: ['#5fe0e6', '#0a5d8c'] },
-    { id: 'naz', emoji: '🗼', name: L('נאזרה, פורטוגל', 'Nazaré, Portugal'), need: 10000, curl: 1.35, size: 1, barrel: 0.2, hazard: 'giant', tow: true,
+    { id: 'naz', emoji: '🗼', name: L('נאזרה, פורטוגל', 'Nazaré, Portugal'), dur: 20, man: 0.2, need: 0, curl: 1.35, size: 1, barrel: 0.2, hazard: 'giant', tow: true,
       desc: L('הגלים הכי גדולים בעולם. אופנוע ים מושך אותך פנימה.', 'The biggest waves on Earth. A jet ski tows you in.'),
       sky: ['#7d8c99', '#d9e0e5'], sea: ['#2f6475', '#12323d'], face: ['#5d9aa8', '#143844'] }
   ];
   var SG_BOARDS = [
     { id: 'foam',    name: L('קלקר', 'Foamie'),      price: 0,     deck: '#ff7a3d', stripe: '#ffffff' },
-    { id: 'classic', name: L('קלאסי', 'Classic'),    price: 1500,  deck: '#f4efe2', stripe: '#c8102e' },
-    { id: 'ocean',   name: L('אוקיינוס', 'Ocean'),    price: 3000,  deck: '#1fb5c9', stripe: '#ffffff' },
-    { id: 'shark',   name: L('כריש', 'Shark'),        price: 5000,  deck: '#8c9aa8', stripe: '#2e3b48' },
-    { id: 'sunset',  name: L('שקיעה', 'Sunset'),      price: 8000,  deck: '#ff5e62', stripe: '#ffd447' },
-    { id: 'gold',    name: L('זהב', 'Gold'),          price: 12000, deck: '#ffd447', stripe: '#b8860b', glow: '#fff1a8' }
+    { id: 'classic', name: L('קלאסי', 'Classic'),    price: 400,   deck: '#f4efe2', stripe: '#c8102e' },
+    { id: 'ocean',   name: L('אוקיינוס', 'Ocean'),    price: 800,   deck: '#1fb5c9', stripe: '#ffffff' },
+    { id: 'shark',   name: L('כריש', 'Shark'),        price: 1300,  deck: '#8c9aa8', stripe: '#2e3b48' },
+    { id: 'sunset',  name: L('שקיעה', 'Sunset'),      price: 2000,  deck: '#ff5e62', stripe: '#ffd447' },
+    { id: 'gold',    name: L('זהב', 'Gold'),          price: 3000,  deck: '#ffd447', stripe: '#b8860b', glow: '#fff1a8' }
   ];
   var SG_RIDERS = [
     { id: 'grom',    name: L('הגרום', 'The Grom'),              price: 0,     skin: '#f1c7a0', hair: '#7a4a22', suit: '#1d9bf0', accent: '#ffd400' },
-    { id: 'local',   name: L('המקומי של אולגה', 'Olga Local'),  price: 2000,  skin: '#d9a47c', hair: '#2a1a10', suit: '#15171b', accent: '#2f6fe0' },
-    { id: 'aloha',   name: L('אלוהה', 'Aloha'),                  price: 4000,  skin: '#b97a56', hair: '#1a0f08', suit: '#e23b3b', accent: '#ffd2e0' },
-    { id: 'charger', name: L('רוכב הענקים', 'Big-Wave Charger'), price: 7000,  skin: '#e8c19e', hair: '#d9b26a', suit: '#2b2f36', accent: '#ff7a00' },
-    { id: 'champ',   name: L('אלוף האוויר', 'Air Champ'),        price: 10000, skin: '#c08a5e', hair: '#2e1c10', suit: '#ffd21f', accent: '#00a03c' },
-    { id: 'tube',    name: L('אגדת הצינור', 'Tube Legend'),     price: 14000, skin: '#e2ab80', hair: '#d1aa6a', suit: '#141619', accent: '#c8102e' }
+    { id: 'local',   name: L('המקומי של אולגה', 'Olga Local'),  price: 500,   skin: '#d9a47c', hair: '#2a1a10', suit: '#15171b', accent: '#2f6fe0' },
+    { id: 'aloha',   name: L('אלוהה', 'Aloha'),                  price: 1000,  skin: '#b97a56', hair: '#1a0f08', suit: '#e23b3b', accent: '#ffd2e0' },
+    { id: 'charger', name: L('רוכב הענקים', 'Big-Wave Charger'), price: 1600,  skin: '#e8c19e', hair: '#d9b26a', suit: '#2b2f36', accent: '#ff7a00' },
+    { id: 'champ',   name: L('אלוף האוויר', 'Air Champ'),        price: 2400,  skin: '#c08a5e', hair: '#2e1c10', suit: '#ffd21f', accent: '#00a03c' },
+    { id: 'tube',    name: L('אגדת הצינור', 'Tube Legend'),     price: 3200,  skin: '#e2ab80', hair: '#d1aa6a', suit: '#141619', accent: '#c8102e' }
   ];
   var SG_UPGRADES = [
     { id: 'speed',   icon: '⚡', name: L('מהירות', 'Speed'),   desc: L('גלשן מהיר יותר', 'A faster board') },
     { id: 'air',     icon: '🚀', name: L('קפיצה', 'Air'),      desc: L('קפיצות גבוהות יותר', 'Higher airs') },
     { id: 'balance', icon: '⚖️', name: L('איזון', 'Balance'),  desc: L('נחיתות וצינורות סלחניים יותר', 'More forgiving landings and barrels') }
   ];
-  var SG_UP_COST = [400, 800, 1500, 2500, 4000];
+  var SG_UP_COST = [150, 300, 500, 800, 1200];
   function sgItem(list, id){ for(var i = 0; i < list.length; i++) if(list[i].id === id) return list[i]; return list[0]; }
-  function sgUnlocked(i){ return i === 0 || (sgSave.best[SG_SPOTS[i - 1].id] || 0) >= SG_SPOTS[i].need; }
+  function sgUnlocked(){ return true; }        // every spot is open
 
   // ---- the ride
   var sg = { active: false, phase: 'menu' };
@@ -4569,11 +4576,14 @@
     sg = { active: true, phase: spot.tow ? 'tow' : 'ride', spot: spot, spotIdx: i, t: 0, x: 0, v: spot.tow ? 620 : 380, h: 0.35, th: -0.3, hold: false,
            curl: -420, score: 0, chain: 0, chainT: 0, lastMove: '', texts: [], spray: [], hazards: [], closeouts: [], throwT: 0, throwLen: 0,
            tube: 0, air: null, prevSign: -1, nextHaz: 3 + sgRand() * 3, nextClose: 14 + sgRand() * 6, nextThrow: 4 + sgRand() * 3,
-           wipe: null, towT: spot.tow ? 2.4 : 0, hint: 4, best: sgSave.best[spot.id] || 0 };
+           wipe: null, towT: spot.tow ? 2.4 : 0, hint: 4, best: sgSave.best10[spot.id] || 0, moves: [] };
     state = 'surfgame';
     startOverlay.hidden = true; hud.hidden = true;
     sgMenu.hidden = true; sgOver.hidden = true; sgShop.hidden = true;
   }
+  // what the judges would give for the ride so far: a lot of good surfing
+  // gets you near 10, never past it
+  function sgTen(raw){ return Math.min(10, 10 * (1 - Math.exp(-raw / 6500))); }
   function sgAddText(txt, col){ sg.texts.push({ t: txt, c: col || '#fff', life: 1.6, y: 0 }); }
   function sgScore(name, pts){
     if(sg.chainT > 0) sg.chain++; else sg.chain = 1;
@@ -4581,18 +4591,29 @@
     var mult = Math.min(4, 1 + 0.5 * (sg.chain - 1)), same = name === sg.lastMove ? 0.5 : 1;
     var got = Math.round(pts * mult * same / 10) * 10;
     sg.score += got; sg.lastMove = name;
-    sgAddText(name + ' +' + fmtScore(got) + (mult > 1 ? '  x' + mult : ''), mult > 1 ? '#ffd447' : '#ffffff');
+    sg.moves.push(name.replace(/ [0-9.]+ ?(שנ׳|s)$/, ''));
+    sgAddText(name + (mult > 1 ? '  x' + mult : ''), mult > 1 ? '#ffd447' : '#ffffff');
   }
   function sgWipe(reason){
     if(sg.phase === 'wipe' || sg.phase === 'over') return;
     sg.phase = 'wipe';
     sg.wipe = { reason: reason, t: 0, x: 0, h: sg.h, spin: 0 };
   }
-  function sgEnd(){
+  // the wave is over (completed = you rode it to the end): five judges score
+  // it 0-10, the highest and the lowest drop, the other three average
+  function sgEnd(completed){
     sg.phase = 'over';
-    var shells = Math.floor(sg.score / 40), isBest = sg.score > (sgSave.best[sg.spot.id] || 0);
+    var base = sgTen(sg.score) * (completed ? 1 : 0.88) + (completed ? 0.4 : 0);
+    base = Math.max(0, Math.min(10, base));
+    var judges = [];
+    for(var j = 0; j < 5; j++) judges.push(Math.max(0, Math.min(10, Math.round((base + (Math.random() - 0.5) * 0.8) * 10) / 10)));
+    var sorted = judges.slice().sort(function(a, b){ return a - b; });
+    var final = Math.round((sorted[1] + sorted[2] + sorted[3]) / 3 * 100) / 100;
+    var hiI = judges.indexOf(sorted[4]), loI = judges.indexOf(sorted[0]);
+    if(loI === hiI) loI = judges.lastIndexOf(sorted[0]);
+    var shells = Math.round(final * 40), isBest = final > (sgSave.best10[sg.spot.id] || 0);
     sgSave.shells += shells;
-    if(isBest) sgSave.best[sg.spot.id] = sg.score;
+    if(isBest) sgSave.best10[sg.spot.id] = final;
     sgStore();
     var R = {
       falls: L('השפה תפסה אותך — נפלת מעל המפל!', 'The lip caught you — over the falls!'),
@@ -4602,16 +4623,25 @@
       jelly: L('נעקצת ממדוזה!', 'Stung by a jellyfish!'),
       close: L('הגל נסגר עליך!', 'The wave closed out on you!')
     };
-    document.getElementById('sgOverReason').textContent = (R[sg.wipe && sg.wipe.reason] || '') + (sg.spot.id === 'naz' ? L(' האפוד התנפח והוציא אותך למעלה 🦺', ' Your vest inflated and floated you up 🦺') : '');
-    document.getElementById('sgOverScore').textContent = fmtScore(sg.score);
-    document.getElementById('sgOverBest').textContent = isBest ? L('🏆 שיא חדש בחוף הזה!', '🏆 A new best at this spot!') : L('השיא שלך כאן: ', 'Your best here: ') + fmtScore(sgSave.best[sg.spot.id] || 0);
+    document.getElementById('sgOverTitle').textContent = completed ? L('🏄 סיימת את הגל!', '🏄 You rode it out!') : L('🌊 נפלת!', '🌊 Wipeout!');
+    document.getElementById('sgOverReason').textContent = completed ? L('רכבת על הגל עד הסוף — השופטים אוהבים את זה', 'You rode the wave to the end — the judges love that')
+      : (R[sg.wipe && sg.wipe.reason] || '') + (sg.spot.id === 'naz' ? L(' האפוד התנפח והוציא אותך למעלה 🦺', ' Your vest inflated and floated you up 🦺') : '');
+    var jr = document.getElementById('sgJudges');
+    jr.innerHTML = '';
+    judges.forEach(function(v, i){
+      var c = document.createElement('div'); c.className = 'sg-judge' + (i === hiI || i === loI ? ' is-out' : '');
+      c.innerHTML = '<span>' + L('שופט ', 'Judge ') + (i + 1) + '</span><b>' + v.toFixed(1) + '</b>';
+      jr.appendChild(c);
+    });
+    document.getElementById('sgOverScore').textContent = final.toFixed(2);
+    var uniq = {}; sg.moves.forEach(function(m){ uniq[m] = (uniq[m] || 0) + 1; });
+    document.getElementById('sgOverMoves').textContent = Object.keys(uniq).length
+      ? Object.keys(uniq).map(function(m){ return m + (uniq[m] > 1 ? ' ×' + uniq[m] : ''); }).join(' · ')
+      : L('לא עשית תרגילים בגל הזה', 'No moves on this wave');
+    document.getElementById('sgOverBest').textContent = isBest ? L('🏆 הציון הכי גבוה שלך בחוף הזה!', '🏆 Your best score at this spot!') : L('הציון הכי גבוה שלך כאן: ', 'Your best here: ') + (sgSave.best10[sg.spot.id] || 0).toFixed(2);
     document.getElementById('sgOverShells').textContent = '🐚 +' + fmtScore(shells);
-    var nxt = SG_SPOTS[sg.spotIdx + 1], unl = document.getElementById('sgOverUnlock');
-    unl.hidden = !(nxt && !sg.wasUnlocked && sgUnlocked(sg.spotIdx + 1));
-    if(!unl.hidden) unl.textContent = L('🔓 נפתח חוף חדש: ', '🔓 New spot unlocked: ') + nxt.emoji + ' ' + nxt.name;
     sgOver.hidden = false;
   }
-
   function sgUpdate(dt){
     var spot = sg.spot, F = sgFaceUnits(), up = sgSave.up;
     sg.t += dt;
@@ -4634,9 +4664,11 @@
     if(sg.phase === 'wipe'){
       var w = sg.wipe;
       w.t += dt; w.spin += dt * 9; sg.v *= 0.96; sg.x += sg.v * dt * 0.3; sg.curl += curlV * dt;
-      if(w.t > 1.7) sgEnd();
+      if(w.t > 1.7) sgEnd(false);
       return;
     }
+    if(sg.phase === 'done'){ sg.doneT += dt; sg.x += sg.v * dt; sg.h = Math.max(0, sg.h - dt * 0.6); if(sg.doneT > 1.4) sgEnd(true); return; }
+    if(sg.t >= sg.spot.dur && sg.phase === 'ride'){ sg.phase = 'done'; sg.doneT = 0; sgAddText(L('🏁 קיק אאוט! סיימת את הגל', '🏁 Kick out! Wave complete'), '#7fffb0'); return; }
     sg.curl += curlV * dt;
     var gap = sg.x - sg.curl;
 
@@ -4678,7 +4710,7 @@
     var sign = sg.th > 0.15 ? 1 : sg.th < -0.15 ? -1 : sg.prevSign;
     if(sign !== sg.prevSign){
       if(sign > 0 && sg.h < 0.3 && sg.v > 260) sgScore(L('פנייה תחתונה', 'Bottom turn'), 80 + sg.v * 0.12);
-      if(sign < 0 && sg.h > 0.78 && sg.v > 220) sgScore(L('סנאפ', 'Snap'), 120 + sg.v * 0.15);
+      if(sign < 0 && sg.h > 0.78 && sg.v > 220){ sgScore(L('סנאפ', 'Snap'), 120 + sg.v * 0.15); sgFan(); }
       sg.prevSign = sign;
     }
     // off the lip with speed: into the air
@@ -4720,6 +4752,13 @@
     sg.score += sg.v * dt * 0.03;
     sgHazards(dt);
     sgHazardsCheck(false);
+  }
+  function sgFan(){
+    var K = sgK();
+    for(var i = 0; i < 46; i++){
+      var a = -Math.PI * (0.55 + Math.random() * 0.4), sp = (260 + Math.random() * 420) * K;
+      sg.spray.push({ x: -30 * K, y: -6 * K, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, life: 1.1 + Math.random() * 0.4, r: 1.5 + Math.random() * 3.5 });
+    }
   }
   function sgSplash(n){
     var K = sgK();
@@ -4765,58 +4804,98 @@
     return { bottom: bottom, top: top, faceH: faceH, sx: W * 0.6 };
   }
   function sgScreenX(wx){ return W * 0.6 + (wx - sg.x) * sgK(); }
-  function sgDrawScene(g){
+  function sgDrawScene(){
     var spot = sg.spot, gm = sgFaceGeom(), K = sgK(), t = sg.t;
-    // sky and far shore
     var sky = ctx.createLinearGradient(0, 0, 0, gm.top);
     sky.addColorStop(0, spot.sky[0]); sky.addColorStop(1, spot.sky[1]);
     ctx.fillStyle = sky; ctx.fillRect(0, 0, W, H);
-    var hz = gm.top - gm.faceH * 0.25;
+    var hz = Math.max(H * 0.12, gm.top - gm.faceH * 0.3);
     sgDrawBackdrop(spot, hz, t);
-    // the sea behind the wave
-    var sea = ctx.createLinearGradient(0, hz, 0, H);
-    sea.addColorStop(0, spot.sea[0]); sea.addColorStop(1, spot.sea[1]);
+    // the open sea behind: deep blue, sparkling lines that drift
+    var sea = ctx.createLinearGradient(0, hz, 0, gm.top + gm.faceH);
+    sea.addColorStop(0, spot.sea[1]); sea.addColorStop(1, spot.sea[0]);
     ctx.fillStyle = sea; ctx.fillRect(0, hz, W, H - hz);
-    // the wave: full height from the curl rightwards, easing into a
-    // shoulder further along; the lip curls over at the curl
-    var cx = sgScreenX(sg.curl);
-    function topAt(x){
-      var d = (x - cx) / (W * 0.9);
-      var shoulder = d > 0.9 ? Math.min(1, (d - 0.9) * 1.4) : 0;
-      return gm.top + gm.faceH * 0.75 * shoulder + Math.sin(x * 0.012 + t * 1.3) * 3;
+    ctx.strokeStyle = 'rgba(255,255,255,0.18)'; ctx.lineWidth = 1;
+    for(var r = 0; r < 22; r++){
+      var ry = hz + (r / 22) * (gm.top - hz + 20), rl = 10 + r * 2.5, off = (r * 97 + t * 14 * (1 + r * 0.05)) % 140;
+      for(var rx = -off; rx < W; rx += 140){ ctx.beginPath(); ctx.moveTo(rx, ry); ctx.lineTo(rx + rl, ry); ctx.stroke(); }
     }
-    var face = ctx.createLinearGradient(0, gm.top, 0, gm.bottom);
-    face.addColorStop(0, spot.face[0]); face.addColorStop(1, spot.face[1]);
-    ctx.fillStyle = face;
-    ctx.beginPath(); ctx.moveTo(cx - 90, gm.bottom + 30); ctx.lineTo(cx - 90, gm.top + gm.faceH * 0.5);
-    for(var x = cx; x <= W + 20; x += 16) ctx.lineTo(x, topAt(x));
-    ctx.lineTo(W + 20, gm.bottom + 30); ctx.closePath(); ctx.fill();
-    // streaks running along the face
-    ctx.strokeStyle = 'rgba(255,255,255,0.16)'; ctx.lineWidth = 2;
-    for(var s = 0; s < 9; s++){
-      var yy = gm.top + gm.faceH * (0.15 + s * 0.09), off = ((sg.x * K * 0.6 + s * 137) % 240);
-      for(var sx2 = cx + 30 - off; sx2 < W; sx2 += 240){
+    var cx = sgScreenX(sg.curl);
+    // the wave's height along the beach: full at the curl, easing off into
+    // a shoulder far down the line
+    function topAt(x){
+      // full height around the surfer, easing into the shoulder past them
+      var d = (x - Math.max(cx + W * 0.75, gm.sx + W * 0.35)) / W;
+      var shoulder = d > 0 ? Math.min(1, d * 1.3) : 0;
+      return gm.top + gm.faceH * 0.7 * shoulder * shoulder + Math.sin(x * 0.01 + t * 1.1) * 2;
+    }
+    // the face: translucent and bright up at the lip, deep and dark lower
+    // down, a little lighter again where it flattens into the trough
+    var fg = ctx.createLinearGradient(0, gm.top - 10, 0, gm.bottom);
+    fg.addColorStop(0, 'rgba(' + hexToRgb(spot.face[0]) + ',0.95)');
+    fg.addColorStop(0.18, spot.face[0]);
+    fg.addColorStop(0.55, spot.face[1]);
+    fg.addColorStop(0.9, spot.face[1]);
+    fg.addColorStop(1, spot.sea[0]);
+    ctx.fillStyle = fg;
+    ctx.beginPath(); ctx.moveTo(cx - 90, gm.bottom + 40); ctx.lineTo(cx - 90, gm.top + gm.faceH * 0.5);
+    for(var x = cx; x <= W + 20; x += 12) ctx.lineTo(x, topAt(x));
+    ctx.lineTo(W + 20, gm.bottom + 40); ctx.closePath(); ctx.fill();
+    // sunlight through the top of the wall
+    var lg2 = ctx.createLinearGradient(0, gm.top, 0, gm.top + gm.faceH * 0.3);
+    lg2.addColorStop(0, 'rgba(220,255,245,0.35)'); lg2.addColorStop(1, 'rgba(220,255,245,0)');
+    ctx.fillStyle = lg2;
+    ctx.beginPath(); ctx.moveTo(cx, gm.top + gm.faceH * 0.3);
+    for(var x2 = cx; x2 <= W + 20; x2 += 12) ctx.lineTo(x2, topAt(x2));
+    ctx.lineTo(W + 20, gm.top + gm.faceH * 0.3); ctx.closePath(); ctx.fill();
+    // lines of water running along the face, bending up toward the curl
+    ctx.lineWidth = 1.5;
+    for(var s = 0; s < 14; s++){
+      var fr = s / 14, yy = gm.top + gm.faceH * (0.12 + fr * 0.8), off2 = ((sg.x * K * 0.5 + s * 173) % 300);
+      ctx.strokeStyle = 'rgba(255,255,255,' + (0.05 + 0.1 * (1 - fr)).toFixed(3) + ')';
+      for(var sx2 = cx + 20 - off2; sx2 < W; sx2 += 300){
         if(sx2 < cx + 10) continue;
-        ctx.beginPath(); ctx.moveTo(sx2, yy); ctx.lineTo(sx2 + 70, yy - 4); ctx.stroke();
+        var len = 90 + (s * 31) % 80, bend = (1 - Math.min(1, (sx2 - cx) / W)) * 10;
+        ctx.beginPath(); ctx.moveTo(sx2, yy); ctx.quadraticCurveTo(sx2 + len / 2, yy - 3 - bend, sx2 + len, yy - bend); ctx.stroke();
       }
     }
-    // the lip throwing over (barrel) ahead of the curl
-    if(sg.throwT > 0){
-      var tl = sg.throwLen * K, a = Math.min(1, sg.throwT * 2);
-      ctx.fillStyle = 'rgba(' + hexToRgb(spot.face[0]) + ',' + (0.85 * a).toFixed(3) + ')';
-      ctx.beginPath(); ctx.moveTo(cx, gm.top);
-      ctx.quadraticCurveTo(cx + tl * 0.6, gm.top - gm.faceH * 0.18, cx + tl, gm.top + gm.faceH * 0.1);
-      ctx.quadraticCurveTo(cx + tl * 0.8, gm.top + gm.faceH * 0.55, cx + tl * 0.55, gm.top + gm.faceH * 0.7);
-      ctx.quadraticCurveTo(cx + tl * 0.4, gm.top + gm.faceH * 0.2, cx, gm.top + gm.faceH * 0.15);
-      ctx.closePath(); ctx.fill();
-      ctx.strokeStyle = 'rgba(255,255,255,' + (0.7 * a).toFixed(3) + ')'; ctx.lineWidth = 3;
-      ctx.beginPath(); ctx.moveTo(cx, gm.top); ctx.quadraticCurveTo(cx + tl * 0.6, gm.top - gm.faceH * 0.18, cx + tl, gm.top + gm.faceH * 0.1); ctx.stroke();
-      // the dark hollow inside
-      ctx.fillStyle = 'rgba(0,30,50,' + (0.25 * a).toFixed(3) + ')';
-      ctx.beginPath(); ctx.ellipse(cx + tl * 0.45, gm.top + gm.faceH * 0.45, tl * 0.4, gm.faceH * 0.28, 0, 0, Math.PI * 2); ctx.fill();
+    // the lip feathering: a thin white edge with spray blowing off it
+    ctx.strokeStyle = 'rgba(255,255,255,0.75)'; ctx.lineWidth = 2;
+    ctx.beginPath();
+    for(var x3 = cx + 40; x3 <= W + 20; x3 += 10){ var ty = topAt(x3) + 1; if(x3 === cx + 40) ctx.moveTo(x3, ty); else ctx.lineTo(x3, ty); }
+    ctx.stroke();
+    for(var m = 0; m < 30; m++){
+      var mx = cx + 60 + ((m * 89 + t * 60) % Math.max(100, W - cx));
+      var my = topAt(mx) - ((m * 7 + t * 30) % 16);
+      ctx.fillStyle = 'rgba(255,255,255,' + (0.25 + (m % 3) * 0.1).toFixed(2) + ')';
+      ctx.beginPath(); ctx.arc(mx, my, 1.2 + (m % 3), 0, Math.PI * 2); ctx.fill();
     }
-    // the curl: a thick lip pitching out and down, then the broken wave
-    // behind it -- a churning mass of white with a bubbling top
+    // the barrel: the lip pitches out over a stretch ahead of the curl and
+    // a dark green hollow opens underneath
+    if(sg.throwT > 0){
+      var tl = sg.throwLen * K, a = Math.min(1, sg.throwT * 2), lipY = gm.top;
+      var hol = ctx.createRadialGradient(cx + tl * 0.35, gm.top + gm.faceH * 0.5, 4, cx + tl * 0.35, gm.top + gm.faceH * 0.5, tl * 0.6);
+      hol.addColorStop(0, 'rgba(4,40,34,' + (0.85 * a).toFixed(3) + ')'); hol.addColorStop(1, 'rgba(10,70,60,0)');
+      ctx.fillStyle = hol;
+      ctx.beginPath(); ctx.ellipse(cx + tl * 0.4, gm.top + gm.faceH * 0.5, tl * 0.55, gm.faceH * 0.38, 0, 0, Math.PI * 2); ctx.fill();
+      var lipg = ctx.createLinearGradient(cx, lipY - gm.faceH * 0.2, cx, lipY + gm.faceH * 0.5);
+      lipg.addColorStop(0, 'rgba(230,255,250,' + (0.9 * a).toFixed(3) + ')'); lipg.addColorStop(1, 'rgba(' + hexToRgb(spot.face[0]) + ',' + (0.75 * a).toFixed(3) + ')');
+      ctx.fillStyle = lipg;
+      ctx.beginPath(); ctx.moveTo(cx, lipY);
+      ctx.bezierCurveTo(cx + tl * 0.4, lipY - gm.faceH * 0.22, cx + tl * 0.95, lipY - gm.faceH * 0.05, cx + tl, lipY + gm.faceH * 0.25);
+      ctx.bezierCurveTo(cx + tl * 0.92, lipY + gm.faceH * 0.5, cx + tl * 0.75, lipY + gm.faceH * 0.62, cx + tl * 0.62, lipY + gm.faceH * 0.7);
+      ctx.bezierCurveTo(cx + tl * 0.7, lipY + gm.faceH * 0.3, cx + tl * 0.5, lipY + gm.faceH * 0.02, cx, lipY + gm.faceH * 0.12);
+      ctx.closePath(); ctx.fill();
+      ctx.strokeStyle = 'rgba(255,255,255,' + (0.85 * a).toFixed(3) + ')'; ctx.lineWidth = 2.5;
+      ctx.beginPath(); ctx.moveTo(cx, lipY); ctx.bezierCurveTo(cx + tl * 0.4, lipY - gm.faceH * 0.22, cx + tl * 0.95, lipY - gm.faceH * 0.05, cx + tl, lipY + gm.faceH * 0.25); ctx.stroke();
+      // the curtain of water dripping off the lip
+      for(var dpp = 0; dpp < 16; dpp++){
+        var dx = cx + tl * (0.55 + (dpp % 8) * 0.055), dy = lipY + gm.faceH * (0.3 + ((dpp * 13 + t * 90) % 40) / 100);
+        ctx.fillStyle = 'rgba(255,255,255,' + (0.5 * a).toFixed(3) + ')';
+        ctx.fillRect(dx, dy, 1.5, 5);
+      }
+    }
+    // the curl: a thick lip throwing out and down
     var lipT = gm.faceH * 0.16;
     var lg = ctx.createLinearGradient(cx - 80, gm.top, cx + 60, gm.top);
     lg.addColorStop(0, '#ffffff'); lg.addColorStop(0.45, spot.face[0]); lg.addColorStop(1, spot.face[0]);
@@ -4826,63 +4905,83 @@
     ctx.lineTo(cx - 90 + lipT, gm.top + gm.faceH * 0.52);
     ctx.bezierCurveTo(cx - 50, gm.top + gm.faceH * 0.05, cx, gm.top - gm.faceH * 0.02, cx + 70, gm.top + lipT * 0.6);
     ctx.closePath(); ctx.fill();
-    ctx.strokeStyle = 'rgba(255,255,255,0.85)'; ctx.lineWidth = 3;
-    ctx.beginPath(); ctx.moveTo(cx + 70, gm.top + 4); ctx.bezierCurveTo(cx + 20, gm.top - gm.faceH * 0.22, cx - 70, gm.top - gm.faceH * 0.12, cx - 90, gm.top + gm.faceH * 0.5); ctx.stroke();
-    var wEnd = cx - 60;
-    if(wEnd > -40){
-      var wg = ctx.createLinearGradient(0, gm.top, 0, gm.bottom + 30);
-      wg.addColorStop(0, '#ffffff'); wg.addColorStop(0.7, '#eaf8fb'); wg.addColorStop(1, '#bfe7ef');
-      ctx.fillStyle = wg;
-      ctx.beginPath(); ctx.moveTo(-20, gm.bottom + 30);
-      for(var wx = -20; wx <= wEnd; wx += 10){
-        var rise = Math.min(1, (wEnd - wx) / 120);       // lower right at the curl, full height behind it
-        var wy = gm.top + gm.faceH * (0.5 - 0.32 * rise) + Math.sin(wx * 0.05 + t * 5) * 6 + Math.sin(wx * 0.13 - t * 7) * 4;
-        ctx.lineTo(wx, wy);
+    // the whitewater: a tall, churning cloud of foam rising over the lip,
+    // shadowed blue-grey underneath, with mist hanging over it
+    var wEnd = cx - 40;
+    if(wEnd > -60){
+      var base = ctx.createLinearGradient(0, gm.top, 0, gm.bottom + 40);
+      base.addColorStop(0, '#f4fbff'); base.addColorStop(0.6, '#dcecf2'); base.addColorStop(1, '#aacfdc');
+      ctx.fillStyle = base;
+      ctx.beginPath(); ctx.moveTo(-20, gm.bottom + 40);
+      for(var wx = -20; wx <= wEnd; wx += 12){
+        var rise = Math.min(1, (wEnd - wx) / 160);
+        ctx.lineTo(wx, gm.top + gm.faceH * (0.45 - 0.5 * rise) + Math.sin(wx * 0.04 + t * 4) * 8);
       }
-      ctx.quadraticCurveTo(cx - 75, gm.top + gm.faceH * 0.5, cx - 80 + lipT, gm.top + gm.faceH * 0.56);
-      ctx.quadraticCurveTo(cx - 40, gm.top + gm.faceH * 0.85, cx - 10, gm.bottom + 30);
+      ctx.quadraticCurveTo(cx - 70, gm.top + gm.faceH * 0.45, cx - 80 + lipT, gm.top + gm.faceH * 0.56);
+      ctx.quadraticCurveTo(cx - 40, gm.top + gm.faceH * 0.85, cx - 10, gm.bottom + 40);
       ctx.closePath(); ctx.fill();
-      // bubbles and spray boiling off the top
-      for(var f = 0; f < 34; f++){
-        var fx = wEnd - ((f * 47 + t * 160) % Math.max(60, wEnd + 40)), fr = Math.min(1, (wEnd - fx) / 120);
-        var fy = gm.top + gm.faceH * (0.5 - 0.32 * fr) - ((f * 13) % 18) - Math.abs(Math.sin(t * 3 + f)) * 10;
-        ctx.fillStyle = 'rgba(255,255,255,' + (0.5 + 0.4 * Math.sin(f)).toFixed(3) + ')';
-        ctx.beginPath(); ctx.arc(fx, fy, (4 + f % 7) * Math.max(0.7, K), 0, Math.PI * 2); ctx.fill();
+      // billows: soft balls of foam, lit from above, boiling up
+      for(var f = 0; f < 46; f++){
+        var span = Math.max(80, wEnd + 60), fx = wEnd + 20 - ((f * 53 + t * 120) % span), fr2 = Math.min(1, (wEnd - fx) / 160);
+        var fy = gm.top + gm.faceH * (0.42 - 0.48 * fr2) + ((f * 37) % 50) - Math.abs(Math.sin(t * 2.5 + f)) * 14;
+        var rr = (gm.faceH * (0.07 + ((f * 17) % 10) / 100)) * (0.8 + 0.2 * Math.sin(t * 3 + f));
+        var bg = ctx.createRadialGradient(fx - rr * 0.3, fy - rr * 0.4, rr * 0.1, fx, fy, rr);
+        bg.addColorStop(0, 'rgba(255,255,255,0.95)'); bg.addColorStop(0.7, 'rgba(235,245,250,0.85)'); bg.addColorStop(1, 'rgba(170,205,220,0)');
+        ctx.fillStyle = bg; ctx.beginPath(); ctx.arc(fx, fy, rr, 0, Math.PI * 2); ctx.fill();
+      }
+      // mist
+      for(var mi = 0; mi < 5; mi++){
+        var mxx = wEnd - mi * gm.faceH * 0.6 + Math.sin(t * 0.7 + mi) * 10, myy = gm.top - gm.faceH * (0.05 + 0.08 * (mi % 2)), mr = gm.faceH * (0.45 + 0.1 * (mi % 3));
+        var mg = ctx.createRadialGradient(mxx, myy, 0, mxx, myy, mr);
+        mg.addColorStop(0, 'rgba(255,255,255,0.32)'); mg.addColorStop(1, 'rgba(255,255,255,0)');
+        ctx.fillStyle = mg; ctx.beginPath(); ctx.arc(mxx, myy, mr, 0, Math.PI * 2); ctx.fill();
       }
     }
-    // the trough in front
-    ctx.fillStyle = 'rgba(255,255,255,0.12)';
-    ctx.fillRect(0, gm.bottom, W, 4);
+    // the trough in front: flat water with lines of old foam
+    var tr = ctx.createLinearGradient(0, gm.bottom, 0, H);
+    tr.addColorStop(0, spot.sea[0]); tr.addColorStop(1, spot.sea[1]);
+    ctx.fillStyle = tr; ctx.fillRect(0, gm.bottom, W, H - gm.bottom);
+    ctx.strokeStyle = 'rgba(255,255,255,0.35)'; ctx.lineWidth = 1.5;
+    for(var q = 0; q < 8; q++){
+      var qy = gm.bottom + 8 + q * 14, qoff = (q * 71 + sg.x * K * 0.4) % 200;
+      for(var qx = -qoff; qx < W; qx += 200){ ctx.beginPath(); ctx.moveTo(qx, qy); ctx.quadraticCurveTo(qx + 30, qy - 3, qx + 60 + q * 4, qy); ctx.stroke(); }
+    }
     // hazards
     sg.hazards.forEach(function(z){
       var zx = sgScreenX(z.x);
       if(zx < -60 || zx > W + 60) return;
       if(z.kind === 'jelly'){
-        var zy = gm.bottom - z.h * gm.faceH + Math.sin(t * 2 + z.ph) * 4;
-        ctx.fillStyle = 'rgba(230,150,255,0.85)';
-        ctx.beginPath(); ctx.arc(zx, zy, 12 * Math.max(0.7, K), Math.PI, 0); ctx.fill();
-        ctx.strokeStyle = 'rgba(230,150,255,0.8)'; ctx.lineWidth = 2;
-        for(var tt = -2; tt <= 2; tt++){ ctx.beginPath(); ctx.moveTo(zx + tt * 4, zy); ctx.quadraticCurveTo(zx + tt * 5 + Math.sin(t * 5 + tt) * 3, zy + 10, zx + tt * 4, zy + 18); ctx.stroke(); }
+        var zy = gm.bottom - z.h * gm.faceH + Math.sin(t * 2 + z.ph) * 4, js = Math.max(0.7, K);
+        var jg = ctx.createRadialGradient(zx, zy - 4 * js, 1, zx, zy, 14 * js);
+        jg.addColorStop(0, 'rgba(255,220,255,0.95)'); jg.addColorStop(1, 'rgba(200,120,240,0.55)');
+        ctx.fillStyle = jg;
+        ctx.beginPath(); ctx.arc(zx, zy, 13 * js, Math.PI, 0); ctx.quadraticCurveTo(zx, zy + 5 * js, zx - 13 * js, zy); ctx.fill();
+        ctx.strokeStyle = 'rgba(230,160,255,0.75)'; ctx.lineWidth = 1.5;
+        for(var tt = -3; tt <= 3; tt++){ ctx.beginPath(); ctx.moveTo(zx + tt * 3.5 * js, zy + 2); ctx.quadraticCurveTo(zx + tt * 4 * js + Math.sin(t * 5 + tt) * 3, zy + 12 * js, zx + tt * 3.5 * js, zy + 22 * js); ctx.stroke(); }
       } else {
-        ctx.fillStyle = '#5b4a3a';
-        var rw = z.w * sgK();
-        ctx.beginPath(); ctx.moveTo(zx - rw / 2, gm.bottom + 6);
-        ctx.lineTo(zx - rw * 0.3, gm.bottom - gm.faceH * 0.1); ctx.lineTo(zx, gm.bottom - gm.faceH * 0.06); ctx.lineTo(zx + rw * 0.25, gm.bottom - gm.faceH * 0.11);
-        ctx.lineTo(zx + rw / 2, gm.bottom + 6); ctx.closePath(); ctx.fill();
-        ctx.fillStyle = 'rgba(255,255,255,0.5)'; ctx.fillRect(zx - rw / 2, gm.bottom - 2, rw, 3);
+        var rw = z.w * K, rg = ctx.createLinearGradient(0, gm.bottom - gm.faceH * 0.12, 0, gm.bottom + 8);
+        rg.addColorStop(0, '#6b5a48'); rg.addColorStop(1, '#2e241c');
+        ctx.fillStyle = rg;
+        ctx.beginPath(); ctx.moveTo(zx - rw / 2, gm.bottom + 8);
+        ctx.lineTo(zx - rw * 0.3, gm.bottom - gm.faceH * 0.1); ctx.lineTo(zx - rw * 0.05, gm.bottom - gm.faceH * 0.06); ctx.lineTo(zx + rw * 0.2, gm.bottom - gm.faceH * 0.12);
+        ctx.lineTo(zx + rw / 2, gm.bottom + 8); ctx.closePath(); ctx.fill();
+        ctx.strokeStyle = 'rgba(255,255,255,0.6)'; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.moveTo(zx - rw / 2 - 6, gm.bottom + 2); ctx.quadraticCurveTo(zx, gm.bottom - 6, zx + rw / 2 + 6, gm.bottom + 2); ctx.stroke();
       }
     });
-    // closing sections ahead: a wall of white falling down the face
+    // closing sections ahead: the lip pouring down over a stretch of face
     sg.closeouts.forEach(function(c){
       if(c.done) return;
-      var qx = sgScreenX(c.x);
-      if(qx < -80 || qx > W + 120) return;
-      var cw = c.w * K;
-      ctx.fillStyle = 'rgba(255,255,255,0.9)';
-      ctx.beginPath(); ctx.moveTo(qx - cw, gm.top);
-      ctx.quadraticCurveTo(qx, gm.top - 20, qx + cw, gm.top);
-      ctx.lineTo(qx + cw * 0.8, gm.bottom - gm.faceH * 0.15); ctx.lineTo(qx - cw * 0.8, gm.bottom - gm.faceH * 0.15); ctx.closePath(); ctx.fill();
-      if(qx > W * 0.6 + 40){ ctx.font = 'bold 22px Rubik, sans-serif'; ctx.textAlign = 'center'; ctx.fillText('⚠️', qx, gm.top - 26); }
+      var qx2 = sgScreenX(c.x);
+      if(qx2 < -100 || qx2 > W + 140) return;
+      var cw = c.w * K * 1.4, cg = ctx.createLinearGradient(0, gm.top - 20, 0, gm.bottom);
+      cg.addColorStop(0, 'rgba(255,255,255,0.95)'); cg.addColorStop(1, 'rgba(220,240,248,0.85)');
+      ctx.fillStyle = cg;
+      ctx.beginPath(); ctx.moveTo(qx2 - cw, gm.top + 4);
+      ctx.bezierCurveTo(qx2 - cw * 0.5, gm.top - 30, qx2 + cw * 0.5, gm.top - 30, qx2 + cw, gm.top + 4);
+      ctx.lineTo(qx2 + cw * 0.85, gm.bottom - gm.faceH * 0.12); ctx.quadraticCurveTo(qx2, gm.bottom - gm.faceH * 0.05, qx2 - cw * 0.85, gm.bottom - gm.faceH * 0.12);
+      ctx.closePath(); ctx.fill();
+      if(qx2 > W * 0.6 + 40){ ctx.font = 'bold 22px Rubik, sans-serif'; ctx.textAlign = 'center'; ctx.fillText('⚠️', qx2, gm.top - 34); }
     });
   }
   function hexToRgb(hex){ var n = parseInt(hex.slice(1), 16); return ((n >> 16) & 255) + ',' + ((n >> 8) & 255) + ',' + (n & 255); }
@@ -4911,40 +5010,60 @@
       ctx.fillStyle = 'rgba(40,40,40,0.5)'; for(var c = 0; c < 30; c++) ctx.fillRect(W * 0.67 + c * 9, hz - 132 - (c % 3) * 2, 3, 6);                              // the crowd on the cliff
     }
   }
-  // the surfer from the side: crouched on the board, arms out
+  // the surfer from the side: a person crouched over a long board, arms
+  // out for balance (drawn ~100 units tall standing; crouch 0..1)
+  function sgLimb(g, x1, y1, x2, y2, w1, w2, col){
+    var a = Math.atan2(y2 - y1, x2 - x1), nx = -Math.sin(a), ny = Math.cos(a);
+    g.fillStyle = col;
+    g.beginPath(); g.moveTo(x1 + nx * w1, y1 + ny * w1); g.lineTo(x2 + nx * w2, y2 + ny * w2); g.lineTo(x2 - nx * w2, y2 - ny * w2); g.lineTo(x1 - nx * w1, y1 - ny * w1); g.closePath(); g.fill();
+    g.beginPath(); g.arc(x2, y2, w2, 0, Math.PI * 2); g.fill();
+    g.beginPath(); g.arc(x1, y1, w1, 0, Math.PI * 2); g.fill();
+  }
   function sgDrawRider(g, rider, board, lean, crouch, vest){
     g.save();
     g.rotate(lean);
-    // the board
-    var bg = board.glow;
-    if(bg){ g.shadowColor = bg; g.shadowBlur = 14; }
-    g.fillStyle = board.deck;
-    g.beginPath(); g.moveTo(-40, 0); g.quadraticCurveTo(-34, -8, 0, -8); g.quadraticCurveTo(38, -8, 46, -2); g.quadraticCurveTo(40, 4, 0, 4); g.quadraticCurveTo(-36, 4, -40, 0); g.fill();
-    g.shadowBlur = 0;
-    g.fillStyle = board.stripe; g.fillRect(-30, -3.5, 66, 2.5);
-    g.fillStyle = 'rgba(0,0,0,0.4)'; g.beginPath(); g.moveTo(-34, 4); g.lineTo(-40, 13); g.lineTo(-28, 4); g.fill();   // fin
-    // legs (bent), torso leaning forward, arms out for balance
     var k = crouch;
-    g.strokeStyle = rider.suit; g.lineCap = 'round'; g.lineWidth = 7;
-    g.beginPath(); g.moveTo(-14, -8); g.lineTo(-8, -24 + 6 * k); g.lineTo(-2, -38 + 10 * k); g.stroke();
-    g.beginPath(); g.moveTo(14, -8); g.lineTo(10, -24 + 6 * k); g.lineTo(2, -38 + 10 * k); g.stroke();
-    g.lineWidth = 9;
-    g.beginPath(); g.moveTo(0, -38 + 10 * k); g.lineTo(8, -60 + 14 * k); g.stroke();
-    g.strokeStyle = rider.accent; g.lineWidth = 3;
-    g.beginPath(); g.moveTo(1, -40 + 10 * k); g.lineTo(8, -58 + 14 * k); g.stroke();
-    g.strokeStyle = rider.suit; g.lineWidth = 5;
-    g.beginPath(); g.moveTo(7, -56 + 14 * k); g.lineTo(-14, -50 + 12 * k); g.lineTo(-24, -44 + 10 * k); g.stroke();
-    g.beginPath(); g.moveTo(8, -56 + 14 * k); g.lineTo(24, -60 + 12 * k); g.lineTo(34, -56 + 10 * k); g.stroke();
-    g.fillStyle = rider.skin;
-    g.beginPath(); g.arc(-25, -44 + 10 * k, 3, 0, Math.PI * 2); g.fill();
-    g.beginPath(); g.arc(35, -56 + 10 * k, 3, 0, Math.PI * 2); g.fill();
-    // head and hair
-    g.beginPath(); g.arc(11, -68 + 14 * k, 7.5, 0, Math.PI * 2); g.fill();
+    // the board: a long, thin shortboard with a pointed nose and rocker
+    if(board.glow){ g.shadowColor = board.glow; g.shadowBlur = 14; }
+    var bd = g.createLinearGradient(0, -9, 0, 5);
+    bd.addColorStop(0, board.deck); bd.addColorStop(1, 'rgba(0,0,0,0.25)');
+    g.fillStyle = board.deck;
+    g.beginPath(); g.moveTo(-44, -2); g.quadraticCurveTo(-42, -7, -20, -8); g.lineTo(30, -7); g.quadraticCurveTo(50, -6, 58, -12);
+    g.quadraticCurveTo(52, -1, 30, 2); g.lineTo(-30, 3); g.quadraticCurveTo(-44, 3, -44, -2); g.fill();
+    g.shadowBlur = 0;
+    g.fillStyle = 'rgba(0,0,0,0.22)'; g.beginPath(); g.moveTo(-44, -1); g.lineTo(30, 1); g.quadraticCurveTo(52, -1, 58, -12); g.quadraticCurveTo(50, -3, 30, 2.5); g.lineTo(-30, 3); g.closePath(); g.fill();
+    g.fillStyle = board.stripe; g.fillRect(-34, -6, 62, 1.6);
+    g.fillStyle = 'rgba(20,20,20,0.6)'; g.beginPath(); g.moveTo(-36, 2); g.lineTo(-42, 12); g.lineTo(-30, 2); g.fill();     // fin
+    // feet planted wide, knees bent, hips low, chest over the front knee
+    var hipX = -2, hipY = -42 + 14 * k, kneeB = [-18, -24 + 7 * k], kneeF = [16, -26 + 8 * k];
+    var footB = [-22, -8], footF = [20, -8];
+    var suit = rider.suit, shade = 'rgba(0,0,0,0.25)';
+    sgLimb(g, hipX - 4, hipY, kneeB[0], kneeB[1], 6, 5, suit);
+    sgLimb(g, kneeB[0], kneeB[1], footB[0], footB[1], 5, 4, suit);
+    sgLimb(g, hipX + 4, hipY, kneeF[0], kneeF[1], 6.5, 5, suit);
+    sgLimb(g, kneeF[0], kneeF[1], footF[0], footF[1], 5, 4, suit);
+    g.fillStyle = rider.skin; g.beginPath(); g.ellipse(footB[0], footB[1] + 1, 5, 2.4, 0, 0, Math.PI * 2); g.fill(); g.beginPath(); g.ellipse(footF[0] + 1, footF[1] + 1, 5, 2.4, 0, 0, Math.PI * 2); g.fill();
+    // torso leaning forward
+    var shX = 10 + 6 * k, shY = -76 + 22 * k;
+    sgLimb(g, hipX, hipY, shX, shY, 9, 10, suit);
+    g.strokeStyle = rider.accent; g.lineWidth = 2.5;
+    g.beginPath(); g.moveTo(hipX + 2, hipY - 2); g.lineTo(shX + 1, shY + 2); g.stroke();
+    // arms out: the back arm low and behind, the front arm reaching ahead
+    sgLimb(g, shX - 2, shY + 2, shX - 18, shY + 14, 4, 3.5, suit);
+    sgLimb(g, shX - 18, shY + 14, shX - 32, shY + 22, 3.5, 3, rider.skin);
+    sgLimb(g, shX + 3, shY + 1, shX + 20, shY + 6, 4, 3.5, suit);
+    sgLimb(g, shX + 20, shY + 6, shX + 36, shY + 4, 3.5, 3, rider.skin);
+    // head, looking down the line
+    var hx = shX + 6, hy = shY - 11;
+    g.fillStyle = rider.skin; g.beginPath(); g.ellipse(hx, hy, 7.5, 8.5, 0.2, 0, Math.PI * 2); g.fill();
     g.fillStyle = rider.hair;
-    g.beginPath(); g.arc(9, -71 + 14 * k, 7.5, Math.PI * 0.95, Math.PI * 2.05); g.fill();
+    g.beginPath(); g.ellipse(hx - 2, hy - 4, 8, 6, 0.2, Math.PI * 0.9, Math.PI * 2.1); g.fill();
+    g.beginPath(); g.ellipse(hx - 5, hy, 4, 6, 0, 0, Math.PI * 2); g.fill();
+    g.fillStyle = shade; g.beginPath(); g.arc(hx + 5, hy + 1, 1.2, 0, Math.PI * 2); g.fill();
     if(vest){
       g.fillStyle = '#ffcc00';
-      g.beginPath(); g.ellipse(6, -50 + 14 * k, 13 * vest, 10 * vest, -0.3, 0, Math.PI * 2); g.fill();
+      g.beginPath(); g.ellipse((hipX + shX) / 2, (hipY + shY) / 2, 13 * vest, 16 * vest, -0.3, 0, Math.PI * 2); g.fill();
+      g.fillStyle = 'rgba(255,255,255,0.4)'; g.beginPath(); g.ellipse((hipX + shX) / 2 - 3, (hipY + shY) / 2 - 5, 4 * vest, 6 * vest, -0.3, 0, Math.PI * 2); g.fill();
     }
     g.restore();
   }
@@ -4978,7 +5097,7 @@
     sg.spray.forEach(function(p){ ctx.fillStyle = 'rgba(255,255,255,' + Math.max(0, p.life).toFixed(3) + ')'; ctx.beginPath(); ctx.arc(sx + p.x, sy + p.y, p.r * K, 0, Math.PI * 2); ctx.fill(); });
     ctx.save();
     ctx.translate(sx, sy);
-    var sc = 1.1 * Math.max(0.65, K) * (sg.spot.id === 'naz' ? 0.85 : 1);
+    var sc = Math.max(0.35, gm.faceH * sg.spot.man / 80);
     ctx.scale(sc, sc);
     var vest = (sg.phase === 'wipe' || sg.phase === 'over') && sg.spot.id === 'naz' ? Math.min(1, (sg.wipe ? sg.wipe.t : 1) * 1.5) : 0;
     sgDrawRider(ctx, rider, board, lean, sg.hold && sg.phase === 'ride' ? 0.2 : 0.6, vest);
@@ -4988,9 +5107,11 @@
     ctx.textAlign = 'center';
     ctx.font = 'bold 34px Suez One, Rubik, sans-serif';
     ctx.lineWidth = 6; ctx.strokeStyle = 'rgba(0,30,50,0.6)'; ctx.fillStyle = '#ffffff';
-    ctx.strokeText(fmtScore(sg.score), W / 2, 50); ctx.fillText(fmtScore(sg.score), W / 2, 50);
+    var live = sgTen(sg.score).toFixed(2);
+    ctx.strokeText(live, W / 2, 50); ctx.fillText(live, W / 2, 50);
     ctx.font = 'bold 14px Rubik, sans-serif';
-    var bestTxt = L('שיא: ', 'Best: ') + fmtScore(Math.max(sg.best, Math.round(sg.score)));
+    var left = Math.max(0, Math.ceil((sg.spot.dur || 0) - sg.t));
+    var bestTxt = L('הכי גבוה: ', 'Best: ') + (sg.best || 0).toFixed(2) + L(' · עוד ', ' · ') + left + L(' שנ׳ לסוף הגל', 's to the end of the wave');
     ctx.lineWidth = 4; ctx.strokeText(bestTxt, W / 2, 72); ctx.fillText(bestTxt, W / 2, 72);
     if(sg.chainT > 0 && sg.chain > 1){
       ctx.font = 'bold 20px Rubik, sans-serif'; ctx.fillStyle = '#ffd447';
@@ -5001,7 +5122,7 @@
     sg.texts.forEach(function(tx, i){
       ctx.globalAlpha = Math.min(1, tx.life * 1.5);
       ctx.font = 'bold 18px Rubik, sans-serif'; ctx.fillStyle = tx.c;
-      var ty = sy - 120 * Math.max(0.7, K) - tx.y - i * 22;
+      var ty = sy - sc * 105 - tx.y - i * 22;
       ctx.strokeText(tx.t, sx, ty); ctx.fillText(tx.t, sx, ty);
       ctx.globalAlpha = 1;
     });
@@ -5038,8 +5159,8 @@
       b.style.background = 'linear-gradient(135deg,' + spot.face[0] + ',' + spot.sea[1] + ')';
       var nm = document.createElement('div'); nm.className = 'sg-spot-name'; nm.textContent = spot.emoji + ' ' + spot.name;
       var ds = document.createElement('div'); ds.className = 'sg-spot-desc';
-      ds.textContent = open ? spot.desc : L('🔒 נפתח כשתגיע ל-' + fmtScore(spot.need) + ' ב' + SG_SPOTS[i - 1].name, '🔒 Opens when you reach ' + fmtScore(spot.need) + ' at ' + SG_SPOTS[i - 1].name);
-      var bs = document.createElement('div'); bs.className = 'sg-spot-best'; bs.textContent = open ? L('🏆 שיא: ', '🏆 Best: ') + fmtScore(sgSave.best[spot.id] || 0) : '';
+      ds.textContent = spot.desc;
+      var bs = document.createElement('div'); bs.className = 'sg-spot-best'; bs.textContent = L('🏆 הציון הכי גבוה: ', '🏆 Best score: ') + (sgSave.best10[spot.id] || 0).toFixed(2) + ' / 10';
       b.appendChild(nm); b.appendChild(ds); b.appendChild(bs);
       if(open) b.addEventListener('click', function(){ sg.wasUnlocked = false; var nx = SG_SPOTS[i + 1]; sgStart(i); sg.wasUnlocked = !!(nx && sgUnlocked(i + 1)); });
       list.appendChild(b);
@@ -11088,7 +11209,7 @@
   // never while the name field is being typed in. Everything worth keeping
   // (coins, skins, name, league) is in localStorage, so a reload loses nothing.
   // 'dev' = a local or preview copy: the updater stays off entirely.
-  var BUILD_VERSION = '20261024-103619';
+  var BUILD_VERSION = '20261024-110126';
   var UPDATE_CHECK_MS = 60000;
   var UPDATE_TRIED_KEY = 'canyonChaseTriedUpdate';
   var pendingSubmits = 0;
