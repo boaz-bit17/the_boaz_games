@@ -4532,7 +4532,7 @@
   var SG_SPOTS = [
     { id: 'pool', emoji: '🏊', name: L('בריכת הגלים', 'The Wave Pool'), dur: 28, man: 0.62, tubeLen: 170, need: 0, curl: 1, size: 0.45, barrel: 0.12, hazard: null,
       desc: L('גלים מושלמים, אחד אחרי השני. המקום ללמוד.', 'Perfect waves, one after another. The place to learn.'),
-      sky: ['#5fb8ff', '#d9f1ff'], sea: ['#29c3cf', '#0b6d86'], face: ['#7fe6e0', '#14889c'] },
+      sky: ['#5fb8ff', '#d9f1ff'], sea: ['#2f9fe0', '#0a4f9c'], face: ['#5fc6f2', '#0b4fa6'] },
     { id: 'olga', emoji: '🇮🇱', name: L('חוף אולגה', 'Olga Beach'), dur: 30, man: 0.58, tubeLen: 200, need: 0, curl: 1.08, size: 0.55, barrel: 0.2, hazard: 'jelly',
       desc: L('הבית! גלים של הים התיכון, ושימו לב למדוזות.', 'Home! Mediterranean waves, and watch out for jellyfish.'),
       sky: ['#6cc0ff', '#fff0d2'], sea: ['#2a9fd6', '#0a4f80'], face: ['#6fd0ef', '#0f5f96'] },
@@ -5398,7 +5398,7 @@
     else { b = 1; c = Math.min(1, -d / (Hm * 1.4)); }
     if(sg.throwT > 0 && d >= 0){
       // the barrel opens and closes gradually at its far end, and as it starts/stops
-      var L3 = sg.throwLen * SG3_M, fadeLen = Hm * 1.6;
+      var L3 = sg.throwLen * SG3_M, fadeLen = Math.min(Hm * 1.6, L3 * 0.4);
       var tb = d < L3 - fadeLen ? 1 : Math.max(0, 1 - (d - (L3 - fadeLen)) / fadeLen);
       b = Math.max(b, tb * Math.min(1, sg.throwT * 1.5));
     }
@@ -5467,7 +5467,7 @@
     });
     var WATER_FS = 'uniform sampler2D uTexFace; uniform sampler2D uTexSea; uniform sampler2D uTexFoam; uniform float uTex;\n' +
       'uniform vec3 uDeep; uniform vec3 uFace; uniform vec3 uGlow; uniform vec3 uSkyC; uniform vec3 uSkyTop; uniform vec3 uFog; uniform vec3 uSunC; uniform vec3 uSunDir; uniform vec3 uCam; uniform float uT; uniform float uH;\n' +
-      'varying vec3 vW; varying vec3 vN; varying float vFoam; varying float vThin;\n' + NOISE +
+      'varying vec3 vW; varying vec3 vN; varying float vFoam; varying float vThin; varying float vCurt;\n' + NOISE +
       'void main(){\n' +
       ' vec3 V = normalize(uCam - vW); vec3 N = normalize(vN); float inside = 0.0; if(dot(N, V) < 0.0){ N = -N; inside = 1.0; }\n' +
       ' float sea = step(vThin, -0.5); float thinV = max(vThin, 0.0);\n' +
@@ -5493,6 +5493,11 @@
       ' float fres = 0.03 + 0.97 * pow(1.0 - max(dot(N, V), 0.0), 5.0);\n' +
       ' vec3 col = mix(base, skyR, fres * (0.8 - 0.25 * sea));\n' +
       ' col *= 1.0 - 0.28 * inside;\n' +
+      ' col = mix(col, uDeep * vec3(0.55, 0.75, 1.15), 0.3 * inside * (1.0 - h * 0.5));\n' +
+      ' float streak = fbm(vec3(vW.x * 2.2, vW.y * 0.25 - uT * 0.9, vW.z * 0.4));\n' +
+      ' float cv = vCurt * (1.0 - inside);\n' +
+      ' col = mix(col, uDeep * vec3(0.45, 0.62, 1.05), cv * (0.38 + 0.25 * streak));\n' +
+      ' col += uGlow * vCurt * (0.12 + 0.2 * smoothstep(0.45, 0.75, streak)) * (0.6 + 0.4 * inside);\n' +
       // light shining through thin water (the lip, the top of the face), strongest backlit
       ' float back = 0.45 + 0.55 * pow(max(dot(V, -uSunDir), 0.0), 2.0);\n' +
       ' col += uGlow * (thinV * (1.1 + 0.6 * inside) + smoothstep(0.55, 1.0, h) * 0.25 * (1.0 - sea)) * back * (0.7 + 0.3 * n3) * 0.42;\n' +
@@ -5515,13 +5520,13 @@
       ' col = mix(col, uFog, smoothstep(140.0, 900.0, length(uCam - vW)));\n' +
       ' gl_FragColor = vec4(col, 1.0);' + OUT;
     var wm = new T.ShaderMaterial({ side: T.DoubleSide, uniforms: WU,
-      vertexShader: 'attribute float foam; attribute float thin; varying vec3 vW; varying vec3 vN; varying float vFoam; varying float vThin;\n' +
-        'void main(){ vec4 w = modelMatrix * vec4(position, 1.0); vW = w.xyz; vN = normalize(mat3(modelMatrix) * normal); vFoam = foam; vThin = thin; gl_Position = projectionMatrix * viewMatrix * w; }',
+      vertexShader: 'attribute float foam; attribute float thin; attribute float curt; varying vec3 vW; varying vec3 vN; varying float vFoam; varying float vThin; varying float vCurt;\n' +
+        'void main(){ vec4 w = modelMatrix * vec4(position, 1.0); vW = w.xyz; vN = normalize(mat3(modelMatrix) * normal); vFoam = foam; vThin = thin; vCurt = curt; gl_Position = projectionMatrix * viewMatrix * w; }',
       fragmentShader: WATER_FS });
     // the sea around: a grid that moves with the camera, swells and chop
     // rolling in toward the beach (calm right next to the wave itself)
     var oceanMat = new T.ShaderMaterial({ uniforms: WU,
-      vertexShader: 'uniform float uT; uniform float uAmp; uniform float uH; varying vec3 vW; varying vec3 vN; varying float vFoam; varying float vThin;\n' +
+      vertexShader: 'uniform float uT; uniform float uAmp; uniform float uH; varying vec3 vW; varying vec3 vN; varying float vFoam; varying float vThin; varying float vCurt;\n' +
         'void wv(vec2 p, vec2 d, float L, float A, inout float y, inout float dx, inout float dz){ float k = 6.2831853 / L; float om = sqrt(9.8 * k); float ph = k * dot(d, p) - om * uT;\n' +
         ' y += A * sin(ph); float c = A * k * cos(ph); dx += c * d.x; dz += c * d.y; }\n' +
         'void main(){ vec4 w = modelMatrix * vec4(position, 1.0);\n' +
@@ -5529,13 +5534,13 @@
         ' wv(p, vec2(0.0, 1.0), 48.0, 0.45, y, dx, dz); wv(p, normalize(vec2(0.35, 0.94)), 21.0, 0.18, y, dx, dz);\n' +
         ' wv(p, normalize(vec2(-0.6, 0.8)), 9.0, 0.08, y, dx, dz); wv(p, normalize(vec2(0.9, 0.44)), 4.0, 0.035, y, dx, dz);\n' +
         ' float damp = smoothstep(uH * 4.0, uH * 7.0, abs(w.z + uH * 0.5)) * uAmp;\n' +
-        ' w.y += y * damp - 0.12; vW = w.xyz; vN = normalize(vec3(-dx * damp, 1.0, -dz * damp)); vFoam = 0.0; vThin = -1.0;\n' +
+        ' w.y += y * damp - 0.12; vW = w.xyz; vN = normalize(vec3(-dx * damp, 1.0, -dz * damp)); vFoam = 0.0; vThin = -1.0; vCurt = 0.0;\n' +
         ' gl_Position = projectionMatrix * viewMatrix * w; }',
       fragmentShader: WATER_FS });
     var og2 = new T.PlaneGeometry(700, 700, 150, 150); og2.rotateX(-Math.PI / 2);
     var oceanNear = new T.Mesh(og2, oceanMat); oceanNear.frustumCulled = false; scene.add(oceanNear);
     // the wave mesh
-    var nV = SG3_COLS * SG3_ROWS, pos = new Float32Array(nV * 3), foam = new Float32Array(nV), thin = new Float32Array(nV), idx = [];
+    var nV = SG3_COLS * SG3_ROWS, pos = new Float32Array(nV * 3), foam = new Float32Array(nV), thin = new Float32Array(nV), curt = new Float32Array(nV), idx = [];
     for(var cI = 0; cI < SG3_COLS - 1; cI++) for(var rI = 0; rI < SG3_ROWS - 1; rI++){
       var a = cI * SG3_ROWS + rI, b2 = a + SG3_ROWS;
       idx.push(a, b2, a + 1, b2, b2 + 1, a + 1);
@@ -5544,12 +5549,14 @@
     geo.setAttribute('position', new T.BufferAttribute(pos, 3));
     geo.setAttribute('foam', new T.BufferAttribute(foam, 1));
     geo.setAttribute('thin', new T.BufferAttribute(thin, 1));
+    geo.setAttribute('curt', new T.BufferAttribute(curt, 1));
     geo.setIndex(idx);
     var wave = new T.Mesh(geo, wm); wave.frustumCulled = false; scene.add(wave);
     // the far sea, flat, out to the horizon
     var og = new T.PlaneGeometry(4000, 4000, 1, 1); og.rotateX(-Math.PI / 2);
     og.setAttribute('foam', new T.BufferAttribute(new Float32Array(4), 1));
     og.setAttribute('thin', new T.BufferAttribute(new Float32Array(4), 1));
+    og.setAttribute('curt', new T.BufferAttribute(new Float32Array(4), 1));
     var ocean = new T.Mesh(og, wm); ocean.position.y = -0.3; scene.add(ocean);
     // light for the solid things: the sky all round, the sun from behind the wave
     scene.add(new T.HemisphereLight(0xdff2ff, 0x2a5566, 1.1));
@@ -5599,7 +5606,7 @@
       haz.push({ j: jm, r: rm });
     }
     var rows = []; for(var q = 0; q < SG3_ROWS; q++) rows.push([0, 0]);
-    sg3 = Object.assign(sg3, { T: T, cv: cv, r: r, scene: scene, cam: cam, skyMat: skyMat, wm: wm, oceanMat: oceanMat, oceanNear: oceanNear, geo: geo, pos: pos, foam: foam, thin: thin,
+    sg3 = Object.assign(sg3, { T: T, cv: cv, r: r, scene: scene, cam: cam, skyMat: skyMat, wm: wm, oceanMat: oceanMat, oceanNear: oceanNear, geo: geo, pos: pos, foam: foam, thin: thin, curt: curt,
       billows: billows, spray: spray, shore: shore, wpos: wpos, walpha: walpha, wgeo: wgeo, WK: WK, rider: rider, ski: ski, haz: haz, rows: rows,
       camP: new T.Vector3(), camL: new T.Vector3(), spotId: '', w: 0, h: 0, last: 0 });
   }
@@ -5652,7 +5659,6 @@
   // hair, arms with hands, feet on a shaped shortboard; posed every frame
   function sg3MakeRider(T){
     var g = new T.Group(), body = new T.Group(); g.add(body);
-    body.scale.z = -1;            // the pose is built chest to +z; the wave is on -z, and a surfer faces it
     function mat(c, rough){ return new T.MeshStandardMaterial({ color: c, roughness: rough === undefined ? 0.6 : rough }); }
     // the board: a real outline (pointed nose, rounded tail), rails, a little
     // rocker, a stringer down the middle and three fins
@@ -5678,9 +5684,8 @@
     function ball(r, m, sx, sy, sz){ var me = new T.Mesh(new T.SphereGeometry(r, 20, 14), m); me.scale.set(sx || 1, sy || 1, sz || 1); body.add(me); return me; }
     var parts = { thighB: cap(0.08, suitM), shinB: cap(0.062, suitM), thighF: cap(0.085, suitM), shinF: cap(0.066, suitM),
       torso: cap(0.13, suitM), stripe: cap(0.025, accM), uArmB: cap(0.052, suitM), fArmB: cap(0.045, suitM), uArmF: cap(0.052, suitM), fArmF: cap(0.045, suitM), neck: cap(0.05, skinM) };
-    var extra = { chest: ball(0.2, suitM, 1.05, 1.05, 0.72), hips: ball(0.15, suitM, 1.15, 0.9, 0.85), handB: ball(0.05, skinM, 1, 0.8, 1.2), handF: ball(0.05, skinM, 1, 0.8, 1.2),
-      footB: ball(0.07, skinM, 1, 0.6, 1.9), footF: ball(0.07, skinM, 1, 0.6, 1.9),
-      kneeB: ball(0.074, suitM), kneeF: ball(0.077, suitM), elB: ball(0.05, suitM), elF: ball(0.05, suitM), shB: ball(0.07, suitM), shF: ball(0.07, suitM) };
+    var extra = { chest: ball(0.2, suitM, 1, 1.05, 0.8), hips: ball(0.15, suitM, 1.1, 0.9, 1), handB: ball(0.05, skinM, 1, 0.8, 1.2), handF: ball(0.05, skinM, 1, 0.8, 1.2),
+      footB: ball(0.07, skinM, 1.9, 0.6, 1), footF: ball(0.07, skinM, 1.9, 0.6, 1) };
     var head = ball(0.115, skinM, 1, 1.12, 0.95);
     var hair = ball(0.124, hairM, 1.05, 0.95, 1.0); hair.geometry = new T.SphereGeometry(0.124, 20, 12, 0, Math.PI * 2, 0, Math.PI * 0.6);
     var vest = ball(0.3, mat(0xffcc00, 0.4)); vest.visible = false;
@@ -5695,30 +5700,14 @@
   }
   function sg3Pose(k, look){
     var T = sg3.T, R = sg3.rider, P = R.parts, X = R.extra, V = function(x, y, z){ return new T.Vector3(x, y, z); };
-    // a real stance: sideways, feet across the board a bit wider than the
-    // shoulders, a deep crouch with the knees driven forward over the toes and
-    // in toward each other, hips back over the heels, the torso leaning out
-    // over the toe side, head up looking at the nose
-    function joint(a, b, l1, l2, pole){           // where the knee/elbow goes (two-bone IK)
-      var d = V(0, 0, 0).subVectors(b, a), len = Math.min(d.length(), l1 + l2 - 0.002); d.normalize();
-      var along = (l1 * l1 - l2 * l2 + len * len) / (2 * len), up = Math.sqrt(Math.max(0, l1 * l1 - along * along));
-      var p = pole.clone().addScaledVector(d, -pole.dot(d)).normalize();
-      return a.clone().addScaledVector(d, along).addScaledVector(p, up);
-    }
-    var footB = V(-0.42, 0.08, -0.01), footF = V(0.24, 0.08, 0.02);
-    var hip = V(-0.09, 0.84 - 0.42 * k, -0.05 - 0.05 * k);
-    var kneeB = joint(hip, footB, 0.44, 0.44, V(0.35, 0, 1)), kneeF = joint(hip, footF, 0.44, 0.44, V(-0.3, 0, 1));
-    var lean = 0.12 + 0.55 * k;                    // the torso tips over the toes as you crouch
-    var sh = V(hip.x + 0.05 + 0.06 * k, hip.y + 0.5 * Math.cos(lean), hip.z + 0.5 * Math.sin(lean));
-    var nk = V(sh.x + 0.03, sh.y + 0.09, sh.z + 0.02), hd = V(sh.x + 0.06, sh.y + 0.22, sh.z + 0.02 - 0.04 * k);
-    // shoulders along the board, opened a little toward the nose
-    var shF = V(sh.x + 0.16, sh.y - 0.03, sh.z - 0.06), shB = V(sh.x - 0.16, sh.y - 0.03, sh.z + 0.06);
-    // the front hand leads low over the nose, the back hand trails low behind, toward the face
-    var haF = V(shF.x + 0.42, shF.y - 0.3, shF.z + 0.16), haB = V(shB.x - 0.34, shB.y - 0.36, shB.z + 0.24);
-    var elF = joint(shF, haF, 0.29, 0.27, V(0, -0.4, -1)), elB = joint(shB, haB, 0.29, 0.27, V(-0.3, -0.2, -1));
+    var hip = V(-0.02, 0.86 - 0.24 * k, 0), kneeB = V(-0.27, 0.46 - 0.1 * k, 0.07), kneeF = V(0.24, 0.48 - 0.1 * k, -0.06);
+    var footB = V(-0.36, 0.08, 0.09), footF = V(0.33, 0.08, -0.07);
+    var sh = V(0.1 + 0.12 * k, 1.4 - 0.3 * k, 0), nk = V(sh.x + 0.05, sh.y + 0.1, 0), hd = V(sh.x + 0.1, sh.y + 0.25, 0);
+    var shB = V(sh.x - 0.03, sh.y - 0.02, 0.17), shF = V(sh.x + 0.03, sh.y - 0.02, -0.17);
+    var elB = V(sh.x - 0.27, sh.y - 0.16, 0.3), haB = V(sh.x - 0.52, sh.y - 0.33, 0.36), elF = V(sh.x + 0.26, sh.y - 0.07, -0.3), haF = V(sh.x + 0.52, sh.y - 0.12, -0.36);
     sg3Limb(T, P.thighB, hip, kneeB); sg3Limb(T, P.shinB, kneeB, footB);
     sg3Limb(T, P.thighF, hip, kneeF); sg3Limb(T, P.shinF, kneeF, footF);
-    sg3Limb(T, P.torso, hip, sh); sg3Limb(T, P.stripe, V(hip.x + 0.02, hip.y + 0.05, hip.z + 0.12), V(sh.x + 0.02, sh.y - 0.05, sh.z + 0.15));
+    sg3Limb(T, P.torso, hip, sh); sg3Limb(T, P.stripe, V(hip.x + 0.03, hip.y + 0.05, -0.15), V(sh.x + 0.02, sh.y - 0.05, -0.16));
     sg3Limb(T, P.neck, sh, nk);
     sg3Limb(T, P.uArmB, shB, elB); sg3Limb(T, P.fArmB, elB, haB); sg3Limb(T, P.uArmF, shF, elF); sg3Limb(T, P.fArmF, elF, haF);
     var dChest = V(0, 0, 0).subVectors(sh, hip).normalize();
@@ -5726,9 +5715,8 @@
     X.hips.position.copy(hip);
     X.handB.position.copy(haB); X.handF.position.copy(haF);
     X.footB.position.copy(footB); X.footF.position.copy(footF);
-    X.kneeB.position.copy(kneeB); X.kneeF.position.copy(kneeF); X.elB.position.copy(elB); X.elF.position.copy(elF); X.shB.position.copy(shB); X.shF.position.copy(shF); X.footF.rotation.y = -0.6; X.footB.rotation.y = -0.1;
-    R.head.position.copy(hd); R.head.rotation.set(0, 0.25, -0.2);
-    R.hair.position.copy(hd).add(V(-0.025, 0.025, -0.01)); R.hair.rotation.set(0, 0, 0.45);
+    R.head.position.copy(hd); R.head.rotation.z = -0.25;
+    R.hair.position.copy(hd).add(V(-0.02, 0.025, 0)); R.hair.rotation.z = 0.45;
     R.vest.position.copy(hip).lerp(sh, 0.6);
   }
 
@@ -5751,7 +5739,7 @@
       sg3SetShore(T, sg3.shore, spot.id);
     }
     var U2 = sg3.wm.uniforms; U2.uT.value = now % 1000; sg3.skyMat.uniforms.uT.value = now % 1000;
-    var sx = sg.x * SG3_M, rows = sg3.rows, pos = sg3.pos, foam = sg3.foam, thin = sg3.thin;
+    var sx = sg.x * SG3_M, rows = sg3.rows, pos = sg3.pos, foam = sg3.foam, thin = sg3.thin, curt = sg3.curt;
     var x0 = sx - Hm * 9 - 30, span = Hm * 22 + 110, dx = span / (SG3_COLS - 1);
     for(var c = 0; c < SG3_COLS; c++){
       var xm = x0 + c * dx, br = sg3Break(xm, Hm);
@@ -5764,9 +5752,10 @@
         // white only right at the lip's edge while it throws; the rest stays clear water
         foam[i] = Math.min(1, br[1] * 1.1 + (r >= 23 && r <= 26 ? 0.12 + 0.3 * br[0] + Math.max(0, br[0] - 0.8) * 2.5 : 0) + (r > 56 && br[1] > 0 ? 0.4 : 0));
         thin[i] = lipZone ? (0.35 + 0.35 * br[0]) * (1 - br[1]) : (r > 22 && r <= 30 ? 0.15 * br[0] : 0);
+        curt[i] = r >= 14 && r <= 34 ? Math.max(0, br[0] - 0.4) / 0.6 * (1 - br[1]) * Math.sin((r - 14) / 20 * Math.PI) : 0;
       }
     }
-    sg3.geo.attributes.position.needsUpdate = true; sg3.geo.attributes.foam.needsUpdate = true; sg3.geo.attributes.thin.needsUpdate = true;
+    sg3.geo.attributes.position.needsUpdate = true; sg3.geo.attributes.foam.needsUpdate = true; sg3.geo.attributes.thin.needsUpdate = true; sg3.geo.attributes.curt.needsUpdate = true;
     var nrmA = sg3.geo.attributes.normal ? sg3.geo.attributes.normal.array : null;
     if(!nrmA){ nrmA = new Float32Array(pos.length); sg3.geo.setAttribute('normal', new T.BufferAttribute(nrmA, 3)); }
     for(var nc = 0; nc < SG3_COLS; nc++){
@@ -5861,7 +5850,7 @@
     var pxScale = sg3.r.domElement.height / (2 * Math.tan(sg3.cam.fov * Math.PI / 360));
     sg3.billows.pts.material.uniforms.uScale.value = pxScale; sg3.spray.pts.material.uniforms.uScale.value = pxScale;
     // the foam ball: big soft puffs boiling up and rolling back
-    for(var e = 0; e < 12; e++) emit(sg3.billows, cm - Math.random() * Hm * 1.4, Hm * (0.1 + Math.random() * 0.3), impactZ * (0.5 + Math.random() * 0.6),
+    for(var e = 0; e < 16; e++) emit(sg3.billows, cm - Math.random() * Hm * 1.4, Hm * (0.1 + Math.random() * 0.3), impactZ * (0.5 + Math.random() * 0.6),
       -Math.random() * 3 - 0.5, (1.2 + Math.random() * 3) * sq, (Math.random() - 0.3) * 2, 1.4 + Math.random() * 1.6, Hm * (0.25 + Math.random() * 0.45), 0.55 + Math.random() * 0.35);
     // fine spray and mist thrown high where the lip lands
     for(var e2 = 0; e2 < 10; e2++) emit(sg3.spray, cm - Math.random() * 2.5, Hm * (0.25 + Math.random() * 0.2), impactZ * (0.5 + Math.random() * 0.6),
@@ -5940,6 +5929,10 @@
       var back = (3.2 + Hm * 0.45) * (1 - 0.35 * inT), high = (1.7 + Hm * 0.3) * (1 - 0.5 * inT);
       var ce = new T.Vector3(p.x - back, Math.max(0.6, p.y + high), p.z + (1.0 + Hm * 0.35) * (1 - 0.6 * inT));
       var ct = new T.Vector3(p.x + 4 + Hm * 0.8, p.y + 0.5, p.z - Hm * 0.1);
+      if(inT > 0){
+        var cmT = sg.curl * SG3_M, tubeE = new T.Vector3(Math.max(p.x - 1.3 - Hm * 0.25, cmT + Hm * 0.3), Hm * 0.46, Hm * 0.82);
+        ce.lerp(tubeE, inT); ct.lerp(new T.Vector3(p.x + 5 + Hm * 1.2, Hm * 0.36, Hm * 0.62), inT);
+      }
       if(!sg3.chE || sg.t < 0.2){ sg3.chE = ce.clone(); sg3.chT = ct.clone(); }
       sg3.chE.lerp(ce, Math.min(1, dtR * 6)); sg3.chT.lerp(ct, Math.min(1, dtR * 6));
       sg3.cam.up.set(0, 1, 0); sg3.cam.position.copy(sg3.chE); sg3.cam.lookAt(sg3.chT);
@@ -5948,7 +5941,7 @@
       sg3.cam.up.set(0, 1, 0);
       sg3.cam.position.copy(sg3.camP); sg3.cam.lookAt(sg3.camL);
     }
-    var fovWant = povNow ? 74 : chaseNow ? 58 : 36;
+    var fovWant = povNow ? 74 : chaseNow ? 58 + 14 * Math.min(1, sg.tube * 4) : 36;
     if(sg3.cam.fov !== fovWant){ sg3.cam.fov = fovWant; sg3.cam.updateProjectionMatrix(); }
     U2.uCam.value.copy(sg3.cam.position);
     sg3.oceanNear.position.set(Math.round(sg3.cam.position.x / 4.67) * 4.67, 0, Math.round(sg3.cam.position.z / 4.67) * 4.67);
@@ -12033,7 +12026,7 @@
   // never while the name field is being typed in. Everything worth keeping
   // (coins, skins, name, league) is in localStorage, so a reload loses nothing.
   // 'dev' = a local or preview copy: the updater stays off entirely.
-  var BUILD_VERSION = '20261024-162444';
+  var BUILD_VERSION = '20261024-164921';
   var UPDATE_CHECK_MS = 60000;
   var UPDATE_TRIED_KEY = 'canyonChaseTriedUpdate';
   var pendingSubmits = 0;
