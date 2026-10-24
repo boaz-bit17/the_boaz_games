@@ -4578,7 +4578,7 @@
     var spot = SG_SPOTS[i];
     sg = { active: true, phase: spot.tow ? 'tow' : 'ride', spot: spot, spotIdx: i, t: 0, x: 0, v: spot.tow ? 620 : 380, h: 0.35, th: -0.3, hold: false,
            curl: -460, score: 0, chain: 0, chainT: 0, lastMove: '', texts: [], spray: [], hazards: [], closeouts: [], throwT: 0, throwLen: 0,
-           tube: 0, air: null, prevSign: -1, nextHaz: 3 + sgRand() * 3, nextClose: 14 + sgRand() * 6, nextThrow: 4 + sgRand() * 3,
+           tube: 0, air: null, psi: 0, psiMax: 0, rebound: false, prevSign: -1, nextHaz: 3 + sgRand() * 3, nextClose: 14 + sgRand() * 6, nextThrow: 4 + sgRand() * 3,
            wipe: null, towT: spot.tow ? 2.4 : 0, hint: 4, best: sgSave.best10[spot.id] || 0, moves: [] };
     state = 'surfgame';
     startOverlay.hidden = true; hud.hidden = true;
@@ -4712,11 +4712,24 @@
     var vmax = 720 * (1 + 0.06 * up.speed);
     sg.v = Math.max(200, Math.min(vmax, sg.v));
     sg.h += Math.sin(sg.th) * sg.v * dt / F;
-    // back on the stick turns you back toward the curl (a cutback), forward pumps
-    var fwdK = 1 + Math.min(0, J.x) * 1.4, prevX = sg.x;
+    // a cutback: hold back on the stick and the board carves all the way
+    // round (psi: 0 = down the line, pi = back at the curl); let go and it
+    // carves back. Ride back into the foam and you bounce off it
+    if(sg.rebound) sg.psi = Math.max(0, sg.psi - dt * 9);
+    else if(J.x < -0.4) sg.psi = Math.min(Math.PI, sg.psi + dt * (2 + 1.6 * -J.x));
+    else sg.psi = Math.max(0, sg.psi - dt * (J.x > 0.4 ? 4 : 2.8));
+    sg.psiMax = Math.max(sg.psiMax, sg.psi);
+    var fwdK = Math.cos(sg.psi), prevX = sg.x;
     sg.x += fwdK * (0.55 + 0.45 * Math.cos(sg.th)) * sg.v * dt;     // the wave carries you along even as you climb
-    if(J.x < -0.4){ sg.cutT = (sg.cutT || 0) + dt; sg.v -= 90 * Math.abs(J.x) * dt; }
-    else { if((sg.cutT || 0) > 0.35 && sg.h > 0.3) { sgScore(L('קאטבק', 'Cutback'), 170 + sg.v * 0.15); sgFan(); } sg.cutT = 0; }
+    if(sg.psi > 0.2){
+      sg.v -= 45 * Math.sin(sg.psi) * dt;                              // carving bleeds a little speed
+      sg.h -= Math.sin(sg.psi) * 0.22 * sg.v * dt / F;                 // and the turn drops you down the face
+    }
+    if(!sg.rebound && sg.psi > 1.2 && gap < 230 && gap > 55){ sg.rebound = true; sg.v = Math.min(vmax, Math.max(sg.v, curlV) + 220); sgScore(L('ריבאונד!', 'Rebound!'), 260 + sg.v * 0.2); sgSplash(3); }
+    if(sg.psi < 0.12){
+      if(sg.psiMax > 2.0) { sgScore(L('קאטבק', 'Cutback'), 220 + sg.v * 0.25 * sg.psiMax / Math.PI); sgFan(); }
+      sg.psiMax = 0; sg.rebound = false;
+    }
     if(J.x > 0.4 && sg.h > 0.2 && sg.h < 0.85) sg.v += 40 * J.x * dt;
     var ps = J.y < -0.35 ? -1 : J.y > 0.35 ? 1 : 0;
     if(ps && ps !== sg.pumpSign){
@@ -4744,7 +4757,7 @@
     }
     // off the lip with speed: into the air
     if(sg.h >= 1){
-      if(sg.th > 0.4 && sg.v > 360 && J.y < -0.5){
+      if(sg.th > 0.4 && sg.v > 360 && J.y < -0.5 && sg.psi < 0.6){
         var lift = (1 + 0.1 * up.air);
         sg.phase = 'air';
         sg.air = { y: 0, vy: Math.sin(sg.th) * sg.v / F * 1.25 * lift, vx: Math.cos(sg.th) * sg.v * 1.05, rot: 0, t0: sg.t };
@@ -4768,7 +4781,7 @@
         if(sg.h > 0.72){ sg.h = 0.72; if(sg.th > 0) sg.th *= 0.5; }
         // the barrel carries you along nearly at its own pace -- only stalling
         // (pulling back) lets it catch you; pumping gets you out ahead
-        if(J.x > -0.3 && sg.x - prevX < curlV * 0.97 * dt) sg.x = prevX + curlV * 0.97 * dt;
+        if(sg.psi < 0.5 && J.x > -0.3 && sg.x - prevX < curlV * 0.97 * dt) sg.x = prevX + curlV * 0.97 * dt;
         sg.tube += dt; sg.score += Math.round(dt * 750);       // the barrel is where the big scores are
       }
       if((!inTube || sg.throwT <= 0) && sg.tube > 0) sgSpit();
@@ -5373,12 +5386,12 @@
   var SG3_SEG = 6, SG3_ROWS = (SG3_CP0.length - 1) * SG3_SEG + 1, SG3_COLS = 120;
   function sg3Cr(a, b, c, d, t){ var t2 = t * t, t3 = t2 * t; return 0.5 * ((2 * b) + (-a + c) * t + (2 * a - 5 * b + 4 * c - d) * t2 + (-a + 3 * b - 3 * c + d) * t3); }
   // the profile at a spot along the wave -> rows of [z, y] in metres
-  function sg3Profile(b, c, Hm, out){
+  function sg3Profile(b, c, Hm, out, s){
     var P = [];
     for(var i = 0; i < SG3_CP0.length; i++){
       var z = SG3_CP0[i][0] + (SG3_CP1[i][0] - SG3_CP0[i][0]) * b, y = SG3_CP0[i][1] + (SG3_CP1[i][1] - SG3_CP0[i][1]) * b;
       z += (SG3_CPC[i][0] - z) * c; y += (SG3_CPC[i][1] - y) * c;
-      P.push([z * Hm, y * Hm]);
+      P.push([z * Hm * (s || 1), y * Hm * (s || 1)]);
     }
     var k = 0;
     for(var s = 0; s < P.length - 1; s++){
@@ -5402,18 +5415,28 @@
       var tb = d < L3 - fadeLen ? 1 : Math.max(0, 1 - (d - (L3 - fadeLen)) / fadeLen);
       b = Math.max(b, tb * Math.min(1, sg.throwT * 1.5));
     }
+    // past the barrel the face stays steep and feathering, softening slowly,
+    // and the wave gets smaller toward the end of the line (s = size)
+    var s = 1;
+    if(d >= 0){
+      var Lb = (sg.throwT > 0 ? sg.throwLen : 200) * SG3_M;
+      b = Math.max(b, 0.32 * Math.exp(-Math.max(0, d - Lb) / (Hm * 4)));
+      var tp = Math.min(1, Math.max(0, (d - Lb) / (Hm * 14)));
+      s = 1 - 0.4 * tp * tp * (3 - 2 * tp);
+    }
     for(var i = 0; i < sg.closeouts.length; i++){
       var q = sg.closeouts[i]; if(q.done) continue;
       var dq = Math.abs(xm - q.x * SG3_M); if(dq < Hm * 3) b = Math.max(b, 1 - dq / (Hm * 3));
     }
     b = b * b * (3 - 2 * b);
-    return [b, c];
+    return [b, c, s];
   }
   var sg3Cache = { H: 0, m: {} };
-  function sg3ProfileQ(b, c, Hm){
+  function sg3ProfileQ(b, c, Hm, s){
     if(sg3Cache.H !== Hm) sg3Cache = { H: Hm, m: {} };
-    var key = Math.round(b * 20) * 32 + Math.round(c * 20), pr = sg3Cache.m[key];
-    if(!pr){ pr = []; for(var i = 0; i < SG3_ROWS; i++) pr.push([0, 0]); sg3Profile(Math.round(b * 20) / 20, Math.round(c * 20) / 20, Hm, pr); sg3Cache.m[key] = pr; }
+    var sq = Math.round((s || 1) * 40);
+    var key = (Math.round(b * 20) * 32 + Math.round(c * 20)) * 64 + sq, pr = sg3Cache.m[key];
+    if(!pr){ pr = []; for(var i = 0; i < SG3_ROWS; i++) pr.push([0, 0]); sg3Profile(Math.round(b * 20) / 20, Math.round(c * 20) / 20, Hm, pr, sq / 40); sg3Cache.m[key] = pr; }
     return pr;
   }
   function sg3RowForH(h){ var top = 7 * SG3_SEG, low = 9.5 * SG3_SEG; return low - h * (low - top); }
@@ -5487,7 +5510,9 @@
       ' vec3 tw = mix(tSea, tFace, upright);\n' +
       ' float tl = dot(tw, vec3(0.3, 0.59, 0.11));\n' +
       ' vec3 photo = mix(tw * (base / max(vec3(0.03), vec3(0.05, 0.22, 0.22))) * 0.55, base * (0.45 + 1.6 * tl), 0.5);\n' +
-      ' base = mix(base, photo, 0.85 * uTex * (1.0 - 0.3 * step(vThin, -0.5)));\n' +
+      ' base = mix(base, photo, 0.85 * uTex * (1.0 - 0.3 * step(vThin, -0.5)) * (1.0 - 0.5 * upright));\n' +
+      ' float gls = smoothstep(0.58, 0.78, fbm(vec3(vW.x * 0.3, vW.y * 2.6 - uT * 0.5, vW.z * 2.6)));\n' +
+      ' base += (gls - 0.3) * 0.07 * upright * (1.0 - sea);\n' +
       // reflection of the sky, by angle
       ' vec3 R = reflect(-V, N); vec3 skyR = mix(uSkyC, uSkyTop, pow(clamp(R.y, 0.0, 1.0), 0.6));\n' +
       ' float fres = 0.03 + 0.97 * pow(1.0 - max(dot(N, V), 0.0), 5.0);\n' +
@@ -5743,7 +5768,7 @@
     var x0 = sx - Hm * 9 - 30, span = Hm * 22 + 110, dx = span / (SG3_COLS - 1);
     for(var c = 0; c < SG3_COLS; c++){
       var xm = x0 + c * dx, br = sg3Break(xm, Hm);
-      rows = sg3ProfileQ(br[0], br[1], Hm);
+      rows = sg3ProfileQ(br[0], br[1], Hm, br[2]);
       for(var r = 0; r < SG3_ROWS; r++){
         var i = c * SG3_ROWS + r;
         pos[i * 3] = xm; pos[i * 3 + 1] = rows[r][1]; pos[i * 3 + 2] = rows[r][0];
@@ -5772,7 +5797,7 @@
     sg3.geo.attributes.normal.needsUpdate = true;
 
     // where the surfer is: on the face at h, at the lip in the air
-    var brS = sg3Break(sx, Hm); rows = sg3ProfileQ(brS[0], brS[1], Hm);
+    var brS = sg3Break(sx, Hm); rows = sg3ProfileQ(brS[0], brS[1], Hm, brS[2]);
     function faceAt(h){
       var fr = sg3RowForH(Math.max(0, Math.min(1, h))), r0 = Math.floor(fr), r1 = Math.min(SG3_ROWS - 1, r0 + 1), f = fr - r0;
       return [rows[r0][0] + (rows[r1][0] - rows[r0][0]) * f, rows[r0][1] + (rows[r1][1] - rows[r0][1]) * f];
@@ -5792,7 +5817,8 @@
       flip = sg.air.rot;
     } else {
       var th = sg.th || 0;
-      fwd = new T.Vector3().addScaledVector(X, Math.cos(th)).addScaledVector(tUp, Math.sin(th)).normalize();
+      var psi = sg.psi || 0;
+      fwd = new T.Vector3().addScaledVector(X, Math.cos(th) * Math.cos(psi)).addScaledVector(tUp, Math.sin(th) - Math.cos(th) * Math.sin(psi) * 0.8).normalize();
       up = nrm.clone();
     }
     var side = new T.Vector3().crossVectors(fwd, up).normalize();
@@ -5873,7 +5899,7 @@
       var ti = tr.length - WK + w, o = w * 6;
       if(ti < 0){ wa[w * 2] = wa[w * 2 + 1] = 0; continue; }
       var pt = tr[ti], bw = sg3Break(pt.x * SG3_M, Hm);
-      rows = sg3ProfileQ(bw[0], bw[1], Hm);
+      rows = sg3ProfileQ(bw[0], bw[1], Hm, bw[2]);
       var q0 = faceAt(pt.h), age = w / WK, half = 0.06 + 0.12 * age;
       wp[o] = pt.x * SG3_M; wp[o + 1] = q0[1] + half; wp[o + 2] = q0[0] - half * 0.6 + 0.04;
       wp[o + 3] = pt.x * SG3_M; wp[o + 4] = q0[1] - half; wp[o + 5] = q0[0] + half * 0.6 + 0.04;
@@ -5886,7 +5912,7 @@
     sg.hazards.forEach(function(z){
       if(hz >= sg3.haz.length) return;
       var H3 = sg3.haz[hz++], zx = z.x * SG3_M, bz = sg3Break(zx, Hm);
-      rows = sg3ProfileQ(bz[0], bz[1], Hm);
+      rows = sg3ProfileQ(bz[0], bz[1], Hm, bz[2]);
       var q1 = faceAt(z.kind === 'jelly' ? z.h : 0.03);
       H3.j.visible = z.kind === 'jelly'; H3.r.visible = z.kind !== 'jelly';
       (z.kind === 'jelly' ? H3.j : H3.r).position.set(zx, q1[1] + (z.kind === 'jelly' ? 0.05 : -0.2), q1[0] + 0.15);
@@ -5927,14 +5953,17 @@
       // looking down the line: the surfer, the wall of the wave, what's coming
       var inT = Math.min(1, sg.tube * 4);
       var back = (3.2 + Hm * 0.45) * (1 - 0.35 * inT), high = (1.7 + Hm * 0.3) * (1 - 0.5 * inT);
-      var ce = new T.Vector3(p.x - back, Math.max(0.6, p.y + high), p.z + (1.0 + Hm * 0.35) * (1 - 0.6 * inT));
-      var ct = new T.Vector3(p.x + 4 + Hm * 0.8, p.y + 0.5, p.z - Hm * 0.1);
+      sg3.camPsi = sg.t < 0.2 ? 0 : (sg3.camPsi || 0) + ((sg.psi || 0) - (sg3.camPsi || 0)) * Math.min(1, dtR * 6);
+      var cps = Math.cos(sg3.camPsi);
+      var ce = new T.Vector3(p.x - back * cps, Math.max(0.6, p.y + high), p.z + (1.0 + Hm * 0.35) * (1 - 0.6 * inT));
+      var ct = new T.Vector3(p.x + (4 + Hm * 0.8) * cps, p.y + 0.5, p.z - Hm * 0.1);
       if(inT > 0){
         var cmT = sg.curl * SG3_M, tubeE = new T.Vector3(Math.max(p.x - 1.3 - Hm * 0.25, cmT + Hm * 0.3), Hm * 0.46, Hm * 0.82);
         ce.lerp(tubeE, inT); ct.lerp(new T.Vector3(p.x + 5 + Hm * 1.2, Hm * 0.36, Hm * 0.62), inT);
       }
       if(!sg3.chE || sg.t < 0.2){ sg3.chE = ce.clone(); sg3.chT = ct.clone(); }
-      sg3.chE.lerp(ce, Math.min(1, dtR * 6)); sg3.chT.lerp(ct, Math.min(1, dtR * 6));
+      var turning = Math.min(1, Math.abs(Math.sin(sg3.camPsi)) * 1.5 + Math.abs((sg.psi || 0) - sg3.camPsi) + (cps < 0 ? 1 : 0));
+      sg3.chE.lerp(ce, Math.min(1, dtR * (6 + 14 * turning))); sg3.chT.lerp(ct, Math.min(1, dtR * (6 + 14 * turning)));
       sg3.cam.up.set(0, 1, 0); sg3.cam.position.copy(sg3.chE); sg3.cam.lookAt(sg3.chT);
       sg3.camP.copy(camWant); sg3.camL.copy(lookWant);
     } else {
@@ -12026,7 +12055,7 @@
   // never while the name field is being typed in. Everything worth keeping
   // (coins, skins, name, league) is in localStorage, so a reload loses nothing.
   // 'dev' = a local or preview copy: the updater stays off entirely.
-  var BUILD_VERSION = '20261024-164921';
+  var BUILD_VERSION = '20261024-170244';
   var UPDATE_CHECK_MS = 60000;
   var UPDATE_TRIED_KEY = 'canyonChaseTriedUpdate';
   var pendingSubmits = 0;
