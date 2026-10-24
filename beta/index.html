@@ -5510,18 +5510,19 @@
       ' vec3 tw = mix(tSea, tFace, upright);\n' +
       ' float tl = dot(tw, vec3(0.3, 0.59, 0.11));\n' +
       ' vec3 photo = mix(tw * (base / max(vec3(0.03), vec3(0.05, 0.22, 0.22))) * 0.55, base * (0.45 + 1.6 * tl), 0.5);\n' +
-      ' base = mix(base, photo, 0.85 * uTex * (1.0 - 0.3 * step(vThin, -0.5)) * (1.0 - 0.5 * upright));\n' +
+      ' float insideP = step(dot(normalize(vN), normalize(uCam - vW)), 0.0);\n' +
+      ' base = mix(base, photo, 0.85 * uTex * (1.0 - 0.3 * step(vThin, -0.5)) * (1.0 - 0.5 * upright) * (1.0 - 0.6 * insideP));\n' +
       ' float gls = smoothstep(0.58, 0.78, fbm(vec3(vW.x * 0.3, vW.y * 2.6 - uT * 0.5, vW.z * 2.6)));\n' +
       ' base += (gls - 0.3) * 0.07 * upright * (1.0 - sea);\n' +
       // reflection of the sky, by angle
       ' vec3 R = reflect(-V, N); vec3 skyR = mix(uSkyC, uSkyTop, pow(clamp(R.y, 0.0, 1.0), 0.6));\n' +
       ' float fres = 0.03 + 0.97 * pow(1.0 - max(dot(N, V), 0.0), 5.0);\n' +
-      ' vec3 col = mix(base, skyR, fres * (0.8 - 0.25 * sea));\n' +
+      ' vec3 col = mix(base, skyR, fres * (0.8 - 0.25 * sea) * (1.0 - 0.55 * vCurt));\n' +
       ' col *= 1.0 - 0.28 * inside;\n' +
       ' col = mix(col, uDeep * vec3(0.55, 0.75, 1.15), 0.3 * inside * (1.0 - h * 0.5));\n' +
       ' float streak = fbm(vec3(vW.x * 2.2, vW.y * 0.25 - uT * 0.9, vW.z * 0.4));\n' +
       ' float cv = vCurt * (1.0 - inside);\n' +
-      ' col = mix(col, uDeep * vec3(0.45, 0.62, 1.05), cv * (0.38 + 0.25 * streak));\n' +
+      ' col = mix(col, uDeep * vec3(0.45, 0.62, 1.05), cv * (0.55 + 0.25 * streak));\n' +
       ' col += uGlow * vCurt * (0.12 + 0.2 * smoothstep(0.45, 0.75, streak)) * (0.6 + 0.4 * inside);\n' +
       // light shining through thin water (the lip, the top of the face), strongest backlit
       ' float back = 0.45 + 0.55 * pow(max(dot(V, -uSunDir), 0.0), 2.0);\n' +
@@ -5756,7 +5757,8 @@
       sg3.spotId = spot.id;
       sg3.skyMat.uniforms.uTop.value.set(spot.sky[0]); sg3.skyMat.uniforms.uHz.value.set(spot.sky[1]);
       var U = sg3.wm.uniforms;
-      U.uDeep.value.set(spot.face[1]).multiplyScalar(0.7); U.uFace.value.set(spot.face[0]); U.uSkyC.value.set(spot.sky[1]); U.uFog.value.set(spot.sky[1]);
+      U.uDeep.value.set(spot.face[1]).multiplyScalar(0.7); U.uFace.value.set(spot.face[0]);
+      U.uGlow.value.set({ pool: 0x38b6ff, olga: 0x2fd2c6, pipe: 0x2ccbe0, naz: 0x3ab8c4 }[spot.id] || 0x2fe0b8); U.uSkyC.value.set(spot.sky[1]); U.uFog.value.set(spot.sky[1]);
       U.uH.value = Hm; U.uSkyTop.value.set(spot.sky[0]);
       U.uAmp.value = { pool: 0.25, olga: 0.7, pipe: 0.85, naz: 1.5 }[spot.id] || 0.7;
       sg3.skyMat.uniforms.uCloud.value = { pool: 0.2, olga: 0.45, pipe: 0.6, naz: 1 }[spot.id] || 0.5;
@@ -5884,6 +5886,10 @@
     // spray blowing back off the top of the wave
     if(Math.random() < 0.8){ var lx = cm + Math.random() * Hm * 6; var bl = sg3Break(lx, Hm);
       emit(sg3.spray, lx, Hm * (1.0 + 0.05 * bl[0]), SG3_CP0[3][0] * Hm, -1 - Math.random() * 2, 1 + Math.random() * 2, -2 - Math.random() * 3, 0.6 + Math.random() * 0.6, 0.06 + Math.random() * 0.08, 0.6); }
+    // spray feathering off the top of the throwing lip, all along the barrel
+    if(sg.throwT > 0){ var L3s = sg.throwLen * SG3_M;
+      for(var e4 = 0; e4 < 3; e4++){ var fx = cm + Math.random() * L3s, bf = sg3Break(fx, Hm), sz = bf[2] || 1;
+        if(bf[0] > 0.6) emit(sg3.spray, fx, Hm * sz * (1.08 + 0.06 * Math.random()), Hm * sz * (0.5 + 0.4 * Math.random()), -0.5 - Math.random() * 2, 1.5 + Math.random() * 2.5, -1.5 - Math.random() * 3, 0.5 + Math.random() * 0.5, 0.05 + Math.random() * 0.07, 0.7); } }
     // spray off the board when it carves: the 2D ride's spray list says when
     if(sg.spray.length > (sg3.lastSpray || 0)){
       var nNew = Math.min(70, sg.spray.length - (sg3.lastSpray || 0));
@@ -12055,7 +12061,7 @@
   // never while the name field is being typed in. Everything worth keeping
   // (coins, skins, name, league) is in localStorage, so a reload loses nothing.
   // 'dev' = a local or preview copy: the updater stays off entirely.
-  var BUILD_VERSION = '20261024-170244';
+  var BUILD_VERSION = '20261024-214601';
   var UPDATE_CHECK_MS = 60000;
   var UPDATE_TRIED_KEY = 'canyonChaseTriedUpdate';
   var pendingSubmits = 0;
