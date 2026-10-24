@@ -4673,6 +4673,7 @@
     var gap = sg.x - sg.curl;
 
     if(sg.phase === 'air'){
+      if(sg.trail && sg.trail.length) sg.trail.shift();
       var a = sg.air;
       a.y += a.vy * dt; a.vy -= 2.7 * dt;
       sg.x += a.vx * dt;
@@ -4703,6 +4704,9 @@
     sg.h += Math.sin(sg.th) * sg.v * dt / F;
     sg.x += (0.55 + 0.45 * Math.cos(sg.th)) * sg.v * dt;     // the wave carries you along even as you climb
     if(sg.h < 0){ sg.h = 0; if(sg.th < 0) sg.th *= 0.5; }
+    sg.trail = sg.trail || [];
+    sg.trail.push({ x: sg.x, h: sg.h });
+    if(sg.trail.length > 80) sg.trail.shift();
     // spray off the rail in hard turns
     if(Math.abs(target - sg.th) > 0.8 && Math.random() < 0.6) sgSplash(1);
 
@@ -4804,6 +4808,56 @@
     return { bottom: bottom, top: top, faceH: faceH, sx: W * 0.6 };
   }
   function sgScreenX(wx){ return W * 0.6 + (wx - sg.x) * sgK(); }
+  // tileable value noise into a canvas; map(v) -> [r, g, b, a]. fx/fy: how
+  // many lattice cells across/down (few across + many down = long streaks)
+  function sgNoiseCanvas(w, hh, fx, fy, oct, map){
+    var c = document.createElement('canvas'); c.width = w; c.height = hh;
+    var g = c.getContext('2d'), img = g.createImageData(w, hh), d = img.data, lat = [];
+    for(var o = 0; o < oct; o++){
+      var gx = fx << o, gy = fy << o, arr = new Float32Array(gx * gy);
+      for(var i = 0; i < arr.length; i++) arr[i] = Math.random();
+      lat.push({ gx: gx, gy: gy, a: arr });
+    }
+    for(var y = 0; y < hh; y++) for(var x = 0; x < w; x++){
+      var v = 0, amp = 1, tot = 0;
+      for(var q = 0; q < oct; q++){
+        var Lt = lat[q], u = x / w * Lt.gx, vv = y / hh * Lt.gy, x0 = Math.floor(u), y0 = Math.floor(vv), tx = u - x0, ty = vv - y0;
+        tx = tx * tx * (3 - 2 * tx); ty = ty * ty * (3 - 2 * ty);
+        var x1 = (x0 + 1) % Lt.gx, y1 = (y0 + 1) % Lt.gy;
+        var a = Lt.a[y0 * Lt.gx + x0], b = Lt.a[y0 * Lt.gx + x1], c2 = Lt.a[y1 * Lt.gx + x0], e = Lt.a[y1 * Lt.gx + x1];
+        v += amp * ((a * (1 - tx) + b * tx) * (1 - ty) + (c2 * (1 - tx) + e * tx) * ty); tot += amp; amp *= 0.5;
+      }
+      var px = map(v / tot), k = (y * w + x) * 4;
+      d[k] = px[0]; d[k + 1] = px[1]; d[k + 2] = px[2]; d[k + 3] = px[3];
+    }
+    g.putImageData(img, 0, 0);
+    return c;
+  }
+  var sgTex = null;
+  function sgTextures(){
+    if(sgTex) return sgTex;
+    function sm(a, b, v){ var t2 = Math.max(0, Math.min(1, (v - a) / (b - a))); return t2 * t2 * (3 - 2 * t2); }
+    sgTex = {
+      // the face: long bright streaks and darker mottling
+      streak: sgNoiseCanvas(512, 256, 3, 22, 4, function(v){
+        if(v > 0.56) return [255, 255, 255, Math.round(sm(0.56, 0.8, v) * 150)];
+        if(v < 0.42) return [0, 25, 35, Math.round(sm(0.42, 0.2, v) * 110)];
+        return [0, 0, 0, 0];
+      }),
+      // foam: white lace with holes
+      foam: sgNoiseCanvas(256, 256, 7, 7, 4, function(v){ return [255, 255, 255, Math.round(sm(0.4, 0.62, v) * 255)]; }),
+      // foam shadows: the grey-blue creases between the bubbles
+      crease: sgNoiseCanvas(256, 256, 5, 5, 4, function(v){ return [120, 160, 180, Math.round(sm(0.5, 0.25, v) * 140)]; }),
+      // the sea's sparkle
+      glint: sgNoiseCanvas(256, 128, 10, 40, 3, function(v){ return [255, 255, 255, Math.round(sm(0.66, 0.85, v) * 200)]; })
+    };
+    return sgTex;
+  }
+  function sgPattern(img, ox, oy, sx, sy){
+    var p = ctx.createPattern(img, 'repeat');
+    if(p.setTransform) p.setTransform(new DOMMatrix().translate(ox, oy).scale(sx, sy));
+    return p;
+  }
   function sgDrawScene(){
     var spot = sg.spot, gm = sgFaceGeom(), K = sgK(), t = sg.t;
     var sky = ctx.createLinearGradient(0, 0, 0, gm.top);
@@ -4815,7 +4869,11 @@
     var sea = ctx.createLinearGradient(0, hz, 0, gm.top + gm.faceH);
     sea.addColorStop(0, spot.sea[1]); sea.addColorStop(1, spot.sea[0]);
     ctx.fillStyle = sea; ctx.fillRect(0, hz, W, H - hz);
-    ctx.strokeStyle = 'rgba(255,255,255,0.18)'; ctx.lineWidth = 1;
+    var TX = sgTextures();
+    ctx.save(); ctx.globalAlpha = 0.55;
+    ctx.fillStyle = sgPattern(TX.glint, -(t * 12) % 256, hz, 1.4, 0.6); ctx.fillRect(0, hz, W, gm.top + gm.faceH - hz);
+    ctx.restore();
+    ctx.strokeStyle = 'rgba(255,255,255,0.1)'; ctx.lineWidth = 1;
     for(var r = 0; r < 22; r++){
       var ry = hz + (r / 22) * (gm.top - hz + 20), rl = 10 + r * 2.5, off = (r * 97 + t * 14 * (1 + r * 0.05)) % 140;
       for(var rx = -off; rx < W; rx += 140){ ctx.beginPath(); ctx.moveTo(rx, ry); ctx.lineTo(rx + rl, ry); ctx.stroke(); }
@@ -4838,9 +4896,42 @@
     fg.addColorStop(0.9, spot.face[1]);
     fg.addColorStop(1, spot.sea[0]);
     ctx.fillStyle = fg;
-    ctx.beginPath(); ctx.moveTo(cx - 90, gm.bottom + 40); ctx.lineTo(cx - 90, gm.top + gm.faceH * 0.5);
-    for(var x = cx; x <= W + 20; x += 12) ctx.lineTo(x, topAt(x));
-    ctx.lineTo(W + 20, gm.bottom + 40); ctx.closePath(); ctx.fill();
+    var facePath = new Path2D(); facePath.moveTo(cx - 90, gm.bottom + 40); facePath.lineTo(cx - 90, gm.top + gm.faceH * 0.5);
+    for(var x = cx; x <= W + 20; x += 12) facePath.lineTo(x, topAt(x));
+    facePath.lineTo(W + 20, gm.bottom + 40); facePath.closePath(); ctx.fill(facePath);
+    ctx.save(); ctx.clip(facePath);
+    // water texture: long streaks moving with the wave, squeezed near the top
+    ctx.fillStyle = sgPattern(TX.streak, -(sg.x * K * 0.9) % 1024, gm.top, 2, gm.faceH / 256);
+    ctx.globalAlpha = 0.7; ctx.fillRect(cx - 90, gm.top - 20, W - cx + 120, gm.faceH + 60);
+    ctx.fillStyle = sgPattern(TX.streak, -(sg.x * K * 1.3 + 200) % 1024, gm.top + 40, 3, gm.faceH / 512);
+    ctx.globalAlpha = 0.35; ctx.fillRect(cx - 90, gm.top - 20, W - cx + 120, gm.faceH + 60);
+    ctx.globalAlpha = 1;
+    // the pocket: steep and shadowed right next to the curl, the water thin
+    // and glowing green under the lip there
+    var pk = ctx.createLinearGradient(cx, 0, cx + W * 0.35, 0);
+    pk.addColorStop(0, 'rgba(0,25,30,0.35)'); pk.addColorStop(1, 'rgba(0,25,30,0)');
+    ctx.fillStyle = pk; ctx.fillRect(cx - 90, gm.top + gm.faceH * 0.25, W * 0.45, gm.faceH * 0.6);
+    var glow = ctx.createRadialGradient(cx + 40, gm.top + gm.faceH * 0.12, 4, cx + 40, gm.top + gm.faceH * 0.12, gm.faceH * 0.6);
+    glow.addColorStop(0, 'rgba(170,255,220,0.45)'); glow.addColorStop(1, 'rgba(170,255,220,0)');
+    ctx.fillStyle = glow; ctx.fillRect(cx - 90, gm.top - 20, gm.faceH * 1.4, gm.faceH * 0.9);
+    // the surfer's wake: a white line carved into the face, fading
+    if(sg.trail && sg.trail.length > 2){
+      // in a few long stretches (not segment by segment), so it reads as one
+      // smooth carved line: a soft wide band with a brighter core
+      ctx.lineCap = 'butt'; ctx.lineJoin = 'round';
+      var CH = 10, n = sg.trail.length;
+      for(var c0 = 0; c0 < n - 1; c0 += CH - 1){
+        var fresh = Math.min(1, (c0 + CH) / n);
+        [[9, 0.18], [3.5, 0.55]].forEach(function(st){
+          ctx.strokeStyle = 'rgba(255,255,255,' + (st[1] * fresh).toFixed(3) + ')';
+          ctx.lineWidth = Math.max(1, st[0] * K * (0.3 + 0.7 * fresh));
+          ctx.beginPath();
+          for(var ti = c0; ti < Math.min(n, c0 + CH); ti++){ var pp = sg.trail[ti], X = sgScreenX(pp.x), Y = gm.bottom - pp.h * gm.faceH; if(ti === c0) ctx.moveTo(X, Y); else ctx.lineTo(X, Y); }
+          ctx.stroke();
+        });
+      }
+    }
+    ctx.restore();
     // sunlight through the top of the wall
     var lg2 = ctx.createLinearGradient(0, gm.top, 0, gm.top + gm.faceH * 0.3);
     lg2.addColorStop(0, 'rgba(220,255,245,0.35)'); lg2.addColorStop(1, 'rgba(220,255,245,0)');
@@ -4869,6 +4960,12 @@
       var my = topAt(mx) - ((m * 7 + t * 30) % 16);
       ctx.fillStyle = 'rgba(255,255,255,' + (0.25 + (m % 3) * 0.1).toFixed(2) + ')';
       ctx.beginPath(); ctx.arc(mx, my, 1.2 + (m % 3), 0, Math.PI * 2); ctx.fill();
+    }
+    for(var sd = 0; sd < 70; sd++){
+      var ph = (t * (0.45 + (sd % 5) * 0.08) + sd * 0.137) % 1, bx = cx + 30 + ((sd * 113) % Math.max(120, W - cx));
+      var spx = bx - ph * 70 * Math.max(0.6, K), spy = topAt(bx) - ph * (30 + (sd % 4) * 12) * Math.max(0.6, K);
+      ctx.fillStyle = 'rgba(255,255,255,' + (0.55 * (1 - ph)).toFixed(3) + ')';
+      ctx.beginPath(); ctx.arc(spx, spy, (1 + (sd % 3) * 0.8) * (1 - ph * 0.5), 0, Math.PI * 2); ctx.fill();
     }
     // the barrel: the lip pitches out over a stretch ahead of the curl and
     // a dark green hollow opens underneath
@@ -4912,22 +5009,37 @@
       var base = ctx.createLinearGradient(0, gm.top, 0, gm.bottom + 40);
       base.addColorStop(0, '#f4fbff'); base.addColorStop(0.6, '#dcecf2'); base.addColorStop(1, '#aacfdc');
       ctx.fillStyle = base;
-      ctx.beginPath(); ctx.moveTo(-20, gm.bottom + 40);
+      var ww = new Path2D(); ww.moveTo(-20, gm.bottom + 40);
       for(var wx = -20; wx <= wEnd; wx += 12){
         var rise = Math.min(1, (wEnd - wx) / 160);
-        ctx.lineTo(wx, gm.top + gm.faceH * (0.45 - 0.5 * rise) + Math.sin(wx * 0.04 + t * 4) * 8);
+        ww.lineTo(wx, gm.top + gm.faceH * (0.45 - 0.5 * rise) + Math.sin(wx * 0.04 + t * 4) * 8 + Math.sin(wx * 0.11 - t * 6) * 5);
       }
-      ctx.quadraticCurveTo(cx - 70, gm.top + gm.faceH * 0.45, cx - 80 + lipT, gm.top + gm.faceH * 0.56);
-      ctx.quadraticCurveTo(cx - 40, gm.top + gm.faceH * 0.85, cx - 10, gm.bottom + 40);
-      ctx.closePath(); ctx.fill();
+      ww.quadraticCurveTo(cx - 70, gm.top + gm.faceH * 0.45, cx - 80 + lipT, gm.top + gm.faceH * 0.56);
+      ww.quadraticCurveTo(cx - 40, gm.top + gm.faceH * 0.85, cx - 10, gm.bottom + 40);
+      ww.closePath(); ctx.fill(ww);
+      // foam texture boiling inside it: creases and lace, churning
+      ctx.save(); ctx.clip(ww);
+      var fs1 = gm.faceH / 180;
+      ctx.fillStyle = sgPattern(TX.crease, (t * 40) % 256, -(t * 60) % 256, fs1, fs1); ctx.fillRect(-20, gm.top - gm.faceH, wEnd + 120, gm.faceH * 2.2);
+      ctx.fillStyle = sgPattern(TX.foam, -(t * 25) % 256, -(t * 45) % 256, fs1 * 0.8, fs1 * 0.8); ctx.globalAlpha = 0.8; ctx.fillRect(-20, gm.top - gm.faceH, wEnd + 120, gm.faceH * 2.2); ctx.globalAlpha = 1;
+      var shd = ctx.createLinearGradient(0, gm.top, 0, gm.bottom + 40);
+      shd.addColorStop(0, 'rgba(0,0,0,0)'); shd.addColorStop(1, 'rgba(60,110,130,0.35)');
+      ctx.fillStyle = shd; ctx.fillRect(-20, gm.top - gm.faceH, wEnd + 120, gm.faceH * 2.2);
+      ctx.restore();
       // billows: soft balls of foam, lit from above, boiling up
-      for(var f = 0; f < 46; f++){
+      for(var f = 0; f < 18; f++){
         var span = Math.max(80, wEnd + 60), fx = wEnd + 20 - ((f * 53 + t * 120) % span), fr2 = Math.min(1, (wEnd - fx) / 160);
         var fy = gm.top + gm.faceH * (0.42 - 0.48 * fr2) + ((f * 37) % 50) - Math.abs(Math.sin(t * 2.5 + f)) * 14;
         var rr = (gm.faceH * (0.07 + ((f * 17) % 10) / 100)) * (0.8 + 0.2 * Math.sin(t * 3 + f));
         var bg = ctx.createRadialGradient(fx - rr * 0.3, fy - rr * 0.4, rr * 0.1, fx, fy, rr);
         bg.addColorStop(0, 'rgba(255,255,255,0.95)'); bg.addColorStop(0.7, 'rgba(235,245,250,0.85)'); bg.addColorStop(1, 'rgba(170,205,220,0)');
         ctx.fillStyle = bg; ctx.beginPath(); ctx.arc(fx, fy, rr, 0, Math.PI * 2); ctx.fill();
+      }
+      for(var ip = 0; ip < 40; ip++){
+        var iph = (t * 1.3 + ip * 0.071) % 1, ia = -Math.PI * (0.3 + (ip % 7) * 0.08);
+        var ir = iph * gm.faceH * (0.5 + (ip % 5) * 0.1);
+        ctx.fillStyle = 'rgba(255,255,255,' + (0.7 * (1 - iph)).toFixed(3) + ')';
+        ctx.beginPath(); ctx.arc(cx - 85 + Math.cos(ia) * ir * 0.7, gm.top + gm.faceH * 0.5 + Math.sin(ia) * ir, (1.5 + ip % 3) * (1 - iph * 0.6), 0, Math.PI * 2); ctx.fill();
       }
       // mist
       for(var mi = 0; mi < 5; mi++){
@@ -4941,7 +5053,10 @@
     var tr = ctx.createLinearGradient(0, gm.bottom, 0, H);
     tr.addColorStop(0, spot.sea[0]); tr.addColorStop(1, spot.sea[1]);
     ctx.fillStyle = tr; ctx.fillRect(0, gm.bottom, W, H - gm.bottom);
-    ctx.strokeStyle = 'rgba(255,255,255,0.35)'; ctx.lineWidth = 1.5;
+    ctx.save(); ctx.globalAlpha = 0.22;
+    ctx.fillStyle = sgPattern(TX.foam, -(sg.x * K * 0.6) % 512, gm.bottom, 1.1, 0.16); ctx.fillRect(0, gm.bottom, W, H - gm.bottom);
+    ctx.restore();
+    ctx.strokeStyle = 'rgba(255,255,255,0.25)'; ctx.lineWidth = 1.5;
     for(var q = 0; q < 8; q++){
       var qy = gm.bottom + 8 + q * 14, qoff = (q * 71 + sg.x * K * 0.4) % 200;
       for(var qx = -qoff; qx < W; qx += 200){ ctx.beginPath(); ctx.moveTo(qx, qy); ctx.quadraticCurveTo(qx + 30, qy - 3, qx + 60 + q * 4, qy); ctx.stroke(); }
@@ -11209,7 +11324,7 @@
   // never while the name field is being typed in. Everything worth keeping
   // (coins, skins, name, league) is in localStorage, so a reload loses nothing.
   // 'dev' = a local or preview copy: the updater stays off entirely.
-  var BUILD_VERSION = '20261024-110126';
+  var BUILD_VERSION = '20261024-111309';
   var UPDATE_CHECK_MS = 60000;
   var UPDATE_TRIED_KEY = 'canyonChaseTriedUpdate';
   var pendingSubmits = 0;
