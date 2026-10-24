@@ -4536,8 +4536,8 @@
     { id: 'olga', emoji: '🇮🇱', name: L('חוף אולגה', 'Olga Beach'), dur: 30, man: 0.58, need: 0, curl: 1.08, size: 0.55, barrel: 0.2, hazard: 'jelly',
       desc: L('הבית! גלים של הים התיכון, ושימו לב למדוזות.', 'Home! Mediterranean waves, and watch out for jellyfish.'),
       sky: ['#6cc0ff', '#fff0d2'], sea: ['#2a9fd6', '#0a4f80'], face: ['#6fd0ef', '#0f5f96'] },
-    { id: 'pipe', emoji: '🌺', name: L('פייפליין, הוואי', 'Pipeline, Hawaii'), dur: 24, man: 0.42, need: 0, curl: 1.2, size: 0.72, barrel: 0.6, hazard: 'reef',
-      desc: L('גל הצינור הכי מפורסם בעולם, מעל שונית חדה.', 'The most famous barrel in the world, over a sharp reef.'),
+    { id: 'pipe', emoji: '🌺', name: L('פייפליין, הוואי', 'Pipeline, Hawaii'), dur: 24, man: 0.42, need: 0, curl: 1.2, size: 0.72, barrel: 0.6, hazard: null,
+      desc: L('גל הצינור הכי מפורסם בעולם. הרבה צינורות!', 'The most famous barrel in the world. Lots of barrels!'),
       sky: ['#3fa2ff', '#ffe1b8'], sea: ['#1b9ec4', '#06456e'], face: ['#5fe0e6', '#0a5d8c'] },
     { id: 'naz', emoji: '🗼', name: L('נאזרה, פורטוגל', 'Nazaré, Portugal'), dur: 20, man: 0.2, need: 0, curl: 1.35, size: 1, barrel: 0.2, hazard: 'giant', tow: true,
       desc: L('הגלים הכי גדולים בעולם. אופנוע ים מושך אותך פנימה.', 'The biggest waves on Earth. A jet ski tows you in.'),
@@ -11895,7 +11895,7 @@
   // never while the name field is being typed in. Everything worth keeping
   // (coins, skins, name, league) is in localStorage, so a reload loses nothing.
   // 'dev' = a local or preview copy: the updater stays off entirely.
-  var BUILD_VERSION = '20261024-151203';
+  var BUILD_VERSION = '20261024-151457';
   var UPDATE_CHECK_MS = 60000;
   var UPDATE_TRIED_KEY = 'canyonChaseTriedUpdate';
   var pendingSubmits = 0;
