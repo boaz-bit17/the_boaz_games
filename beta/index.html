@@ -653,7 +653,7 @@
   .tourney-banner:active{ transform:translateY(1px); }
   /* ---------- daily streak & badges ---------- */
   .tourney-banner.streak-banner{ background:linear-gradient(135deg,#ff9a1f,#e8590c 60%,#b8320a); border-color:rgba(90,30,0,.5); text-shadow:0 1px 2px rgba(0,0,0,.35);
-    width:auto; display:table; margin:0 auto 10px; font-size:12px; padding:4px 12px; border-radius:999px; border-width:1px; line-height:1.3; }
+    font-size:13px; padding:6px 10px; margin-bottom:10px; }
   .tourney-banner.streak-banner.is-missed{ background:linear-gradient(135deg,#ff3b3b,#a10f2b); animation:surfPulse 1s ease-in-out infinite; }
   .streak-strip{ display:grid; grid-template-columns:repeat(7,1fr); gap:4px; margin:6px 0; }
   .streak-day{ background:rgba(255,255,255,.5); border:1px solid rgba(0,0,0,.15); border-radius:8px; padding:5px 2px; text-align:center; font-size:10px; line-height:1.3; }
@@ -4318,10 +4318,10 @@
   function renderStreakBtn(){
     var st = streakStatus(), s = prog.streak, next = STREAK_REWARDS[streakNextDay() - 1];
     streakBtn.classList.toggle('is-missed', st === 'missed');
-    if(st === 'missed') streakBtn.textContent = L('😱 פספסת אתמול · לחץ לתקן ב-💎1', '😱 Missed yesterday · tap to fix for 💎1');
-    else if(st === 'done') streakBtn.textContent = L('🔥 ' + s.count + ' ✅ · מחר ', '🔥 ' + s.count + ' ✅ · tomorrow ') + streakRewardText(next);
-    else if(st === 'ready') streakBtn.textContent = L('🔥 ' + s.count + ' · היום ', '🔥 ' + s.count + ' · today ') + streakRewardText(next);
-    else streakBtn.textContent = L('🔥 רצף · היום ', '🔥 Streak · today ') + streakRewardText(STREAK_REWARDS[0]);
+    if(st === 'missed') streakBtn.textContent = L('😱 פספסת אתמול! לחץ כאן לתקן את הרצף ב-💎1', '😱 You missed yesterday! Tap here to fix your streak for 💎1');
+    else if(st === 'done') streakBtn.textContent = L('🔥 רצף ' + s.count + ' ימים ✅ · מחר תקבל ', '🔥 ' + s.count + '-day streak ✅ · tomorrow: ') + streakRewardText(next);
+    else if(st === 'ready') streakBtn.textContent = L('🔥 רצף ' + s.count + ' ימים · שחק היום וקבל ', '🔥 ' + s.count + '-day streak · play today for ') + streakRewardText(next);
+    else streakBtn.textContent = L('🔥 התחל רצף! שחק היום וקבל ', '🔥 Start a streak! Play today for ') + streakRewardText(STREAK_REWARDS[0]);
   }
   streakBtn.addEventListener('click', function(){ if(streakStatus() === 'missed') streakRepair(); else openBadges(); });
 
@@ -10413,7 +10413,7 @@
   // never while the name field is being typed in. Everything worth keeping
   // (coins, skins, name, league) is in localStorage, so a reload loses nothing.
   // 'dev' = a local or preview copy: the updater stays off entirely.
-  var BUILD_VERSION = '20261024-100006';
+  var BUILD_VERSION = '20261024-100116';
   var UPDATE_CHECK_MS = 60000;
   var UPDATE_TRIED_KEY = 'canyonChaseTriedUpdate';
   var pendingSubmits = 0;
