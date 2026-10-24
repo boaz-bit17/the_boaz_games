@@ -4530,16 +4530,16 @@
   function sgStore(){ try { localStorage.setItem(SG_KEY, JSON.stringify(sgSave)); } catch(e){} }
 
   var SG_SPOTS = [
-    { id: 'pool', emoji: '🏊', name: L('בריכת הגלים', 'The Wave Pool'), dur: 28, man: 0.62, need: 0, curl: 1, size: 0.45, barrel: 0.12, hazard: null,
+    { id: 'pool', emoji: '🏊', name: L('בריכת הגלים', 'The Wave Pool'), dur: 28, man: 0.62, tubeLen: 170, need: 0, curl: 1, size: 0.45, barrel: 0.12, hazard: null,
       desc: L('גלים מושלמים, אחד אחרי השני. המקום ללמוד.', 'Perfect waves, one after another. The place to learn.'),
       sky: ['#5fb8ff', '#d9f1ff'], sea: ['#29c3cf', '#0b6d86'], face: ['#7fe6e0', '#14889c'] },
-    { id: 'olga', emoji: '🇮🇱', name: L('חוף אולגה', 'Olga Beach'), dur: 30, man: 0.58, need: 0, curl: 1.08, size: 0.55, barrel: 0.2, hazard: 'jelly',
+    { id: 'olga', emoji: '🇮🇱', name: L('חוף אולגה', 'Olga Beach'), dur: 30, man: 0.58, tubeLen: 200, need: 0, curl: 1.08, size: 0.55, barrel: 0.2, hazard: 'jelly',
       desc: L('הבית! גלים של הים התיכון, ושימו לב למדוזות.', 'Home! Mediterranean waves, and watch out for jellyfish.'),
       sky: ['#6cc0ff', '#fff0d2'], sea: ['#2a9fd6', '#0a4f80'], face: ['#6fd0ef', '#0f5f96'] },
-    { id: 'pipe', emoji: '🌺', name: L('פייפליין, הוואי', 'Pipeline, Hawaii'), dur: 24, man: 0.42, need: 0, curl: 1.2, size: 0.72, barrel: 0.6, hazard: null,
+    { id: 'pipe', emoji: '🌺', name: L('פייפליין, הוואי', 'Pipeline, Hawaii'), dur: 24, man: 0.42, tubeLen: 330, need: 0, curl: 1.2, size: 0.72, barrel: 0.6, hazard: null,
       desc: L('גל הצינור הכי מפורסם בעולם. הרבה צינורות!', 'The most famous barrel in the world. Lots of barrels!'),
       sky: ['#3fa2ff', '#ffe1b8'], sea: ['#1b9ec4', '#06456e'], face: ['#5fe0e6', '#0a5d8c'] },
-    { id: 'naz', emoji: '🗼', name: L('נאזרה, פורטוגל', 'Nazaré, Portugal'), dur: 20, man: 0.2, need: 0, curl: 1.35, size: 1, barrel: 0.2, hazard: 'giant', tow: true,
+    { id: 'naz', emoji: '🗼', name: L('נאזרה, פורטוגל', 'Nazaré, Portugal'), dur: 20, man: 0.2, tubeLen: 300, need: 0, curl: 1.35, size: 1, barrel: 0.2, hazard: 'giant', tow: true,
       desc: L('הגלים הכי גדולים בעולם. אופנוע ים מושך אותך פנימה.', 'The biggest waves on Earth. A jet ski tows you in.'),
       sky: ['#7d8c99', '#d9e0e5'], sea: ['#2f6475', '#12323d'], face: ['#5d9aa8', '#143844'] }
   ];
@@ -4570,14 +4570,14 @@
 
   // ---- the ride
   var sg = { active: false, phase: 'menu' };
-  var SG_G = 620, SG_FACE = 260, SG_SPIN = 7.5, SG_CURL0 = 250, SG_CURL_RAMP = 2, SG_CURL_MAX = 470;
+  var SG_G = 620, SG_FACE = 260, SG_SPIN = 7.5, SG_CURL0 = 285, SG_CURL_RAMP = 2.2, SG_CURL_MAX = 500;
   function sgK(){ return Math.max(0.5, Math.min(1.25, W / 900)); }
   function sgFaceUnits(){ return SG_FACE * (0.75 + 0.55 * sg.spot.size); }
   function sgRand(){ return Math.random(); }
   function sgStart(i){
     var spot = SG_SPOTS[i];
     sg = { active: true, phase: spot.tow ? 'tow' : 'ride', spot: spot, spotIdx: i, t: 0, x: 0, v: spot.tow ? 620 : 380, h: 0.35, th: -0.3, hold: false,
-           curl: -420, score: 0, chain: 0, chainT: 0, lastMove: '', texts: [], spray: [], hazards: [], closeouts: [], throwT: 0, throwLen: 0,
+           curl: -460, score: 0, chain: 0, chainT: 0, lastMove: '', texts: [], spray: [], hazards: [], closeouts: [], throwT: 0, throwLen: 0,
            tube: 0, air: null, prevSign: -1, nextHaz: 3 + sgRand() * 3, nextClose: 14 + sgRand() * 6, nextThrow: 4 + sgRand() * 3,
            wipe: null, towT: spot.tow ? 2.4 : 0, hint: 4, best: sgSave.best10[spot.id] || 0, moves: [] };
     state = 'surfgame';
@@ -4591,7 +4591,10 @@
   function sgScore(name, pts, quiet){
     if(sg.chainT > 0) sg.chain++; else sg.chain = 1;
     sg.chainT = 2.4;
-    var mult = Math.min(4, 1 + 0.5 * (sg.chain - 1)), same = name === sg.lastMove ? 0.5 : 1;
+    // the judges reward variety: every repeat of the same move is worth less
+    var base = name.replace(/ [0-9.]+ ?(שנ׳|s)$/, '');
+    sg.counts = sg.counts || {}; sg.counts[base] = (sg.counts[base] || 0) + 1;
+    var mult = Math.min(4, 1 + 0.5 * (sg.chain - 1)), same = (name === sg.lastMove ? 0.5 : 1) / (1 + 0.35 * (sg.counts[base] - 1));
     var got = Math.round(pts * mult * same / 10) * 10;
     sg.score += got; sg.lastMove = name;
     sg.moves.push(name.replace(/ [0-9.]+ ?(שנ׳|s)$/, '').replace(/^🌀 /, ''));
@@ -4690,7 +4693,7 @@
         if(off > tol){ sg.h = 1; sgWipe('pearl'); return; }
         var flips = Math.round(Math.abs(a.rot) / (Math.PI * 2)), airT = sg.t - a.t0;
         sg.phase = 'ride'; sg.h = 0.93; sg.th = -0.75; sg.v = Math.max(300, a.vx * 0.95);
-        sgScore(flips >= 2 ? L('סלטה כפולה!', 'Double flip!') : flips === 1 ? L('סלטה!', 'Flip!') : L('קפיצה!', 'Air!'), 300 + 250 * airT + 700 * flips);
+        sgScore(flips >= 2 ? L('אייר 720!', 'Air 720!') : flips === 1 ? L('אייר 360!', 'Air 360!') : L('אייר!', 'Air!'), 300 + 250 * airT + 700 * flips);
         sgSplash(2);
       }
       sgHazardsCheck(true);
@@ -4753,11 +4756,9 @@
     }
 
     // the barrel: now and then the lip throws over a stretch ahead of the curl
-    sg.nextThrow -= dt;
-    if(sg.throwT <= 0 && sg.nextThrow <= 0){
-      if(Math.random() < spot.barrel + 0.15){ sg.throwT = 2.8 + Math.random() * 2.7; sg.throwLen = 340 + Math.random() * 200; }
-      sg.nextThrow = 3 + Math.random() * 4;
-    }
+    // like True Surf: the barrel is always at the curl, and it's fast. Stay
+    // deep and you're in it; be faster and you're out on the open face
+    sg.throwT = 1; sg.throwLen = spot.tubeLen || 220;
     if(sg.throwT > 0){
       sg.throwT -= dt;
       var inTube = gap < sg.throwLen;               // low or high, under the lip is inside
@@ -4768,7 +4769,7 @@
         // the barrel carries you along nearly at its own pace -- only stalling
         // (pulling back) lets it catch you; pumping gets you out ahead
         if(J.x > -0.3 && sg.x - prevX < curlV * 0.97 * dt) sg.x = prevX + curlV * 0.97 * dt;
-        sg.tube += dt; sg.score += Math.round(dt * 320);
+        sg.tube += dt; sg.score += Math.round(dt * 750);       // the barrel is where the big scores are
       }
       if((!inTube || sg.throwT <= 0) && sg.tube > 0) sgSpit();
     } else if(sg.tube > 0) sgSpit();
@@ -4790,7 +4791,7 @@
   }
   function sgSpit(){
     if(sg.tube > 0.5){
-      sgScore(L('צינור', 'Barrel'), 400 + 600 * sg.tube, true);
+      sgScore(L('צינור', 'Barrel'), 700 + 1100 * sg.tube, true);
       sg.v = Math.min(900, sg.v + 160);
       sgSplash(4); sgFan();
     }
@@ -5290,7 +5291,7 @@
     }
     if(sg.phase === 'air'){
       ctx.font = 'bold 15px Rubik, sans-serif'; ctx.fillStyle = '#ffd447';
-      var at = L('הזז ⬅️➡️ כדי להסתובב · עזוב כדי לנחות ישר', 'Move ⬅️➡️ to flip · let go to land straight');
+      var at = L('הזז ⬅️➡️ כדי להסתובב 360 · עזוב כדי לנחות ישר', 'Move ⬅️➡️ to spin a 360 · let go to land straight');
       ctx.strokeText(at, W / 2, H - 28); ctx.fillText(at, W / 2, H - 28);
     }
     var jj = sgJoy();
@@ -5366,7 +5367,7 @@
   // the wave's cross-section (z toward the beach/camera, y up), in wave
   // heights: an unbroken swell (CP0), a pitching barrel (CP1), and broken
   // foam (CPC). 0 back trough, 2 crest, 4 lip tip, 7 face top, 10 trough
-  var SG3_CP0 = [[-3.2,-0.05],[-1.6,0.36],[0.0,1.0],[0.2,1.02],[0.34,0.93],[0.31,0.87],[0.25,0.83],[0.2,0.75],[0.3,0.4],[0.85,0.08],[2.2,-0.05]];
+  var SG3_CP0 = [[-3.2,-0.05],[-1.6,0.35],[0,1],[0.08,0.99],[0.12,0.96],[0.13,0.93],[0.14,0.9],[0.17,0.85],[0.42,0.44],[0.92,0.1],[2.2,-0.05]];
   var SG3_CP1 = [[-3.2,-0.05],[-1.6,0.4],[-0.1,1.05],[0.8,1.14],[1.45,0.05],[1.1,0.55],[0.62,0.95],[0.22,0.74],[0.34,0.36],[0.9,0.08],[2.2,-0.05]];
   var SG3_CPC = [[-3.2,-0.05],[-1.6,0.22],[-0.3,0.5],[0.1,0.56],[0.45,0.48],[0.5,0.42],[0.45,0.4],[0.5,0.35],[0.75,0.22],[1.15,0.06],[2.2,-0.05]];
   var SG3_SEG = 6, SG3_ROWS = (SG3_CP0.length - 1) * SG3_SEG + 1, SG3_COLS = 120;
@@ -5393,7 +5394,7 @@
   // how far the wave has broken at x (metres): b = lip pitching, c = collapsed
   function sg3Break(xm, Hm){
     var cm = sg.curl * SG3_M, d = xm - cm, b = 0, c = 0;
-    if(d >= 0) b = Math.max(0, 1 - d / (Hm * 4.5));
+    if(d >= 0) b = Math.max(0, 1 - d / (Hm * 1.4));
     else { b = 1; c = Math.min(1, -d / (Hm * 1.4)); }
     if(sg.throwT > 0 && d >= 0){
       // the barrel opens and closes gradually at its far end, and as it starts/stops
@@ -5771,7 +5772,7 @@
     R.g.position.copy(p).addScaledVector(up, 0.03);
     R.g.quaternion.setFromRotationMatrix(m4);
     R.body.rotation.set(0, 0, 0);
-    if(flip) R.body.rotation.z = -flip;
+    if(flip) R.body.rotation.y = flip;            // an air 360: spinning around, board under the feet
     if(sg.phase === 'wipe' || sg.phase === 'over'){ var wt = sg.wipe ? sg.wipe.t : 1; R.body.rotation.set(wt * 5, 0, wt * 7); R.g.position.y -= Math.min(1, wt) * 0.8; }
     // colours of the chosen board and surfer
     var rd = sgItem(SG_RIDERS, sgSave.rider), bd = sgItem(SG_BOARDS, sgSave.board);
@@ -11991,7 +11992,7 @@
   // never while the name field is being typed in. Everything worth keeping
   // (coins, skins, name, league) is in localStorage, so a reload loses nothing.
   // 'dev' = a local or preview copy: the updater stays off entirely.
-  var BUILD_VERSION = '20261024-153130';
+  var BUILD_VERSION = '20261024-154639';
   var UPDATE_CHECK_MS = 60000;
   var UPDATE_TRIED_KEY = 'canyonChaseTriedUpdate';
   var pendingSubmits = 0;
