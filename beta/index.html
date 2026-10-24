@@ -4532,13 +4532,13 @@
   var SG_SPOTS = [
     { id: 'pool', emoji: '🏊', name: L('בריכת הגלים', 'The Wave Pool'), dur: 28, man: 0.62, tubeLen: 170, need: 0, curl: 1, size: 0.45, barrel: 0.12, hazard: null,
       desc: L('גלים מושלמים, אחד אחרי השני. המקום ללמוד.', 'Perfect waves, one after another. The place to learn.'),
-      sky: ['#5fb8ff', '#d9f1ff'], sea: ['#2f8fe6', '#0a3a9e'], face: ['#4fb0ff', '#0a3fae'] },
+      sky: ['#5fb8ff', '#d9f1ff'], sea: ['#3a88b8', '#0d4f86'], face: ['#3d8fc4', '#0a4a88'] },
     { id: 'olga', emoji: '🇮🇱', name: L('חוף אולגה', 'Olga Beach'), dur: 30, man: 0.58, tubeLen: 200, need: 0, curl: 1.08, size: 0.55, barrel: 0.2, hazard: 'jelly',
       desc: L('הבית! גלים של הים התיכון, ושימו לב למדוזות.', 'Home! Mediterranean waves, and watch out for jellyfish.'),
-      sky: ['#6cc0ff', '#fff0d2'], sea: ['#2a98d8', '#0a4a86'], face: ['#55c2f0', '#0c4f96'] },
+      sky: ['#6cc0ff', '#fff0d2'], sea: ['#358cbc', '#0c4c80'], face: ['#3f95c6', '#0b4a84'] },
     { id: 'pipe', emoji: '🌺', name: L('פייפליין, הוואי', 'Pipeline, Hawaii'), dur: 24, man: 0.42, tubeLen: 330, need: 0, curl: 1.2, size: 0.72, barrel: 0.6, hazard: null,
       desc: L('גל הצינור הכי מפורסם בעולם. הרבה צינורות!', 'The most famous barrel in the world. Lots of barrels!'),
-      sky: ['#3fa2ff', '#ffe1b8'], sea: ['#1d9cd0', '#063f74'], face: ['#4ccbe8', '#0a4f8e'] },
+      sky: ['#3fa2ff', '#ffe1b8'], sea: ['#2a92c0', '#08466e'], face: ['#3ea8cc', '#0a4c80'] },
     { id: 'naz', emoji: '🗼', name: L('נאזרה, פורטוגל', 'Nazaré, Portugal'), dur: 20, man: 0.2, tubeLen: 300, need: 0, curl: 1.35, size: 1, barrel: 0.2, hazard: 'giant', tow: true,
       desc: L('הגלים הכי גדולים בעולם. אופנוע ים מושך אותך פנימה.', 'The biggest waves on Earth. A jet ski tows you in.'),
       sky: ['#7d8c99', '#d9e0e5'], sea: ['#2f6475', '#12323d'], face: ['#5d9aa8', '#143844'] }
@@ -4552,7 +4552,7 @@
     { id: 'gold',    name: L('זהב', 'Gold'),          price: 3000,  deck: '#ffd447', stripe: '#b8860b', glow: '#fff1a8' }
   ];
   var SG_RIDERS = [
-    { id: 'grom',    name: L('הגרום', 'The Grom'),              price: 0,     skin: '#f1c7a0', hair: '#7a4a22', suit: '#1d9bf0', accent: '#ffd400' },
+    { id: 'grom',    name: L('הגרום', 'The Grom'),              price: 0,     skin: '#f1c7a0', hair: '#7a4a22', suit: '#17191d', accent: '#1d9bf0' },
     { id: 'local',   name: L('המקומי של אולגה', 'Olga Local'),  price: 500,   skin: '#d9a47c', hair: '#2a1a10', suit: '#15171b', accent: '#2f6fe0' },
     { id: 'aloha',   name: L('אלוהה', 'Aloha'),                  price: 1000,  skin: '#b97a56', hair: '#1a0f08', suit: '#e23b3b', accent: '#ffd2e0' },
     { id: 'charger', name: L('רוכב הענקים', 'Big-Wave Charger'), price: 1600,  skin: '#e8c19e', hair: '#d9b26a', suit: '#2b2f36', accent: '#ff7a00' },
@@ -5383,7 +5383,7 @@
   // heights: an unbroken swell (CP0), a pitching barrel (CP1), and broken
   // foam (CPC). 0 back trough, 2 crest, 4 lip tip, 7 face top, 10 trough
   var SG3_CP0 = [[-3.2,-0.05],[-1.6,0.35],[0,1],[0.08,0.99],[0.12,0.96],[0.13,0.93],[0.14,0.9],[0.17,0.85],[0.42,0.44],[0.92,0.1],[2.2,-0.05]];
-  var SG3_CP1 = [[-3.2,-0.05],[-1.6,0.4],[-0.1,1.05],[0.8,1.14],[1.45,0.05],[1.1,0.55],[0.62,0.95],[0.22,0.74],[0.34,0.36],[0.9,0.08],[2.2,-0.05]];
+  var SG3_CP1 = [[-3.2,-0.05],[-1.6,0.4],[-0.1,1.05],[0.8,1.14],[1.38,0.24],[1.12,0.62],[0.62,0.96],[0.22,0.74],[0.34,0.36],[0.9,0.08],[2.2,-0.05]];
   var SG3_CPC = [[-3.2,-0.05],[-1.6,0.22],[-0.3,0.5],[0.1,0.56],[0.45,0.48],[0.5,0.42],[0.45,0.4],[0.5,0.35],[0.75,0.22],[1.15,0.06],[2.2,-0.05]];
   var SG3_SEG = 6, SG3_ROWS = (SG3_CP0.length - 1) * SG3_SEG + 1, SG3_COLS = 120;
   function sg3Cr(a, b, c, d, t){ var t2 = t * t, t3 = t2 * t; return 0.5 * ((2 * b) + (-a + c) * t + (2 * a - 5 * b + 4 * c - d) * t2 + (-a + 3 * b - 3 * c + d) * t3); }
@@ -5413,8 +5413,9 @@
     else { b = 1; c = Math.min(1, -d / (Hm * 1.4)); }
     if(sg.throwT > 0 && d >= 0){
       // the barrel opens and closes gradually at its far end, and as it starts/stops
-      var L3 = sg.throwLen * SG3_M, fadeLen = Math.min(Hm * 1.6, L3 * 0.4);
-      var tb = d < L3 - fadeLen ? 1 : Math.max(0, 1 - (d - (L3 - fadeLen)) / fadeLen);
+      // closed deep inside, opening up toward the mouth, then the steep face
+      var L3 = sg.throwLen * SG3_M;
+      var tb = d < L3 * 0.35 ? 1 : d < L3 ? 1 - 0.42 * (d - L3 * 0.35) / (L3 * 0.65) : 0.58 * Math.exp(-(d - L3) / (Hm * 1.2));
       b = Math.max(b, tb * Math.min(1, sg.throwT * 1.5));
     }
     // past the barrel the face stays steep and feathering, softening slowly,
@@ -5527,15 +5528,15 @@
       ' col = mix(col, uDeep * vec3(0.5, 0.68, 1.15), 0.45 * inside * (1.0 - h * 0.4));\n' +
       ' float streak = fbm(vec3(vW.x * 2.2, vW.y * 0.25 - uT * 0.9, vW.z * 0.4));\n' +
       ' float cv = vCurt * (1.0 - inside);\n' +
-      ' col = mix(col, uDeep * vec3(0.45, 0.62, 1.05), cv * (0.55 + 0.25 * streak));\n' +
-      ' col += uGlow * vCurt * (0.12 + 0.2 * smoothstep(0.45, 0.75, streak)) * (0.6 + 0.4 * inside);\n' +
+      ' col = mix(col, uDeep * vec3(0.5, 0.75, 1.0), cv * (0.65 + 0.2 * streak));\n' +
+      ' col += uGlow * vCurt * (0.06 + 0.16 * smoothstep(0.5, 0.78, streak)) * (0.5 + 0.5 * inside);\n' +
       // light shining through thin water (the lip, the top of the face), strongest backlit
       ' float back = 0.45 + 0.55 * pow(max(dot(V, -uSunDir), 0.0), 2.0);\n' +
       ' col += uGlow * (thinV * (1.1 + 0.6 * inside) + smoothstep(0.55, 1.0, h) * 0.25 * (1.0 - sea)) * back * (0.7 + 0.3 * n3) * 0.42;\n' +
       // the sun on the water: a hard sparkle and a soft sheen
       ' float trn = pow(clamp(dot(V, -normalize(uSunDir + N * 0.35)), 0.0, 1.0), 3.0);\n' +
-      ' float thick = thinV * 1.4 + 0.55 * vCurt + 0.22 * smoothstep(0.6, 1.0, h) * (1.0 - sea);\n' +
-      ' col += mix(uGlow, vec3(0.75, 0.95, 1.0), 0.25 * thinV) * trn * thick * 0.75;\n' +
+      ' float thick = thinV * 1.4 + 0.55 * vCurt + 0.7 * smoothstep(0.45, 1.0, h) * (1.0 - sea);\n' +
+      ' col += mix(uGlow, vec3(0.75, 0.95, 1.0), 0.25 * thinV) * trn * thick * 0.4;\n' +
       ' float spc = max(dot(reflect(-uSunDir, N), V), 0.0);\n' +
       ' col += uSunC * (pow(spc, 380.0) * 4.0 + pow(spc, 45.0) * 0.22);\n' +
       ' col += uSunC * pow(spc, 1400.0) * 14.0 * step(0.55, n2) * det;\n' +
@@ -5767,7 +5768,7 @@
       sg3.skyMat.uniforms.uTop.value.set(spot.sky[0]); sg3.skyMat.uniforms.uHz.value.set(spot.sky[1]);
       var U = sg3.wm.uniforms;
       U.uDeep.value.set(spot.face[1]).multiplyScalar(0.7); U.uFace.value.set(spot.face[0]);
-      U.uGlow.value.set({ pool: 0x5cc0ff, olga: 0x40c8e8, pipe: 0x36d0e6, naz: 0x3ab8c4 }[spot.id] || 0x2fe0b8); U.uSkyC.value.set(spot.sky[1]); U.uFog.value.set(spot.sky[1]);
+      U.uGlow.value.set({ pool: 0x5ab6e0, olga: 0x56bcd8, pipe: 0x48c6d8, naz: 0x3ab8c4 }[spot.id] || 0x2fe0b8); U.uSkyC.value.set(spot.sky[1]); U.uFog.value.set(spot.sky[1]);
       U.uH.value = Hm; U.uSkyTop.value.set(spot.sky[0]);
       U.uAmp.value = { pool: 0.25, olga: 0.7, pipe: 0.85, naz: 1.5 }[spot.id] || 0.7;
       sg3.skyMat.uniforms.uCloud.value = { pool: 0.2, olga: 0.45, pipe: 0.6, naz: 1 }[spot.id] || 0.5;
@@ -5779,7 +5780,8 @@
     var x0 = sx - Hm * 9 - 30, span = Hm * 22 + 110, dx = span / (SG3_COLS - 1);
     for(var c = 0; c < SG3_COLS; c++){
       var xm = x0 + c * dx, br = sg3Break(xm, Hm);
-      rows = sg3ProfileQ(br[0], br[1], Hm, br[2]);
+      var endF = Math.min(1, c / (SG3_COLS * 0.12), (SG3_COLS - 1 - c) / (SG3_COLS * 0.2));   // flattens away at both ends
+      rows = sg3ProfileQ(br[0], br[1], Hm, Math.max(0.05, (br[2] || 1) * endF * endF * (3 - 2 * endF)));
       for(var r = 0; r < SG3_ROWS; r++){
         var i = c * SG3_ROWS + r;
         pos[i * 3] = xm; pos[i * 3 + 1] = rows[r][1]; pos[i * 3 + 2] = rows[r][0];
@@ -5914,6 +5916,9 @@
     var dPsi = Math.abs((sg.psi || 0) - (sg3.lastPsi || 0)) / Math.max(0.001, dtR); sg3.lastPsi = sg.psi || 0;
     if(dPsi > 0.8 && sg.phase === 'ride') for(var e7 = 0; e7 < 10; e7++) emit(sg3.spray, p.x - fwd.x * 0.6, p.y + 0.08, p.z - fwd.z * 0.6,
       -side3.x * (2 + Math.random() * 3) + (Math.random() - 0.5), (2.5 + Math.random() * 4) * sq, -side3.z * (2 + Math.random() * 3) + (Math.random() - 0.5), 0.6 + Math.random() * 0.5, 0.04 + Math.random() * 0.1, 0.9);
+    // the rail always churns a little water while you ride
+    if(sg.phase === 'ride' && Math.random() < 0.9) for(var e8 = 0; e8 < 2; e8++) emit(sg3.spray, p.x - fwd.x * (0.3 + Math.random() * 0.6), p.y + 0.04, p.z - fwd.z * 0.5 + nrm.z * 0.15,
+      -fwd.x * (0.5 + Math.random()), 0.6 + Math.random() * 1.2, nrm.z * (0.3 + Math.random()), 0.3 + Math.random() * 0.3, 0.05 + Math.random() * 0.06, 0.8);
     // spray off the board when it carves: the 2D ride's spray list says when
     if(sg.spray.length > (sg3.lastSpray || 0)){
       var nNew = Math.min(70, sg.spray.length - (sg3.lastSpray || 0));
@@ -5933,7 +5938,7 @@
       var q0 = faceAt(pt.h), age = w / WK, half = 0.06 + 0.12 * age;
       wp[o] = pt.x * SG3_M; wp[o + 1] = q0[1] + half; wp[o + 2] = q0[0] - half * 0.6 + 0.04;
       wp[o + 3] = pt.x * SG3_M; wp[o + 4] = q0[1] - half; wp[o + 5] = q0[0] + half * 0.6 + 0.04;
-      wa[w * 2] = wa[w * 2 + 1] = 0.55 * age;
+      wa[w * 2] = wa[w * 2 + 1] = 0.2 * age;
     }
     sg3.wgeo.attributes.position.needsUpdate = true; sg3.wgeo.attributes.alpha.needsUpdate = true;
 
@@ -5982,11 +5987,12 @@
       // behind the surfer and a little above, a touch out from the face,
       // looking down the line: the surfer, the wall of the wave, what's coming
       var inT = Math.min(1, sg.tube * 4);
-      var back = (3.2 + Hm * 0.45) * (1 - 0.35 * inT), high = (1.7 + Hm * 0.3) * (1 - 0.5 * inT);
+      var back = (2.6 + Hm * 0.35) * (1 - 0.35 * inT);
       sg3.camPsi = sg.t < 0.2 ? 0 : (sg3.camPsi || 0) + ((sg.psi || 0) - (sg3.camPsi || 0)) * Math.min(1, dtR * 6);
       var cps = Math.cos(sg3.camPsi);
-      var ce = new T.Vector3(p.x - back * cps, Math.max(0.6, p.y + high), p.z + (1.0 + Hm * 0.35) * (1 - 0.6 * inT));
-      var ct = new T.Vector3(p.x + (4 + Hm * 0.8) * cps, p.y + 0.5, p.z - Hm * 0.1);
+      // low by the water out in front of the face, looking up at the wave
+      var ce = new T.Vector3(p.x - back * cps, 0.55 + Hm * 0.14 + p.y * 0.3, p.z + 2.0 + Hm * 0.75);
+      var ct = new T.Vector3(p.x + (3 + Hm * 0.7) * cps, p.y * 0.65 + Hm * 0.32, p.z - Hm * 0.2);
       if(inT > 0){
         var cmT = sg.curl * SG3_M, midZ = Hm * 0.78;
         var tubeE = new T.Vector3(Math.max(p.x - 1.6 - Hm * 0.3, cmT + Hm * 0.3), Math.min(Hm * 0.62, Math.max(p.y + 0.9, Hm * 0.4)), p.z + (midZ - p.z) * 0.6);
@@ -6001,7 +6007,7 @@
       sg3.cam.up.set(0, 1, 0);
       sg3.cam.position.copy(sg3.camP); sg3.cam.lookAt(sg3.camL);
     }
-    var fovWant = povNow ? 74 : chaseNow ? 58 + 14 * Math.min(1, sg.tube * 4) : 36;
+    var fovWant = povNow ? 74 : chaseNow ? 62 + 10 * Math.min(1, sg.tube * 4) : 36;
     if(sg3.cam.fov !== fovWant){ sg3.cam.fov = fovWant; sg3.cam.updateProjectionMatrix(); }
     U2.uCam.value.copy(sg3.cam.position);
     sg3.oceanNear.position.set(Math.round(sg3.cam.position.x / 4.67) * 4.67, 0, Math.round(sg3.cam.position.z / 4.67) * 4.67);
@@ -12086,7 +12092,7 @@
   // never while the name field is being typed in. Everything worth keeping
   // (coins, skins, name, league) is in localStorage, so a reload loses nothing.
   // 'dev' = a local or preview copy: the updater stays off entirely.
-  var BUILD_VERSION = '20261024-220035';
+  var BUILD_VERSION = '20261024-221720';
   var UPDATE_CHECK_MS = 60000;
   var UPDATE_TRIED_KEY = 'canyonChaseTriedUpdate';
   var pendingSubmits = 0;
