@@ -5377,6 +5377,62 @@
     s.onerror = function(){ sg3.state = 'failed'; };
     document.head.appendChild(s);
   }
+  // the picture's finish: HDR render -> bloom from the brightest spots ->
+  // ACES -> grading (saturation, contrast, cool shadows, warm light) -> vignette
+  function sg3PostInit(T, r){
+    var type = r.capabilities.isWebGL2 ? T.HalfFloatType : T.UnsignedByteType;
+    function target(opts){ return new T.WebGLRenderTarget(2, 2, Object.assign({ type: type, minFilter: T.LinearFilter, magFilter: T.LinearFilter, depthBuffer: false }, opts || {})); }
+    var P = { scene: target({ depthBuffer: true, samples: r.capabilities.isWebGL2 ? 4 : 0 }), a: target(), b: target(), w: 0, h: 0 };
+    var quad = new T.PlaneGeometry(2, 2);
+    P.cam = new T.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+    function pass(fs, uniforms){
+      var m = new T.ShaderMaterial({ uniforms: uniforms, depthTest: false, depthWrite: false,
+        vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }', fragmentShader: fs });
+      var s = new T.Scene(); s.add(new T.Mesh(quad, m)); return { m: m, s: s };
+    }
+    // only what's brighter than white glows
+    P.bright = pass('uniform sampler2D tSrc; varying vec2 vUv;\n' +
+      'void main(){ vec3 c = texture2D(tSrc, vUv).rgb; float l = max(c.r, max(c.g, c.b)); gl_FragColor = vec4(c * smoothstep(1.7, 3.2, l), 1.0); }',
+      { tSrc: { value: null } });
+    P.blur = pass('uniform sampler2D tSrc; uniform vec2 uDir; varying vec2 vUv;\n' +
+      'void main(){ vec3 s = texture2D(tSrc, vUv).rgb * 0.227;\n' +
+      ' s += (texture2D(tSrc, vUv + uDir * 1.385).rgb + texture2D(tSrc, vUv - uDir * 1.385).rgb) * 0.316;\n' +
+      ' s += (texture2D(tSrc, vUv + uDir * 3.231).rgb + texture2D(tSrc, vUv - uDir * 3.231).rgb) * 0.07;\n' +
+      ' gl_FragColor = vec4(s, 1.0); }',
+      { tSrc: { value: null }, uDir: { value: new T.Vector2() } });
+    P.comp = pass('uniform sampler2D tScene; uniform sampler2D tBloom; uniform float uExposure; uniform float uBloom; varying vec2 vUv;\n' +
+      // three.js's own ACES curve, so the tones match the plain render
+      'vec3 rrt(vec3 v){ vec3 a = v * (v + 0.0245786) - 0.000090537; vec3 b = v * (0.983729 * v + 0.432951) + 0.238081; return a / b; }\n' +
+      'vec3 aces(vec3 c){ const mat3 mi = mat3(vec3(0.59719, 0.076, 0.0284), vec3(0.35458, 0.90834, 0.13383), vec3(0.04823, 0.01566, 0.83777));\n' +
+      ' const mat3 mo = mat3(vec3(1.60475, -0.10208, -0.00327), vec3(-0.53108, 1.10813, -0.07276), vec3(-0.07367, -0.00605, 1.07602));\n' +
+      ' return clamp(mo * rrt(mi * (c * uExposure / 0.6)), 0.0, 1.0); }\n' +
+      'void main(){ vec3 c = texture2D(tScene, vUv).rgb + texture2D(tBloom, vUv).rgb * uBloom;\n' +
+      ' c = aces(c);\n' +
+      ' float l = dot(c, vec3(0.2126, 0.7152, 0.0722));\n' +
+      ' c = mix(vec3(l), c, 1.08);\n' +                                         // saturation
+      ' c = clamp((c - 0.45) * 1.1 + 0.45, 0.0, 1.0);\n' +                     // contrast
+      ' c *= mix(vec3(0.95, 0.99, 1.06), vec3(1.05, 1.0, 0.94), smoothstep(0.3, 0.85, l));\n' +   // cool shadows, warm light
+      ' vec2 q = vUv - 0.5; c *= 1.0 - 0.3 * smoothstep(0.3, 0.78, length(q * vec2(1.0, 0.8)));\n' +   // vignette
+      ' c = clamp(c, 0.0, 1.0);\n' +
+      ' gl_FragColor = vec4(mix(c * 12.92, 1.055 * pow(c, vec3(0.41666)) - 0.055, step(0.0031308, c)), 1.0); }',
+      { tScene: { value: null }, tBloom: { value: null }, uExposure: { value: r.toneMappingExposure }, uBloom: { value: 0.55 } });
+    return P;
+  }
+  function sg3PostRender(){
+    var T = sg3.T, r = sg3.r, P = sg3.post;
+    if(!P){ r.setRenderTarget(null); r.render(sg3.scene, sg3.cam); return; }
+    var v = r.getDrawingBufferSize(new T.Vector2());
+    if(P.w !== v.x || P.h !== v.y){ P.w = v.x; P.h = v.y; P.scene.setSize(v.x, v.y); P.a.setSize(v.x >> 1, v.y >> 1); P.b.setSize(v.x >> 1, v.y >> 1); }
+    r.setRenderTarget(P.scene); r.render(sg3.scene, sg3.cam);
+    P.bright.m.uniforms.tSrc.value = P.scene.texture; r.setRenderTarget(P.a); r.render(P.bright.s, P.cam);
+    var hw = 1 / Math.max(1, v.x >> 1), hh = 1 / Math.max(1, v.y >> 1);
+    for(var it = 1; it <= 2; it++){
+      P.blur.m.uniforms.tSrc.value = P.a.texture; P.blur.m.uniforms.uDir.value.set(hw * it, 0); r.setRenderTarget(P.b); r.render(P.blur.s, P.cam);
+      P.blur.m.uniforms.tSrc.value = P.b.texture; P.blur.m.uniforms.uDir.value.set(0, hh * it); r.setRenderTarget(P.a); r.render(P.blur.s, P.cam);
+    }
+    P.comp.m.uniforms.tScene.value = P.scene.texture; P.comp.m.uniforms.tBloom.value = P.a.texture; P.comp.m.uniforms.uExposure.value = r.toneMappingExposure;
+    r.setRenderTarget(null); r.render(P.comp.s, P.cam);
+  }
   function sg3Hide(){ if(sg3.cv) sg3.cv.style.display = 'none'; document.getElementById('sgCamBtn').hidden = true; }
 
   // the wave's cross-section (z toward the beach/camera, y up), in wave
@@ -5648,7 +5704,9 @@
       haz.push({ j: jm, r: rm });
     }
     var rows = []; for(var q = 0; q < SG3_ROWS; q++) rows.push([0, 0]);
-    sg3 = Object.assign(sg3, { T: T, cv: cv, r: r, scene: scene, cam: cam, skyMat: skyMat, wm: wm, oceanMat: oceanMat, oceanNear: oceanNear, geo: geo, pos: pos, foam: foam, thin: thin, curt: curt, cave: cave,
+    var post = null;
+    try { post = sg3PostInit(T, r); } catch(e){ if(window.console) console.warn('surf post off:', e); }
+    sg3 = Object.assign(sg3, { post: post, T: T, cv: cv, r: r, scene: scene, cam: cam, skyMat: skyMat, wm: wm, oceanMat: oceanMat, oceanNear: oceanNear, geo: geo, pos: pos, foam: foam, thin: thin, curt: curt, cave: cave,
       billows: billows, spray: spray, shore: shore, wpos: wpos, walpha: walpha, wgeo: wgeo, WK: WK, rider: rider, ski: ski, haz: haz, rows: rows,
       camP: new T.Vector3(), camL: new T.Vector3(), spotId: '', w: 0, h: 0, last: 0 });
   }
@@ -6024,7 +6082,7 @@
     if(sg3.cam.fov !== fovWant){ sg3.cam.fov = fovWant; sg3.cam.updateProjectionMatrix(); }
     U2.uCam.value.copy(sg3.cam.position);
     sg3.oceanNear.position.set(Math.round(sg3.cam.position.x / 4.67) * 4.67, 0, Math.round(sg3.cam.position.z / 4.67) * 4.67);
-    sg3.r.render(sg3.scene, sg3.cam);
+    sg3PostRender();
     // where the surfer's head is on screen
     var sp = p.clone().addScaledVector(up, 1.5).project(sg3.cam);
     var foot = p.clone().project(sg3.cam);
@@ -12105,7 +12163,7 @@
   // never while the name field is being typed in. Everything worth keeping
   // (coins, skins, name, league) is in localStorage, so a reload loses nothing.
   // 'dev' = a local or preview copy: the updater stays off entirely.
-  var BUILD_VERSION = '20261025-140130';
+  var BUILD_VERSION = '20261025-142402';
   var UPDATE_CHECK_MS = 60000;
   var UPDATE_TRIED_KEY = 'canyonChaseTriedUpdate';
   var pendingSubmits = 0;
