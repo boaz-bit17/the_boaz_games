@@ -5383,9 +5383,9 @@
   // heights: an unbroken swell (CP0), a pitching barrel (CP1), and broken
   // foam (CPC). 0 back trough, 2 crest, 4 lip tip, 7 face top, 10 trough
   var SG3_CP0 = [[-3.2,-0.05],[-1.6,0.35],[0,1],[0.08,0.99],[0.12,0.96],[0.13,0.93],[0.14,0.9],[0.17,0.85],[0.42,0.44],[0.92,0.1],[2.2,-0.05]];
-  var SG3_CP1 = [[-3.2,-0.05],[-1.6,0.4],[-0.1,1.06],[0.82,1.15],[1.4,0.26],[1.2,0.5],[0.68,0.9],[0.22,0.74],[0.34,0.36],[0.9,0.08],[2.2,-0.05]];
+  var SG3_CP1 = [[-3.2,-0.05],[-1.6,0.4],[-0.1,1.05],[0.8,1.14],[1.38,0.24],[1.12,0.62],[0.62,0.96],[0.22,0.74],[0.34,0.36],[0.9,0.08],[2.2,-0.05]];
   // the pocket: the face stands near vertical, the lip thrown out high over it
-  var SG3_CPM = [[-3.2,-0.05],[-1.6,0.38],[-0.05,1.06],[0.62,1.15],[1.04,0.86],[0.92,0.74],[0.5,0.88],[0.2,0.8],[0.26,0.4],[0.8,0.08],[2.2,-0.05]];
+  var SG3_CPM = [[-3.2,-0.05],[-1.6,0.38],[-0.05,1.05],[0.55,1.13],[0.98,0.8],[0.8,0.86],[0.42,0.96],[0.18,0.84],[0.26,0.4],[0.8,0.08],[2.2,-0.05]];
   var SG3_CPC = [[-3.2,-0.05],[-1.6,0.22],[-0.3,0.5],[0.1,0.56],[0.45,0.48],[0.5,0.42],[0.45,0.4],[0.5,0.35],[0.75,0.22],[1.15,0.06],[2.2,-0.05]];
   var SG3_SEG = 6, SG3_ROWS = (SG3_CP0.length - 1) * SG3_SEG + 1, SG3_COLS = 120;
   function sg3Cr(a, b, c, d, t){ var t2 = t * t, t3 = t2 * t; return 0.5 * ((2 * b) + (-a + c) * t + (2 * a - 5 * b + 4 * c - d) * t2 + (-a + 3 * b - 3 * c + d) * t3); }
@@ -5415,18 +5415,22 @@
     var cm = sg.curl * SG3_M, d = xm - cm, b = 0, c = 0;
     if(d >= 0) b = Math.max(0, 1 - d / (Hm * 1.4));
     else { b = 1; c = Math.min(1, -d / (Hm * 1.4)); }
-    // the pocket travels with the surfer: in the barrel the lip arcs right
-    // over him (b .82), on the open face it's thrown out above him (b .62);
-    // behind him back to the curl it stays pitching, just ahead of him it
-    // opens up (the mouth), then the shoulder lies down and fades (s = size)
-    var s = 1;
-    if(d >= 0 && sg.throwT > 0){
-      var sxm = sg.x * SG3_M, ds = xm - sxm, bS = sg.x - sg.curl < sg.throwLen ? 0.64 : 0.56;
-      var tb = ds <= 0 ? 0.55 + (bS - 0.55) * Math.exp(ds / (Hm * 1.8))
-             : ds < Hm ? bS - (bS - 0.5) * ds / Hm : 0.5 * Math.exp(-(ds - Hm) / (Hm * 2.2));
+    if(sg.throwT > 0 && d >= 0){
+      // the barrel opens and closes gradually at its far end, and as it starts/stops
+      // closed deep inside, opening toward the mouth; past it the pocket
+      // still stands tall with its lip thrown out, then the shoulder softens
+      var L3 = sg.throwLen * SG3_M, Lp = Hm * 2.5;
+      var tb = d < L3 * 0.3 ? 1 : d < L3 ? 1 - 0.38 * (d - L3 * 0.3) / (L3 * 0.7)
+             : d < L3 + Lp ? 0.62 - 0.12 * (d - L3) / Lp : 0.5 * Math.exp(-(d - L3 - Lp) / (Hm * 2.5));
       b = Math.max(b, tb * Math.min(1, sg.throwT * 1.5));
-      var tp = Math.min(1, Math.max(0, (ds - Hm * 0.3) / (Hm * 3)));
-      s = 1 - 0.75 * tp * tp * (3 - 2 * tp);
+    }
+    // past the barrel the face stays steep and feathering, softening slowly,
+    // and the wave gets smaller toward the end of the line (s = size)
+    var s = 1;
+    if(d >= 0){
+      var Lb = (sg.throwT > 0 ? sg.throwLen : 200) * SG3_M + Hm * 2.5;
+      var tp = Math.min(1, Math.max(0, (d - Lb) / (Hm * 12)));
+      s = 1 - 0.55 * tp * tp * (3 - 2 * tp);                 // the shoulder: lower and lower
     }
     for(var i = 0; i < sg.closeouts.length; i++){
       var q = sg.closeouts[i]; if(q.done) continue;
@@ -5810,7 +5814,7 @@
         var lipZone = r >= 12 && r <= 22 ? 1 : 0;      // light through the thin top of the wave only
         if(br[0] > 0.85 && r > 22 && r <= 32) lipZone = 0.6;   // the curtain of a barrel, lit from behind
         // white only right at the lip's edge while it throws; the rest stays clear water
-        foam[i] = Math.min(1, br[1] * 1.1 + (r >= 22 && r <= 27 ? (0.3 + 0.5 * br[0]) * Math.min(1, Math.max(0, (br[0] - 0.3) * 4)) * (r === 22 || r === 27 ? 0.5 : 1) : 0) + (r > 56 && br[1] > 0 ? 0.4 : 0));
+        foam[i] = Math.min(1, br[1] * 1.1 + (r >= 23 && r <= 26 ? 0.12 + 0.3 * br[0] + Math.max(0, br[0] - 0.8) * 2.5 : 0) + (r > 56 && br[1] > 0 ? 0.4 : 0));
         thin[i] = lipZone ? (0.35 + 0.35 * br[0]) * (1 - br[1]) : (r > 22 && r <= 30 ? 0.15 * br[0] : 0);
         cave[i] = r >= 34 && r <= 57 ? Math.pow(Math.max(0, br[0] - 0.3) / 0.7, 1.4) * (1 - br[1]) * Math.sin((r - 34) / 23 * Math.PI) : 0;
         curt[i] = r >= 14 && r <= 34 ? Math.max(0, br[0] - 0.4) / 0.6 * (1 - br[1]) * Math.sin((r - 14) / 20 * Math.PI) : 0;
@@ -6020,11 +6024,11 @@
       // behind the surfer and a little above, a touch out from the face,
       // looking down the line: the surfer, the wall of the wave, what's coming
       // filmed from the channel like the clip: low by the water, out in
-      // front of the face, square on to the surfer -- the wave fills the
-      // screen, highest at the surfer
+      // front of the face and a little ahead of the surfer, looking back
+      // into the pocket -- the wave fills the screen, the barrel opens to us
       var trough = Hm * 2.2 * (brS[2] || 1);
-      var ce = new T.Vector3(p.x + 0.6 + Hm * 0.35, 0.45 + Hm * 0.1, trough + 0.6 + Hm * 0.7);
-      var ct = new T.Vector3(p.x - Hm * 0.1, Hm * 0.42 + p.y * 0.25, Math.min(p.z, trough) - Hm * 0.3);
+      var ce = new T.Vector3(p.x + 2.0 + Hm * 1.3, 0.45 + Hm * 0.1, trough + 1.0 + Hm * 0.95);
+      var ct = new T.Vector3(p.x - Hm * 0.45, Hm * 0.45 + p.y * 0.25, Math.min(p.z, trough) - Hm * 0.3);
       if(!sg3.chE || sg.t < 0.2){ sg3.chE = ce.clone(); sg3.chT = ct.clone(); }
       sg3.chE.lerp(ce, Math.min(1, dtR * 5)); sg3.chT.lerp(ct, Math.min(1, dtR * 6));
       sg3.cam.up.set(0, 1, 0); sg3.cam.position.copy(sg3.chE); sg3.cam.lookAt(sg3.chT);
@@ -12118,7 +12122,7 @@
   // never while the name field is being typed in. Everything worth keeping
   // (coins, skins, name, league) is in localStorage, so a reload loses nothing.
   // 'dev' = a local or preview copy: the updater stays off entirely.
-  var BUILD_VERSION = '20261025-074350';
+  var BUILD_VERSION = '20261025-074831';
   var UPDATE_CHECK_MS = 60000;
   var UPDATE_TRIED_KEY = 'canyonChaseTriedUpdate';
   var pendingSubmits = 0;
