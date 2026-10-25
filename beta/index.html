@@ -4586,7 +4586,7 @@
   }
   // what the judges would give for the ride so far: a lot of good surfing
   // gets you near 10, never past it
-  function sgTen(raw){ return Math.min(10, 10 * (1 - Math.exp(-raw / 6500))); }
+  function sgTen(raw){ return Math.min(10, 10 * (1 - Math.exp(-raw / 14000))); }
   function sgAddText(txt, col){ sg.texts.push({ t: txt, c: col || '#fff', life: 1.6, y: 0 }); }
   function sgScore(name, pts, quiet){
     if(sg.chainT > 0) sg.chain++; else sg.chain = 1;
@@ -4594,7 +4594,7 @@
     // the judges reward variety: every repeat of the same move is worth less
     var base = name.replace(/ [0-9.]+ ?(שנ׳|s)$/, '');
     sg.counts = sg.counts || {}; sg.counts[base] = (sg.counts[base] || 0) + 1;
-    var mult = Math.min(4, 1 + 0.5 * (sg.chain - 1)), same = (name === sg.lastMove ? 0.5 : 1) / (1 + 0.35 * (sg.counts[base] - 1));
+    var mult = Math.min(4, 1 + 0.5 * (sg.chain - 1)), same = (name === sg.lastMove ? 0.4 : 1) / (1 + 0.7 * (sg.counts[base] - 1));
     var got = Math.round(pts * mult * same / 10) * 10;
     sg.score += got; sg.lastMove = name;
     sg.moves.push(name.replace(/ [0-9.]+ ?(שנ׳|s)$/, '').replace(/^🌀 /, ''));
@@ -4609,7 +4609,7 @@
   // it 0-10, the highest and the lowest drop, the other three average
   function sgEnd(completed){
     sg.phase = 'over';
-    var base = sgTen(sg.score) * (completed ? 1 : 0.88) + (completed ? 0.4 : 0);
+    var base = sgTen(sg.score) * (completed ? 1 : 0.8) + (completed ? 0.15 : 0);
     base = Math.max(0, Math.min(10, base));
     var judges = [];
     for(var j = 0; j < 5; j++) judges.push(Math.max(0, Math.min(10, Math.round((base + (Math.random() - 0.5) * 0.8) * 10) / 10)));
@@ -4787,7 +4787,7 @@
         // the barrel carries you along nearly at its own pace -- only stalling
         // (pulling back) lets it catch you; pumping gets you out ahead
         if(sg.psi < 0.5 && J.x > -0.3 && sg.x - prevX < curlV * 0.97 * dt) sg.x = prevX + curlV * 0.97 * dt;
-        sg.tube += dt; sg.score += Math.round(dt * 750);       // the barrel is where the big scores are
+        sg.tube += dt; sg.score += Math.round(dt * 380);       // the barrel is where the big scores are
       }
       if((!inTube || sg.throwT <= 0) && sg.tube > 0) sgSpit();
     } else if(sg.tube > 0) sgSpit();
@@ -4810,7 +4810,7 @@
   }
   function sgSpit(){
     if(sg.tube > 0.5){
-      sgScore(L('צינור', 'Barrel'), 700 + 1100 * sg.tube, true);
+      sgScore(L('צינור', 'Barrel'), 500 + 520 * Math.min(sg.tube, 8), true);
       sg.v = Math.min(900, sg.v + 160);
       sgSplash(4); sgFan();
     }
@@ -12220,7 +12220,7 @@
   // never while the name field is being typed in. Everything worth keeping
   // (coins, skins, name, league) is in localStorage, so a reload loses nothing.
   // 'dev' = a local or preview copy: the updater stays off entirely.
-  var BUILD_VERSION = '20261025-152524';
+  var BUILD_VERSION = '20261025-153110';
   var UPDATE_CHECK_MS = 60000;
   var UPDATE_TRIED_KEY = 'canyonChaseTriedUpdate';
   var pendingSubmits = 0;
