@@ -5538,12 +5538,16 @@
         '   col = mix(col, vec3(1.0) * (0.86 + 0.14 * sd) + vec3(0.05, 0.04, 0.0) * sd, c * 0.85); }\n' +
         ' gl_FragColor = vec4(col, 1.0);' + OUT });
     var sky = new T.Mesh(new T.SphereGeometry(1500, 32, 20), skyMat); scene.add(sky);
+    // the sky captured into a cube map for the water to reflect
+    var envScene = new T.Scene(); envScene.add(new T.Mesh(sky.geometry, skyMat));
+    var envRT = new T.WebGLCubeRenderTarget(128, { type: r.capabilities.isWebGL2 ? T.HalfFloatType : T.UnsignedByteType, generateMipmaps: true, minFilter: T.LinearMipmapLinearFilter });
+    var envCam = new T.CubeCamera(1, 3000, envRT); envScene.add(envCam);
     // the water: one fragment shader for the wave and the sea
     var WU = { uDeep: { value: new T.Color() }, uFace: { value: new T.Color() }, uGlow: { value: new T.Color(0x2fe0b8) }, uSkyC: { value: new T.Color() }, uSkyTop: { value: new T.Color() },
                uFog: { value: new T.Color() }, uSunC: { value: new T.Color(0xffd9a0) }, uSunDir: { value: SUN }, uSea: { value: new T.Color() },
                uCam: { value: new T.Vector3() }, uT: { value: 0 }, uH: { value: 3 }, uAmp: { value: 0.7 },
                uTexFace: { value: null }, uTexSea: { value: null }, uTexFoam: { value: null }, uTex: { value: 0 },
-               uNrm: { value: null }, uHasN: { value: 0 }, uCurlX: { value: 0 } };
+               uNrm: { value: null }, uHasN: { value: 0 }, uCurlX: { value: 0 }, uEnv: { value: envRT.texture }, uHasEnv: { value: 0 } };
     new T.TextureLoader().load('https://cdn.jsdelivr.net/gh/mrdoob/three.js@r147/examples/textures/waternormals.jpg', function(t){
       t.wrapS = t.wrapT = T.RepeatWrapping; t.anisotropy = Math.min(8, r.capabilities.getMaxAnisotropy());
       WU.uNrm.value = t; WU.uHasN.value = 1;
@@ -5557,7 +5561,7 @@
         WU[tx[0]].value = t; if(--texLeft === 0) WU.uTex.value = 1;
       });
     });
-    var WATER_FS = 'uniform sampler2D uNrm; uniform float uHasN; uniform float uCurlX; uniform sampler2D uTexFace; uniform sampler2D uTexSea; uniform sampler2D uTexFoam; uniform float uTex;\n' +
+    var WATER_FS = 'uniform sampler2D uNrm; uniform float uHasN; uniform float uCurlX; uniform samplerCube uEnv; uniform float uHasEnv; uniform sampler2D uTexFace; uniform sampler2D uTexSea; uniform sampler2D uTexFoam; uniform float uTex;\n' +
       'uniform vec3 uSea; uniform vec3 uDeep; uniform vec3 uFace; uniform vec3 uGlow; uniform vec3 uSkyC; uniform vec3 uSkyTop; uniform vec3 uFog; uniform vec3 uSunC; uniform vec3 uSunDir; uniform vec3 uCam; uniform float uT; uniform float uH;\n' +
       'varying vec3 vW; varying vec3 vN; varying float vFoam; varying float vThin; varying float vCurt; varying float vCave;\n' + NOISE +
       'void main(){\n' +
@@ -5583,6 +5587,8 @@
       ' vec3 R = reflect(-V, N); float NdV = max(dot(N, V), 0.0);\n' +
       ' float F = 0.02 + 0.98 * pow(1.0 - NdV, 5.0);\n' +
       ' vec3 skyR = mix(mix(uSkyC, uSkyTop, 0.5) * 0.8, uSkyTop, pow(clamp(R.y, 0.0, 1.0), 0.5)) + uSunC * pow(max(dot(R, uSunDir), 0.0), 60.0) * 0.25;\n' +
+      ' vec3 envR = min(textureCube(uEnv, R).rgb, vec3(1.4)) * mix(0.55, 1.0, smoothstep(0.0, 0.35, R.y)) * (1.0 - 0.3 * sea);\n' +
+      ' skyR = mix(skyR, envR, uHasEnv);\n' +
       // into the water: deep blue where it's thick, turquoise light through it where it's thin
       ' float thinness = clamp(thinV * 1.2 + vCurt * 0.12 + smoothstep(0.7, 1.0, h) * 0.3 * face, 0.0, 1.0);\n' +
       ' vec3 body = mix(uDeep * 0.9, uFace, smoothstep(0.0, 0.85, h) * (1.0 - sea));\n' +
@@ -5706,7 +5712,7 @@
     var rows = []; for(var q = 0; q < SG3_ROWS; q++) rows.push([0, 0]);
     var post = null;
     try { post = sg3PostInit(T, r); } catch(e){ if(window.console) console.warn('surf post off:', e); }
-    sg3 = Object.assign(sg3, { post: post, T: T, cv: cv, r: r, scene: scene, cam: cam, skyMat: skyMat, wm: wm, oceanMat: oceanMat, oceanNear: oceanNear, geo: geo, pos: pos, foam: foam, thin: thin, curt: curt, cave: cave,
+    sg3 = Object.assign(sg3, { envScene: envScene, envCam: envCam, post: post, T: T, cv: cv, r: r, scene: scene, cam: cam, skyMat: skyMat, wm: wm, oceanMat: oceanMat, oceanNear: oceanNear, geo: geo, pos: pos, foam: foam, thin: thin, curt: curt, cave: cave,
       billows: billows, spray: spray, shore: shore, wpos: wpos, walpha: walpha, wgeo: wgeo, WK: WK, rider: rider, ski: ski, haz: haz, rows: rows,
       camP: new T.Vector3(), camL: new T.Vector3(), spotId: '', w: 0, h: 0, last: 0 });
   }
@@ -5838,6 +5844,10 @@
       sg3.skyMat.uniforms.uCloud.value = { pool: 0.0, olga: 0.15, pipe: 0.3, naz: 1 }[spot.id] || 0.3;
       sg3.r.setClearColor(spot.sky[1]);
       sg3SetShore(T, sg3.shore, spot.id);
+    }
+    if(sg3.envSpot !== spot.id || now - (sg3.envT || 0) > 4){
+      sg3.envSpot = spot.id; sg3.envT = now;
+      try { sg3.envCam.update(sg3.r, sg3.envScene); sg3.wm.uniforms.uHasEnv.value = 1; } catch(e){ sg3.wm.uniforms.uHasEnv.value = 0; }
     }
     var U2 = sg3.wm.uniforms; U2.uT.value = now % 1000; U2.uCurlX.value = sg.curl * SG3_M; sg3.skyMat.uniforms.uT.value = now % 1000;
     var sx = sg.x * SG3_M, rows = sg3.rows, pos = sg3.pos, foam = sg3.foam, thin = sg3.thin, curt = sg3.curt, cave = sg3.cave;
@@ -12163,7 +12173,7 @@
   // never while the name field is being typed in. Everything worth keeping
   // (coins, skins, name, league) is in localStorage, so a reload loses nothing.
   // 'dev' = a local or preview copy: the updater stays off entirely.
-  var BUILD_VERSION = '20261025-142402';
+  var BUILD_VERSION = '20261025-142835';
   var UPDATE_CHECK_MS = 60000;
   var UPDATE_TRIED_KEY = 'canyonChaseTriedUpdate';
   var pendingSubmits = 0;
