@@ -5558,15 +5558,10 @@
                uFog: { value: new T.Color() }, uSunC: { value: new T.Color(0xffd9a0) }, uSunDir: { value: SUN }, uSea: { value: new T.Color() },
                uCam: { value: new T.Vector3() }, uT: { value: 0 }, uH: { value: 3 }, uAmp: { value: 0.7 },
                uTexFace: { value: null }, uTexSea: { value: null }, uTexFoam: { value: null }, uTex: { value: 0 },
-               uNrm: { value: null }, uHasN: { value: 0 }, uCurlX: { value: 0 }, uEnv: { value: envRT.texture }, uHasEnv: { value: 0 }, uTexWave: { value: null }, uHasWave: { value: 0 } };
+               uNrm: { value: null }, uHasN: { value: 0 }, uCurlX: { value: 0 }, uEnv: { value: envRT.texture }, uHasEnv: { value: 0 } };
     new T.TextureLoader().load('https://cdn.jsdelivr.net/gh/mrdoob/three.js@r147/examples/textures/waternormals.jpg', function(t){
       t.wrapS = t.wrapT = T.RepeatWrapping; t.anisotropy = Math.min(8, r.capabilities.getMaxAnisotropy());
       WU.uNrm.value = t; WU.uHasN.value = 1;
-    });
-    // the wave face: a real photo of a wave face, flowing up it
-    new T.TextureLoader().load('tex/surf-wave.jpg', function(t){
-      t.wrapS = t.wrapT = T.RepeatWrapping; t.encoding = T.sRGBEncoding; t.anisotropy = Math.min(8, r.capabilities.getMaxAnisotropy());
-      WU.uTexWave.value = t; WU.uHasWave.value = 1;
     });
     // real water photos (made for the game), loaded in the background; the
     // shader works without them until they arrive
@@ -5577,9 +5572,9 @@
         WU[tx[0]].value = t; if(--texLeft === 0) WU.uTex.value = 1;
       });
     });
-    var WATER_FS = 'uniform sampler2D uNrm; uniform float uHasN; uniform float uCurlX; uniform samplerCube uEnv; uniform float uHasEnv; uniform sampler2D uTexWave; uniform float uHasWave; uniform sampler2D uTexFace; uniform sampler2D uTexSea; uniform sampler2D uTexFoam; uniform float uTex;\n' +
+    var WATER_FS = 'uniform sampler2D uNrm; uniform float uHasN; uniform float uCurlX; uniform samplerCube uEnv; uniform float uHasEnv; uniform sampler2D uTexFace; uniform sampler2D uTexSea; uniform sampler2D uTexFoam; uniform float uTex;\n' +
       'uniform vec3 uSea; uniform vec3 uDeep; uniform vec3 uFace; uniform vec3 uGlow; uniform vec3 uSkyC; uniform vec3 uSkyTop; uniform vec3 uFog; uniform vec3 uSunC; uniform vec3 uSunDir; uniform vec3 uCam; uniform float uT; uniform float uH;\n' +
-      'varying vec3 vW; varying vec3 vN; varying float vFoam; varying float vThin; varying float vCurt; varying float vCave; varying float vAlen;\n' + NOISE +
+      'varying vec3 vW; varying vec3 vN; varying float vFoam; varying float vThin; varying float vCurt; varying float vCave;\n' + NOISE +
       'void main(){\n' +
       ' vec3 V = normalize(uCam - vW); vec3 N = normalize(vN); float inside = 0.0; if(dot(N, V) < 0.0){ N = -N; inside = 1.0; }\n' +
       ' float sea = step(vThin, -0.5); float thinV = max(vThin, 0.0);\n' +
@@ -5615,21 +5610,10 @@
       ' body += uGlow * sss * thinness * 0.6;\n' +
       ' body *= 1.0 - 0.45 * vCave - 0.3 * inside;\n' +
       ' body = mix(body, uDeep * vec3(0.5, 0.68, 1.1), 0.35 * inside);\n' +
-      // the wave: the photo, two phases of it sliding toward the lip and cross-faded, so it flows forever
-      ' vec2 wuv = vec2(vW.x * 0.2, vAlen * 0.075);\n' +
-      ' float ph0 = fract(uT * 0.16); float ph1 = fract(uT * 0.16 + 0.5);\n' +
-      ' vec2 wdr = vec2(0.01, 0.2);\n' +
-      ' vec3 wt0 = texture2D(uTexWave, wuv + wdr * ph0).rgb;\n' +
-      ' vec3 wt1 = texture2D(uTexWave, wuv + wdr * ph1 + vec2(0.37, 0.21)).rgb;\n' +
-      ' vec3 waveC = mix(wt0, wt1, abs(1.0 - 2.0 * ph0));\n' +
-      ' float wl = dot(waveC, vec3(0.3, 0.59, 0.11));\n' +
-      ' float useW = uHasWave * (1.0 - sea) * smoothstep(0.0, 0.14, h) * (0.35 + 0.65 * det);\n' +
-      ' body *= 1.0 + clamp((wl - 0.11) * 4.0, -0.35, 0.6) * useW;\n' +
-      ' body += vec3(0.7, 0.88, 1.0) * smoothstep(0.17, 0.3, wl) * 0.18 * useW;\n' +
       ' vec3 col = mix(body, skyR, F * (1.0 - 0.6 * thinness) * (1.0 - 0.5 * vCurt) * (1.0 - 0.4 * sea));\n' +
       // the sun: small sharp glints
-      ' col += vec3(0.8, 0.92, 1.0) * smoothstep(0.04, 0.32, ln) * 0.3 * lf * (1.0 - useW);\n' +
-      ' col *= 1.0 - 0.2 * smoothstep(0.04, 0.32, -ln) * lf * (1.0 - useW);\n' +
+      ' col += vec3(0.8, 0.92, 1.0) * smoothstep(0.04, 0.32, ln) * 0.3 * lf;\n' +
+      ' col *= 1.0 - 0.2 * smoothstep(0.04, 0.32, -ln) * lf;\n' +
       ' float spc = max(dot(R, uSunDir), 0.0);\n' +
       ' col += uSunC * (pow(spc, 1200.0) * 10.0 + pow(spc, 300.0) * 0.6) * (0.4 + 0.6 * det);\n' +
       // foam: the real foam photo shows through as much as the mask asks --
@@ -5649,13 +5633,13 @@
       ' col = mix(col, uFog, smoothstep(200.0, 1000.0, dd));\n' +
       ' gl_FragColor = vec4(col, 1.0);' + OUT;
     var wm = new T.ShaderMaterial({ side: T.DoubleSide, uniforms: WU,
-      vertexShader: 'attribute float foam; attribute float thin; attribute float curt; attribute float cave; attribute float alen; varying vec3 vW; varying vec3 vN; varying float vFoam; varying float vThin; varying float vCurt; varying float vCave; varying float vAlen;\n' +
-        'void main(){ vec4 w = modelMatrix * vec4(position, 1.0); vW = w.xyz; vN = normalize(mat3(modelMatrix) * normal); vFoam = foam; vThin = thin; vCurt = curt; vCave = cave; vAlen = alen; gl_Position = projectionMatrix * viewMatrix * w; }',
+      vertexShader: 'attribute float foam; attribute float thin; attribute float curt; attribute float cave; varying vec3 vW; varying vec3 vN; varying float vFoam; varying float vThin; varying float vCurt; varying float vCave;\n' +
+        'void main(){ vec4 w = modelMatrix * vec4(position, 1.0); vW = w.xyz; vN = normalize(mat3(modelMatrix) * normal); vFoam = foam; vThin = thin; vCurt = curt; vCave = cave; gl_Position = projectionMatrix * viewMatrix * w; }',
       fragmentShader: WATER_FS });
     // the sea around: a grid that moves with the camera, swells and chop
     // rolling in toward the beach (calm right next to the wave itself)
     var oceanMat = new T.ShaderMaterial({ uniforms: WU,
-      vertexShader: 'uniform float uT; uniform float uAmp; uniform float uH; varying vec3 vW; varying vec3 vN; varying float vFoam; varying float vThin; varying float vCurt; varying float vCave; varying float vAlen;\n' +
+      vertexShader: 'uniform float uT; uniform float uAmp; uniform float uH; varying vec3 vW; varying vec3 vN; varying float vFoam; varying float vThin; varying float vCurt; varying float vCave;\n' +
         'void wv(vec2 p, vec2 d, float L, float A, inout float y, inout float dx, inout float dz){ float k = 6.2831853 / L; float om = sqrt(9.8 * k); float ph = k * dot(d, p) - om * uT;\n' +
         ' y += A * sin(ph); float c = A * k * cos(ph); dx += c * d.x; dz += c * d.y; }\n' +
         'void main(){ vec4 w = modelMatrix * vec4(position, 1.0);\n' +
@@ -5663,13 +5647,13 @@
         ' wv(p, vec2(0.0, 1.0), 48.0, 0.45, y, dx, dz); wv(p, normalize(vec2(0.35, 0.94)), 21.0, 0.18, y, dx, dz);\n' +
         ' wv(p, normalize(vec2(-0.6, 0.8)), 9.0, 0.08, y, dx, dz); wv(p, normalize(vec2(0.9, 0.44)), 4.0, 0.035, y, dx, dz);\n' +
         ' float damp = smoothstep(uH * 4.0, uH * 7.0, abs(w.z + uH * 0.5)) * uAmp;\n' +
-        ' w.y += y * damp - 0.12; vW = w.xyz; vN = normalize(vec3(-dx * damp, 1.0, -dz * damp)); vFoam = 0.0; vThin = -1.0; vCurt = 0.0; vCave = 0.0; vAlen = 0.0;\n' +
+        ' w.y += y * damp - 0.12; vW = w.xyz; vN = normalize(vec3(-dx * damp, 1.0, -dz * damp)); vFoam = 0.0; vThin = -1.0; vCurt = 0.0; vCave = 0.0;\n' +
         ' gl_Position = projectionMatrix * viewMatrix * w; }',
       fragmentShader: WATER_FS });
     var og2 = new T.PlaneGeometry(700, 700, 150, 150); og2.rotateX(-Math.PI / 2);
     var oceanNear = new T.Mesh(og2, oceanMat); oceanNear.frustumCulled = false; scene.add(oceanNear);
     // the wave mesh
-    var nV = SG3_COLS * SG3_ROWS, pos = new Float32Array(nV * 3), foam = new Float32Array(nV), thin = new Float32Array(nV), curt = new Float32Array(nV), cave = new Float32Array(nV), alen = new Float32Array(nV), idx = [];
+    var nV = SG3_COLS * SG3_ROWS, pos = new Float32Array(nV * 3), foam = new Float32Array(nV), thin = new Float32Array(nV), curt = new Float32Array(nV), cave = new Float32Array(nV), idx = [];
     for(var cI = 0; cI < SG3_COLS - 1; cI++) for(var rI = 0; rI < SG3_ROWS - 1; rI++){
       var a = cI * SG3_ROWS + rI, b2 = a + SG3_ROWS;
       idx.push(a, b2, a + 1, b2, b2 + 1, a + 1);
@@ -5680,7 +5664,6 @@
     geo.setAttribute('thin', new T.BufferAttribute(thin, 1));
     geo.setAttribute('curt', new T.BufferAttribute(curt, 1));
     geo.setAttribute('cave', new T.BufferAttribute(cave, 1));
-    geo.setAttribute('alen', new T.BufferAttribute(alen, 1));
     geo.setIndex(idx);
     var wave = new T.Mesh(geo, wm); wave.frustumCulled = false; scene.add(wave);
     // the far sea, flat, out to the horizon
@@ -5689,7 +5672,6 @@
     og.setAttribute('thin', new T.BufferAttribute(new Float32Array(4), 1));
     og.setAttribute('curt', new T.BufferAttribute(new Float32Array(4), 1));
     og.setAttribute('cave', new T.BufferAttribute(new Float32Array(4), 1));
-    og.setAttribute('alen', new T.BufferAttribute(new Float32Array(4), 1));
     var ocean = new T.Mesh(og, wm); ocean.position.y = -0.3; scene.add(ocean);
     // light for the solid things: the sky all round, the sun from behind the wave
     scene.add(new T.HemisphereLight(0xdff2ff, 0x2a5566, 1.1));
@@ -5747,7 +5729,7 @@
     var rows = []; for(var q = 0; q < SG3_ROWS; q++) rows.push([0, 0]);
     var post = null;
     try { post = sg3PostInit(T, r); } catch(e){ if(window.console) console.warn('surf post off:', e); }
-    sg3 = Object.assign(sg3, { envScene: envScene, envCam: envCam, post: post, T: T, cv: cv, r: r, scene: scene, cam: cam, skyMat: skyMat, wm: wm, oceanMat: oceanMat, oceanNear: oceanNear, geo: geo, pos: pos, foam: foam, thin: thin, curt: curt, cave: cave, alen: alen,
+    sg3 = Object.assign(sg3, { envScene: envScene, envCam: envCam, post: post, T: T, cv: cv, r: r, scene: scene, cam: cam, skyMat: skyMat, wm: wm, oceanMat: oceanMat, oceanNear: oceanNear, geo: geo, pos: pos, foam: foam, thin: thin, curt: curt, cave: cave,
       billows: billows, spray: spray, shore: shore, wpos: wpos, walpha: walpha, wgeo: wgeo, WK: WK, rider: rider, ski: ski, haz: haz, rows: rows,
       camP: new T.Vector3(), camL: new T.Vector3(), spotId: '', w: 0, h: 0, last: 0 });
   }
@@ -5893,7 +5875,7 @@
       try { sg3.envCam.update(sg3.r, sg3.envScene); sg3.wm.uniforms.uHasEnv.value = 1; } catch(e){ sg3.wm.uniforms.uHasEnv.value = 0; }
     }
     var U2 = sg3.wm.uniforms; U2.uT.value = now % 1000; U2.uCurlX.value = sg.curl * SG3_M; sg3.skyMat.uniforms.uT.value = now % 1000;
-    var sx = sg.x * SG3_M, rows = sg3.rows, pos = sg3.pos, foam = sg3.foam, thin = sg3.thin, curt = sg3.curt, cave = sg3.cave, alen = sg3.alen;
+    var sx = sg.x * SG3_M, rows = sg3.rows, pos = sg3.pos, foam = sg3.foam, thin = sg3.thin, curt = sg3.curt, cave = sg3.cave;
     var x0 = sx - Hm * 9 - 30, span = Hm * 22 + 110, dx = span / (SG3_COLS - 1);
     for(var c = 0; c < SG3_COLS; c++){
       var xm = x0 + c * dx, br = sg3Break(xm, Hm);
@@ -5902,7 +5884,6 @@
       for(var r = 0; r < SG3_ROWS; r++){
         var i = c * SG3_ROWS + r;
         pos[i * 3] = xm; pos[i * 3 + 1] = rows[r][1]; pos[i * 3 + 2] = rows[r][0];
-        alen[i] = r ? alen[i - 1] + Math.hypot(rows[r][0] - rows[r - 1][0], rows[r][1] - rows[r - 1][1]) : 0;
         var lipZone = r >= 12 && r <= 22 ? 1 : 0;      // light through the thin top of the wave only
         if(br[0] > 0.85 && r > 22 && r <= 32) lipZone = 0.6;   // the curtain of a barrel, lit from behind
         // white only right at the lip's edge while it throws; the rest stays clear water
@@ -5912,7 +5893,7 @@
         curt[i] = r >= 14 && r <= 34 ? Math.max(0, br[0] - 0.4) / 0.6 * (1 - br[1]) * Math.sin((r - 14) / 20 * Math.PI) : 0;
       }
     }
-    sg3.geo.attributes.position.needsUpdate = true; sg3.geo.attributes.foam.needsUpdate = true; sg3.geo.attributes.thin.needsUpdate = true; sg3.geo.attributes.curt.needsUpdate = true; sg3.geo.attributes.cave.needsUpdate = true; sg3.geo.attributes.alen.needsUpdate = true;
+    sg3.geo.attributes.position.needsUpdate = true; sg3.geo.attributes.foam.needsUpdate = true; sg3.geo.attributes.thin.needsUpdate = true; sg3.geo.attributes.curt.needsUpdate = true; sg3.geo.attributes.cave.needsUpdate = true;
     var nrmA = sg3.geo.attributes.normal ? sg3.geo.attributes.normal.array : null;
     if(!nrmA){ nrmA = new Float32Array(pos.length); sg3.geo.setAttribute('normal', new T.BufferAttribute(nrmA, 3)); }
     for(var nc = 0; nc < SG3_COLS; nc++){
@@ -12220,7 +12201,7 @@
   // never while the name field is being typed in. Everything worth keeping
   // (coins, skins, name, league) is in localStorage, so a reload loses nothing.
   // 'dev' = a local or preview copy: the updater stays off entirely.
-  var BUILD_VERSION = '20261025-153110';
+  var BUILD_VERSION = '20261025-153422';
   var UPDATE_CHECK_MS = 60000;
   var UPDATE_TRIED_KEY = 'canyonChaseTriedUpdate';
   var pendingSubmits = 0;
