@@ -4628,7 +4628,9 @@
       reef:  L('פגעת בשונית!', 'You hit the reef!'),
       jelly: L('נעקצת ממדוזה!', 'Stung by a jellyfish!'),
       close: L('הגל נסגר עליך!', 'The wave closed out on you!'),
-      swallow: L('לא היית מהיר מספיק — הצינור בלע אותך!', 'Not fast enough — the barrel swallowed you!')
+      swallow: L('לא היית מהיר מספיק — הצינור בלע אותך!', 'Not fast enough — the barrel swallowed you!'),
+      superman: L('לא החזרת את הגלשן מתחת לרגליים בזמן! עזבו ⬆️ לפני הנחיתה', 'You didn\'t get the board back under your feet! Let go of ⬆️ before landing'),
+      flip:  L('הסלטה לא הסתיימה — נחתת על הראש!', 'The flip wasn\'t finished — you landed on your head!')
     };
     document.getElementById('sgOverTitle').textContent = completed ? L('🏄 סיימת את הגל!', '🏄 You rode it out!') : L('🌊 נפלת!', '🌊 Wipeout!');
     document.getElementById('sgOverReason').textContent = completed ? L('רכבת על הגל עד הסוף — השופטים אוהבים את זה', 'You rode the wave to the end — the judges love that')
@@ -4691,13 +4693,31 @@
       sg.x += a.vx * dt;
       var Ja = sgJoyVec();
       if(Math.abs(Ja.x) > 0.35) a.rot += SG_SPIN * dt * (Ja.x < 0 ? -1 : 1);
+      // ⬇️ flips end over end
+      if(Ja.y > 0.5) a.fl = (a.fl || 0) + SG_SPIN * 1.05 * dt;
+      // ⬆️ let go and pushed again: superman (stretch out over the board, then pull it back)
+      if(Ja.y > -0.3) a.upOff = true;
+      var supOn = a.upOff && Ja.y < -0.5;
+      a.sup = Math.max(0, Math.min(1, (a.sup || 0) + (supOn ? 4 : -5) * dt));
+      if(a.sup > 0.85) a.supT = (a.supT || 0) + dt;
       if(a.y <= 0 && a.vy < 0){
         // back on the face: straight enough?
         var TAU = Math.PI * 2, r = ((a.rot % TAU) + TAU) % TAU, off = Math.min(r, TAU - r), tol = 0.55 + 0.12 * up.balance;
+        var rf = (((a.fl || 0) % TAU) + TAU) % TAU, offF = Math.min(rf, TAU - rf);
+        if(a.sup > 0.35){ sg.h = 1; sgWipe('superman'); return; }
         if(off > tol){ sg.h = 1; sgWipe('pearl'); return; }
-        var flips = Math.round(Math.abs(a.rot) / (Math.PI * 2)), airT = sg.t - a.t0;
+        if(offF > tol){ sg.h = 1; sgWipe('flip'); return; }
+        var flips = Math.round(Math.abs(a.rot) / (Math.PI * 2)), salto = Math.round((a.fl || 0) / TAU), airT = sg.t - a.t0, sup = (a.supT || 0) > 0.12;
         sg.phase = 'ride'; sg.h = 0.93; sg.th = -0.75; sg.v = Math.max(300, a.vx * 0.95);
-        sgScore(flips >= 2 ? L('אייר 720!', 'Air 720!') : flips === 1 ? L('אייר 360!', 'Air 360!') : L('אייר!', 'Air!'), 300 + 250 * airT + 700 * flips);
+        // the name: the spin by its direction, the flip, the superman, and their combos
+        var nm = [];
+        if(salto && flips) nm.push(L('רודאו פליפ', 'Rodeo flip'));
+        else if(salto) nm.push(salto > 1 ? L('סלטה כפולה', 'Double backflip') : L('סלטה', 'Backflip'));
+        else if(flips) nm.push((a.rot < 0 ? L('אלי-אופ ', 'Alley-oop ') : L('אייר ', 'Air ')) + (flips >= 2 ? '720' : '360'));
+        if(sup) nm.unshift(L('סופרמן', 'Superman'));
+        if(!nm.length) nm.push(L('אייר', 'Air'));
+        var pts = 300 + 250 * airT + 700 * flips + (a.rot < 0 ? 150 * flips : 0) + 950 * salto + (salto && flips ? 600 : 0) + (sup ? 700 + 900 * Math.min(0.8, a.supT) : 0) + (sup && (salto || flips) ? 500 : 0);
+        sgScore(nm.join(' + ') + '!', pts);
         sgSplash(2);
       }
       sgHazardsCheck(true);
@@ -5247,7 +5267,7 @@
     var sx = gm.sx, sy, lean;
     if(sg.phase === 'air'){
       sy = gm.top - sg.air.y * gm.faceH;
-      lean = -Math.atan2(sg.air.vy * gm.faceH, sg.air.vx * K) - sg.air.rot;
+      lean = -Math.atan2(sg.air.vy * gm.faceH, sg.air.vx * K) - sg.air.rot - (sg.air.fl || 0);
     } else if(sg.phase === 'wipe' || sg.phase === 'over'){
       var w = sg.wipe || { t: 2, spin: 0, h: 0 };
       sy = gm.bottom - Math.max(0, w.h - w.t * 0.8) * gm.faceH + Math.min(1, w.t) * 20;
@@ -5309,7 +5329,7 @@
     }
     if(sg.phase === 'air'){
       ctx.font = 'bold 15px Rubik, sans-serif'; ctx.fillStyle = '#ffd447';
-      var at = L('הזז ⬅️➡️ כדי להסתובב 360 · עזוב כדי לנחות ישר', 'Move ⬅️➡️ to spin a 360 · let go to land straight');
+      var at = L('⬅️➡️ סיבוב 360 · ⬇️ סלטה · עזוב ⬆️ ולחץ שוב = סופרמן · עזוב הכול כדי לנחות ישר', '⬅️➡️ spin 360 · ⬇️ backflip · let go of ⬆️ and push again = superman · let go to land straight');
       ctx.strokeText(at, W / 2, H - 28); ctx.fillText(at, W / 2, H - 28);
     }
     var jj = sgJoy();
@@ -5948,6 +5968,7 @@
       var lip = faceAt(1);
       p.set(sx, lip[1] + sg.air.y * Hm * 0.9, lip[0]);
       var pitch = Math.atan2(sg.air.vy * 2.2, 1);
+      if(sg.air.sup){ var su0 = sg.air.sup; pitch *= 1 - 0.75 * su0 * su0 * (3 - 2 * su0); }   // superman: the board levels out under you
       fwd = new T.Vector3(Math.cos(pitch), Math.sin(pitch), 0); up = new T.Vector3(-Math.sin(pitch), Math.cos(pitch), 0);
       flip = sg.air.rot;
     } else {
@@ -5971,6 +5992,7 @@
     sg3.bank = (sg3.bank || 0) + (bankW - (sg3.bank || 0)) * Math.min(1, dtR * 7);
     R.body.rotation.x = sg3.bank;
     if(flip) R.body.rotation.y = flip;            // an air 360: spinning around, board under the feet
+    if(sg.phase === 'air' && sg.air && sg.air.fl) R.body.rotation.z = sg.air.fl;   // the backflip: nose up and over
     if(sg.phase === 'wipe' || sg.phase === 'over'){ var wt = sg.wipe ? sg.wipe.t : 1; R.body.rotation.set(wt * 5, 0, wt * 7); R.g.position.y -= Math.min(1, wt) * 0.8; }
     // colours of the chosen board and surfer
     var rd = sgItem(SG_RIDERS, sgSave.rider), bd = sgItem(SG_BOARDS, sgSave.board);
@@ -5984,7 +6006,22 @@
     var povNow = sg3.camMode === 'pov' && riding3;
     var chaseNow = sg3.camMode === 'chase' && (riding3 || sg.phase === 'wipe' || sg.phase === 'over');
     R.body.children.forEach(function(ch){ if(ch !== R.board && ch !== R.stripe && ch !== R.fin) ch.visible = !povNow; });
-    sg3Pose(sg.tube > 0.1 ? 0.95 : sg.phase === 'ride' && (sg.joy && sg.joy.y < -0.3) ? 0.25 : 0.65);
+    sg3Pose(sg.phase === 'air' && sg.air && sg.air.sup > 0.01 ? 0.3 : sg.tube > 0.1 ? 0.95 : sg.phase === 'ride' && (sg.joy && sg.joy.y < -0.3) ? 0.25 : 0.65);
+    if(sg.phase === 'air' && sg.air && sg.air.sup > 0.01){
+      // superman: the body swings out flat above the board, legs kicked back,
+      // hands on the rails
+      var su = sg.air.sup, su2 = su * su * (3 - 2 * su);
+      var qS = new T.Quaternion().setFromAxisAngle(new T.Vector3(0, 0, 1), -1.45 * su2), pv = new T.Vector3(0.25, 0.55, 0), lf = new T.Vector3(-0.15 * su2, 0.15 * su2, 0);
+      var tf = function(v){ return v.sub(pv).applyQuaternion(qS).add(pv).add(lf); };
+      R.body.children.forEach(function(ch){ if(ch === R.board || ch === R.stripe || ch === R.fin) return; tf(ch.position); ch.quaternion.premultiply(qS); });
+      // the arms reach down to the rails
+      var shS = tf(new T.Vector3(0.1 + 0.12 * 0.3, 1.4 - 0.3 * 0.3, 0));
+      [[R.parts.uArmF, R.parts.fArmF, R.extra.handF, -1], [R.parts.uArmB, R.parts.fArmB, R.extra.handB, 1]].forEach(function(A){
+        var s0 = shS.clone().add(new T.Vector3(0, 0, A[3] * 0.17)), hd = new T.Vector3(0.3, 0.06, A[3] * 0.26);
+        var hn = s0.clone().lerp(hd, su2), e0 = s0.clone().lerp(hn, 0.5).add(new T.Vector3(0.06, 0.04, A[3] * 0.06));
+        sg3Limb(T, A[0], s0, e0); sg3Limb(T, A[1], e0, hn); A[2].position.copy(hn);
+      });
+    }
     R.vest.visible = (sg.phase === 'wipe' || sg.phase === 'over') && spot.id === 'naz';
     if(R.vest.visible){ var vs = Math.min(1, (sg.wipe ? sg.wipe.t : 1) * 1.5); R.vest.scale.set(vs, vs * 1.2, vs); }
     // the jet ski at Nazaré
@@ -12221,7 +12258,7 @@
   // never while the name field is being typed in. Everything worth keeping
   // (coins, skins, name, league) is in localStorage, so a reload loses nothing.
   // 'dev' = a local or preview copy: the updater stays off entirely.
-  var BUILD_VERSION = '20261025-191155';
+  var BUILD_VERSION = '20261025-211648';
   var UPDATE_CHECK_MS = 60000;
   var UPDATE_TRIED_KEY = 'canyonChaseTriedUpdate';
   var pendingSubmits = 0;
