@@ -4532,7 +4532,7 @@
   var SG_SPOTS = [
     { id: 'pool', emoji: '🏊', name: L('בריכת הגלים', 'The Wave Pool'), dur: 28, man: 0.62, tubeLen: 170, need: 0, curl: 1, size: 0.45, barrel: 0.12, hazard: null,
       desc: L('גלים מושלמים, אחד אחרי השני. המקום ללמוד.', 'Perfect waves, one after another. The place to learn.'),
-      sky: ['#2f7ad2', '#b9d6ee'], sea: ['#2a8cc4', '#0d4f86'], face: ['#3d8fc4', '#0a4a88'] },
+      sky: ['#3d8ee0', '#cfe6f6'], sea: ['#3fb0d8', '#0d4f86'], face: ['#3d8fc4', '#0a4a88'] },
     { id: 'olga', emoji: '🇮🇱', name: L('חוף אולגה', 'Olga Beach'), dur: 30, man: 0.58, tubeLen: 200, need: 0, curl: 1.08, size: 0.55, barrel: 0.2, hazard: 'jelly',
       desc: L('הבית! גלים של הים התיכון, ושימו לב למדוזות.', 'Home! Mediterranean waves, and watch out for jellyfish.'),
       sky: ['#4a98e2', '#e2eef4'], sea: ['#3aa8d0', '#0c4c80'], face: ['#3f95c6', '#0b4a84'] },
@@ -5459,7 +5459,7 @@
     r.setPixelRatio(Math.min(1.35, window.devicePixelRatio || 1));
     r.outputEncoding = T.sRGBEncoding;
     r.toneMapping = T.ACESFilmicToneMapping;          // film-like colours and highlights
-    r.toneMappingExposure = 0.95;
+    r.toneMappingExposure = 1.0;
     var scene = new T.Scene(), cam = new T.PerspectiveCamera(36, 1, 0.1, 3000);
     var SUN = new T.Vector3(-0.5, 0.2, -0.84).normalize();     // low (sunset), behind the wave, so the lip glows
     var OUT = '\n#include <tonemapping_fragment>\n#include <encodings_fragment>\n}';
@@ -5476,7 +5476,7 @@
         'void main(){ vec3 d = normalize(vP); float h = clamp(d.y * 2.4, 0.0, 1.0);\n' +
         ' vec3 col = mix(uHz, uTop, pow(h, 0.8));\n' +
         ' float sd = max(dot(d, uSunDir), 0.0);\n' +
-        ' col += vec3(1.0, 0.9, 0.7) * pow(sd, 900.0) * 6.0 + vec3(1.0, 0.78, 0.45) * (pow(sd, 10.0) * 0.4 + pow(sd, 3.0) * 0.05);\n' +
+        ' col += vec3(1.0, 0.9, 0.7) * pow(sd, 900.0) * 6.0 + vec3(1.0, 0.78, 0.45) * (pow(sd, 10.0) * 0.45 + pow(sd, 3.0) * 0.12);\n' +
         ' if(d.y > 0.0){ vec2 uv = d.xz / (d.y + 0.12); float c = fbm(vec3(uv * 0.9 + vec2(uT * 0.008, 0.0), 1.0)) * 0.7 + fbm(vec3(uv * 2.4, 2.0)) * 0.3;\n' +
         '   c = smoothstep(0.62 - uCloud * 0.18, 0.8, c) * smoothstep(0.0, 0.2, d.y);\n' +
         '   col = mix(col, vec3(1.0) * (0.86 + 0.14 * sd) + vec3(0.05, 0.04, 0.0) * sd, c * 0.85); }\n' +
@@ -5503,7 +5503,7 @@
     });
     var WATER_FS = 'uniform sampler2D uNrm; uniform float uHasN; uniform sampler2D uTexFace; uniform sampler2D uTexSea; uniform sampler2D uTexFoam; uniform float uTex;\n' +
       'uniform vec3 uSea; uniform vec3 uDeep; uniform vec3 uFace; uniform vec3 uGlow; uniform vec3 uSkyC; uniform vec3 uSkyTop; uniform vec3 uFog; uniform vec3 uSunC; uniform vec3 uSunDir; uniform vec3 uCam; uniform float uT; uniform float uH;\n' +
-      'varying vec3 vW; varying vec3 vN; varying float vFoam; varying float vThin; varying float vCurt; varying float vCave; varying float vArc;\n' + NOISE +
+      'varying vec3 vW; varying vec3 vN; varying float vFoam; varying float vThin; varying float vCurt; varying float vCave;\n' + NOISE +
       'void main(){\n' +
       ' vec3 V = normalize(uCam - vW); vec3 N = normalize(vN); float inside = 0.0; if(dot(N, V) < 0.0){ N = -N; inside = 1.0; }\n' +
       ' float sea = step(vThin, -0.5); float thinV = max(vThin, 0.0);\n' +
@@ -5516,20 +5516,19 @@
       ' N = normalize(N + (vec3(n1 - 0.5, 0.0, (n2 - 0.5) * det) * (0.12 + 0.2 * det) + vec3(0.0, (n3 - 0.5) * 0.2, (n3 - 0.5) * 0.16)) * bump);\n' +
       ' float h = clamp(vW.y / uH, 0.0, 1.0);\n' +
       ' float uprN = 1.0 - smoothstep(0.55, 0.9, abs(normalize(vN).y));\n' +
-      ' vec2 uvS = vW.xz * 0.075; vec2 uvF = vec2(vW.x * 0.09, vW.y * 0.1);\n' +
-      ' vec2 uvA = mix(uvS, uvF, uprN), uvB = mix(uvS * 2.6, uvF * 2.4, uprN);\n' +
-      ' vec3 rA = texture2D(uNrm, uvA + vec2(uT * 0.011, -uT * mix(0.017, 0.04, uprN))).rgb * 2.0 - 1.0;\n' +
-      ' vec3 rB = texture2D(uNrm, uvB + vec2(-uT * 0.019, -uT * mix(0.008, 0.06, uprN))).rgb * 2.0 - 1.0;\n' +
+      ' float lines = fbm(vec3(vW.x * 1.7, vW.y * 0.32 - uT * 0.32, vW.z * 1.7));\n' +
+      ' N = normalize(N + vec3((lines - 0.5) * 0.45 * uprN * det * (1.0 - sea), 0.0, 0.0));\n' +
+      ' vec2 uvS = vW.xz * 0.075; vec2 uvF = vec2(vW.x * 0.022, vW.y * 0.17);\n' +
+      ' vec2 uvA = mix(uvS, uvF, uprN), uvB = mix(uvS * 2.6, uvF * vec2(2.2, 2.6), uprN);\n' +
+      ' vec3 rA = texture2D(uNrm, uvA + vec2(uT * mix(0.011, -0.03, uprN), -uT * mix(0.017, 0.02, uprN))).rgb * 2.0 - 1.0;\n' +
+      ' vec3 rB = texture2D(uNrm, uvB + vec2(-uT * 0.019, -uT * mix(0.008, 0.09, uprN))).rgb * 2.0 - 1.0;\n' +
       ' vec2 rp = (rA.xy * 0.6 + rB.xy * 0.4) * uHasN * (0.25 + 0.75 * det) * (1.0 - 0.5 * inside);\n' +
       ' vec3 tX = vec3(1.0, 0.0, 0.0); vec3 tY = normalize(cross(N, tX));\n' +
-      ' N = normalize(N + (tX * rp.x + tY * rp.y) * 0.5);\n' +
+      ' N = normalize(N + (tX * rp.x + tY * rp.y) * mix(0.55, 0.62, uprN));\n' +
+      ' float lineC = (rA.y * 0.6 + rB.y * 0.4) * uHasN * uprN * (1.0 - sea);\n' +
       // the body of the water: deep below, brighter up the face
-      ' vec3 base = mix(mix(uDeep, uFace, 0.5), uFace, smoothstep(0.0, 0.8, h));\n' +
-      ' float lw = fbm(vec3(vW.x * 0.22, vArc * 5.0, uT * 0.15));\n' +
-      ' float lsn = sin(vArc * 34.0 + vW.x * 0.45 + lw * 5.0 - uT * 1.6);\n' +
-      ' float lFace = uprN * (1.0 - sea) * det;\n' +
-      ' base += vec3(0.75, 0.92, 1.0) * smoothstep(0.86, 1.0, lsn) * 0.2 * lFace;\n' +
-      ' base *= 1.0 - 0.2 * smoothstep(-0.8, -1.0, lsn) * lFace;\n' +
+      ' vec3 base = mix(uDeep * 0.85, uFace, smoothstep(0.05, 0.9, h));\n' +
+      ' base *= 1.0 + 0.22 * lineC;\n' +
       ' base = mix(base, uSea, sea * 0.85 + (1.0 - sea) * (1.0 - smoothstep(0.0, 0.12, h)) * 0.6);\n' +
       ' float upright = 1.0 - smoothstep(0.55, 0.9, abs(normalize(vN).y));\n' +
       ' vec3 tFace = texture2D(uTexFace, vec2(vW.x * 0.11 - uT * 0.02, vW.y * 0.2 - uT * 0.05)).rgb;\n' +
@@ -5539,12 +5538,14 @@
       ' vec3 photo = mix(tw * (base / max(vec3(0.03), vec3(0.05, 0.22, 0.22))) * 0.55, base * (0.45 + 1.6 * tl), 0.5);\n' +
       ' float insideP = step(dot(normalize(vN), normalize(uCam - vW)), 0.0);\n' +
       ' base = mix(base, photo, 0.85 * uTex * (1.0 - 0.3 * step(vThin, -0.5)) * (1.0 - 0.5 * upright) * (1.0 - 0.6 * insideP));\n' +
+      ' float gls = smoothstep(0.58, 0.78, fbm(vec3(vW.x * 0.3, vW.y * 2.6 - uT * 0.5, vW.z * 2.6)));\n' +
+      ' base += (gls - 0.3) * 0.07 * upright * (1.0 - sea);\n' +
       // reflection of the sky, by angle
       ' vec3 R = reflect(-V, N); vec3 skyR = mix(uSkyC, uSkyTop, pow(clamp(R.y, 0.0, 1.0), 0.6));\n' +
       ' float fres = 0.03 + 0.97 * pow(1.0 - max(dot(N, V), 0.0), 5.0);\n' +
-      ' vec3 col = mix(base, skyR, fres * (0.8 - 0.58 * sea) * (1.0 - 0.55 * vCurt));\n' +
+      ' vec3 col = mix(base, skyR, fres * (0.8 - 0.25 * sea) * (1.0 - 0.55 * vCurt));\n' +
       ' col *= 1.0 - 0.28 * inside;\n' +
-      ' col = mix(col, uDeep * vec3(0.5, 0.66, 1.05), vCave * 0.55);\n' +
+      ' col = mix(col, uDeep * vec3(0.42, 0.58, 1.0), vCave * 0.6);\n' +
       ' col = mix(col, uDeep * vec3(0.5, 0.68, 1.15), 0.45 * inside * (1.0 - h * 0.4));\n' +
       ' float streak = fbm(vec3(vW.x * 2.2, vW.y * 0.25 - uT * 0.9, vW.z * 0.4));\n' +
       ' float cv = vCurt * (1.0 - inside);\n' +
@@ -5562,7 +5563,7 @@
       ' float spc = max(dot(reflect(-uSunDir, N), V), 0.0);\n' +
       ' col += uSunC * (pow(spc, 380.0) * 4.0 + pow(spc, 45.0) * 0.22);\n' +
       ' col += uSunC * pow(spc, 1400.0) * 14.0 * step(0.55, n2) * det;\n' +
-      ' col += uSunC * pow(spc, 400.0) * 1.2 * sea;\n' +
+      ' col += uSunC * pow(spc, 160.0) * 1.6 * sea;\n' +
       ' col += smoothstep(0.62, 0.82, n3) * 0.05 - smoothstep(0.42, 0.24, n3) * 0.04;\n' +
       // foam: bubbles at two sizes, lace with holes; drifting patches lower down
       ' float b1 = fbm(vW * 1.7 + vec3(0.0, uT * 0.45, uT * 0.2)); float b2 = ns(vW * 5.5 - vec3(uT * 0.3));\n' +
@@ -5576,17 +5577,16 @@
       ' foamC = mix(foamC, tFoam * 1.08, uTex);\n' +
       ' f = mix(f, clamp(f * (0.35 + 1.2 * smoothstep(0.3, 0.8, fl)), 0.0, 1.0), uTex);\n' +
       ' col = mix(col, foamC, f);\n' +
-      ' col = mix(vec3(dot(col, vec3(0.3, 0.59, 0.11))), col, 1.18);\n' +
-      ' col = mix(col, uFog, smoothstep(220.0, 1100.0, length(uCam - vW)));\n' +
+      ' col = mix(col, uFog, smoothstep(140.0, 900.0, length(uCam - vW)));\n' +
       ' gl_FragColor = vec4(col, 1.0);' + OUT;
     var wm = new T.ShaderMaterial({ side: T.DoubleSide, uniforms: WU,
-      vertexShader: 'attribute float foam; attribute float thin; attribute float curt; attribute float cave; attribute float arc; varying vec3 vW; varying vec3 vN; varying float vFoam; varying float vThin; varying float vCurt; varying float vCave; varying float vArc;\n' +
-        'void main(){ vec4 w = modelMatrix * vec4(position, 1.0); vW = w.xyz; vN = normalize(mat3(modelMatrix) * normal); vFoam = foam; vThin = thin; vCurt = curt; vCave = cave; vArc = arc; gl_Position = projectionMatrix * viewMatrix * w; }',
+      vertexShader: 'attribute float foam; attribute float thin; attribute float curt; attribute float cave; varying vec3 vW; varying vec3 vN; varying float vFoam; varying float vThin; varying float vCurt; varying float vCave;\n' +
+        'void main(){ vec4 w = modelMatrix * vec4(position, 1.0); vW = w.xyz; vN = normalize(mat3(modelMatrix) * normal); vFoam = foam; vThin = thin; vCurt = curt; vCave = cave; gl_Position = projectionMatrix * viewMatrix * w; }',
       fragmentShader: WATER_FS });
     // the sea around: a grid that moves with the camera, swells and chop
     // rolling in toward the beach (calm right next to the wave itself)
     var oceanMat = new T.ShaderMaterial({ uniforms: WU,
-      vertexShader: 'uniform float uT; uniform float uAmp; uniform float uH; varying vec3 vW; varying vec3 vN; varying float vFoam; varying float vThin; varying float vCurt; varying float vCave; varying float vArc;\n' +
+      vertexShader: 'uniform float uT; uniform float uAmp; uniform float uH; varying vec3 vW; varying vec3 vN; varying float vFoam; varying float vThin; varying float vCurt; varying float vCave;\n' +
         'void wv(vec2 p, vec2 d, float L, float A, inout float y, inout float dx, inout float dz){ float k = 6.2831853 / L; float om = sqrt(9.8 * k); float ph = k * dot(d, p) - om * uT;\n' +
         ' y += A * sin(ph); float c = A * k * cos(ph); dx += c * d.x; dz += c * d.y; }\n' +
         'void main(){ vec4 w = modelMatrix * vec4(position, 1.0);\n' +
@@ -5594,14 +5594,13 @@
         ' wv(p, vec2(0.0, 1.0), 48.0, 0.45, y, dx, dz); wv(p, normalize(vec2(0.35, 0.94)), 21.0, 0.18, y, dx, dz);\n' +
         ' wv(p, normalize(vec2(-0.6, 0.8)), 9.0, 0.08, y, dx, dz); wv(p, normalize(vec2(0.9, 0.44)), 4.0, 0.035, y, dx, dz);\n' +
         ' float damp = smoothstep(uH * 4.0, uH * 7.0, abs(w.z + uH * 0.5)) * uAmp;\n' +
-        ' w.y += y * damp - 0.12; vW = w.xyz; vN = normalize(vec3(-dx * damp, 1.0, -dz * damp)); vFoam = 0.0; vThin = -1.0; vCurt = 0.0; vCave = 0.0; vArc = 0.0;\n' +
+        ' w.y += y * damp - 0.12; vW = w.xyz; vN = normalize(vec3(-dx * damp, 1.0, -dz * damp)); vFoam = 0.0; vThin = -1.0; vCurt = 0.0; vCave = 0.0;\n' +
         ' gl_Position = projectionMatrix * viewMatrix * w; }',
       fragmentShader: WATER_FS });
     var og2 = new T.PlaneGeometry(700, 700, 150, 150); og2.rotateX(-Math.PI / 2);
     var oceanNear = new T.Mesh(og2, oceanMat); oceanNear.frustumCulled = false; scene.add(oceanNear);
     // the wave mesh
-    var nV = SG3_COLS * SG3_ROWS, pos = new Float32Array(nV * 3), foam = new Float32Array(nV), thin = new Float32Array(nV), curt = new Float32Array(nV), cave = new Float32Array(nV), arc = new Float32Array(nV), idx = [];
-    for(var ai = 0; ai < nV; ai++) arc[ai] = (ai % SG3_ROWS) / (SG3_ROWS - 1);     // 0 the back .. 1 the front trough
+    var nV = SG3_COLS * SG3_ROWS, pos = new Float32Array(nV * 3), foam = new Float32Array(nV), thin = new Float32Array(nV), curt = new Float32Array(nV), cave = new Float32Array(nV), idx = [];
     for(var cI = 0; cI < SG3_COLS - 1; cI++) for(var rI = 0; rI < SG3_ROWS - 1; rI++){
       var a = cI * SG3_ROWS + rI, b2 = a + SG3_ROWS;
       idx.push(a, b2, a + 1, b2, b2 + 1, a + 1);
@@ -5612,7 +5611,6 @@
     geo.setAttribute('thin', new T.BufferAttribute(thin, 1));
     geo.setAttribute('curt', new T.BufferAttribute(curt, 1));
     geo.setAttribute('cave', new T.BufferAttribute(cave, 1));
-    geo.setAttribute('arc', new T.BufferAttribute(arc, 1));
     geo.setIndex(idx);
     var wave = new T.Mesh(geo, wm); wave.frustumCulled = false; scene.add(wave);
     // the far sea, flat, out to the horizon
@@ -5621,7 +5619,6 @@
     og.setAttribute('thin', new T.BufferAttribute(new Float32Array(4), 1));
     og.setAttribute('curt', new T.BufferAttribute(new Float32Array(4), 1));
     og.setAttribute('cave', new T.BufferAttribute(new Float32Array(4), 1));
-    og.setAttribute('arc', new T.BufferAttribute(new Float32Array(4), 1));
     var ocean = new T.Mesh(og, wm); ocean.position.y = -0.3; scene.add(ocean);
     // light for the solid things: the sky all round, the sun from behind the wave
     scene.add(new T.HemisphereLight(0xdff2ff, 0x2a5566, 1.1));
@@ -5630,18 +5627,11 @@
     // foam and spray: soft round puffs, each its own size and fade, lit from above
     var PS_VS = 'attribute float aSize; attribute float aAlpha; uniform float uScale; varying float vA;\n' +
       'void main(){ vec4 mv = modelViewMatrix * vec4(position, 1.0); gl_Position = projectionMatrix * mv; gl_PointSize = aSize * uScale / max(0.5, -mv.z); vA = aAlpha; }';
-    // each puff a lump of foam: a bubbly, broken edge, a solid middle, lit
-    // from above with a blue-grey underside
     var PS_FS = 'varying float vA; uniform vec3 uTint;\n' +
-      'float hs(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }\n' +
-      'float vn(vec2 p){ vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);\n' +
-      ' return mix(mix(hs(i), hs(i + vec2(1.0, 0.0)), f.x), mix(hs(i + vec2(0.0, 1.0)), hs(i + vec2(1.0, 1.0)), f.x), f.y); }\n' +
-      'void main(){ vec2 c = gl_PointCoord * 2.0 - 1.0; float r2 = dot(c, c);\n' +
-      ' float n = vn(c * 3.0 + 3.0) * 0.6 + vn(c * 8.0 + 11.0) * 0.4;\n' +
-      ' float e = r2 + (n - 0.5) * 0.7; if(e > 1.0) discard;\n' +
-      ' float lit = 0.62 + 0.42 * (-c.y) - 0.08 * c.x + (n - 0.5) * 0.35;\n' +
-      ' vec3 col = mix(uTint * 0.72, vec3(1.0), clamp(lit, 0.0, 1.0));\n' +
-      ' gl_FragColor = vec4(col, vA * smoothstep(1.0, 0.62, e));' + OUT;
+      'void main(){ vec2 c = gl_PointCoord * 2.0 - 1.0; float r2 = dot(c, c); if(r2 > 1.0) discard;\n' +
+      ' float lit = 0.72 + 0.28 * (-c.y) - 0.1 * c.x;\n' +
+      ' vec3 col = mix(uTint, vec3(1.0), clamp(lit, 0.0, 1.0));\n' +
+      ' gl_FragColor = vec4(col, vA * (1.0 - r2) * (0.75 + 0.25 * (1.0 - r2)));' + OUT;
     function particles(n, tint){
       var p = new Float32Array(n * 3); for(var i = 0; i < n * 3; i++) p[i] = -9999;
       var sz = new Float32Array(n), al = new Float32Array(n);
@@ -5826,7 +5816,7 @@
         // white only right at the lip's edge while it throws; the rest stays clear water
         foam[i] = Math.min(1, br[1] * 1.1 + (r >= 23 && r <= 26 ? 0.12 + 0.3 * br[0] + Math.max(0, br[0] - 0.8) * 2.5 : 0) + (r > 56 && br[1] > 0 ? 0.4 : 0));
         thin[i] = lipZone ? (0.35 + 0.35 * br[0]) * (1 - br[1]) : (r > 22 && r <= 30 ? 0.15 * br[0] : 0);
-        cave[i] = r >= 32 && r <= 52 ? Math.pow(Math.max(0, br[0] - 0.55) / 0.45, 1.3) * (1 - br[1]) * Math.sin((r - 32) / 20 * Math.PI) : 0;
+        cave[i] = r >= 34 && r <= 57 ? Math.pow(Math.max(0, br[0] - 0.3) / 0.7, 1.4) * (1 - br[1]) * Math.sin((r - 34) / 23 * Math.PI) : 0;
         curt[i] = r >= 14 && r <= 34 ? Math.max(0, br[0] - 0.4) / 0.6 * (1 - br[1]) * Math.sin((r - 14) / 20 * Math.PI) : 0;
       }
     }
@@ -12132,7 +12122,7 @@
   // never while the name field is being typed in. Everything worth keeping
   // (coins, skins, name, league) is in localStorage, so a reload loses nothing.
   // 'dev' = a local or preview copy: the updater stays off entirely.
-  var BUILD_VERSION = '20261025-075314';
+  var BUILD_VERSION = '20261025-075601';
   var UPDATE_CHECK_MS = 60000;
   var UPDATE_TRIED_KEY = 'canyonChaseTriedUpdate';
   var pendingSubmits = 0;
