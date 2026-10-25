@@ -5581,7 +5581,7 @@
       ' vec2 s4 = texture2D(uNrm, vec2(uvW.x * 0.9, uvW.y * 0.32) + flw * uT * 0.22).xy * 2.0 - 1.0;\n' +
       ' vec2 s5 = texture2D(uNrm, vec2(uvW.x * 2.1, uvW.y * 0.75) * mat2(0.94, -0.34, 0.34, 0.94) + flw * uT * 0.38).xy * 2.0 - 1.0;\n' +
       ' float lf = face * det * uHasN; float ln = s4.y * 0.6 + s5.y * 0.4;\n' +
-      ' rp += (s4 * 0.35 + s5 * 0.25) * lf;\n' +
+      ' rp += (s4 * 0.35 + s5 * 0.25) * lf + s3 * 0.3 * sea * det;\n' +
       ' N = normalize(Ng + (tX * rp.x + tY * rp.y) * mix(0.6, 0.95, face));\n' +
       // Fresnel and the sky in the water
       ' vec3 R = reflect(-V, N); float NdV = max(dot(N, V), 0.0);\n' +
@@ -5592,14 +5592,14 @@
       // into the water: deep blue where it's thick, turquoise light through it where it's thin
       ' float thinness = clamp(thinV * 1.2 + vCurt * 0.12 + smoothstep(0.7, 1.0, h) * 0.3 * face, 0.0, 1.0);\n' +
       ' vec3 body = mix(uDeep * 0.9, uFace, smoothstep(0.0, 0.85, h) * (1.0 - sea));\n' +
-      ' body = mix(body, uSea * 0.75, max(sea, (1.0 - smoothstep(0.0, 0.16, h)) * (1.0 - vCave)));\n' +
+      ' body = mix(body, uSea * 0.6 + uDeep * 0.22, max(sea, (1.0 - smoothstep(0.0, 0.16, h)) * (1.0 - vCave)));\n' +
       ' body = mix(body, uDeep * vec3(0.55, 0.78, 1.05), vCurt * 0.55 * (1.0 - inside));\n' +
       ' body = mix(body, uGlow, thinness * 0.5);\n' +
       ' float sss = pow(clamp(dot(V, -normalize(uSunDir + N * 0.4)), 0.0, 1.0), 4.0) * 1.4 + 0.25;\n' +
       ' body += uGlow * sss * thinness * 0.6;\n' +
       ' body *= 1.0 - 0.45 * vCave - 0.3 * inside;\n' +
       ' body = mix(body, uDeep * vec3(0.5, 0.68, 1.1), 0.35 * inside);\n' +
-      ' vec3 col = mix(body, skyR, F * (1.0 - 0.6 * thinness) * (1.0 - 0.5 * vCurt));\n' +
+      ' vec3 col = mix(body, skyR, F * (1.0 - 0.6 * thinness) * (1.0 - 0.5 * vCurt) * (1.0 - 0.4 * sea));\n' +
       // the sun: small sharp glints
       ' col += vec3(0.8, 0.92, 1.0) * smoothstep(0.04, 0.32, ln) * 0.3 * lf;\n' +
       ' col *= 1.0 - 0.2 * smoothstep(0.04, 0.32, -ln) * lf;\n' +
@@ -5689,9 +5689,15 @@
     for(var w = 0; w < WK - 1; w++){ var w0 = w * 2; widx.push(w0, w0 + 1, w0 + 2, w0 + 1, w0 + 3, w0 + 2); }
     var wgeo = new T.BufferGeometry(); wgeo.setAttribute('position', new T.BufferAttribute(wpos, 3));
     var walpha = new Float32Array(WK * 2); wgeo.setAttribute('alpha', new T.BufferAttribute(walpha, 1)); wgeo.setIndex(widx);
-    var wmat = new T.ShaderMaterial({ transparent: true, depthWrite: false, side: T.DoubleSide,
-      vertexShader: 'attribute float alpha; varying float vA; void main(){ vA = alpha; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
-      fragmentShader: 'varying float vA; void main(){ gl_FragColor = vec4(0.95, 0.98, 1.0, vA);' + OUT });
+    var wside = new Float32Array(WK * 2); for(var ws = 0; ws < WK * 2; ws++) wside[ws] = ws % 2; wgeo.setAttribute('side', new T.BufferAttribute(wside, 1));
+    // the trail behind the board: the foam photo, more of it broken away the older it is
+    var wmat = new T.ShaderMaterial({ transparent: true, depthWrite: false, side: T.DoubleSide, uniforms: { tFoam: WU.uTexFoam, uHas: WU.uTex },
+      vertexShader: 'attribute float alpha; attribute float side; varying float vA; varying float vS; varying vec3 vP; void main(){ vA = alpha; vS = side; vec4 w = modelMatrix * vec4(position, 1.0); vP = w.xyz; gl_Position = projectionMatrix * viewMatrix * w; }',
+      fragmentShader: 'uniform sampler2D tFoam; uniform float uHas; varying float vA; varying float vS; varying vec3 vP;\n' +
+        'void main(){ float l = dot(texture2D(tFoam, vec2(vP.x * 0.35, vP.y * 0.5 + vP.z * 0.3)).rgb, vec3(0.3, 0.59, 0.11));\n' +
+        ' float m = vA * sin(vS * 3.14159);\n' +
+        ' float a = mix(m * 0.5, smoothstep(1.0 - m, 1.0 - m + 0.25, l), uHas);\n' +
+        ' gl_FragColor = vec4(mix(vec3(0.7, 0.8, 0.86), vec3(0.97, 0.99, 1.0), l), a * 0.9);' + OUT });
     var wake = new T.Mesh(wgeo, wmat); wake.frustumCulled = false; scene.add(wake);
     // the surfer, the jet ski, hazards
     var rider = sg3MakeRider(T); scene.add(rider.g);
@@ -6005,8 +6011,8 @@
     if(dPsi > 0.8 && sg.phase === 'ride') for(var e7 = 0; e7 < 10; e7++) emit(sg3.spray, p.x - fwd.x * 0.6, p.y + 0.08, p.z - fwd.z * 0.6,
       -side3.x * (2 + Math.random() * 3) + (Math.random() - 0.5), (2.5 + Math.random() * 4) * sq, -side3.z * (2 + Math.random() * 3) + (Math.random() - 0.5), 0.6 + Math.random() * 0.5, 0.04 + Math.random() * 0.1, 0.9);
     // the rail always churns a little water while you ride
-    if(sg.phase === 'ride' && Math.random() < 0.9) for(var e8 = 0; e8 < 2; e8++) emit(sg3.spray, p.x - fwd.x * (0.3 + Math.random() * 0.6), p.y + 0.04, p.z - fwd.z * 0.5 + nrm.z * 0.15,
-      -fwd.x * (0.5 + Math.random()), 0.6 + Math.random() * 1.2, nrm.z * (0.3 + Math.random()), 0.3 + Math.random() * 0.3, 0.05 + Math.random() * 0.06, 0.8);
+    if(sg.phase === 'ride') for(var e8 = 0; e8 < 4; e8++) emit(sg3.spray, p.x - fwd.x * (0.3 + Math.random() * 0.6), p.y + 0.04, p.z - fwd.z * 0.5 + nrm.z * 0.15,
+      -fwd.x * (0.5 + Math.random() * 1.5), 0.8 + Math.random() * 1.8, nrm.z * (0.3 + Math.random() * 1.2), 0.35 + Math.random() * 0.4, 0.04 + Math.random() * 0.07, 0.85);
     // spray off the board when it carves: the 2D ride's spray list says when
     if(sg.spray.length > (sg3.lastSpray || 0)){
       var nNew = Math.min(70, sg.spray.length - (sg3.lastSpray || 0));
@@ -6023,10 +6029,10 @@
       if(ti < 0){ wa[w * 2] = wa[w * 2 + 1] = 0; continue; }
       var pt = tr[ti], bw = sg3Break(pt.x * SG3_M, Hm);
       rows = sg3ProfileQ(bw[0], bw[1], Hm, bw[2]);
-      var q0 = faceAt(pt.h), age = w / WK, half = 0.06 + 0.12 * age;
+      var q0 = faceAt(pt.h), age = w / WK, half = 0.12 + 0.2 * age;
       wp[o] = pt.x * SG3_M; wp[o + 1] = q0[1] + half; wp[o + 2] = q0[0] - half * 0.6 + 0.04;
       wp[o + 3] = pt.x * SG3_M; wp[o + 4] = q0[1] - half; wp[o + 5] = q0[0] + half * 0.6 + 0.04;
-      wa[w * 2] = wa[w * 2 + 1] = 0.2 * age;
+      wa[w * 2] = wa[w * 2 + 1] = 0.85 * Math.pow(age, 0.7);
     }
     sg3.wgeo.attributes.position.needsUpdate = true; sg3.wgeo.attributes.alpha.needsUpdate = true;
 
@@ -12173,7 +12179,7 @@
   // never while the name field is being typed in. Everything worth keeping
   // (coins, skins, name, league) is in localStorage, so a reload loses nothing.
   // 'dev' = a local or preview copy: the updater stays off entirely.
-  var BUILD_VERSION = '20261025-142835';
+  var BUILD_VERSION = '20261025-143337';
   var UPDATE_CHECK_MS = 60000;
   var UPDATE_TRIED_KEY = 'canyonChaseTriedUpdate';
   var pendingSubmits = 0;
