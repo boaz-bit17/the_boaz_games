@@ -5420,7 +5420,7 @@
   }
   function sg3PostRender(){
     var T = sg3.T, r = sg3.r, P = sg3.post;
-    if(!P){ r.setRenderTarget(null); r.render(sg3.scene, sg3.cam); return; }
+    if(!P || sg3.lowQ){ r.setRenderTarget(null); r.render(sg3.scene, sg3.cam); return; }
     var v = r.getDrawingBufferSize(new T.Vector2());
     if(P.w !== v.x || P.h !== v.y){ P.w = v.x; P.h = v.y; P.scene.setSize(v.x, v.y); P.a.setSize(v.x >> 1, v.y >> 1); P.b.setSize(v.x >> 1, v.y >> 1); }
     r.setRenderTarget(P.scene); r.render(sg3.scene, sg3.cam);
@@ -5434,6 +5434,12 @@
     r.setRenderTarget(null); r.render(P.comp.s, P.cam);
   }
   function sg3Hide(){ if(sg3.cv) sg3.cv.style.display = 'none'; document.getElementById('sgCamBtn').hidden = true; }
+  // quality, picked by the game: 'high' (post-processing, full particles,
+  // sharper pixels) or 'medium' (phones and weaker devices)
+  function sg3SetQuality(q){
+    sg3.lowQ = q === 'medium';
+    if(sg3.r){ sg3.r.setPixelRatio(sg3.lowQ ? 1 : Math.min(1.35, window.devicePixelRatio || 1)); sg3.w = 0; }
+  }
 
   // the wave's cross-section (z toward the beach/camera, y up), in wave
   // heights: an unbroken swell (CP0), a pitching barrel (CP1), and broken
@@ -5512,7 +5518,7 @@
     cv.style.cssText = 'position:absolute;inset:0;display:none;width:100%;height:100%';
     stage.insertBefore(cv, canvas);
     var r = new T.WebGLRenderer({ canvas: cv, antialias: true });
-    r.setPixelRatio(Math.min(1.35, window.devicePixelRatio || 1));
+    r.setPixelRatio(sg3.lowQ ? 1 : Math.min(1.35, window.devicePixelRatio || 1));
     r.outputEncoding = T.sRGBEncoding;
     r.toneMapping = T.ACESFilmicToneMapping;          // film-like colours and highlights
     r.toneMappingExposure = 1.0;
@@ -5837,6 +5843,14 @@
   function sg3Render(){
     var T = sg3.T, spot = sg.spot, Hm = SG3_H[spot.id] || 3, now = performance.now() / 1000;
     var dtR = Math.min(0.05, now - (sg3.last || now)); sg3.last = now;
+    if(!sg3.lowQ && !sg3.autoDropped && sg.phase === 'ride'){
+      var fd = now - (sg3.fpsT || now); sg3.fpsT = now;
+      if(fd > 0 && fd < 0.5){ sg3.fpsN = (sg3.fpsN || 0) + 1; sg3.fpsSum = (sg3.fpsSum || 0) + fd; }
+      if((sg3.fpsN || 0) >= 180){
+        if(sg3.fpsSum / sg3.fpsN > 1 / 45){ sg3.autoDropped = true; sg3SetQuality('medium'); }
+        sg3.fpsN = 0; sg3.fpsSum = 0;
+      }
+    }
     sg3.cv.style.display = 'block';
     if(sg3.w !== W || sg3.h !== H){ sg3.r.setSize(W, H, false); sg3.cam.aspect = W / H; sg3.cam.updateProjectionMatrix(); sg3.w = W; sg3.h = H; }
     if(sg3.spotId !== spot.id){
@@ -5851,7 +5865,7 @@
       sg3.r.setClearColor(spot.sky[1]);
       sg3SetShore(T, sg3.shore, spot.id);
     }
-    if(sg3.envSpot !== spot.id || now - (sg3.envT || 0) > 4){
+    if(sg3.envSpot !== spot.id || (!sg3.lowQ && now - (sg3.envT || 0) > 4)){
       sg3.envSpot = spot.id; sg3.envT = now;
       try { sg3.envCam.update(sg3.r, sg3.envScene); sg3.wm.uniforms.uHasEnv.value = 1; } catch(e){ sg3.wm.uniforms.uHasEnv.value = 0; }
     }
@@ -5971,6 +5985,7 @@
       var A = P.pts.geometry.attributes; A.position.needsUpdate = true; A.aSize.needsUpdate = true; A.aAlpha.needsUpdate = true;
     }
     function emit(P, x, y, z, vx, vy, vz, life, size, alpha){
+      if(sg3.lowQ && Math.random() < 0.5) return;
       var k = P.next; P.next = (P.next + 1) % P.n;
       P.pos[k * 3] = x; P.pos[k * 3 + 1] = y; P.pos[k * 3 + 2] = z; P.vel[k * 3] = vx; P.vel[k * 3 + 1] = vy; P.vel[k * 3 + 2] = vz;
       P.life[k] = life; P.max[k] = life; P.size[k] = size; P.base[k] = alpha; P.alpha[k] = 0;
@@ -6178,6 +6193,8 @@
   document.getElementById('sgEnterBtn').addEventListener('click', sgOpenMenu);
   var SG3_CAMS = ['chase', 'pov', 'beach'];
   sg3.camMode = SG3_CAMS.indexOf(sgSave.cam) !== -1 ? sgSave.cam : 'chase';
+  var sgWeak = ('ontouchstart' in window && Math.min(screen.width, screen.height) < 520) || (navigator.hardwareConcurrency || 4) <= 4;
+  sg3SetQuality(sgWeak ? 'medium' : 'high');
   document.getElementById('sgCamBtn').addEventListener('click', function(e){
     e.stopPropagation();
     sg3.camMode = SG3_CAMS[(SG3_CAMS.indexOf(sg3.camMode) + 1) % SG3_CAMS.length]; sgSave.cam = sg3.camMode; sgStore();
@@ -12179,7 +12196,7 @@
   // never while the name field is being typed in. Everything worth keeping
   // (coins, skins, name, league) is in localStorage, so a reload loses nothing.
   // 'dev' = a local or preview copy: the updater stays off entirely.
-  var BUILD_VERSION = '20261025-143337';
+  var BUILD_VERSION = '20261025-150359';
   var UPDATE_CHECK_MS = 60000;
   var UPDATE_TRIED_KEY = 'canyonChaseTriedUpdate';
   var pendingSubmits = 0;
