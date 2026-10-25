@@ -5558,7 +5558,8 @@
                uFog: { value: new T.Color() }, uSunC: { value: new T.Color(0xffd9a0) }, uSunDir: { value: SUN }, uSea: { value: new T.Color() },
                uCam: { value: new T.Vector3() }, uT: { value: 0 }, uH: { value: 3 }, uAmp: { value: 0.7 },
                uTexFace: { value: null }, uTexSea: { value: null }, uTexFoam: { value: null }, uTex: { value: 0 },
-               uNrm: { value: null }, uHasN: { value: 0 }, uCurlX: { value: 0 }, uEnv: { value: envRT.texture }, uHasEnv: { value: 0 } };
+               uNrm: { value: null }, uHasN: { value: 0 }, uCurlX: { value: 0 }, uEnv: { value: envRT.texture }, uHasEnv: { value: 0 },
+               uBed: { value: 0 }, uBedD: { value: 2.5 }, uBedSand: { value: new T.Color() }, uBedReef: { value: new T.Color() }, uExt: { value: new T.Vector3() }, uScat: { value: new T.Color() } };
     new T.TextureLoader().load('https://cdn.jsdelivr.net/gh/mrdoob/three.js@r147/examples/textures/waternormals.jpg', function(t){
       t.wrapS = t.wrapT = T.RepeatWrapping; t.anisotropy = Math.min(8, r.capabilities.getMaxAnisotropy());
       WU.uNrm.value = t; WU.uHasN.value = 1;
@@ -5572,9 +5573,12 @@
         WU[tx[0]].value = t; if(--texLeft === 0) WU.uTex.value = 1;
       });
     });
-    var WATER_FS = 'uniform sampler2D uNrm; uniform float uHasN; uniform float uCurlX; uniform samplerCube uEnv; uniform float uHasEnv; uniform sampler2D uTexFace; uniform sampler2D uTexSea; uniform sampler2D uTexFoam; uniform float uTex;\n' +
+    var WATER_FS = 'uniform sampler2D uNrm; uniform float uHasN; uniform float uCurlX; uniform samplerCube uEnv; uniform float uHasEnv; uniform float uBed; uniform float uBedD; uniform vec3 uBedSand; uniform vec3 uBedReef; uniform vec3 uExt; uniform vec3 uScat; uniform sampler2D uTexFace; uniform sampler2D uTexSea; uniform sampler2D uTexFoam; uniform float uTex;\n' +
       'uniform vec3 uSea; uniform vec3 uDeep; uniform vec3 uFace; uniform vec3 uGlow; uniform vec3 uSkyC; uniform vec3 uSkyTop; uniform vec3 uFog; uniform vec3 uSunC; uniform vec3 uSunDir; uniform vec3 uCam; uniform float uT; uniform float uH;\n' +
       'varying vec3 vW; varying vec3 vN; varying float vFoam; varying float vThin; varying float vCurt; varying float vCave;\n' + NOISE +
+      'float caus(vec2 p, float t){ vec3 q = vec3(p * 0.8, t * 0.5);\n' +
+      ' float a = abs(ns(q) - ns(q + vec3(5.2, 1.3, 0.0))); float b = abs(ns(q * 2.1 + 3.0) - ns(q * 2.1 + vec3(1.7, 9.2, 0.0)));\n' +
+      ' return pow(1.0 - min(1.0, a * 4.0), 6.0) * 0.6 + pow(1.0 - min(1.0, b * 4.0), 6.0) * 0.4; }\n' +
       'void main(){\n' +
       ' vec3 V = normalize(uCam - vW); vec3 N = normalize(vN); float inside = 0.0; if(dot(N, V) < 0.0){ N = -N; inside = 1.0; }\n' +
       ' float sea = step(vThin, -0.5); float thinV = max(vThin, 0.0);\n' +
@@ -5604,6 +5608,18 @@
       ' float thinness = clamp(thinV * 1.2 + vCurt * 0.12 + smoothstep(0.7, 1.0, h) * 0.3 * face, 0.0, 1.0);\n' +
       ' vec3 body = mix(uDeep * 0.9, uFace, smoothstep(0.0, 0.85, h) * (1.0 - sea));\n' +
       ' body = mix(body, uSea * 0.6 + uDeep * 0.22, max(sea, (1.0 - smoothstep(0.0, 0.16, h)) * (1.0 - vCave)));\n' +
+      ' if(uBed > 0.0){\n' +
+      '   vec3 rr = refract(-V, N, 0.75);\n' +
+      '   float tb = (vW.y + uBedD) / max(0.08, -rr.y);\n' +
+      '   vec3 bp = vW + rr * tb;\n' +
+      '   float rn = fbm(vec3(bp.xz * 0.35, 1.7)); float rg = ns(vec3(bp.xz * 2.2, 4.1));\n' +
+      '   vec3 bed = mix(uBedSand, uBedReef, smoothstep(0.42, 0.62, rn)) * (0.7 + 0.6 * rg);\n' +
+      '   bed *= 0.7 + 1.5 * caus(bp.xz, uT) * max(uSunDir.y, 0.2);\n' +
+      '   vec3 ab = exp(-uExt * tb);\n' +
+      '   vec3 seen = bed * ab + uScat * (1.0 - ab);\n' +
+      '   float clear = uBed * (1.0 - inside) * (1.0 - vCave) * (1.0 - smoothstep(25.0, 110.0, dd));\n' +
+      '   body = mix(body, seen, clear);\n' +
+      ' }\n' +
       ' body = mix(body, uDeep * vec3(0.55, 0.78, 1.05), vCurt * 0.55 * (1.0 - inside));\n' +
       ' body = mix(body, uGlow, thinness * 0.5);\n' +
       ' float sss = pow(clamp(dot(V, -normalize(uSunDir + N * 0.4)), 0.0, 1.0), 4.0) * 1.4 + 0.25;\n' +
@@ -5863,6 +5879,10 @@
       sg3.skyMat.uniforms.uTop.value.set(spot.sky[0]); sg3.skyMat.uniforms.uHz.value.set(spot.sky[1]);
       var U = sg3.wm.uniforms;
       U.uDeep.value.set(spot.face[1]).multiplyScalar(0.7); U.uFace.value.set(spot.face[0]); U.uSea.value.set(spot.sea[0]);
+      // the bottom: Pipeline's reef through clear water, Olga's sand through cloudier water
+      var BED = { pipe: [1, 0.55, 0xd8cfae, 0x5d6e58, [0.42, 0.11, 0.075], 0x0a4a6e], olga: [0.75, 0.5, 0xd9c9a2, 0xb3a684, [0.55, 0.2, 0.16], 0x0d4f73] }[spot.id];
+      U.uBed.value = BED ? BED[0] : 0;
+      if(BED){ U.uBedD.value = BED[1] * Hm; U.uBedSand.value.setHex(BED[2]); U.uBedReef.value.setHex(BED[3]); U.uExt.value.fromArray(BED[4]); U.uScat.value.setHex(BED[5]); }
       U.uGlow.value.set({ pool: 0x5ab6e0, olga: 0x56bcd8, pipe: 0x48c6d8, naz: 0x3ab8c4 }[spot.id] || 0x2fe0b8); U.uSkyC.value.set(spot.sky[1]); U.uFog.value.set(spot.sky[1]);
       U.uH.value = Hm; U.uSkyTop.value.set(spot.sky[0]);
       U.uAmp.value = { pool: 0.25, olga: 0.7, pipe: 0.85, naz: 1.5 }[spot.id] || 0.7;
@@ -12201,7 +12221,7 @@
   // never while the name field is being typed in. Everything worth keeping
   // (coins, skins, name, league) is in localStorage, so a reload loses nothing.
   // 'dev' = a local or preview copy: the updater stays off entirely.
-  var BUILD_VERSION = '20261025-153422';
+  var BUILD_VERSION = '20261025-191155';
   var UPDATE_CHECK_MS = 60000;
   var UPDATE_TRIED_KEY = 'canyonChaseTriedUpdate';
   var pendingSubmits = 0;
