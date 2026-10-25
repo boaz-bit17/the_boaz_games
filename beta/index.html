@@ -5507,64 +5507,42 @@
       'void main(){\n' +
       ' vec3 V = normalize(uCam - vW); vec3 N = normalize(vN); float inside = 0.0; if(dot(N, V) < 0.0){ N = -N; inside = 1.0; }\n' +
       ' float sea = step(vThin, -0.5); float thinV = max(vThin, 0.0);\n' +
-      // small ripples on the surface, moving: two layers + long streaks along the wave
-      ' float n1 = fbm(vW * 0.9 + vec3(uT * 0.55, 0.0, uT * 0.3));\n' +
-      ' float n2 = ns(vW * 3.1 - vec3(uT * 1.1, uT * 0.4, -uT * 0.6));\n' +
-      ' float n3 = fbm(vec3(vW.x * 0.12 + uT * 0.05, vW.y * 1.4, vW.z * 1.4));\n' +
-      ' float dd = length(uCam - vW); float det = 1.0 - smoothstep(18.0, 110.0, dd);\n' +
-      ' float bump = (1.0 - 0.7 * sea) * (1.0 - 0.6 * uHasN);\n' +
-      ' N = normalize(N + (vec3(n1 - 0.5, 0.0, (n2 - 0.5) * det) * (0.12 + 0.2 * det) + vec3(0.0, (n3 - 0.5) * 0.2, (n3 - 0.5) * 0.16)) * bump);\n' +
+      // the surface: three ripple layers flowing with the water
+      ' float dd = length(uCam - vW); float det = 1.0 - smoothstep(18.0, 140.0, dd);\n' +
       ' float h = clamp(vW.y / uH, 0.0, 1.0);\n' +
-      ' float uprN = 1.0 - smoothstep(0.55, 0.9, abs(normalize(vN).y));\n' +
-      ' float lines = fbm(vec3(vW.x * 1.7, vW.y * 0.32 - uT * 0.32, vW.z * 1.7));\n' +
-      ' N = normalize(N + vec3((lines - 0.5) * 0.45 * uprN * det * (1.0 - sea), 0.0, 0.0));\n' +
-      ' vec2 uvS = vW.xz * 0.075; vec2 uvF = vec2(vW.x * 0.022, vW.y * 0.17);\n' +
-      ' vec2 uvA = mix(uvS, uvF, uprN), uvB = mix(uvS * 2.6, uvF * vec2(2.2, 2.6), uprN);\n' +
-      ' vec3 rA = texture2D(uNrm, uvA + vec2(uT * mix(0.011, -0.03, uprN), -uT * mix(0.017, 0.02, uprN))).rgb * 2.0 - 1.0;\n' +
-      ' vec3 rB = texture2D(uNrm, uvB + vec2(-uT * 0.019, -uT * mix(0.008, 0.09, uprN))).rgb * 2.0 - 1.0;\n' +
-      ' vec2 rp = (rA.xy * 0.6 + rB.xy * 0.4) * uHasN * (0.25 + 0.75 * det) * (1.0 - 0.5 * inside);\n' +
-      ' vec3 tX = vec3(1.0, 0.0, 0.0); vec3 tY = normalize(cross(N, tX));\n' +
-      ' N = normalize(N + (tX * rp.x + tY * rp.y) * mix(0.55, 0.62, uprN));\n' +
-      ' float lineC = (rA.y * 0.6 + rB.y * 0.4) * uHasN * uprN * (1.0 - sea);\n' +
-      // the body of the water: deep below, brighter up the face
-      ' vec3 base = mix(uDeep * 0.85, uFace, smoothstep(0.05, 0.9, h));\n' +
-      ' base *= 1.0 + 0.22 * lineC;\n' +
-      ' base = mix(base, uSea, sea * 0.85 + (1.0 - sea) * (1.0 - smoothstep(0.0, 0.12, h)) * 0.6);\n' +
-      ' float upright = 1.0 - smoothstep(0.55, 0.9, abs(normalize(vN).y));\n' +
-      ' vec3 tFace = texture2D(uTexFace, vec2(vW.x * 0.11 - uT * 0.02, vW.y * 0.2 - uT * 0.05)).rgb;\n' +
-      ' vec3 tSea = texture2D(uTexSea, vW.xz * 0.06 + vec2(uT * 0.006, uT * 0.01)).rgb;\n' +
-      ' vec3 tw = mix(tSea, tFace, upright);\n' +
-      ' float tl = dot(tw, vec3(0.3, 0.59, 0.11));\n' +
-      ' vec3 photo = mix(tw * (base / max(vec3(0.03), vec3(0.05, 0.22, 0.22))) * 0.55, base * (0.45 + 1.6 * tl), 0.5);\n' +
-      ' float insideP = step(dot(normalize(vN), normalize(uCam - vW)), 0.0);\n' +
-      ' base = mix(base, photo, 0.85 * uTex * (1.0 - 0.3 * step(vThin, -0.5)) * (1.0 - 0.5 * upright) * (1.0 - 0.6 * insideP));\n' +
-      ' float gls = smoothstep(0.58, 0.78, fbm(vec3(vW.x * 0.3, vW.y * 2.6 - uT * 0.5, vW.z * 2.6)));\n' +
-      ' base += (gls - 0.3) * 0.07 * upright * (1.0 - sea);\n' +
-      // reflection of the sky, by angle
-      ' vec3 R = reflect(-V, N); vec3 skyR = mix(uSkyC, uSkyTop, pow(clamp(R.y, 0.0, 1.0), 0.6));\n' +
-      ' float fres = 0.03 + 0.97 * pow(1.0 - max(dot(N, V), 0.0), 5.0);\n' +
-      ' vec3 col = mix(base, skyR, fres * (0.8 - 0.25 * sea) * (1.0 - 0.55 * vCurt));\n' +
-      ' col *= 1.0 - 0.28 * inside;\n' +
-      ' col = mix(col, uDeep * vec3(0.42, 0.58, 1.0), vCave * 0.6);\n' +
-      ' col = mix(col, uDeep * vec3(0.5, 0.68, 1.15), 0.45 * inside * (1.0 - h * 0.4));\n' +
-      ' float streak = fbm(vec3(vW.x * 2.2, vW.y * 0.25 - uT * 0.9, vW.z * 0.4));\n' +
-      ' float cv = vCurt * (1.0 - inside);\n' +
-      ' col = mix(col, uDeep * vec3(0.5, 0.75, 1.0), cv * (0.65 + 0.2 * streak));\n' +
-      ' col += uGlow * vCurt * (0.06 + 0.16 * smoothstep(0.5, 0.78, streak)) * (0.5 + 0.5 * inside);\n' +
-      // light shining through thin water (the lip, the top of the face), strongest backlit
-      ' float back = 0.45 + 0.55 * pow(max(dot(V, -uSunDir), 0.0), 2.0);\n' +
-      ' col += uGlow * (thinV * (1.1 + 0.6 * inside) + smoothstep(0.55, 1.0, h) * 0.25 * (1.0 - sea)) * back * (0.7 + 0.3 * n3) * 0.42;\n' +
-      // the sun on the water: a hard sparkle and a soft sheen
-      ' float trn = pow(clamp(dot(V, -normalize(uSunDir + N * 0.35)), 0.0, 1.0), 3.0);\n' +
-      ' float thick = thinV * 1.4 + 0.55 * vCurt + 0.7 * smoothstep(0.45, 1.0, h) * (1.0 - sea);\n' +
-      ' col += mix(uGlow, vec3(0.75, 0.95, 1.0), 0.25 * thinV) * trn * thick * 0.4;\n' +
-      ' float seeT = clamp(thinV * 0.8 + 0.25 * smoothstep(0.75, 1.0, h) * (1.0 - sea), 0.0, 0.45) * (1.0 - 0.4 * inside) * (1.0 - 0.75 * vCurt);\n' +
-      ' col = mix(col, uGlow * 1.1, seeT);\n' +
-      ' float spc = max(dot(reflect(-uSunDir, N), V), 0.0);\n' +
-      ' col += uSunC * (pow(spc, 380.0) * 4.0 + pow(spc, 45.0) * 0.22);\n' +
-      ' col += uSunC * pow(spc, 1400.0) * 14.0 * step(0.55, n2) * det;\n' +
-      ' col += uSunC * pow(spc, 160.0) * 1.6 * sea;\n' +
-      ' col += smoothstep(0.62, 0.82, n3) * 0.05 - smoothstep(0.42, 0.24, n3) * 0.04;\n' +
+      ' vec3 Ng = N; float face = (1.0 - smoothstep(0.55, 0.92, abs(Ng.y))) * (1.0 - sea);\n' +
+      ' vec3 tX = vec3(1.0, 0.0, 0.0); vec3 tY = normalize(cross(Ng, tX) + vec3(0.0, 0.0, 0.0001));\n' +
+      ' vec2 uvW = mix(vW.xz, vec2(vW.x, vW.y * 1.2 - vW.z * 0.4), face);\n' +
+      ' vec2 flw = mix(vec2(0.0, 1.0), vec2(0.0, -1.0), face);\n' +
+      ' vec2 s1 = texture2D(uNrm, uvW * 0.05 + flw * uT * 0.028 + vec2(uT * 0.006, 0.0)).xy * 2.0 - 1.0;\n' +
+      ' vec2 s2 = texture2D(uNrm, (uvW * 0.13) * mat2(0.8, -0.6, 0.6, 0.8) + flw * uT * 0.06).xy * 2.0 - 1.0;\n' +
+      ' vec2 s3 = texture2D(uNrm, (uvW * 0.37) * mat2(0.6, 0.8, -0.8, 0.6) + flw * uT * 0.11 - vec2(uT * 0.02, 0.0)).xy * 2.0 - 1.0;\n' +
+      ' vec2 rp = (s1 * 0.5 + s2 * 0.35 + s3 * 0.25 * det) * uHasN * (0.35 + 0.65 * det);\n' +
+      ' vec2 s4 = texture2D(uNrm, vec2(uvW.x * 0.9, uvW.y * 0.32) + flw * uT * 0.22).xy * 2.0 - 1.0;\n' +
+      ' vec2 s5 = texture2D(uNrm, vec2(uvW.x * 2.1, uvW.y * 0.75) * mat2(0.94, -0.34, 0.34, 0.94) + flw * uT * 0.38).xy * 2.0 - 1.0;\n' +
+      ' float lf = face * det * uHasN; float ln = s4.y * 0.6 + s5.y * 0.4;\n' +
+      ' rp += (s4 * 0.35 + s5 * 0.25) * lf;\n' +
+      ' N = normalize(Ng + (tX * rp.x + tY * rp.y) * mix(0.6, 0.95, face));\n' +
+      // Fresnel and the sky in the water
+      ' vec3 R = reflect(-V, N); float NdV = max(dot(N, V), 0.0);\n' +
+      ' float F = 0.02 + 0.98 * pow(1.0 - NdV, 5.0);\n' +
+      ' vec3 skyR = mix(mix(uSkyC, uSkyTop, 0.5) * 0.8, uSkyTop, pow(clamp(R.y, 0.0, 1.0), 0.5)) + uSunC * pow(max(dot(R, uSunDir), 0.0), 60.0) * 0.25;\n' +
+      // into the water: deep blue where it's thick, turquoise light through it where it's thin
+      ' float thinness = clamp(thinV * 1.2 + vCurt * 0.12 + smoothstep(0.7, 1.0, h) * 0.3 * face, 0.0, 1.0);\n' +
+      ' vec3 body = mix(uDeep * 0.9, uFace, smoothstep(0.0, 0.85, h) * (1.0 - sea));\n' +
+      ' body = mix(body, uSea * 0.75, max(sea, (1.0 - smoothstep(0.0, 0.16, h)) * (1.0 - vCave)));\n' +
+      ' body = mix(body, uDeep * vec3(0.55, 0.78, 1.05), vCurt * 0.55 * (1.0 - inside));\n' +
+      ' body = mix(body, uGlow, thinness * 0.5);\n' +
+      ' float sss = pow(clamp(dot(V, -normalize(uSunDir + N * 0.4)), 0.0, 1.0), 4.0) * 1.4 + 0.25;\n' +
+      ' body += uGlow * sss * thinness * 0.6;\n' +
+      ' body *= 1.0 - 0.45 * vCave - 0.3 * inside;\n' +
+      ' body = mix(body, uDeep * vec3(0.5, 0.68, 1.1), 0.35 * inside);\n' +
+      ' vec3 col = mix(body, skyR, F * (1.0 - 0.6 * thinness) * (1.0 - 0.5 * vCurt));\n' +
+      // the sun: small sharp glints
+      ' col += vec3(0.8, 0.92, 1.0) * smoothstep(0.04, 0.32, ln) * 0.3 * lf;\n' +
+      ' col *= 1.0 - 0.2 * smoothstep(0.04, 0.32, -ln) * lf;\n' +
+      ' float spc = max(dot(R, uSunDir), 0.0);\n' +
+      ' col += uSunC * (pow(spc, 1200.0) * 10.0 + pow(spc, 300.0) * 0.6) * (0.4 + 0.6 * det);\n' +
       // foam: bubbles at two sizes, lace with holes; drifting patches lower down
       ' float b1 = fbm(vW * 1.7 + vec3(0.0, uT * 0.45, uT * 0.2)); float b2 = ns(vW * 5.5 - vec3(uT * 0.3));\n' +
       ' float lace = smoothstep(0.36, 0.6, b1 * 0.7 + b2 * 0.3 * det + 0.15 * (1.0 - det));\n' +
@@ -5577,7 +5555,7 @@
       ' foamC = mix(foamC, tFoam * 1.08, uTex);\n' +
       ' f = mix(f, clamp(f * (0.35 + 1.2 * smoothstep(0.3, 0.8, fl)), 0.0, 1.0), uTex);\n' +
       ' col = mix(col, foamC, f);\n' +
-      ' col = mix(col, uFog, smoothstep(140.0, 900.0, length(uCam - vW)));\n' +
+      ' col = mix(col, uFog, smoothstep(200.0, 1000.0, dd));\n' +
       ' gl_FragColor = vec4(col, 1.0);' + OUT;
     var wm = new T.ShaderMaterial({ side: T.DoubleSide, uniforms: WU,
       vertexShader: 'attribute float foam; attribute float thin; attribute float curt; attribute float cave; varying vec3 vW; varying vec3 vN; varying float vFoam; varying float vThin; varying float vCurt; varying float vCave;\n' +
@@ -12122,7 +12100,7 @@
   // never while the name field is being typed in. Everything worth keeping
   // (coins, skins, name, league) is in localStorage, so a reload loses nothing.
   // 'dev' = a local or preview copy: the updater stays off entirely.
-  var BUILD_VERSION = '20261025-075601';
+  var BUILD_VERSION = '20261025-135519';
   var UPDATE_CHECK_MS = 60000;
   var UPDATE_TRIED_KEY = 'canyonChaseTriedUpdate';
   var pendingSubmits = 0;
