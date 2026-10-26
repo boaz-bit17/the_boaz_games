@@ -4837,8 +4837,10 @@
     // off the lip with speed: into the air
     if(sg.h >= 1){
       var onWall = sgWallAt(sg.x) > 0.05;
-      if(onWall ? sg.th > 0.1 && sg.v > 220 && J.y < -0.3 && sg.psi < 0.8 : sg.th > 0.4 && sg.v > 360 && J.y < -0.5 && sg.psi < 0.6){
+      if(onWall ? J.y < -0.3 && sg.psi < 0.8 : sg.th > 0.4 && sg.v > 360 && J.y < -0.5 && sg.psi < 0.6){
         var lift = (1 + 0.1 * up.air) * (onWall ? 1.5 : 1);
+        // the wall throws you up even if you came up it slowly
+        if(onWall){ sg.v = Math.max(sg.v, 430); sg.th = Math.max(sg.th, 0.75); }
         sg.phase = 'air';
         sg.air = { y: 0, vy: Math.sin(sg.th) * sg.v / F * 1.25 * lift, vx: Math.cos(sg.th) * sg.v * 1.05, rot: 0, t0: sg.t };
         sg.h = 1;
@@ -6188,13 +6190,16 @@
     var portrait = W < H, dist = (Hm * 2.7 + 6) * (portrait ? 1.5 : 1) * 2.1;      // well back on the sand
     var camWant = new T.Vector3(sx - Hm * 0.2, Hm * 0.5 + 1.4, Hm * 2.2 + dist);
     var lookWant = new T.Vector3(sx - Hm * (portrait ? 0.1 : 0.5), Hm * 0.55, Hm * 0.2);
-    var inBarrel = sg.tube > 0.12 && sg.throwT > 0;
+    // in the air the camera follows you up: it looks up at you and backs off, so a big air stays on screen
+    var airUp = sg.phase === 'air' ? Math.max(0, p.y - Hm * 0.6) : 0;
+    var inBarrel = sg.tube > 0.12 && sg.throwT > 0 && sg.phase !== 'air';
     sg3.tubeK = (sg3.tubeK || 0) + ((inBarrel ? 1 : 0) - (sg3.tubeK || 0)) * Math.min(1, dtR * (inBarrel ? 2.5 : 1.8));
     if(sg3.tubeK > 0.01){
       var mouthX = (sg.curl + sg.throwLen) * SG3_M + Hm * 3.8, tk = sg3.tubeK * sg3.tubeK * (3 - 2 * sg3.tubeK);
       camWant.lerp(new T.Vector3(mouthX, Hm * 0.65, Hm * 2.6), tk);
       lookWant.lerp(new T.Vector3(sx - Hm * 0.6, Hm * 0.42, Hm * 0.42), tk);
     }
+    lookWant.y += airUp * 0.95; lookWant.z = lookWant.z + (p.z - lookWant.z) * Math.min(1, airUp / Hm); camWant.y += airUp * 0.45; camWant.z += airUp * 1.3;
     // a new wave (or a new spot): the camera starts in place instead of flying over
     if(!sg3.camInit || sg3.camRun !== sg.spot.id + ':' + (sg.t < 0.2) || sg.t < 0.2){ sg3.camP.copy(camWant); sg3.camL.copy(lookWant); sg3.camInit = true; }
     sg3.camRun = sg.spot.id + ':' + (sg.t < 0.2);
@@ -6221,7 +6226,8 @@
       // into the pocket -- the wave fills the screen, the barrel opens to us
       var trough = Hm * 2.2 * (brS[2] || 1);
       var ce = new T.Vector3(p.x + 2.0 + Hm * 1.3, 0.45 + Hm * 0.1, trough + 1.0 + Hm * 0.95);
-      var ct = new T.Vector3(p.x - Hm * 0.45, Hm * 0.45 + p.y * 0.25, Math.min(p.z, trough) - Hm * 0.3);
+      var ct = new T.Vector3(p.x - Hm * 0.45, Hm * 0.45 + p.y * 0.25 + airUp * 0.6, Math.min(p.z, trough) - Hm * 0.3);
+      ce.y += airUp * 0.35; ce.z += airUp * 0.5;
       if(!sg3.chE || sg.t < 0.2){ sg3.chE = ce.clone(); sg3.chT = ct.clone(); }
       sg3.chE.lerp(ce, Math.min(1, dtR * 5)); sg3.chT.lerp(ct, Math.min(1, dtR * 6));
       sg3.cam.up.set(0, 1, 0); sg3.cam.position.copy(sg3.chE); sg3.cam.lookAt(sg3.chT);
@@ -12320,7 +12326,7 @@
   // never while the name field is being typed in. Everything worth keeping
   // (coins, skins, name, league) is in localStorage, so a reload loses nothing.
   // 'dev' = a local or preview copy: the updater stays off entirely.
-  var BUILD_VERSION = '20261026-173202';
+  var BUILD_VERSION = '20261026-194014';
   var UPDATE_CHECK_MS = 60000;
   var UPDATE_TRIED_KEY = 'canyonChaseTriedUpdate';
   var pendingSubmits = 0;
