@@ -986,7 +986,6 @@
       </div>
       <button class="boss-banner" id="bossBtn" type="button" hidden></button>
       <button class="boss-banner thu-chest-btn" id="thuChestBtn" type="button" hidden></button>
-      <button class="tourney-banner surf-banner" id="surfBanner" type="button" hidden></button>
       <button class="tourney-banner world-banner" id="worldBanner" type="button" hidden></button>
       <button class="tourney-banner" id="tourneyBanner" type="button" hidden></button>
       <button class="tourney-banner streak-banner" id="streakBtn" type="button"></button>
@@ -1226,6 +1225,7 @@
     <div class="tablet">
       <h1>🌊 משחק הגלישה</h1>
       <p class="tagline">בחר חוף, תפוס גל, והשופטים ייתנו לך ציון מ-0 עד 10</p>
+      <button class="tourney-banner surf-banner" id="surfBanner" type="button" hidden></button>
       <div class="sg-shells" id="sgShells"></div>
       <div class="sg-spots" id="sgSpots"></div>
       <button class="shop-btn" id="sgShopBtn" type="button">🛒 חנות הגלישה</button>
@@ -1281,7 +1281,7 @@
   <div class="overlay" id="surfOverlay" hidden>
     <div class="tablet">
       <h1>🏄 סבב הגלישה</h1>
-      <p class="tagline">4 תחרויות · מקצים חיים ראש בראש, כל יום מ-13:45 (ברביעי מ-15:30) · המשחק אומר לך מתי המקצה שלך ונגד מי</p>
+      <p class="tagline">4 תחרויות במשחק הגלישה · כל יום מ-13:45 (ברביעי מ-15:30) · בכל מקצה כל גולש תופס גל אחד, והשופטים נותנים ציון 0–10</p>
       <div class="tourney-status" id="surfStatus"></div>
       <div class="surf-join" id="surfJoin"></div>
       <div class="world-claim" id="surfClaim" hidden>
@@ -1299,7 +1299,7 @@
       <div class="mission-title">טבלת הסבב</div>
       <div class="leaderboard-list" id="surfTable"></div>
       <div class="surf-draw" id="surfDraw"></div>
-      <p class="mission-sub">כל תחרות: שמינית גמר (מקצים של 4, שניים עולים), רבע גמר, חצי גמר וגמר (אחד על אחד) -- שלב אחד בכל יום. בכל מקצה כולם רצים יחד באותו מסלול, ומי שעושה יותר נקודות עולה. מי שלא מגיע -- מפסיד. כל מקום נותן נקודות לטבלה: ניצחון 10,000 · גמר 7,800 · חצי גמר 6,085 · רבע גמר 4,745 · שמינית 3,320 / 1,330. התחרות האחרונה שווה פי 1.5.</p>
+      <p class="mission-sub">כל תחרות: שמינית גמר (מקצים של 4, שניים עולים), רבע גמר, חצי גמר וגמר (אחד על אחד) -- שלב אחד בכל יום. כל מקצה פתוח 20 דקות: נכנסים, תופסים גל אחד בחוף של התחרות, והציון של השופטים הוא הציון שלך. הציון הגבוה עולה. מי שלא גולש בזמן -- מפסיד. כל מקום נותן נקודות לטבלה: ניצחון 10,000 · גמר 7,800 · חצי גמר 6,085 · רבע גמר 4,745 · שמינית 3,320 / 1,330. התחרות האחרונה שווה פי 1.5.</p>
       <button class="back-btn" id="closeSurfBtn" type="button">חזרה</button>
     </div>
   </div>
@@ -1426,11 +1426,11 @@
    "שחק כל יום כדי לשמור על הרצף, ואסוף תגים בדרך": "Play every day to keep your streak, and collect badges on the way",
    "🔥 הרצף היומי": "🔥 Daily streak",
    "🏄 סבב הגלישה": "🏄 Surf Tour",
-   "4 תחרויות · מקצים חיים ראש בראש, כל יום מ-13:45 (ברביעי מ-15:30) · המשחק אומר לך מתי המקצה שלך ונגד מי": "4 events · live head-to-head heats, every day from 13:45 (Wednesday from 15:30) · the game tells you when your heat is and who you race",
+   "4 תחרויות במשחק הגלישה · כל יום מ-13:45 (ברביעי מ-15:30) · בכל מקצה כל גולש תופס גל אחד, והשופטים נותנים ציון 0–10": "4 events in the surf game · every day from 13:45 (Wednesday from 15:30) · in every heat each surfer catches one wave and the judges score it 0–10",
    "🥇 אלוף הסבב: הסקינים \"מלך האוויר\" ו\"אגדת הצינור\"": "🥇 Tour champion: the Air King and Pipe Legend skins",
    "🥈 מקום 2: הסקין \"מלך האוויר\"": "🥈 2nd place: the Air King skin",
    "טבלת הסבב": "Tour table",
-   "כל תחרות: שמינית גמר (מקצים של 4, שניים עולים), רבע גמר, חצי גמר וגמר (אחד על אחד) -- שלב אחד בכל יום. בכל מקצה כולם רצים יחד באותו מסלול, ומי שעושה יותר נקודות עולה. מי שלא מגיע -- מפסיד. כל מקום נותן נקודות לטבלה: ניצחון 10,000 · גמר 7,800 · חצי גמר 6,085 · רבע גמר 4,745 · שמינית 3,320 / 1,330. התחרות האחרונה שווה פי 1.5.": "Every event: round of 16 (heats of 4, two go through), quarterfinals, semifinals and the final (one on one) -- one round a day. In every heat everyone races together on the same track, and the higher score goes through. No-shows lose. Every place earns tour points: win 10,000 · final 7,800 · semifinal 6,085 · quarterfinal 4,745 · round of 16 3,320 / 1,330. The last event is worth 1.5x.",
+   "כל תחרות: שמינית גמר (מקצים של 4, שניים עולים), רבע גמר, חצי גמר וגמר (אחד על אחד) -- שלב אחד בכל יום. כל מקצה פתוח 20 דקות: נכנסים, תופסים גל אחד בחוף של התחרות, והציון של השופטים הוא הציון שלך. הציון הגבוה עולה. מי שלא גולש בזמן -- מפסיד. כל מקום נותן נקודות לטבלה: ניצחון 10,000 · גמר 7,800 · חצי גמר 6,085 · רבע גמר 4,745 · שמינית 3,320 / 1,330. התחרות האחרונה שווה פי 1.5.": "Every event: round of 16 (heats of 4, two go through), quarterfinals, semifinals and the final (one on one) -- one round a day. Every heat is open for 20 minutes: go in, catch one wave at the event's spot, and the judges' score is yours. The higher score goes through. Surf in time or lose. Every place earns tour points: win 10,000 · final 7,800 · semifinal 6,085 · quarterfinal 4,745 · round of 16 3,320 / 1,330. The last event is worth 1.5x.",
    "🌍 טורניר עולמי": "🌍 World Tournament",
    "10 ימים · כולם נגד כולם · סכום כל הריצות שלך": "10 days · everyone against everyone · the total of all your runs",
    "🥇 מקום 1: תיבה מיוחדת + שלושת סקיני הכוכבים (קוסם הכדור, מכונת השערים, מלך הסלים) + 💎 7 יהלומים": "🥇 1st place: a special chest + all three star skins (Ball Wizard, Goal Machine, Hoop King) + 💎 7 diamonds",
@@ -3799,13 +3799,14 @@
   setInterval(function(){ if(!startOverlay.hidden) fetchWorld().then(fetchWorldRows).then(renderWorldBanner); }, 60000);
 
   // ---------- surf tour ----------
-  // A pro-surfing-style season: 4 events, 4 days each (16 days in a row),
+  // A pro-surfing-style season in the surf game: 4 events, 4 days each (16 days in a row),
   // one round a day -- round of 16 (heats of 4, two go through), quarter-
-  // finals, semifinals and the final (one on one). Every heat is a live
-  // race at its own time (from 13:45 Israel time, Wednesday from 15:30,
-  // one every SURF_SLOT minutes): the heat's players race head to head on
-  // the same track, bots fill the empty seats and run with them, and the
-  // best score goes through. Miss your heat and the others go through.
+  // finals, semifinals and the final (one on one). Every heat opens at its
+  // own time (from 13:45 Israel time, Wednesday from 15:30, one every
+  // SURF_SLOT minutes) for SURF_GRACE: each surfer catches one wave at the
+  // event's spot and the judges' 0-10 score (kept in hundredths) is the
+  // heat score; bots fill the empty seats with judged scores of their own,
+  // and the best scores go through. Miss your heat and the others go through.
   // Every place earns tour points (the last event is worth 1.5x); the most
   // points by the end is the champion. Starts when a row goes into
   // surf_seasons (id, start_day -- added by hand in Supabase). Prizes,
@@ -3814,16 +3815,16 @@
   var SURF_KEY = 'canyonChaseSurfV2';
   var SURF_DAYS = 16, SURF_DRAW = 16;
   var SURF_SLOT = 10 * 60000;          // a heat every 10 minutes
-  var SURF_GRACE = 3 * 60000;          // the room is open this long, then it starts with whoever is there
+  var SURF_GRACE = 20 * 60000;         // the heat is open this long: catch your wave in it
   var SURF_EARLY = 2 * 60000;          // you can come in this early
   var SURF_LATE = 25 * 60000;          // results not in by then: that player didn't show
-  var SURF_BOT_TOP = 150000, SURF_ROUND_MULT = [1, 1.12, 1.25, 1.4];
+  var SURF_BOT_TOP = 8.2, SURF_ROUND_MULT = [1, 1.04, 1.08, 1.12];   // bots' judged scores: the best ~8, the weakest ~2.5
   var SURF_PTS = { win: 10000, second: 7800, semi: 6085, quarter: 4745, r16third: 3320, r16fourth: 1330 };
   var SURF_EVENTS = [
-    { name: L('🌵 תחרות הקניון', '🌵 Canyon Pro'), world: 'canyon', mult: 1 },
-    { name: L('🧊 תחרות הקרח', '🧊 Ice Pro'), world: 'ice', mult: 1 },
-    { name: L('🌴 תחרות הג\'ונגל', '🌴 Jungle Pro'), world: 'jungle', mult: 1 },
-    { name: L('🌊 גמר הים · פי 1.5', '🌊 Sea Finals · 1.5x'), world: 'sea', mult: 1.5 }
+    { name: L('🏊 תחרות בריכת הגלים', '🏊 Wave Pool Pro'), spot: 'pool', mult: 1 },
+    { name: L('🇮🇱 תחרות חוף אולגה', '🇮🇱 Olga Beach Pro'), spot: 'olga', mult: 1 },
+    { name: L('🌺 פייפליין פרו', '🌺 Pipeline Pro'), spot: 'pipe', mult: 1 },
+    { name: L('🌊 גמר נזרה · פי 1.5', '🌊 Nazaré Finals · 1.5x'), spot: 'naz', mult: 1.5 }
   ];
   var SURF_ROUNDS = [L('שמינית גמר', 'Round of 16'), L('רבע גמר', 'Quarterfinals'), L('חצי גמר', 'Semifinals'), L('גמר', 'Final')];
   var SURF_BOT_NAMES = [L('קאי','Kai'), L('נואה','Noa'), L('מאיה','Maya'), L('לני','Leni'), L('טאמה','Tama'), L('קואה','Koa'), L('ריו','Rio'), L('אלה','Ella'),
@@ -3873,7 +3874,7 @@
   function surfHash(s){ var h = 2166136261; for(var i = 0; i < s.length; i++){ h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; }
   function surfBotFinal(bot, heatKey, r){
     var rng = mulberry32(surfHash(surfT.id + '|' + heatKey + '|' + bot.id));
-    return Math.round(bot.skill * SURF_ROUND_MULT[r] * (0.55 + rng() * 0.9) / 10) * 10;
+    return Math.round(Math.min(9.9, bot.skill * SURF_ROUND_MULT[r] * (0.75 + rng() * 0.45)) * 100);
   }
   // how a run goes over time (measured on the real game): ~65 t^2 points,
   // ~680 then 900 units of track a second
@@ -3904,10 +3905,10 @@
         for(var k = 0; k < need; k++){
           var j = need === 1 ? 8 : Math.round(k * (SURF_DRAW - 1) / (need - 1));
           var bn = SURF_BOT_NAMES[(pi * SURF_DRAW + j) % SURF_BOT_NAMES.length] + (pi ? ' ' + (pi + 1) : '');
-          members.push(who({ id: 'b' + pi + ':' + j, name: bn, bot: true, skill: SURF_BOT_TOP * Math.pow(0.85, j),
+          members.push(who({ id: 'b' + pi + ':' + j, name: bn, bot: true, skill: SURF_BOT_TOP - 0.38 * j,
                              sk: SURF_BOT_SKINS[(pi * 7 + j) % SURF_BOT_SKINS.length] }));
         }
-        members.sort(function(a, b){ return (pts[b.id] || 0) - (pts[a.id] || 0) || (b.skill || 60000) - (a.skill || 60000) || (a.id < b.id ? -1 : 1); });
+        members.sort(function(a, b){ return (pts[b.id] || 0) - (pts[a.id] || 0) || (b.skill || 5) - (a.skill || 5) || (a.id < b.id ? -1 : 1); });
         var seedOf = {};
         members.forEach(function(sf, i){ seedOf[sf.id] = i; });
         var heats = [0, 1, 2, 3].map(function(h){ return [members[h], members[7 - h], members[8 + h], members[15 - h]]; });
@@ -4000,7 +4001,7 @@
         // a beta test season with a start time runs fast: a heat every 3 minutes
         if(rows[0].starts_at && /^beta/.test(rows[0].id)){
           surfT.fast = Date.parse(rows[0].starts_at);
-          SURF_SLOT = 3 * 60000; SURF_GRACE = 60000; SURF_EARLY = 60000; SURF_LATE = 6 * 60000;
+          SURF_SLOT = 3 * 60000; SURF_GRACE = 2 * 60000; SURF_EARLY = 60000; SURF_LATE = 3 * 60000;
         }
       } else if(rows) surfT = null;
       if(!surfT || !surfPhase()) return;
@@ -4049,19 +4050,24 @@
       .catch(function(){}).then(function(){ setTimeout(fetchSurf, 1500); });
   }
 
-  // ---- going into your heat: a live room, like head to head
+  // ---- going into your heat: one wave at the event's spot in the surf game
   function surfEnterHeat(){
     var m = surfMine(surfState);
     if(!surfCanEnter(m)) return;
     if(!sameName(surfMe(), playerNick())){ playerName = surfMe(); playerNameInput.value = playerName; saveName(); }
     surfOverlay.hidden = true;
-    startOverlay.hidden = true;
-    duelOverlay.hidden = false;
-    duelNameRow.hidden = true;
-    var others = m.heat.members.filter(function(sf){ return sf.id !== surfMyId(); });
     if(m.rd.r === 3 && !prog.stats.surfFinal){ prog.stats.surfFinal = 1; saveProg(); }
+    var si = 0; SG_SPOTS.forEach(function(sp, i){ if(sp.id === m.evo.ev.spot) si = i; });
+    sgOpenMenu(); sgMenu.hidden = true;
+    sgStart(si);
+    sg.tour = { key: m.heat.key, round: SURF_ROUNDS[m.rd.r], vs: m.heat.members.filter(function(sf){ return sf.id !== surfMyId(); }).map(function(sf){ return sf.name; }) };
+    sgAddText(L('🏄 מקצה בסבב! גל אחד — תן הכול', '🏄 Tour heat! One wave — give it everything'), '#ffd447');
+  }
+  // (the old live race room for heats, no longer used)
+  function surfEnterRoomOld(m){
+    var others = m.heat.members.filter(function(sf){ return sf.id !== surfMyId(); });
     duelEnterRoom('surf-' + surfT.id + '-' + m.heat.key, false, null);
-    duel.surf = { key: m.heat.key, r: m.rd.r, adv: m.heat.adv, at: m.heat.at, world: m.evo.ev.world,
+    duel.surf = { key: m.heat.key, r: m.rd.r, adv: m.heat.adv, at: m.heat.at, world: 'canyon',
                   reals: m.heat.members.filter(function(sf){ return !sf.bot; }).map(function(sf){ return { id: sf.id, name: sf.name }; }),
                   bots: m.heat.members.filter(function(sf){ return sf.bot; }).map(function(sf){ return { id: 'bot-' + sf.id, name: sf.name, bot: 1, fin: surfBotFinal(sf, m.heat.key, m.rd.r), sk: sf.sk }; }),
                   seedOrder: m.heat.members.map(function(sf){ return sf.id; }), vs: others.map(function(sf){ return sf.name; }) };
@@ -4176,7 +4182,7 @@
     var rn = SURF_ROUNDS[m.rd.r], h = m.heat;
     if(surfCanEnter(m)){
       surfBanner.classList.add('is-now');
-      surfBanner.textContent = L('🔴 המקצה שלך מתחיל עכשיו! לחץ כאן להיכנס', '🔴 Your heat is starting now! Tap here to go in') + ' · ' + rn;
+      surfBanner.textContent = L('🔴 המקצה שלך פתוח עכשיו! לחץ כאן לתפוס את הגל', '🔴 Your heat is open now! Tap here to catch your wave') + ' · ' + rn;
     } else if(m.out){
       var nextEv = m.evo.e < 3 ? surfDay((m.evo.e + 1) * 4) : null;
       surfBanner.textContent = L('🏄 הודחת ב' + rn, '🏄 Out in the ' + rn) + (nextEv ? L(' · התחרות הבאה ב-' + nextEv.label, ' · next event ' + nextEv.label) : '') + L(' · לחץ לטבלה', ' · tap for the table');
@@ -4185,7 +4191,8 @@
       surfBanner.textContent = L('🏄 ' + rn + ': ' + (today ? 'היום' : 'ב-' + m.rd.day.label) + ' ב-' + surfClock(h.at) + ' נגד ' + surfOppNames(m),
                                  '🏄 ' + rn + ': ' + (today ? 'today' : m.rd.day.label) + ' at ' + surfClock(h.at) + ' vs ' + surfOppNames(m));
     } else if(h.status === 'live'){
-      surfBanner.textContent = L('🏄 המקצה שלך רץ עכשיו · לחץ לתוצאות', '🏄 Your heat is running · tap for results');
+      surfBanner.textContent = (surfResults[h.key] || {})[nameKey(me)] !== undefined ? L('🏄 גלשת! מחכים לשאר המקצה · לחץ לתוצאות', '🏄 You surfed! Waiting for the rest of the heat · tap for results')
+                                                                       : L('🏄 המקצה שלך רץ עכשיו · לחץ לתוצאות', '🏄 Your heat is running · tap for results');
     } else {
       surfBanner.textContent = L('🏄 עלית שלב! לחץ לראות נגד מי', '🏄 You\'re through! Tap to see who\'s next');
     }
@@ -4199,7 +4206,7 @@
     var nm = document.createElement('span'); nm.className = 'surf-heat-name';
     nm.textContent = (row.sf.bot ? '🤖 ' : '🏄 ') + row.sf.name;
     var tot = document.createElement('span'); tot.className = 'surf-heat-total';
-    tot.textContent = row.absent ? L('לא הגיע', 'no-show') : row.score === null ? '—' : fmtScore(row.score);
+    tot.textContent = row.absent ? L('לא הגיע', 'no-show') : row.score === null ? '—' : (row.score / 100).toFixed(2);
     el.appendChild(nm); el.appendChild(tot);
     return el;
   }
@@ -4243,14 +4250,15 @@
       m.heat.rows.forEach(function(row, i){ mineList.appendChild(surfRowEl(row, m.heat.adv, i, row.sf.id === surfMyId(), m.heat.status === 'done')); });
       if(surfCanEnter(m)){
         var go = document.createElement('button'); go.type = 'button'; go.className = 'boss-banner boss-go surf-go';
-        go.textContent = L('🔴 היכנס למקצה עכשיו!', '🔴 Go into your heat now!');
+        go.textContent = L('🔴 המקצה פתוח! לתפוס את הגל עכשיו', '🔴 Your heat is open! Catch your wave now');
         go.addEventListener('click', surfEnterHeat);
         mineList.appendChild(go);
       }
       var note = document.createElement('div'); note.className = 'mission-sub';
       note.textContent = m.out ? L('הודחת הפעם. התחרות הבאה מתחילה מחדש עם כולם!', 'You\'re out this time. The next event starts fresh for everyone!')
-        : m.heat.status === 'soon' ? L('תהיה כאן ב-' + surfClock(m.heat.at) + '! תוכל להיכנס 2 דקות לפני. כולם רצים יחד באותו מסלול, ראש בראש. מי שלא מגיע — מפסיד.', 'Be here at ' + surfClock(m.heat.at) + '! You can go in 2 minutes early. Everyone races together on the same track, head to head. No-shows lose.')
-        : m.heat.status === 'live' ? L('המקצה רץ עכשיו.', 'The heat is running now.')
+        : m.heat.status === 'soon' ? L('המקצה נפתח ב-' + surfClock(m.heat.at) + ' ל-20 דקות. תופסים בו גל אחד ב' + m.evo.ev.name.replace(/^\S+ /, '') + ', והשופטים נותנים ציון. מי שלא גולש בזמן — מפסיד.',
+                                       'The heat opens at ' + surfClock(m.heat.at) + ' for 20 minutes. Catch one wave in it and the judges score it. Surf in time or lose.')
+        : m.heat.status === 'live' ? L('המקצה פתוח עכשיו. התוצאות כשכולם גלשו או כשהזמן נגמר.', 'The heat is open now. Results when everyone has surfed or time is up.')
         : L('עלית לשלב הבא!', 'You\'re through to the next round!');
       mineList.appendChild(note);
     }
@@ -4315,7 +4323,7 @@
   function openSurf(){
     // the heat is on right now: straight in
     if(surfCanEnter(surfMine(surfState))){ surfEnterHeat(); return; }
-    startOverlay.hidden = true;
+    document.getElementById('sgMenu').hidden = true;
     surfOverlay.hidden = false;
     surfJoinMsg = '';
     document.getElementById('surfClaimResult').textContent = '';
@@ -4326,7 +4334,7 @@
   surfBanner.addEventListener('click', openSurf);
   document.getElementById('closeSurfBtn').addEventListener('click', function(){
     surfOverlay.hidden = true;
-    startOverlay.hidden = false;
+    document.getElementById('sgMenu').hidden = false;
     renderSurfBanner();
   });
   // heats come and go by the clock: keep the banner and screen current
@@ -4334,7 +4342,7 @@
   setInterval(function(){
     if(!surfT) return;
     var now = Date.now(), m = surfMine(surfState), near = m && Math.abs(now - m.heat.at) < 30 * 60000;
-    if(now - surfLastFetch > (near ? 15000 : 60000) && (!startOverlay.hidden || !surfOverlay.hidden)){ surfLastFetch = now; fetchSurf().then(function(){ if(!surfOverlay.hidden) renderSurf(); }); }
+    if(now - surfLastFetch > (near ? 15000 : 60000) && (!document.getElementById('sgMenu').hidden || !surfOverlay.hidden)){ surfLastFetch = now; fetchSurf().then(function(){ if(!surfOverlay.hidden) renderSurf(); }); }
     else { surfState = surfCompute(); renderSurfBanner(); if(!surfOverlay.hidden) renderSurf(); }
   }, 5000);
   fetchSurf();
@@ -4618,6 +4626,8 @@
     var hiI = judges.indexOf(sorted[4]), loI = judges.indexOf(sorted[0]);
     if(loI === hiI) loI = judges.lastIndexOf(sorted[0]);
     var shells = Math.round(final * 40), isBest = final > (sgSave.best10[sg.spot.id] || 0);
+    var tourWave = sg.tour;
+    if(tourWave){ surfPostResult(tourWave.key, Math.round(final * 100)); sg.tour = null; }
     sgSave.shells += shells;
     if(isBest) sgSave.best10[sg.spot.id] = final;
     sgStore();
@@ -4635,6 +4645,9 @@
     document.getElementById('sgOverTitle').textContent = completed ? L('🏄 סיימת את הגל!', '🏄 You rode it out!') : L('🌊 נפלת!', '🌊 Wipeout!');
     document.getElementById('sgOverReason').textContent = completed ? L('רכבת על הגל עד הסוף — השופטים אוהבים את זה', 'You rode the wave to the end — the judges love that')
       : (R[sg.wipe && sg.wipe.reason] || '') + (sg.spot.id === 'naz' ? L(' האפוד התנפח והוציא אותך למעלה 🦺', ' Your vest inflated and floated you up 🦺') : '');
+    if(tourWave) document.getElementById('sgOverReason').textContent += L(' · 🏄 הציון נשלח למקצה (' + tourWave.round + ')! התוצאות כשהמקצה ייסגר — בדוק בסבב.',
+                                                                         ' · 🏄 Your score went in for the heat (' + tourWave.round + ')! Results when the heat closes — check the tour.');
+    document.getElementById('sgAgainBtn').hidden = !!tourWave;        // one wave per heat
     var jr = document.getElementById('sgJudges');
     jr.innerHTML = '';
     judges.forEach(function(v, i){
@@ -6186,6 +6199,7 @@
   // ---- screens: the spots, the shop, after a wipeout
   var sgMenu = document.getElementById('sgMenu'), sgShop = document.getElementById('sgShop'), sgOver = document.getElementById('sgOver');
   function sgRenderMenu(){
+    renderSurfBanner(); fetchSurf();
     document.getElementById('sgShells').textContent = '🐚 ' + fmtScore(sgSave.shells);
     var list = document.getElementById('sgSpots');
     list.innerHTML = '';
@@ -12258,7 +12272,7 @@
   // never while the name field is being typed in. Everything worth keeping
   // (coins, skins, name, league) is in localStorage, so a reload loses nothing.
   // 'dev' = a local or preview copy: the updater stays off entirely.
-  var BUILD_VERSION = '20261025-211648';
+  var BUILD_VERSION = '20261026-074710';
   var UPDATE_CHECK_MS = 60000;
   var UPDATE_TRIED_KEY = 'canyonChaseTriedUpdate';
   var pendingSubmits = 0;
