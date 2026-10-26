@@ -4764,12 +4764,13 @@
         if(offF > tol){ sg.h = 1; sgWipe('flip'); return; }
         var flips = Math.round(Math.abs(a.rot) / (Math.PI * 2)), salto = Math.round((a.fl || 0) / TAU), airT = sg.t - a.t0, sup = (a.supT || 0) > 0.12;
         sg.phase = 'ride'; sg.h = 0.93; sg.th = -0.75; sg.v = Math.max(300, a.vx * 0.95);
-        // the name: the spin by its direction, the flip, the superman, and their combos
-        var nm = [];
-        if(salto && flips) nm.push(L('רודאו פליפ', 'Rodeo flip'));
-        else if(salto) nm.push(salto > 1 ? L('סלטה כפולה', 'Double backflip') : L('סלטה', 'Backflip'));
-        else if(flips) nm.push((a.rot < 0 ? L('אלי-אופ ', 'Alley-oop ') : L('אייר ', 'Air ')) + (flips >= 2 ? '720' : '360'));
-        if(sup) nm.unshift(L('סופרמן', 'Superman'));
+        // the name says every part: the superman, the spin (by its direction) and the flip;
+        // a spin with a flip is a rodeo, with both parts written out
+        var nm = [], spinN = flips ? (a.rot < 0 ? L('אלי-אופ ', 'Alley-oop ') : '') + (flips >= 2 ? '720' : '360') : '', flipN = salto ? (salto > 1 ? L('סלטה כפולה', 'Double backflip') : L('סלטה', 'Backflip')) : '';
+        if(sup) nm.push(L('סופרמן', 'Superman'));
+        if(spinN && flipN) nm.push(L('רודאו (', 'Rodeo (') + spinN + ' + ' + flipN + ')');
+        else if(flipN) nm.push(flipN);
+        else if(spinN) nm.push((a.rot < 0 ? '' : L('אייר ', 'Air ')) + spinN);
         if(!nm.length) nm.push(L('אייר', 'Air'));
         var pts = 300 + 250 * airT + 700 * flips + (a.rot < 0 ? 150 * flips : 0) + 950 * salto + (salto && flips ? 600 : 0) + (sup ? 700 + 900 * Math.min(0.8, a.supT) : 0) + (sup && (salto || flips) ? 500 : 0);
         sgScore(nm.join(' + ') + '!', pts);
@@ -12326,7 +12327,7 @@
   // never while the name field is being typed in. Everything worth keeping
   // (coins, skins, name, league) is in localStorage, so a reload loses nothing.
   // 'dev' = a local or preview copy: the updater stays off entirely.
-  var BUILD_VERSION = '20261026-194014';
+  var BUILD_VERSION = '20261026-200538';
   var UPDATE_CHECK_MS = 60000;
   var UPDATE_TRIED_KEY = 'canyonChaseTriedUpdate';
   var pendingSubmits = 0;
