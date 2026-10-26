@@ -6185,14 +6185,14 @@
     for(; hz < sg3.haz.length; hz++){ sg3.haz[hz].j.visible = sg3.haz[hz].r.visible = false; }
 
     // the camera: on the beach, looking at the face, a little ahead
-    var portrait = W < H, dist = (Hm * 2.7 + 6) * (portrait ? 1.5 : 1);
-    var camWant = new T.Vector3(sx - Hm * 0.2, Hm * 0.32 + 0.7, Hm * 2.2 + dist);
+    var portrait = W < H, dist = (Hm * 2.7 + 6) * (portrait ? 1.5 : 1) * 1.7;      // well back on the sand
+    var camWant = new T.Vector3(sx - Hm * 0.2, Hm * 0.45 + 1.2, Hm * 2.2 + dist);
     var lookWant = new T.Vector3(sx - Hm * (portrait ? 0.1 : 0.5), Hm * 0.55, Hm * 0.2);
     var inBarrel = sg.tube > 0.12 && sg.throwT > 0;
     sg3.tubeK = (sg3.tubeK || 0) + ((inBarrel ? 1 : 0) - (sg3.tubeK || 0)) * Math.min(1, dtR * (inBarrel ? 2.5 : 1.8));
     if(sg3.tubeK > 0.01){
-      var mouthX = (sg.curl + sg.throwLen) * SG3_M + Hm * 2.2, tk = sg3.tubeK * sg3.tubeK * (3 - 2 * sg3.tubeK);
-      camWant.lerp(new T.Vector3(mouthX, Hm * 0.5, Hm * 1.35), tk);
+      var mouthX = (sg.curl + sg.throwLen) * SG3_M + Hm * 3.2, tk = sg3.tubeK * sg3.tubeK * (3 - 2 * sg3.tubeK);
+      camWant.lerp(new T.Vector3(mouthX, Hm * 0.6, Hm * 2.1), tk);
       lookWant.lerp(new T.Vector3(sx - Hm * 0.6, Hm * 0.42, Hm * 0.42), tk);
     }
     // a new wave (or a new spot): the camera starts in place instead of flying over
@@ -12320,7 +12320,7 @@
   // never while the name field is being typed in. Everything worth keeping
   // (coins, skins, name, league) is in localStorage, so a reload loses nothing.
   // 'dev' = a local or preview copy: the updater stays off entirely.
-  var BUILD_VERSION = '20261026-161657';
+  var BUILD_VERSION = '20261026-172628';
   var UPDATE_CHECK_MS = 60000;
   var UPDATE_TRIED_KEY = 'canyonChaseTriedUpdate';
   var pendingSubmits = 0;
