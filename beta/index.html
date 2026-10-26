@@ -4706,8 +4706,8 @@
   // how far a wave runs before it fades out: long rides, like True Surf --
   // about a minute at the pool, shorter on the faster, heavier waves
   function sgWaveLen(spot){ return spot.dur * 750; }
-  // the Air Wave's wall: the last 40% of the line
-  function sgWallAt(x){ var s = sg.spot; if(!s || !s.wall) return 0; var L0 = sgWaveLen(s); return Math.max(0, Math.min(1, (x - L0 * 0.6) / (L0 * 0.4))); }
+  // the Air Wave's wall: only the end of the line (the last quarter)
+  function sgWallAt(x){ var s = sg.spot; if(!s || !s.wall) return 0; var L0 = sgWaveLen(s); return Math.max(0, Math.min(1, (x - L0 * 0.75) / (L0 * 0.25))); }
   function sgUpdate(dt){
     var spot = sg.spot, F = sgFaceUnits(), up = sgSave.up;
     sg.t += dt;
@@ -4851,7 +4851,8 @@
     // the barrel: now and then the lip throws over a stretch ahead of the curl
     // like True Surf: the barrel is always at the curl, and it's fast. Stay
     // deep and you're in it; be faster and you're out on the open face
-    sg.throwT = 1; sg.throwLen = spot.tubeLen || 220;
+    // (the Air Wave has no barrel: just a crumbly lip, and the wall at the end)
+    sg.throwT = spot.wall ? 0 : 1; sg.throwLen = spot.tubeLen || 220;
     if(sg.throwT > 0){
       sg.throwT -= dt;
       var inTube = gap < sg.throwLen;               // low or high, under the lip is inside
@@ -5580,6 +5581,7 @@
       var q = sg.closeouts[i]; if(q.done) continue;
       var dq = Math.abs(xm - q.x * SG3_M); if(dq < Hm * 3) b = Math.max(b, 1 - dq / (Hm * 3));
     }
+    if(sg.spot.wall) b = Math.min(b, 0.5);          // the Air Wave never pitches a barrel
     b = b * b * (3 - 2 * b);
     return [b, c, s];
   }
@@ -12318,7 +12320,7 @@
   // never while the name field is being typed in. Everything worth keeping
   // (coins, skins, name, league) is in localStorage, so a reload loses nothing.
   // 'dev' = a local or preview copy: the updater stays off entirely.
-  var BUILD_VERSION = '20261026-161229';
+  var BUILD_VERSION = '20261026-161657';
   var UPDATE_CHECK_MS = 60000;
   var UPDATE_TRIED_KEY = 'canyonChaseTriedUpdate';
   var pendingSubmits = 0;
