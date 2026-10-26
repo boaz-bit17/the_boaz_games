@@ -3913,7 +3913,11 @@
         members.sort(function(a, b){ return (pts[b.id] || 0) - (pts[a.id] || 0) || (b.skill || 5) - (a.skill || 5) || (a.id < b.id ? -1 : 1); });
         var seedOf = {};
         members.forEach(function(sf, i){ seedOf[sf.id] = i; });
-        var heats = [0, 1, 2, 3].map(function(h){ return [members[h], members[7 - h], members[8 + h], members[15 - h]]; });
+        // real surfers surf against each other: they go in together, heat by heat,
+        // and the bots fill the empty seats, the strong ones spread over the heats
+        var heats = [[], [], [], []], snake = [3, 2, 1, 0, 0, 1, 2, 3], si = 0;     // the strongest bot to the last heat (bots only, if any)
+        members.filter(function(sf){ return !sf.bot; }).forEach(function(sf, i){ heats[Math.floor(i / 4)].push(sf); });
+        members.filter(function(sf){ return sf.bot; }).forEach(function(sf){ while(heats[snake[si % 8]].length >= 4) si++; heats[snake[si % 8]].push(sf); si++; });
         var rounds = [];
         for(var r = 0; r < 4; r++){
           var day = surfDay(e * 4 + r), adv = r === 0 ? 2 : 1, allDone = true;
@@ -12302,7 +12306,7 @@
   // never while the name field is being typed in. Everything worth keeping
   // (coins, skins, name, league) is in localStorage, so a reload loses nothing.
   // 'dev' = a local or preview copy: the updater stays off entirely.
-  var BUILD_VERSION = '20261026-075516';
+  var BUILD_VERSION = '20261026-080452';
   var UPDATE_CHECK_MS = 60000;
   var UPDATE_TRIED_KEY = 'canyonChaseTriedUpdate';
   var pendingSubmits = 0;
