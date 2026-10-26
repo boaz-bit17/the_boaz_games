@@ -3809,7 +3809,8 @@
   // and the best scores go through. Miss your heat and the others go through.
   // Every place earns tour points (the last event is worth 1.5x); the most
   // points by the end is the champion. Starts when a row goes into
-  // surf_seasons (id, start_day -- added by hand in Supabase). Prizes,
+  // surf_seasons (id, start_day, and optionally starts_at for the first
+  // day's first heat -- added by hand in Supabase). Prizes,
   // claimed on this device after the season: 1st -- both surf-pro skins,
   // 2nd -- Air King.
   var SURF_KEY = 'canyonChaseSurfV2';
@@ -3849,7 +3850,7 @@
     }
     var dt = new Date(Date.UTC(surfT.y, surfT.m, surfT.d + i)), y = dt.getUTCFullYear(), m = dt.getUTCMonth(), d = dt.getUTCDate();
     var wed = dt.getUTCDay() === 3;
-    return { i: i, label: d + '.' + (m + 1), open: israelAt(y, m, d, wed ? 15 : 13, wed ? 30 : 45), close: israelAt(y, m, d, 21, 0) };
+    return { i: i, label: d + '.' + (m + 1), open: i === 0 && surfT.firstAt ? surfT.firstAt : israelAt(y, m, d, wed ? 15 : 13, wed ? 30 : 45), close: israelAt(y, m, d, 21, 0) };
   }
   function surfClock(ms){
     var o = {};
@@ -4003,6 +4004,8 @@
           surfT.fast = Date.parse(rows[0].starts_at);
           SURF_SLOT = 3 * 60000; SURF_GRACE = 2 * 60000; SURF_EARLY = 60000; SURF_LATE = 3 * 60000;
         }
+        // a real season with a start time: the first day's heats start then
+        else if(rows[0].starts_at) surfT.firstAt = Date.parse(rows[0].starts_at);
       } else if(rows) surfT = null;
       if(!surfT || !surfPhase()) return;
       return Promise.all([
@@ -12272,7 +12275,7 @@
   // never while the name field is being typed in. Everything worth keeping
   // (coins, skins, name, league) is in localStorage, so a reload loses nothing.
   // 'dev' = a local or preview copy: the updater stays off entirely.
-  var BUILD_VERSION = '20261026-074710';
+  var BUILD_VERSION = '20261026-075124';
   var UPDATE_CHECK_MS = 60000;
   var UPDATE_TRIED_KEY = 'canyonChaseTriedUpdate';
   var pendingSubmits = 0;
