@@ -5767,25 +5767,59 @@
         R.board.material.color.set(bd.deck); R.stripe.material.color.set(bd.stripe); }
       G.nm = o.nm; G.sc = o.sc; G.riding = o.ph === 'r' || o.ph === 'a';
       var gx = ((sg.peak.peakX || 0) + (o.x || 0)) * SG3_M, fwd, pos;
+      // the wave where they are (the same set as yours): its profile at their x
+      var bG = sg3Break(gx, Hm), rG = sg3ProfileQ(bG[0], bG[1], Hm, bG[2]);
+      var onFace = function(hq){ var fr = sg3RowForH(Math.max(0, Math.min(1, hq))), r0 = Math.floor(fr), r1 = Math.min(SG3_ROWS - 1, r0 + 1), f = fr - r0;
+        return [rG[r0][0] + (rG[r1][0] - rG[r0][0]) * f, rG[r0][1] + (rG[r1][1] - rG[r0][1]) * f]; };
+      var up;
       if(G.riding){
-        // up and riding down the line, on the face
-        var hh = Math.max(0, Math.min(1, o.h || 0.4));
-        pos = new T.Vector3(gx, Hm * (0.12 + 0.6 * hh), zLine - Hm * (0.25 + 0.55 * hh) - 0.6);
-        fwd = new T.Vector3(1, 0, 0);
+        // up and riding down the line, standing on the face of the wave at their height
+        var hh = Math.max(0, Math.min(1, o.h === undefined ? 0.5 : o.h)), f0 = onFace(hh), f1 = onFace(hh + 0.05), f2 = onFace(hh - 0.05);
+        pos = new T.Vector3(gx, f0[1], f0[0] - zOff);
+        var tU = new T.Vector3(0, f1[1] - f2[1], f1[0] - f2[0]).normalize(), nG = new T.Vector3().crossVectors(new T.Vector3(1, 0, 0), tU).normalize();
+        if(nG.y < 0) nG.negate();
+        fwd = new T.Vector3(1, 0, 0).addScaledVector(tU, 0.15).normalize(); up = nG.lerp(new T.Vector3(0, 1, 0), 0.45).normalize();
         sg3Pose(0.65, null, R);
       } else {
-        // lying on the board in the water, facing where they paddle
-        var zg = zLine + (o.dz || 0);
-        pos = new T.Vector3(gx, sg3WaterY(rows, zg + zOff) + 0.02 + Math.sin(now * 1.7 + i) * 0.06, zg);
-        fwd = new T.Vector3(Math.sin(o.hd || 0), 0, Math.cos(o.hd || 0));
-        sg3Pose(0.05, null, R); sg3ProneOf(T, R);
+        // lying on the board in the water, facing where they paddle, stroking
+        var zg = onFace(0)[0] + 0.6 + (o.dz || 0);
+        pos = new T.Vector3(gx, sg3WaterY(rG, zg + zOff) + 0.02 + Math.sin(now * 1.7 + i) * 0.06, zg);
+        fwd = new T.Vector3(Math.sin(o.hd || 0), 0, Math.cos(o.hd || 0)); up = new T.Vector3(0, 1, 0);
+        var cyc = (now * 1.1 + i * 0.37) % 1;
+        sg3PoseProne(T, R, Math.max(0, 1 - cyc * 2), Math.max(0, 1 - ((cyc + 0.5) % 1) * 2));
       }
-      var up = new T.Vector3(0, 1, 0), side = new T.Vector3().crossVectors(fwd, up).normalize();
+      var side = new T.Vector3().crossVectors(fwd, up).normalize(); up = new T.Vector3().crossVectors(side, fwd).normalize();
       G.g.position.copy(pos); G.g.quaternion.setFromRotationMatrix(new T.Matrix4().makeBasis(fwd, up, side));
       R.body.rotation.set(0, 0, 0); R.vest.visible = false;
     });
   }
   // lying on the board: the body turned down onto the deck, head toward the nose
+  // lying on the board paddling, in the body's own frame (x to the nose, y up):
+  // legs straight back, chest and head up, each arm reaching forward and pulling
+  // back through the water (kL, kR: how fresh each arm's stroke is, 1 = just reached)
+  function sg3PoseProne(T, R, kL, kR){
+    var P = R.parts, X = R.extra, V = function(x, y, z){ return new T.Vector3(x, y, z); };
+    var hip = V(-0.22, 0.17, 0), sh = V(0.36, 0.25, 0), nk = V(0.49, 0.31, 0), hd = V(0.6, 0.4, 0);
+    sg3Limb(T, P.torso, hip, sh); sg3Limb(T, P.stripe, V(hip.x + 0.05, hip.y + 0.04, -0.13), V(sh.x - 0.02, sh.y + 0.03, -0.13));
+    sg3Limb(T, P.neck, sh, nk);
+    // legs: straight back along the board, feet together at the tail
+    sg3Limb(T, P.thighB, V(hip.x, hip.y - 0.02, 0.08), V(-0.62, 0.14, 0.1)); sg3Limb(T, P.shinB, V(-0.62, 0.14, 0.1), V(-0.98, 0.13, 0.09));
+    sg3Limb(T, P.thighF, V(hip.x, hip.y - 0.02, -0.08), V(-0.62, 0.14, -0.1)); sg3Limb(T, P.shinF, V(-0.62, 0.14, -0.1), V(-0.98, 0.13, -0.09));
+    X.footB.position.set(-1.04, 0.12, 0.09); X.footF.position.set(-1.04, 0.12, -0.09);
+    var dC = V(0, 0, 0).subVectors(sh, hip).normalize();
+    X.chest.position.copy(hip).lerp(sh, 0.68); X.chest.quaternion.setFromUnitVectors(V(0, 1, 0), dC);
+    X.hips.position.copy(hip);
+    R.head.position.copy(hd); R.head.rotation.set(0, 0, -0.9);
+    R.hair.position.copy(hd).add(V(-0.03, 0.04, 0)); R.hair.rotation.set(0, 0, -0.35);
+    // the arms: each stroke reaches forward past the nose and pulls back under the board
+    [[P.uArmF, P.fArmF, X.handF, -1, kL], [P.uArmB, P.fArmB, X.handB, 1, kR]].forEach(function(A){
+      var ph = 1 - A[4], s0 = V(sh.x - 0.02, sh.y - 0.03, A[3] * 0.19);
+      var hn = V(sh.x + 0.5 - 0.95 * ph, sh.y - 0.1 - 0.32 * Math.sin(ph * Math.PI) - 0.06 * ph, A[3] * (0.3 + 0.06 * Math.sin(ph * Math.PI)));
+      var el = s0.clone().lerp(hn, 0.5).add(V(0, 0.12 * Math.sin(ph * Math.PI) + 0.04, A[3] * 0.07));
+      sg3Limb(T, A[0], s0, el); sg3Limb(T, A[1], el, hn); A[2].position.copy(hn);
+    });
+    R.vest.position.copy(hip).lerp(sh, 0.6);
+  }
   function sg3ProneOf(T, R){
     var qP = new T.Quaternion().setFromAxisAngle(new T.Vector3(0, 0, 1), -Math.PI / 2), oP = new T.Vector3(-0.92, 0.22, 0);
     R.body.children.forEach(function(ch){ if(ch === R.board || ch === R.stripe || ch === R.fin) return; ch.position.applyQuaternion(qP).add(oP); ch.quaternion.premultiply(qP); });
@@ -6335,19 +6369,7 @@
     var chaseNow = sg3.camMode === 'chase' && (riding3 || sg.phase === 'wipe' || sg.phase === 'over') && sg.phase !== 'paddle';
     R.body.children.forEach(function(ch){ if(ch !== R.board && ch !== R.stripe && ch !== R.fin) ch.visible = !povNow; });
     sg3Pose(sg.phase === 'paddle' ? 0.05 : sg.phase === 'air' && sg.air && sg.air.sup > 0.01 ? 0.3 : sg.tube > 0.1 ? 0.95 : sg.phase === 'ride' && (sg.joy && sg.joy.y < -0.3) ? 0.25 : 0.65);
-    if(sg.phase === 'paddle'){
-      // prone: the body turned down onto the deck, head toward the nose
-      var qP = new T.Quaternion().setFromAxisAngle(new T.Vector3(0, 0, 1), -Math.PI / 2), oP = new T.Vector3(-0.92, 0.22, 0);
-      R.body.children.forEach(function(ch){ if(ch === R.board || ch === R.stripe || ch === R.fin) return; ch.position.applyQuaternion(qP).add(oP); ch.quaternion.premultiply(qP); });
-      // each arm: reach forward past the shoulder, pull back down through the water
-      var shX = 0.47, shY = 0.12;
-      [[R.parts.uArmF, R.parts.fArmF, R.extra.handF, -1, sg.pad.kL || 0], [R.parts.uArmB, R.parts.fArmB, R.extra.handB, 1, sg.pad.kR || 0]].forEach(function(A){
-        var ph = 1 - A[4], z = A[3] * 0.2;
-        var s0 = new T.Vector3(shX, shY, z), hd = new T.Vector3(shX + 0.5 - 0.85 * ph, shY - 0.12 - 0.3 * Math.sin(ph * Math.PI) - 0.05 * ph, A[3] * 0.32);
-        var e0 = s0.clone().lerp(hd, 0.5).add(new T.Vector3(0, 0.1, A[3] * 0.06));
-        sg3Limb(T, A[0], s0, e0); sg3Limb(T, A[1], e0, hd); A[2].position.copy(hd);
-      });
-    }
+    if(sg.phase === 'paddle') sg3PoseProne(T, R, sg.pad.kL || 0, sg.pad.kR || 0);
     if(sg.phase === 'air' && sg.air && sg.air.sup > 0.01){
       // superman: the body swings out flat above the board, legs kicked back,
       // hands on the rails
@@ -12658,7 +12680,7 @@
   // never while the name field is being typed in. Everything worth keeping
   // (coins, skins, name, league) is in localStorage, so a reload loses nothing.
   // 'dev' = a local or preview copy: the updater stays off entirely.
-  var BUILD_VERSION = '20261027-153556';
+  var BUILD_VERSION = '20261027-154122';
   var UPDATE_CHECK_MS = 60000;
   var UPDATE_TRIED_KEY = 'canyonChaseTriedUpdate';
   var pendingSubmits = 0;
