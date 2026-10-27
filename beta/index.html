@@ -673,6 +673,9 @@
   #sgOverMoves{ text-align:center; margin:0 0 8px; }
   .sg-cam-btn{ position:absolute; top:12px; right:12px; z-index:6; width:46px; height:46px; border-radius:50%; border:2px solid rgba(255,255,255,.7);
     background:rgba(0,30,50,.45); font-size:22px; cursor:pointer; }
+  .sg-peak-btn{ position:absolute; top:12px; left:12px; z-index:6; height:42px; padding:0 14px; border-radius:21px; border:2px solid rgba(255,255,255,.75);
+    background:rgba(255,140,40,.85); color:#fff; font:bold 16px Rubik, sans-serif; cursor:pointer; }
+  .sg-exit-btn{ top:62px; background:rgba(0,30,50,.55); }
   .sg-row{ display:flex; gap:8px; }
   .sg-row .go-btn{ margin:0; }
   /* ---------- daily streak & badges ---------- */
@@ -950,6 +953,8 @@
 <div id="stage">
   <canvas id="game"></canvas>
   <button class="sg-cam-btn" id="sgCamBtn" type="button" hidden>🎥</button>
+  <button class="sg-peak-btn" id="sgPeakBtn" type="button" hidden>🚀 לפיק</button>
+  <button class="sg-peak-btn sg-exit-btn" id="sgExitBtn" type="button" hidden>🏁 סיום</button>
 
   <div class="hud" id="hud" hidden>
     <div class="hud-panel">
@@ -1228,6 +1233,7 @@
       <button class="tourney-banner surf-banner" id="surfBanner" type="button" hidden></button>
       <div class="sg-shells" id="sgShells"></div>
       <div class="sg-spots" id="sgSpots"></div>
+      <button class="shop-btn sg-mode-btn" id="sgModeBtn" type="button"></button>
       <button class="shop-btn" id="sgShopBtn" type="button">🛒 חנות הגלישה</button>
       <button class="back-btn" id="sgBackBtn" type="button">⬅ חזרה למשחק הריצה</button>
     </div>
@@ -1420,6 +1426,8 @@
    "🌊 נפלת!": "🌊 Wipeout!",
    "ציון הגל": "Wave score",
    "🔁 עוד גל": "🔁 Another wave",
+   "🚀 לפיק": "🚀 To the peak",
+   "🏁 סיום": "🏁 Finish",
    "🏝️ חופים": "🏝️ Spots",
    "🏅 תגים": "🏅 Badges",
    "🏅 תגים ורצף": "🏅 Badges & Streak",
@@ -4608,12 +4616,20 @@
   function sgK(){ return Math.max(0.5, Math.min(1.25, W / 900)); }
   function sgFaceUnits(){ return SG_FACE * (0.75 + 0.55 * sg.spot.size); }
   function sgRand(){ return Math.random(); }
+  // a set coming in: how long until it reaches you, and where its peak is
+  // (the gap from you to the peak, in track units -- you paddle into the spot)
+  var SG_SPOT_LO = 110, SG_SPOT_HI = 480;
+  function sgNewSet(first){ return { t: 0, T: first === false ? 12 : 9, pw: 0, taps: 0, side: 1, kL: 0, kR: 0, turn: 0, k: 0, stage: 'horizon' }; }
+  var SG_SET_RUN = 20;      // the swell rolls in over this many wave heights, steadily
+  function sgSetOff(k, Hm){ return Hm * SG_SET_RUN * (1 - k); }
+  function sgPeakGap(){ return Math.random() < 0.5 ? 65 + Math.random() * 45 : 500 + Math.random() * 120; }
   function sgStart(i){
     var spot = SG_SPOTS[i];
-    sg = { active: true, phase: spot.tow ? 'tow' : 'ride', spot: spot, spotIdx: i, t: 0, x: 0, v: spot.tow ? 620 : 380, h: 0.35, th: -0.3, hold: false,
-           curl: -460, score: 0, chain: 0, chainT: 0, lastMove: '', texts: [], spray: [], hazards: [], closeouts: [], throwT: 0, throwLen: 0,
+    sg = { active: true, phase: spot.tow ? 'tow' : 'paddle', spot: spot, spotIdx: i, t: 0, x: 0, v: spot.tow ? 620 : 40, h: spot.tow ? 0.35 : 0.04, th: spot.tow ? -0.3 : 0, hold: false,
+           pad: sgNewSet(), catchT: 0, dz: 0, hd: Math.PI,
+           curl: spot.tow ? -460 : -sgPeakGap(), score: 0, chain: 0, chainT: 0, lastMove: '', texts: [], spray: [], hazards: [], closeouts: [], throwT: 0, throwLen: 0,
            tube: 0, air: null, psi: 0, psiMax: 0, rebound: false, prevSign: -1, nextHaz: 3 + sgRand() * 3, nextClose: 14 + sgRand() * 6, nextThrow: 4 + sgRand() * 3,
-           wipe: null, towT: spot.tow ? 2.4 : 0, hint: 4, best: sgSave.best10[spot.id] || 0, moves: [] };
+           wipe: null, towT: spot.tow ? 2.4 : 0, hint: spot.tow ? 4 : 0, best: sgSave.best10[spot.id] || 0, moves: [] };
     state = 'surfgame';
     startOverlay.hidden = true; hud.hidden = true;
     sgMenu.hidden = true; sgOver.hidden = true; sgShop.hidden = true;
@@ -4672,6 +4688,7 @@
       jelly: L('נעקצת ממדוזה!', 'Stung by a jellyfish!'),
       close: L('הגל נסגר עליך!', 'The wave closed out on you!'),
       swallow: L('לא היית מהיר מספיק — הצינור בלע אותך!', 'Not fast enough — the barrel swallowed you!'),
+      late:  L('הייתם עמוק מדי, ממש מתחת לשבירה — השפה נפלה עליכם!', 'Too deep, right under the peak — the lip landed on you!'),
       superman: L('לא החזרת את הגלשן מתחת לרגליים בזמן! עזבו ⬆️ לפני הנחיתה', 'You didn\'t get the board back under your feet! Let go of ⬆️ before landing'),
       flip:  L('הסלטה לא הסתיימה — נחתת על הראש!', 'The flip wasn\'t finished — you landed on your head!')
     };
@@ -4701,7 +4718,73 @@
       : L('לא עשית תרגילים בגל הזה', 'No moves on this wave');
     document.getElementById('sgOverBest').textContent = isBest ? L('🏆 הציון הכי גבוה שלך בחוף הזה!', '🏆 Your best score at this spot!') : L('הציון הכי גבוה שלך כאן: ', 'Your best here: ') + (sgSave.best10[sg.spot.id] || 0).toFixed(2);
     document.getElementById('sgOverShells').textContent = '🐚 +' + fmtScore(shells);
+    if(sg.peak){ sgPeakNext(final, completed); return; }
     sgOver.hidden = false;
+  }
+  // the peak: back in the water where the ride ended, the next set on its way
+  // ---- the shared peak: a lineup per spot over realtime (see the duels) ----
+  var PEAK_PERIOD = 14000, PEAK_SEND_MS = 150, PEAK_SILENT_MS = 6000;
+  var sgNet = { ch: null, spot: '', others: {}, names: {}, last: 0 };
+  function sgPeakJitter(spotId, n){ return (surfHash(spotId + ':' + n) % 161) - 80; }
+  function sgNetJoin(spot){
+    sgNetLeave();
+    if(!isOnlineBoard) return;
+    sgNet.spot = spot.id; sgNet.others = {}; sgNet.names = {};
+    duelGetClient().then(function(c){
+      if(!sg.peak || sg.spot.id !== spot.id || sgNet.ch) return;
+      var beta = location.pathname.indexOf('/beta/') !== -1 ? 'b-' : '';
+      var ch = c.channel(DUEL_PREFIX + 'peak-' + beta + spot.id, { config: { presence: { key: duelMyId }, broadcast: { self: false } } });
+      ch.on('presence', { event: 'sync' }, function(){
+        var st = ch.presenceState(), names = {};
+        Object.keys(st).forEach(function(k){ var m = st[k] && st[k][0]; if(m && m.id !== duelMyId) names[m.id] = m; });
+        sgNet.names = names;
+        Object.keys(sgNet.others).forEach(function(id){ if(!names[id]) delete sgNet.others[id]; });
+      });
+      ch.on('broadcast', { event: 'pk' }, function(msg){
+        var m = msg && msg.payload; if(!m || !m.id || m.id === duelMyId) return;
+        var o = sgNet.others[m.id] = sgNet.others[m.id] || { best: 0 };
+        if(o.ph === 'p' && m.ph === 'r') sgAddText('🏄 ' + (m.nm || L('גולש', 'A surfer')) + L(' תפס/ה גל!', ' caught a wave!'), '#bfe9ff');
+        Object.assign(o, m); o.seen = Date.now();
+      });
+      ch.on('broadcast', { event: 'pw' }, function(msg){
+        var m = msg && msg.payload; if(!m || !m.id) return;
+        var o = sgNet.others[m.id] = sgNet.others[m.id] || { best: 0 };
+        o.best = Math.max(o.best || 0, +m.sc || 0);
+        sgAddText((m.nm || L('גולש', 'A surfer')) + ': ' + (+m.sc).toFixed(2), '#ffd447');
+      });
+      ch.subscribe(function(status){
+        if(status === 'SUBSCRIBED') ch.track({ id: duelMyId, name: playerNick() || L('גולש', 'Surfer'), rider: sgSave.rider, board: sgSave.board, at: Date.now() });
+      });
+      sgNet.ch = ch;
+    }).catch(function(){});
+  }
+  function sgNetLeave(){
+    if(sgNet.ch){ var ch = sgNet.ch; sgNet.ch = null; try { duelClient.removeChannel(ch); } catch(e){} }
+    sgNet.others = {}; sgNet.names = {};
+  }
+  // where you are, a few times a second, in the peak's own frame
+  function sgNetTick(){
+    if(!sgNet.ch || !sg.peak) return;
+    var now = Date.now(); if(now - sgNet.last < PEAK_SEND_MS) return; sgNet.last = now;
+    var ph = sg.phase === 'paddle' ? 'p' : sg.phase === 'ride' || sg.phase === 'done' || sg.phase === 'tow' ? 'r' : sg.phase === 'air' ? 'a' : 'w';
+    try { sgNet.ch.send({ type: 'broadcast', event: 'pk', payload: { id: duelMyId, nm: playerNick() || L('גולש', 'Surfer'), rd: sgSave.rider, bd: sgSave.board, ph: ph,
+      x: Math.round(sg.x - sg.peak.peakX), dz: Math.round((sg.dz || 0) * 10) / 10, hd: Math.round((sg.hd || 0) * 100) / 100, h: Math.round((sg.h || 0) * 100) / 100,
+      sc: Math.round(sgTen(sg.score) * 100) / 100, best: sg.peak.best } }); } catch(e){}
+  }
+  // the others who are still here (heard from lately)
+  function sgNetList(){
+    var now = Date.now();
+    return Object.keys(sgNet.others).map(function(id){ var o = sgNet.others[id]; o.id = id; return o; })
+      .filter(function(o){ return o.seen && now - o.seen < PEAK_SILENT_MS && sgNet.names[o.id]; });
+  }
+  function sgPeakNext(final, completed){
+    var S = sg.peak, endX = sg.x;
+    S.rides.push(final); S.best = Math.max(S.best, final);
+    if(sgNet.ch) try { sgNet.ch.send({ type: 'broadcast', event: 'pw', payload: { id: duelMyId, nm: playerNick() || L('גולש', 'Surfer'), sc: final } }); } catch(e){}
+    sgStart(sg.spotIdx);
+    sg.peak = S; sg.x = endX; sg.curl = S.peakX + (Math.random() - 0.5) * 160; sg.pad.T = 16;     // time to paddle back out
+    if(S.shared) sg.pad.n = -1;                                      // the shared peak: join the set that's coming now
+    sgAddText((completed ? L('🏄 ', '🏄 ') : L('🌊 ', '🌊 ')) + final.toFixed(2) + L(' · הסט הבא מגיע', ' · the next set is coming'), '#ffd447');
   }
   // how far a wave runs before it fades out: long rides, like True Surf --
   // about a minute at the pool, shorter on the faster, heavier waves
@@ -4710,6 +4793,7 @@
   function sgWallAt(x){ var s = sg.spot; if(!s || !s.wall) return 0; var L0 = sgWaveLen(s); return Math.max(0, Math.min(1, (x - L0 * 0.75) / (L0 * 0.25))); }
   function sgUpdate(dt){
     var spot = sg.spot, F = sgFaceUnits(), up = sgSave.up;
+    if(sg.peak && sg.peak.shared) sgNetTick();
     sg.t += dt;
     sg.hint = Math.max(0, sg.hint - dt);
     sg.chainT = Math.max(0, sg.chainT - dt);
@@ -4719,7 +4803,7 @@
     sg.spray = sg.spray.filter(function(p){ return p.life > 0; });
     if(sg.phase === 'over') return;
     // the curl peels on, a little faster all the time
-    var curlV = Math.min(SG_CURL_MAX, SG_CURL0 + sg.t * SG_CURL_RAMP) * spot.curl;
+    var curlV = Math.min(SG_CURL_MAX, SG_CURL0 + (sg.t - (sg.catchT || 0)) * SG_CURL_RAMP) * spot.curl;
     if(sg.throwT > 0) curlV *= 1.05;            // a throwing barrel chases you down the line
     if(sg.phase === 'tow'){
       // Nazaré: the jet ski pulls you across the flat water into the giant
@@ -4732,6 +4816,58 @@
       var w = sg.wipe;
       w.t += dt; w.spin += dt * 9; sg.v *= 0.96; sg.x += sg.v * dt * 0.3; sg.curl += curlV * dt;
       if(w.t > 1.7) sgEnd(false);
+      return;
+    }
+    if(sg.phase === 'paddle'){
+      var P = sg.pad, Jp = sgJoyVec(), Hp = SG3_H[spot.id] || 3; P.t += dt;
+      if(sg.peak && sg.peak.shared){
+        // everyone's sets come at the same moments: one every PEAK_PERIOD, the peak placed by its number
+        var nowS = Date.now(), nS = Math.floor(nowS / PEAK_PERIOD);
+        if(P.n !== nS){ var keep = P.pw; sg.pad = P = sgNewSet(false); P.n = nS; P.T = 11; P.pw = keep; sg.curl = sg.peak.peakX + sgPeakJitter(spot.id, nS); }
+        P.t = (nowS - nS * PEAK_PERIOD) / 1000;
+      }
+      // strokes build up paddling speed; it fades when you stop
+      while(P.taps > 0){ P.taps--; P.pw = Math.min(1.25, P.pw + 0.3); P.side = -P.side; P[P.side > 0 ? 'kR' : 'kL'] = 1; }
+      P.pw = Math.max(0, P.pw - dt * 0.16); P.kR = Math.max(0, P.kR - dt * 2.4); P.kL = Math.max(0, P.kL - dt * 2.4);
+      // ⬅️ ➡️ turn the board
+      if(Math.abs(Jp.x) > 0.3) sg.hd -= Jp.x * 2.3 * dt;
+      // paddle where you're facing (quicker when the peak is far off)
+      var toX = (sg.curl + 300 - sg.x) / 40, dist = Math.sqrt(toX * toX + sg.dz * sg.dz);
+      var spd = (0.3 + P.pw * 2.4) * (P.stage === 'go' ? 1 : 1 + Math.min(6, Math.max(0, dist - 35) / 40));
+      sg.x += Math.sin(sg.hd) * spd * 40 * dt; sg.dz += Math.cos(sg.hd) * spd * dt;
+      sg.dz = Math.max(-Hp * 9, Math.min(Hp * 5, sg.dz));
+      sg.v = 40 + P.pw * 260; sg.th = 0; sg.h = 0.04;
+      var pg = sg.x - sg.curl;
+      // the set: rolling in steadily; it reaches you where you are
+      P.k = P.t / P.T;
+      var kReach = 1 + (0.6 + sg.dz) / (Hp * SG_SET_RUN), toReach = (kReach - P.k) * P.T;
+      if(P.passT === undefined){
+        P.stage = P.t < Math.max(1.6, P.T - 7.5) ? 'horizon' : toReach > 3.2 ? 'position' : 'go';
+        if(P.stage === 'go' && P.dzGo === undefined){ P.dzGo = sg.dz; P.pgGo = pg; }   // where you were sitting when it came
+        if(toReach <= 0){
+          var dz0 = P.dzGo === undefined ? sg.dz : P.dzGo, facing = Math.cos(sg.hd) > 0.3, outside = dz0 < -Hp * 4, inside = dz0 > Hp * 1.6, why = '';
+          // further out than the take-off line you can still catch it, but you have to be paddling harder
+          var needPw = 0.75 + Math.min(0.4, 0.15 * Math.max(0, -dz0 / Hp - 1.3));
+          if(!outside && !inside && pg < 55){ sg.h = 0.5; sgWipe('late'); return; }        // right under the peak: the lip takes you
+          if(!outside && !inside && pg <= 900 && facing && P.pw >= needPw){
+            // in! the closer to the peak, the deeper the take-off
+            sg.phase = 'ride'; sg.catchT = sg.t; sg.h = 0.45; sg.th = -0.55; sg.v = 360; sg.hint = 4; sg.dz = 0;
+            sgAddText(L('🏄 תפסתם את הגל!', '🏄 You caught it!'), '#7fffb0');
+            if(pg < 230) sgScore(L('טייק-אוף עמוק', 'Deep take-off'), pg < 170 ? 900 : 500);
+            return;
+          }
+          why = outside ? L('😕 הייתם רחוק מדי בחוץ — הגל עבר מתחתיכם', '😕 Too far out — it rolled under you')
+              : inside ? L('😕 הייתם מדי פנימה — הגל שבר לפניכם', '😕 Too far inside — it broke before it reached you')
+              : pg > 900 ? L('😕 רחוקים מדי מהפיק — הגל עבר מתחתיכם', '😕 Too far from the peak — it rolled under you')
+              : !facing ? L('😕 לא הסתובבתם לחוף — הגל עבר מתחתיכם', '😕 Not facing the beach — it rolled under you')
+              : L('😕 לא חתרתם מספיק חזק — הגל עבר מתחתיכם', '😕 Not paddling hard enough — it rolled under you');
+          sgAddText(why, '#ffd0a0'); P.passT = 0; P.stage = 'pass';
+        }
+      } else {
+        // a missed set rolls on toward the beach; then the next one
+        P.passT += dt;
+        if(P.passT > 3 && !(sg.peak && sg.peak.shared)){ sg.pad = sgNewSet(false); sg.curl = sg.peak ? sg.peak.peakX + (Math.random() - 0.5) * 160 : sg.curl; }
+      }
       return;
     }
     if(sg.phase === 'done'){ sg.doneT += dt; sg.x += sg.v * dt; sg.h = Math.max(0, sg.h - dt * 0.6); if(sg.doneT > 1.4) sgEnd(true); return; }
@@ -5321,6 +5457,8 @@
     if(sg3.state === 'ready'){
       var p3 = sg3Render(); sgHud(p3.sx, p3.sy, p3.sc);
       document.getElementById('sgCamBtn').hidden = !(sg.phase === 'ride' || sg.phase === 'air' || sg.phase === 'tow' || sg.phase === 'done');
+      document.getElementById('sgPeakBtn').hidden = !(sg.peak && sg.phase === 'paddle' && (Math.abs(sg.x - sg.curl - 300) > 500 || Math.abs(sg.dz) > 12));
+      document.getElementById('sgExitBtn').hidden = !sg.peak || sg.phase === 'over';
       return;
     }
     sgDrawScene();
@@ -5360,6 +5498,56 @@
   }
   // the numbers and words over the ride (2D and 3D), and the joystick
   function sgHud(sx, sy, sc){
+    if(sg.peak && sg.peak.shared){
+      ctx.save(); ctx.textAlign = 'center'; ctx.lineWidth = 4; ctx.strokeStyle = 'rgba(0,30,50,0.65)';
+      (sg3.tags || []).forEach(function(tg){
+        ctx.font = 'bold 13px Rubik, sans-serif'; ctx.fillStyle = '#ffffff';
+        ctx.strokeText(tg.nm, tg.x, tg.y); ctx.fillText(tg.nm, tg.x, tg.y);
+        if(tg.sc !== null){ ctx.fillStyle = '#ffd447'; var st = (+tg.sc).toFixed(2); ctx.strokeText(st, tg.x, tg.y - 15); ctx.fillText(st, tg.x, tg.y - 15); }
+      });
+      // the lineup: everyone's best wave, a crown on the top one
+      var rowsL = sgNetList().map(function(o){ return { nm: o.nm || '?', b: +o.best || 0, me: false }; });
+      rowsL.push({ nm: L('אתה', 'You'), b: sg.peak.best, me: true });
+      rowsL.sort(function(a, b){ return b.b - a.b; });
+      ctx.textAlign = 'right'; ctx.font = 'bold 13px Rubik, sans-serif';
+      var lx = W - 12, ly = 70;
+      ctx.fillStyle = 'rgba(0,30,50,0.45)'; ctx.fillRect(W - 170, ly - 16, 162, 20 + rowsL.length * 18);
+      ctx.fillStyle = '#ffe9a8'; ctx.fillText(L('🏝️ פיק משותף · ', '🏝️ Shared peak · ') + rowsL.length, lx, ly); ly += 18;
+      rowsL.forEach(function(r, i){ ctx.fillStyle = r.me ? '#7fffb0' : '#ffffff';
+        ctx.fillText((i === 0 && r.b > 0 ? '👑 ' : '') + r.nm + '  ' + (r.b > 0 ? r.b.toFixed(2) : '—'), lx, ly); ly += 18; });
+      ctx.restore();
+    }
+    if(sg.peak){
+      ctx.save(); ctx.textAlign = 'center'; ctx.font = 'bold 14px Rubik, sans-serif'; ctx.lineWidth = 4; ctx.strokeStyle = 'rgba(0,30,50,0.6)'; ctx.fillStyle = '#ffe9a8';
+      var pt = L('🏝️ פיק · גלים: ', '🏝️ Peak · waves: ') + sg.peak.rides.length + L(' · הכי טוב: ', ' · best: ') + sg.peak.best.toFixed(2);
+      ctx.strokeText(pt, W / 2, 92); ctx.fillText(pt, W / 2, 92); ctx.restore();
+    }
+    if(sg.phase === 'paddle'){
+      var P = sg.pad, go = P.stage === 'go', pg = sg.x - sg.curl, Hq = SG3_H[sg.spot.id] || 3;
+      var bx0 = (sg.curl + 300 - sg.x) / 40, bd = Math.round(Math.sqrt(bx0 * bx0 + sg.dz * sg.dz));
+      var inSpot = pg >= SG_SPOT_LO && pg <= SG_SPOT_HI && Math.abs(sg.dz) < Hq * 1.1, canCatch = pg >= 55 && pg <= 900 && sg.dz > -Hq * 4 && sg.dz < Hq * 1.6, faceBeach = Math.cos(sg.hd) > 0.3;
+      var pm = P.stage === 'pass' ? L('🌊 הסט הבא בדרך', '🌊 The next set is on its way')
+             : P.stage === 'horizon' ? L('🌊 עקבו אחרי האופק — סט מגיע · המצוף הכתום = הפיק', '🌊 Watch the horizon — a set is coming · the orange buoy = the peak')
+             : go ? (faceBeach ? L('🌊 חתרו עכשיו! לחצו שוב ושוב: רווח / ⬆️ / הקשה', '🌊 Paddle now! Tap again and again: Space / ⬆️ / tap')
+                               : L('🌊 הסתובבו לחוף ⬅️➡️ וחתרו!', '🌊 Turn to the beach ⬅️➡️ and paddle!'))
+             : !inSpot && canCatch && sg.dz < -Hq * 1.3 ? L('🌊 אתם בחוץ — אפשר לתפוס גם מכאן, רק לחתור חזק יותר', '🌊 You\'re out the back — you can catch it from here too, just paddle harder')
+             : !inSpot && canCatch && (pg > SG_SPOT_HI || pg < SG_SPOT_LO) ? L('🌊 אתם בכתף של הגל — אפשר לתפוס גם מכאן', '🌊 You\'re on the shoulder — you can catch it from here too')
+             : inSpot ? L('✅ אתם בפיק! כשהגל קרוב — הסתובבו לחוף וחתרו', '✅ You\'re at the peak! When it\'s close — turn to the beach and paddle')
+             : sg.peak && bd > 30 ? L('🟠 חתרו אל המצוף (' + bd + ' מ\') — או 🚀 השתגרו', '🟠 Paddle to the buoy (' + bd + ' m) — or 🚀 jump there')
+             : L('🟠 חתרו אל המצוף הכתום (' + bd + ' מ\') · ⬅️➡️ להסתובב, רווח לחתור', '🟠 Paddle to the orange buoy (' + bd + ' m) · ⬅️➡️ turn, Space to paddle');
+      ctx.save(); ctx.textAlign = 'center';
+      ctx.globalAlpha = go ? 0.75 + 0.25 * Math.sin(sg.t * 12) : 1;
+      ctx.font = (W < 560 ? 'bold 18px' : 'bold 24px') + ' Suez One, Rubik, sans-serif'; ctx.lineWidth = 6;
+      ctx.strokeStyle = 'rgba(0,30,50,0.6)'; ctx.fillStyle = go ? '#ffd447' : inSpot || P.stage === 'horizon' ? '#ffffff' : '#bfe9ff';
+      ctx.strokeText(pm, W / 2, H * 0.3); ctx.fillText(pm, W / 2, H * 0.3);
+      ctx.globalAlpha = 1;
+      // the paddling speed: fill it up as the wave arrives
+      var bw = Math.min(260, W * 0.5), bx = W / 2 - bw / 2, by = H * 0.3 + 18;
+      ctx.fillStyle = 'rgba(0,30,50,0.45)'; ctx.fillRect(bx - 2, by - 2, bw + 4, 16);
+      var need = 0.75 + Math.min(0.4, 0.15 * Math.max(0, -sg.dz / Hq - 1.3));
+      ctx.fillStyle = P.pw >= need ? '#7fffb0' : go ? '#ffd447' : '#bfe9ff'; ctx.fillRect(bx, by, bw * Math.min(1, P.pw / need), 12);
+      ctx.restore();
+    }
     ctx.textAlign = 'center';
     ctx.font = 'bold 34px Suez One, Rubik, sans-serif';
     ctx.lineWidth = 6; ctx.strokeStyle = 'rgba(0,30,50,0.6)'; ctx.fillStyle = '#ffffff';
@@ -5417,6 +5605,7 @@
   function sgJoy(){ return sg.joy || (sg.joy = {}); }
   function sgJoyStart(px, py){
     var r = canvas.getBoundingClientRect(), j = sgJoy();
+    if(sg.phase === 'paddle') sg.pad.taps++;
     j.on = true; j.bx = px - r.left; j.by = py - r.top; j.x = 0; j.y = 0;
   }
   function sgJoyMove(px, py){
@@ -5425,8 +5614,10 @@
     j.x = dx * k / SG_JOY_R; j.y = dy * k / SG_JOY_R;
   }
   function sgJoyEnd(){ var j = sgJoy(); j.on = false; j.x = 0; j.y = 0; }
-  function sgJoyKey(key, down){
+  function sgJoyKey(key, down, rep){
     var j = sgJoy(), v = down ? 1 : 0;
+    // a stroke is a new press, not a key held down (auto-repeat)
+    if(down && !rep && sg.phase === 'paddle' && (key === ' ' || key === 'ArrowUp' || key === 'w' || key === 'W') && !j.ku) sg.pad.taps++;
     if(key === 'ArrowUp' || key === 'w' || key === 'W' || key === ' ') j.ku = v;
     else if(key === 'ArrowDown' || key === 's' || key === 'S') j.kd = v;
     else if(key === 'ArrowLeft' || key === 'a' || key === 'A') j.kl = v;
@@ -5557,7 +5748,57 @@
     return out;
   }
   // how far the wave has broken at x (metres): b = lip pitching, c = collapsed
+  function sg3WaterY(rows, zq){
+    var n = rows.length;
+    if(zq >= rows[n - 1][0]) return rows[n - 1][1];
+    for(var r = n - 1; r > 0; r--){ var a = rows[r], b = rows[r - 1];
+      if((zq - a[0]) * (zq - b[0]) <= 0){ var f = (zq - a[0]) / ((b[0] - a[0]) || 1); return a[1] + (b[1] - a[1]) * f; } }
+    return rows[0][1];
+  }
+  // the others in the lineup: a model each, lying and paddling, or up and riding
+  function sg3Ghosts(T, Hm, rows, zLine, zOff, now){
+    sg3.ghosts = sg3.ghosts || [];
+    var list = sg.peak && sg.peak.shared ? sgNetList().slice(0, 7) : [];
+    while(sg3.ghosts.length < list.length){ var nr = sg3MakeRider(T); sg3.scene.add(nr.g); sg3.ghosts.push({ r: nr, g: nr.g, key: '' }); }
+    sg3.ghosts.forEach(function(G, i){
+      var o = list[i]; G.g.visible = !!o; if(!o) return;
+      var R = G.r, rd = sgItem(SG_RIDERS, o.rd), bd = sgItem(SG_BOARDS, o.bd);
+      if(G.key !== rd.id + bd.id){ G.key = rd.id + bd.id; R.suitM.color.set(rd.suit); R.skinM.color.set(rd.skin); R.hairM.color.set(rd.hair); R.accM.color.set(rd.accent);
+        R.board.material.color.set(bd.deck); R.stripe.material.color.set(bd.stripe); }
+      G.nm = o.nm; G.sc = o.sc; G.riding = o.ph === 'r' || o.ph === 'a';
+      var gx = ((sg.peak.peakX || 0) + (o.x || 0)) * SG3_M, fwd, pos;
+      if(G.riding){
+        // up and riding down the line, on the face
+        var hh = Math.max(0, Math.min(1, o.h || 0.4));
+        pos = new T.Vector3(gx, Hm * (0.12 + 0.6 * hh), zLine - Hm * (0.25 + 0.55 * hh) - 0.6);
+        fwd = new T.Vector3(1, 0, 0);
+        sg3Pose(0.65, null, R);
+      } else {
+        // lying on the board in the water, facing where they paddle
+        var zg = zLine + (o.dz || 0);
+        pos = new T.Vector3(gx, sg3WaterY(rows, zg + zOff) + 0.02 + Math.sin(now * 1.7 + i) * 0.06, zg);
+        fwd = new T.Vector3(Math.sin(o.hd || 0), 0, Math.cos(o.hd || 0));
+        sg3Pose(0.05, null, R); sg3ProneOf(T, R);
+      }
+      var up = new T.Vector3(0, 1, 0), side = new T.Vector3().crossVectors(fwd, up).normalize();
+      G.g.position.copy(pos); G.g.quaternion.setFromRotationMatrix(new T.Matrix4().makeBasis(fwd, up, side));
+      R.body.rotation.set(0, 0, 0); R.vest.visible = false;
+    });
+  }
+  // lying on the board: the body turned down onto the deck, head toward the nose
+  function sg3ProneOf(T, R){
+    var qP = new T.Quaternion().setFromAxisAngle(new T.Vector3(0, 0, 1), -Math.PI / 2), oP = new T.Vector3(-0.92, 0.22, 0);
+    R.body.children.forEach(function(ch){ if(ch === R.board || ch === R.stripe || ch === R.fin) return; ch.position.applyQuaternion(qP).add(oP); ch.quaternion.premultiply(qP); });
+  }
   function sg3Break(xm, Hm){
+    if(sg.phase === 'paddle'){
+      // a peak: highest where it will break, falling away to the shoulders; growing as it
+      // comes in, and standing up and feathering at the peak just before it reaches you
+      var kp = sg.pad.k || 0, kq = Math.min(1, kp), dp = (xm - sg.curl * SG3_M) / Hm;
+      var pk = Math.exp(-dp * dp / 14), pk2 = Math.exp(-dp * dp / 5);
+      var fz = Math.max(0, Math.min(1, (kp - 0.85) / 0.15)) * Math.max(0, Math.min(1, 1 - (kp - 1.05) / 0.12));   // feathering at the take-off line
+      return [0.4 * fz * pk2, 0, (0.4 + 0.6 * kq) * (0.22 + 0.78 * pk)];
+    }
     var cm = sg.curl * SG3_M, d = xm - cm, b = 0, c = 0;
     if(d >= 0) b = Math.max(0, 1 - d / (Hm * 1.4));
     else { b = 1; c = Math.min(1, -d / (Hm * 1.4)); }
@@ -5586,6 +5827,7 @@
       var dq = Math.abs(xm - q.x * SG3_M); if(dq < Hm * 3) b = Math.max(b, 1 - dq / (Hm * 3));
     }
     if(sg.spot.wall) b = Math.min(b, 0.5);          // the Air Wave never pitches a barrel
+    if(sg.catchT){ var ck = Math.min(1, (sg.t - sg.catchT) / 0.7); b *= ck; c *= ck; }   // just caught: it starts to break
     b = b * b * (3 - 2 * b);
     return [b, c, s];
   }
@@ -5811,6 +6053,20 @@
     var wake = new T.Mesh(wgeo, wmat); wake.frustumCulled = false; scene.add(wake);
     // the surfer, the jet ski, hazards
     var rider = sg3MakeRider(T); scene.add(rider.g);
+    // an orange buoy marking the take-off spot at the peak
+    var buoy = new T.Group(), bM = new T.MeshStandardMaterial({ color: 0xff7a1a, roughness: 0.5 });
+    var bBall = new T.Mesh(new T.SphereGeometry(0.45, 20, 14), bM); bBall.scale.y = 0.75; buoy.add(bBall);
+    var bPole = new T.Mesh(new T.CylinderGeometry(0.04, 0.04, 1.6, 8), new T.MeshStandardMaterial({ color: 0x222222 })); bPole.position.y = 0.9; buoy.add(bPole);
+    var bFlag = new T.Mesh(new T.PlaneGeometry(0.5, 0.32), new T.MeshStandardMaterial({ color: 0xffd400, side: T.DoubleSide })); bFlag.position.set(0.25, 1.5, 0); buoy.add(bFlag);
+    buoy.visible = false; scene.add(buoy); sg3.buoy = buoy;
+    // your own arms in the eyes view while paddling: upper arm, forearm, hand
+    var povArms = new T.Group(); povArms.visible = false; cam.add(povArms); scene.add(cam);
+    rider.povArms = [-1, 1].map(function(sd){
+      var a = { sd: sd, up: new T.Mesh(new T.CapsuleGeometry(0.052, 1, 6, 14), rider.suitM), fo: new T.Mesh(new T.CapsuleGeometry(0.044, 1, 6, 14), rider.suitM),
+        ha: new T.Mesh(new T.SphereGeometry(0.05, 18, 12), rider.skinM) };
+      a.ha.scale.set(1.1, 1.8, 0.45); povArms.add(a.up); povArms.add(a.fo); povArms.add(a.ha); return a;
+    });
+    rider.povG = povArms;
     var shore = sg3MakeShore(T); scene.add(shore.g);
     var ski = new T.Group();
     var hull = new T.Mesh(new T.BoxGeometry(2.8, 0.6, 1.1), new T.MeshStandardMaterial({ color: 0xffcc00, roughness: 0.35 })); hull.position.y = 0.3; ski.add(hull);
@@ -5920,8 +6176,8 @@
     m.scale.set(1, Math.max(0.05, len - 0.1), 1);
     m.quaternion.setFromUnitVectors(new T.Vector3(0, 1, 0), d.normalize());
   }
-  function sg3Pose(k, look){
-    var T = sg3.T, R = sg3.rider, P = R.parts, X = R.extra, V = function(x, y, z){ return new T.Vector3(x, y, z); };
+  function sg3Pose(k, look, who){
+    var T = sg3.T, R = who || sg3.rider, P = R.parts, X = R.extra, V = function(x, y, z){ return new T.Vector3(x, y, z); };
     var hip = V(-0.02, 0.86 - 0.24 * k, 0), kneeB = V(-0.27, 0.46 - 0.1 * k, 0.07), kneeF = V(0.24, 0.48 - 0.1 * k, -0.06);
     var footB = V(-0.36, 0.08, 0.09), footF = V(0.33, 0.08, -0.07);
     var sh = V(0.1 + 0.12 * k, 1.4 - 0.3 * k, 0), nk = V(sh.x + 0.05, sh.y + 0.1, 0), hd = V(sh.x + 0.1, sh.y + 0.25, 0);
@@ -5980,13 +6236,14 @@
     var U2 = sg3.wm.uniforms; U2.uT.value = now % 1000; U2.uCurlX.value = sg.curl * SG3_M; sg3.skyMat.uniforms.uT.value = now % 1000;
     var sx = sg.x * SG3_M, rows = sg3.rows, pos = sg3.pos, foam = sg3.foam, thin = sg3.thin, curt = sg3.curt, cave = sg3.cave;
     var x0 = sx - Hm * 9 - 30, span = Hm * 22 + 110, dx = span / (SG3_COLS - 1);
+    var zOff = sg.phase === 'paddle' ? sgSetOff(sg.pad.k, Hm) : 0;    // the set, rolling in from the horizon (and on past, if you missed it)
     for(var c = 0; c < SG3_COLS; c++){
       var xm = x0 + c * dx, br = sg3Break(xm, Hm);
       var endF = Math.min(1, c / (SG3_COLS * 0.12), (SG3_COLS - 1 - c) / (SG3_COLS * 0.2));   // flattens away at both ends
       rows = sg3ProfileQ(br[0], br[1], Hm, Math.max(0.05, (br[2] || 1) * endF * endF * (3 - 2 * endF)));
       for(var r = 0; r < SG3_ROWS; r++){
         var i = c * SG3_ROWS + r;
-        pos[i * 3] = xm; pos[i * 3 + 1] = rows[r][1]; pos[i * 3 + 2] = rows[r][0];
+        pos[i * 3] = xm; pos[i * 3 + 1] = rows[r][1]; pos[i * 3 + 2] = rows[r][0] - zOff;
         var lipZone = r >= 12 && r <= 22 ? 1 : 0;      // light through the thin top of the wave only
         if(br[0] > 0.85 && r > 22 && r <= 32) lipZone = 0.6;   // the curtain of a barrel, lit from behind
         // white only right at the lip's edge while it throws; the rest stays clear water
@@ -6040,6 +6297,14 @@
       fwd = new T.Vector3().addScaledVector(X, Math.cos(th) * Math.cos(psi)).addScaledVector(tUp, Math.sin(th) - Math.cos(th) * Math.sin(psi) * 0.8).normalize();
       up = nrm.clone().lerp(new T.Vector3(0, 1, 0), 0.45).normalize();
     }
+    if(sg.phase === 'paddle'){
+      var bob = Math.sin(now * 1.7) * 0.06, zLine = faceAt(0)[0] + 0.6, zS = zLine + sg.dz;
+      p.set(sx, sg3WaterY(rows, zS + zOff) + 0.02 + bob, zS);
+      fwd = new T.Vector3(Math.sin(sg.hd), 0, Math.cos(sg.hd)); up = new T.Vector3(0, 1, 0);
+      // the buoy at the take-off spot
+      sg3.buoy.visible = true; sg3.buoy.position.set((sg.curl + 300) * SG3_M, Math.sin(now * 1.3 + 1) * 0.08, zLine);
+    } else if(sg3.buoy) sg3.buoy.visible = false;
+    sg3Ghosts(T, Hm, rows, faceAt(0)[0] + 0.6, zOff, now);
     var side = new T.Vector3().crossVectors(fwd, up).normalize();
     up = new T.Vector3().crossVectors(side, fwd).normalize();
     var m4 = new T.Matrix4().makeBasis(fwd, up, side);
@@ -6065,11 +6330,24 @@
       R.board.material.color.set(bd.deck); R.stripe.material.color.set(bd.stripe);
       R.board.material.emissive = new T.Color(bd.glow ? 0x332200 : 0x000000);
     }
-    var riding3 = sg.phase === 'ride' || sg.phase === 'air' || sg.phase === 'tow' || sg.phase === 'done';
-    var povNow = sg3.camMode === 'pov' && riding3;
-    var chaseNow = sg3.camMode === 'chase' && (riding3 || sg.phase === 'wipe' || sg.phase === 'over');
+    var riding3 = sg.phase === 'ride' || sg.phase === 'air' || sg.phase === 'tow' || sg.phase === 'done' || sg.phase === 'paddle';
+    var povNow = (sg3.camMode === 'pov' && riding3) || sg.phase === 'paddle';
+    var chaseNow = sg3.camMode === 'chase' && (riding3 || sg.phase === 'wipe' || sg.phase === 'over') && sg.phase !== 'paddle';
     R.body.children.forEach(function(ch){ if(ch !== R.board && ch !== R.stripe && ch !== R.fin) ch.visible = !povNow; });
-    sg3Pose(sg.phase === 'air' && sg.air && sg.air.sup > 0.01 ? 0.3 : sg.tube > 0.1 ? 0.95 : sg.phase === 'ride' && (sg.joy && sg.joy.y < -0.3) ? 0.25 : 0.65);
+    sg3Pose(sg.phase === 'paddle' ? 0.05 : sg.phase === 'air' && sg.air && sg.air.sup > 0.01 ? 0.3 : sg.tube > 0.1 ? 0.95 : sg.phase === 'ride' && (sg.joy && sg.joy.y < -0.3) ? 0.25 : 0.65);
+    if(sg.phase === 'paddle'){
+      // prone: the body turned down onto the deck, head toward the nose
+      var qP = new T.Quaternion().setFromAxisAngle(new T.Vector3(0, 0, 1), -Math.PI / 2), oP = new T.Vector3(-0.92, 0.22, 0);
+      R.body.children.forEach(function(ch){ if(ch === R.board || ch === R.stripe || ch === R.fin) return; ch.position.applyQuaternion(qP).add(oP); ch.quaternion.premultiply(qP); });
+      // each arm: reach forward past the shoulder, pull back down through the water
+      var shX = 0.47, shY = 0.12;
+      [[R.parts.uArmF, R.parts.fArmF, R.extra.handF, -1, sg.pad.kL || 0], [R.parts.uArmB, R.parts.fArmB, R.extra.handB, 1, sg.pad.kR || 0]].forEach(function(A){
+        var ph = 1 - A[4], z = A[3] * 0.2;
+        var s0 = new T.Vector3(shX, shY, z), hd = new T.Vector3(shX + 0.5 - 0.85 * ph, shY - 0.12 - 0.3 * Math.sin(ph * Math.PI) - 0.05 * ph, A[3] * 0.32);
+        var e0 = s0.clone().lerp(hd, 0.5).add(new T.Vector3(0, 0.1, A[3] * 0.06));
+        sg3Limb(T, A[0], s0, e0); sg3Limb(T, A[1], e0, hd); A[2].position.copy(hd);
+      });
+    }
     if(sg.phase === 'air' && sg.air && sg.air.sup > 0.01){
       // superman: the body swings out flat above the board, legs kicked back,
       // hands on the rails
@@ -6111,6 +6389,7 @@
     }
     function emit(P, x, y, z, vx, vy, vz, life, size, alpha){
       if(sg3.lowQ && Math.random() < 0.5) return;
+      if(sg.phase === 'paddle') return;
       var k = P.next; P.next = (P.next + 1) % P.n;
       P.pos[k * 3] = x; P.pos[k * 3 + 1] = y; P.pos[k * 3 + 2] = z; P.vel[k * 3] = vx; P.vel[k * 3 + 1] = vy; P.vel[k * 3 + 2] = vz;
       P.life[k] = life; P.max[k] = life; P.size[k] = size; P.base[k] = alpha; P.alpha[k] = 0;
@@ -6208,16 +6487,19 @@
     sg3.camP.lerp(camWant, Math.min(1, dtR * 4)); sg3.camL.lerp(lookWant, Math.min(1, dtR * 5));
     if(povNow){
       // crouched low inside a barrel, so the eyes stay inside the tunnel
-      var eyeH = 1.42 - Math.min(1, sg.tube * 4) * 0.55;
-      var eye = p.clone().addScaledVector(up, eyeH).addScaledVector(fwd, -0.25);
+      var eyeH = sg.phase === 'paddle' ? 0.42 : 1.42 - Math.min(1, sg.tube * 4) * 0.55;
+      var eye = p.clone().addScaledVector(up, eyeH).addScaledVector(fwd, sg.phase === 'paddle' ? 0.3 : -0.25);
+      if(sg.phase === 'paddle') eye.y += 0.035 * Math.max(sg.pad.kL, sg.pad.kR) * Math.sin(Math.max(sg.pad.kL, sg.pad.kR) * Math.PI);
       var dir = fwd.clone().addScaledVector(up, -0.3).normalize();
       if(sg.phase === 'air') dir = new T.Vector3(1, -0.25, 0).normalize();
       if(sg.tube > 0.05) dir = fwd.clone().addScaledVector(up, -0.06).normalize();
+      if(sg.phase === 'paddle') dir = fwd.clone().addScaledVector(up, 0.02).normalize();
       var tgt = eye.clone().addScaledVector(dir, 10);
       if(!sg3.povE || sg.t < 0.2){ sg3.povE = eye.clone(); sg3.povT = tgt.clone(); }
       sg3.povE.lerp(eye, Math.min(1, dtR * 14)); sg3.povT.lerp(tgt, Math.min(1, dtR * 7));
       sg3.cam.position.copy(sg3.povE);
       sg3.cam.up.copy(new T.Vector3(0, 1, 0).lerp(up, 0.45).normalize());
+      if(sg.phase === 'paddle') sg3.cam.up.addScaledVector(side, 0.05 * (sg.pad.kR - sg.pad.kL)).normalize();
       sg3.cam.lookAt(sg3.povT);
       sg3.camP.copy(camWant); sg3.camL.copy(lookWant);       // ready to cut back to the beach view
     } else if(chaseNow){
@@ -6230,6 +6512,11 @@
       var ce = new T.Vector3(p.x + 2.0 + Hm * 1.3, 0.45 + Hm * 0.1, trough + 1.0 + Hm * 0.95);
       var ct = new T.Vector3(p.x - Hm * 0.45, Hm * 0.45 + p.y * 0.25 + airUp * 0.6, Math.min(p.z, trough) - Hm * 0.3);
       ce.y += airUp * 0.35; ce.z += airUp * 0.5;
+      if(sg.phase === 'paddle'){
+        var tw = sg.pad.turn;
+        ce = new T.Vector3(p.x + 1.5, p.y + 1.4 + 0.6 * tw, p.z + 4.2 - 1.5 * tw);
+        ct = new T.Vector3(p.x - 1.0, p.y + Hm * 0.35, p.z - Hm * 4);
+      }
       if(!sg3.chE || sg.t < 0.2){ sg3.chE = ce.clone(); sg3.chT = ct.clone(); }
       sg3.chE.lerp(ce, Math.min(1, dtR * 5)); sg3.chT.lerp(ct, Math.min(1, dtR * 6));
       sg3.cam.up.set(0, 1, 0); sg3.cam.position.copy(sg3.chE); sg3.cam.lookAt(sg3.chT);
@@ -6238,6 +6525,28 @@
       sg3.cam.up.set(0, 1, 0);
       sg3.cam.position.copy(sg3.camP); sg3.cam.lookAt(sg3.camL);
     }
+    R.povG.visible = povNow && sg.phase === 'paddle';
+    if(R.povG.visible){
+      // in camera space (x right, y up, -z ahead): each stroke reaches forward into the
+      // water beside the board and pulls back under; between strokes the hands are down
+      var asp = Math.max(0.8, Math.min(1.6, sg3.cam.aspect));
+      R.povArms.forEach(function(a){
+        var s = a.sd, kk = s > 0 ? sg.pad.kR : sg.pad.kL, ph = 1 - kk, rr = Math.sin(ph * Math.PI);
+        var shp = new T.Vector3(s * 0.26 * asp, -0.3, 0.1);
+        var hap = new T.Vector3(s * (0.36 + 0.06 * rr) * asp, -0.14 - 0.5 * ph * ph, -0.85 + 0.55 * ph);
+        var elp = shp.clone().lerp(hap, 0.5).add(new T.Vector3(s * 0.12 * asp, 0.06, 0));
+        sg3Limb(T, a.up, shp, elp); sg3Limb(T, a.fo, elp, hap);
+        a.ha.quaternion.copy(a.fo.quaternion); a.ha.position.copy(hap).add(new T.Vector3(0, 0.06, 0).applyQuaternion(a.fo.quaternion));
+      });
+    }
+    // the others' names, where they are on the screen
+    sg3.tags = [];
+    (sg3.ghosts || []).forEach(function(G){
+      if(!G.g.visible) return;
+      var hp = G.g.position.clone(); hp.y += G.riding ? 2.0 : 0.9;
+      var q = hp.project(sg3.cam); if(q.z > 1 || Math.abs(q.x) > 1.1 || Math.abs(q.y) > 1.1) return;
+      sg3.tags.push({ x: (q.x + 1) / 2 * W, y: (1 - q.y) / 2 * H, nm: G.nm, sc: G.riding ? G.sc : null });
+    });
     var fovWant = povNow ? 74 : chaseNow ? 60 : 36;
     if(sg3.cam.fov !== fovWant){ sg3.cam.fov = fovWant; sg3.cam.updateProjectionMatrix(); }
     U2.uCam.value.copy(sg3.cam.position);
@@ -6253,6 +6562,9 @@
   // ---- screens: the spots, the shop, after a wipeout
   var sgMenu = document.getElementById('sgMenu'), sgShop = document.getElementById('sgShop'), sgOver = document.getElementById('sgOver');
   function sgRenderMenu(){
+    document.getElementById('sgModeBtn').textContent = sgSave.peakMode
+      ? L('מצב: 🏝️ פיק — גלים כל כמה שניות, בלי הפסקה (לחץ להחליף)', 'Mode: 🏝️ Peak — a wave every few seconds, non-stop (tap to switch)')
+      : L('מצב: 🌊 גל אחד (לחץ להחליף לפיק)', 'Mode: 🌊 One wave (tap to switch to the peak)');
     renderSurfBanner(); fetchSurf();
     document.getElementById('sgShells').textContent = '🐚 ' + fmtScore(sgSave.shells);
     var list = document.getElementById('sgSpots');
@@ -6266,11 +6578,18 @@
       ds.textContent = spot.desc;
       var bs = document.createElement('div'); bs.className = 'sg-spot-best'; bs.textContent = L('🏆 הציון הכי גבוה: ', '🏆 Best score: ') + (sgSave.best10[spot.id] || 0).toFixed(2) + ' / 10';
       b.appendChild(nm); b.appendChild(ds); b.appendChild(bs);
-      if(open) b.addEventListener('click', function(){ sg.wasUnlocked = false; var nx = SG_SPOTS[i + 1]; sgStart(i); sg.wasUnlocked = !!(nx && sgUnlocked(i + 1)); });
+      if(open) b.addEventListener('click', function(){ sg.wasUnlocked = false; var nx = SG_SPOTS[i + 1]; sgStart(i); sg.wasUnlocked = !!(nx && sgUnlocked(i + 1));
+        if(sgSave.peakMode){
+          // online: the shared peak (its frame: the peak at 0, the sets by the clock)
+          var shared = !!isOnlineBoard;
+          sg.peak = { peakX: shared ? 0 : sg.curl, rides: [], best: 0, shared: shared };
+          if(shared){ sg.pad.n = -1; sg.curl = sgPeakJitter(sg.spot.id, Math.floor(Date.now() / PEAK_PERIOD)); sg.x = sg.curl + 300 + 260; sgNetJoin(sg.spot); }
+        } });
       list.appendChild(b);
     });
   }
   function sgOpenMenu(){
+    sgPeakBtnsOff();
     sg = { active: true, phase: 'menu', spot: SG_SPOTS[0], t: 0, x: 0, curl: -400, h: 0.4, th: 0, v: 400, texts: [], spray: [], hazards: [], closeouts: [], throwT: 0, tube: 0, chain: 0, chainT: 0, score: 0, best: 0, hint: 0 };
     state = 'surfgame';
     sg3Load();
@@ -6279,7 +6598,9 @@
     sgRenderMenu();
     sgMenu.hidden = false;
   }
+  function sgPeakBtnsOff(){ document.getElementById('sgPeakBtn').hidden = true; document.getElementById('sgExitBtn').hidden = true; sgNetLeave(); }
   function sgLeave(){
+    sgPeakBtnsOff();
     sg = { active: false, phase: 'menu' };
     sg3Hide();
     sgMenu.hidden = true; sgOver.hidden = true; sgShop.hidden = true;
@@ -6325,6 +6646,15 @@
   sg3.camMode = SG3_CAMS.indexOf(sgSave.cam) !== -1 ? sgSave.cam : 'chase';
   var sgWeak = ('ontouchstart' in window && Math.min(screen.width, screen.height) < 520) || (navigator.hardwareConcurrency || 4) <= 4;
   sg3SetQuality(sgWeak ? 'medium' : 'high');
+  document.getElementById('sgModeBtn').addEventListener('click', function(){ sgSave.peakMode = !sgSave.peakMode; sgStore(); sgRenderMenu(); });
+  // straight to the peak: into the spot, ready for the next set
+  document.getElementById('sgPeakBtn').addEventListener('click', function(e){
+    e.stopPropagation();
+    if(!sg.peak || sg.phase !== 'paddle') return;
+    sg.x = sg.curl + 300; sg.dz = 0; sg.hd = Math.PI;
+    sgAddText(L('🚀 השתגרתם לפיק!', '🚀 You\'re at the peak!'), '#7fffb0');
+  });
+  document.getElementById('sgExitBtn').addEventListener('click', function(e){ e.stopPropagation(); sgOpenMenu(); });
   document.getElementById('sgCamBtn').addEventListener('click', function(e){
     e.stopPropagation();
     sg3.camMode = SG3_CAMS[(SG3_CAMS.indexOf(sg3.camMode) + 1) % SG3_CAMS.length]; sgSave.cam = sg3.camMode; sgStore();
@@ -12205,7 +12535,7 @@
     // typing in a text box (name, room code): the keys belong to the text, not the runner
     var tag = e.target && e.target.tagName;
     if(tag === 'INPUT' || tag === 'TEXTAREA') return;
-    if(sg.active){ if(sgJoyKey(e.key, true)) e.preventDefault(); return; }
+    if(sg.active){ if(sgJoyKey(e.key, true, e.repeat)) e.preventDefault(); return; }
     switch(e.key){
       case 'ArrowLeft': case 'a': case 'A': laneMove(-1); e.preventDefault(); break;
       case 'ArrowRight': case 'd': case 'D': laneMove(1); e.preventDefault(); break;
@@ -12328,7 +12658,7 @@
   // never while the name field is being typed in. Everything worth keeping
   // (coins, skins, name, league) is in localStorage, so a reload loses nothing.
   // 'dev' = a local or preview copy: the updater stays off entirely.
-  var BUILD_VERSION = '20261026-200723';
+  var BUILD_VERSION = '20261027-153556';
   var UPDATE_CHECK_MS = 60000;
   var UPDATE_TRIED_KEY = 'canyonChaseTriedUpdate';
   var pendingSubmits = 0;
