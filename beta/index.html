@@ -676,6 +676,18 @@
   .sg-peak-btn{ position:absolute; top:12px; left:12px; z-index:6; height:42px; padding:0 14px; border-radius:21px; border:2px solid rgba(255,255,255,.75);
     background:rgba(255,140,40,.85); color:#fff; font:bold 16px Rubik, sans-serif; cursor:pointer; }
   .sg-exit-btn{ top:62px; background:rgba(0,30,50,.55); }
+  .sg-design{ display:flex; flex-direction:column; align-items:center; gap:4px; margin:4px 0 10px; }
+  .sg-design canvas{ width:240px; height:96px; }
+  .sg-design .sg-sub{ font:bold 13px Rubik, sans-serif; color:#5a3b1a; margin-top:4px; }
+  .sg-opts{ display:flex; flex-wrap:wrap; gap:6px; justify-content:center; }
+  .sg-opt{ min-width:44px; height:34px; padding:0 10px; border-radius:17px; border:2px solid rgba(90,59,26,.35); background:#fff7e6; font:bold 14px Rubik, sans-serif; cursor:pointer; }
+  .sg-opt.is-on{ border-color:#ff8c1a; background:#ffe1b8; }
+  .sg-colors.is-small .sg-color{ width:26px; height:26px; border-width:2px; }
+  .sg-colors{ display:flex; flex-wrap:wrap; gap:8px; justify-content:center; margin:6px 0 10px; }
+  .sg-color{ width:34px; height:34px; border-radius:50%; border:3px solid rgba(255,255,255,.7); cursor:pointer; box-shadow:0 1px 3px rgba(0,0,0,.35); }
+  .sg-color.is-on{ border-color:#ffd447; transform:scale(1.12); }
+  .sg-door-btn{ top:auto; bottom:90px; left:50%; transform:translateX(-50%); background:rgba(46,160,90,.92); font-size:18px; height:48px; }
+  .sg-skip-btn{ top:12px; left:auto; right:12px; background:rgba(0,30,50,.6); }
   .sg-row{ display:flex; gap:8px; }
   .sg-row .go-btn{ margin:0; }
   /* ---------- daily streak & badges ---------- */
@@ -955,6 +967,7 @@
   <button class="sg-cam-btn" id="sgCamBtn" type="button" hidden>🎥</button>
   <button class="sg-peak-btn" id="sgPeakBtn" type="button" hidden>🚀 לפיק</button>
   <button class="sg-peak-btn sg-exit-btn" id="sgExitBtn" type="button" hidden>🏁 סיום</button>
+  <button class="sg-peak-btn sg-skip-btn" id="sgSkipBtn" type="button" hidden>⏭️ לים</button>
 
   <div class="hud" id="hud" hidden>
     <div class="hud-panel">
@@ -1229,7 +1242,7 @@
   <div class="overlay" id="sgMenu" hidden>
     <div class="tablet">
       <h1>🌊 משחק הגלישה</h1>
-      <p class="tagline">בחר חוף, תפוס גל, והשופטים ייתנו לך ציון מ-0 עד 10</p>
+      <p class="tagline">🧭 אתם במכונית — לאן נוסעים? בחרו חוף, נהגו לשם, ותפסו גלים</p>
       <button class="tourney-banner surf-banner" id="surfBanner" type="button" hidden></button>
       <div class="sg-shells" id="sgShells"></div>
       <div class="sg-spots" id="sgSpots"></div>
@@ -1247,11 +1260,27 @@
       <div class="sg-grid" id="sgShopBoards"></div>
       <div class="mission-title">🧍 גולשים</div>
       <div class="sg-grid" id="sgShopRiders"></div>
+      <div class="mission-title">🏄 עיצוב הגלשן</div>
+      <div class="sg-design" id="sgShopDesign"></div>
+      <div class="mission-title">🚗 כלי רכב</div>
+      <div class="sg-grid" id="sgShopCars"></div>
+      <div class="mission-title">🎨 צבע המכונית</div>
+      <div class="sg-colors" id="sgShopColors"></div>
       <div class="mission-title">⬆️ שדרוגים</div>
       <div class="sg-grid" id="sgShopUps"></div>
       <button class="back-btn" id="sgShopBack" type="button">חזרה</button>
     </div>
   </div>
+
+  <div class="overlay" id="sgHut" hidden>
+    <div class="tablet">
+      <h1 id="sgHutTitle"></h1>
+      <div class="sg-shells" id="sgHutShells"></div>
+      <div id="sgHutBody"></div>
+      <button class="back-btn" id="sgHutBack" type="button">חזרה לחוף</button>
+    </div>
+  </div>
+  <button class="sg-peak-btn sg-door-btn" id="sgDoorBtn" type="button" hidden>🚪 היכנס</button>
 
   <div class="overlay" id="sgOver" hidden>
     <div class="tablet">
@@ -1417,7 +1446,7 @@
   var I18N_HTML = {
    "🌊 מעבר למשחק גלישה": "🌊 Go to the surf game",
    "🌊 משחק הגלישה": "🌊 The Surf Game",
-   "בחר חוף, תפוס גל, והשופטים ייתנו לך ציון מ-0 עד 10": "Pick a spot, catch a wave, and the judges score it from 0 to 10",
+   "🧭 אתם במכונית — לאן נוסעים? בחרו חוף, נהגו לשם, ותפסו גלים": "🧭 You're in the car — where to? Pick a beach, drive there, catch waves",
    "🛒 חנות הגלישה": "🛒 Surf shop",
    "⬅ חזרה למשחק הריצה": "⬅ Back to the running game",
    "🏄 גלשנים": "🏄 Boards",
@@ -1426,6 +1455,12 @@
    "🌊 נפלת!": "🌊 Wipeout!",
    "ציון הגל": "Wave score",
    "🔁 עוד גל": "🔁 Another wave",
+   "🚗 כלי רכב": "🚗 Vehicles",
+   "חזרה לחוף": "Back to the beach",
+   "🚪 היכנס": "🚪 Go in",
+   "🏄 עיצוב הגלשן": "🏄 Board design",
+   "🎨 צבע המכונית": "🎨 Car colour",
+   "⏭️ לים": "⏭️ To the water",
    "🚀 לפיק": "🚀 To the peak",
    "🏁 סיום": "🏁 Finish",
    "🏝️ חופים": "🏝️ Spots",
@@ -4561,10 +4596,13 @@
   // section. Points until you wipe out; a best per spot. Its own money
   // (shells) buys boards, surfers and upgrades.
   var SG_KEY = 'canyonSurfGameV1';
-  var sgSave = { shells: 0, boards: ['foam'], board: 'foam', riders: ['grom'], rider: 'grom', up: { speed: 0, air: 0, balance: 0 }, best: {}, best10: {} };
+  var sgSave = { shells: 0, boards: ['foam'], board: 'foam', riders: ['grom'], rider: 'grom', cars: ['van', 'bike'], car: 'van', carColor: '#e74c3c', rack: true,
+                bd: { on: false, deck: '#ffffff', line: 1, lineC: '#e74c3c', icon: 'none', iconC: '#1565c0' }, up: { speed: 0, air: 0, balance: 0 }, best: {}, best10: {} };
   try {
     var sg0 = JSON.parse(localStorage.getItem(SG_KEY) || 'null');
-    if(sg0){ sgSave = Object.assign(sgSave, sg0); sgSave.up = Object.assign({ speed: 0, air: 0, balance: 0 }, sg0.up || {}); sgSave.best = sg0.best || {}; sgSave.best10 = sg0.best10 || {}; }
+    if(sg0){ sgSave = Object.assign(sgSave, sg0); sgSave.up = Object.assign({ speed: 0, air: 0, balance: 0 }, sg0.up || {}); sgSave.best = sg0.best || {}; sgSave.best10 = sg0.best10 || {};
+      if(sgSave.cars.indexOf('bike') === -1) sgSave.cars.push('bike');
+      sgSave.bd = Object.assign({ on: false, deck: '#ffffff', line: 1, lineC: '#e74c3c', icon: 'none', iconC: '#1565c0' }, sg0.bd || {}); }
   } catch(e){}
   function sgStore(){ try { localStorage.setItem(SG_KEY, JSON.stringify(sgSave)); } catch(e){} }
 
@@ -4601,6 +4639,52 @@
     { id: 'champ',   name: L('אלוף האוויר', 'Air Champ'),        price: 2400,  skin: '#c08a5e', hair: '#2e1c10', suit: '#ffd21f', accent: '#00a03c' },
     { id: 'tube',    name: L('אגדת הצינור', 'Tube Legend'),     price: 3200,  skin: '#e2ab80', hair: '#d1aa6a', suit: '#141619', accent: '#c8102e' }
   ];
+  var SG_DRIVE_M = { pool: 220, olga: 320, pipe: 420, air: 260, naz: 0 };     // metres of coast road to each beach's car park (a 15-30 s drive)
+  function sgDriveM(spot){ var m = SG_DRIVE_M[spot.id] || 300; return sgSave.car === 'bike' ? Math.round(m * 0.3) : m; }
+  var SG_CARS = [
+    { id: 'bike',  name: L('אופניים', 'Bicycle'),         price: 0 },
+    { id: 'van',   name: L('ואן גלישה', 'Surf Van'),     price: 0 },
+    { id: 'jeep',  name: L('ג\'יפ', 'Jeep'),             price: 2500 },
+    { id: 'truck', name: L('טראק', 'Pickup Truck'),       price: 4000 },
+    { id: 'lux',   name: L('מכונית יוקרה', 'Luxury Car'), price: 7000 }
+  ];
+  var SG_CAR_COLORS = ['#e74c3c', '#ff8c1a', '#f4d03f', '#2ecc71', '#1abc9c', '#3498db', '#8e44ad', '#ff5fa2', '#f5f5f0', '#2c3e50', '#111418'];
+  var SG_BOARD_ICONS = ['none', 'star', 'heart', 'flame', 'wave'];
+  // how a board looks: your design (yours, or someone else's from the lineup) or the board bought in the shop
+  function sgLookOf(design, boardId){
+    if(design) return { deck: design.deck, line: +design.line || 0, lineC: design.lineC, icon: design.icon || 'none', iconC: design.iconC, glow: null,
+                        key: [design.deck, design.line, design.lineC, design.icon, design.iconC].join('|') };
+    var bd = sgItem(SG_BOARDS, boardId);
+    return { deck: bd.deck, line: 1, lineC: bd.stripe, icon: 'none', iconC: '#000', glow: bd.glow, key: 'b:' + bd.id };
+  }
+  function sgMyLook(){ return sgLookOf(sgSave.bd && sgSave.bd.on ? sgSave.bd : null, sgSave.board); }
+  function sgMyBoard2D(){ var lk = sgMyLook(); return { deck: lk.deck, stripe: lk.line ? lk.lineC : lk.deck, glow: lk.glow }; }
+  // the pictures for a deck, drawn into a box of size s around (x, y)
+  function sgDrawIcon(g, icon, x, y, s, color){
+    g.save(); g.translate(x, y); g.scale(s / 100, s / 100); g.fillStyle = color; g.beginPath();
+    if(icon === 'star'){ for(var i = 0; i < 10; i++){ var a = -Math.PI / 2 + i * Math.PI / 5, r = i % 2 ? 20 : 48; g.lineTo(Math.cos(a) * r, Math.sin(a) * r); } }
+    else if(icon === 'heart'){ g.moveTo(0, 40); g.bezierCurveTo(-60, -5, -30, -50, 0, -18); g.bezierCurveTo(30, -50, 60, -5, 0, 40); }
+    else if(icon === 'flame'){ g.moveTo(0, 46); g.bezierCurveTo(-40, 40, -38, 0, -14, -20); g.bezierCurveTo(-12, -2, -2, 0, 0, -48); g.bezierCurveTo(14, -20, 40, 4, 30, 26); g.bezierCurveTo(26, 40, 14, 46, 0, 46); }
+    else if(icon === 'wave'){ g.moveTo(-48, 30); g.bezierCurveTo(-46, -20, -10, -46, 22, -36); g.bezierCurveTo(46, -28, 44, 4, 22, 6); g.bezierCurveTo(6, 8, 4, -12, 18, -14);
+      g.bezierCurveTo(-4, -26, -24, -6, -20, 30); g.closePath(); }
+    g.fill(); g.restore();
+  }
+  // a board seen from above (the designer's preview)
+  function sgDrawBoardTop(g, lk, cx, cy, len){
+    var w = len * 0.27;
+    g.save(); g.translate(cx, cy);
+    g.beginPath(); g.moveTo(-len / 2, 0);
+    g.bezierCurveTo(-len / 2, -w * 0.45, -len * 0.36, -w * 0.5, -len * 0.25, -w * 0.5);
+    g.bezierCurveTo(0, -w * 0.56, len * 0.3, -w * 0.4, len / 2, 0);
+    g.bezierCurveTo(len * 0.3, w * 0.4, 0, w * 0.56, -len * 0.25, w * 0.5);
+    g.bezierCurveTo(-len * 0.36, w * 0.5, -len / 2, w * 0.45, -len / 2, 0); g.closePath();
+    g.fillStyle = lk.deck; g.fill(); g.lineWidth = 2; g.strokeStyle = 'rgba(0,0,0,0.25)'; g.stroke(); g.clip();
+    g.fillStyle = lk.lineC;
+    if(lk.line === 1) g.fillRect(-len / 2, -1.5, len, 3);
+    if(lk.line === 2){ g.fillRect(-len / 2, -w * 0.2 - 2, len, 4); g.fillRect(-len / 2, w * 0.2 - 2, len, 4); }
+    if(lk.icon && lk.icon !== 'none') sgDrawIcon(g, lk.icon, len * 0.08, 0, w * 0.7, lk.iconC);
+    g.restore();
+  }
   var SG_UPGRADES = [
     { id: 'speed',   icon: '⚡', name: L('מהירות', 'Speed'),   desc: L('גלשן מהיר יותר', 'A faster board') },
     { id: 'air',     icon: '🚀', name: L('קפיצה', 'Air'),      desc: L('קפיצות גבוהות יותר', 'Higher airs') },
@@ -4668,7 +4752,7 @@
     var final = Math.round((sorted[1] + sorted[2] + sorted[3]) / 3 * 100) / 100;
     var hiI = judges.indexOf(sorted[4]), loI = judges.indexOf(sorted[0]);
     if(loI === hiI) loI = judges.lastIndexOf(sorted[0]);
-    var shells = Math.round(final * 40), isBest = final > (sgSave.best10[sg.spot.id] || 0);
+    var shells = Math.round(final * 40 * sgBoost.shells), isBest = final > (sgSave.best10[sg.spot.id] || 0);
     var tourWave = sg.tour;
     var tourPd = tourWave && surfSave.pend[tourWave.key], tourDone = false;
     if(tourWave){
@@ -4753,7 +4837,7 @@
         sgAddText((m.nm || L('גולש', 'A surfer')) + ': ' + (+m.sc).toFixed(2), '#ffd447');
       });
       ch.subscribe(function(status){
-        if(status === 'SUBSCRIBED') ch.track({ id: duelMyId, name: playerNick() || L('גולש', 'Surfer'), rider: sgSave.rider, board: sgSave.board, at: Date.now() });
+        if(status === 'SUBSCRIBED') ch.track({ id: duelMyId, name: playerNick() || L('גולש', 'Surfer'), rider: sgSave.rider, board: sgSave.board, car: sgSave.car, color: sgSave.carColor, at: Date.now() });
       });
       sgNet.ch = ch;
     }).catch(function(){});
@@ -4766,10 +4850,11 @@
   function sgNetTick(){
     if(!sgNet.ch || !sg.peak) return;
     var now = Date.now(); if(now - sgNet.last < PEAK_SEND_MS) return; sgNet.last = now;
-    var ph = sg.phase === 'paddle' ? 'p' : sg.phase === 'ride' || sg.phase === 'done' || sg.phase === 'tow' ? 'r' : sg.phase === 'air' ? 'a' : 'w';
+    var ph = sg.phase === 'drive' || sg.phase === 'walk' ? 'd' : sg.phase === 'paddle' ? 'p' : sg.phase === 'ride' || sg.phase === 'done' || sg.phase === 'tow' ? 'r' : sg.phase === 'air' ? 'a' : 'w';
     try { sgNet.ch.send({ type: 'broadcast', event: 'pk', payload: { id: duelMyId, nm: playerNick() || L('גולש', 'Surfer'), rd: sgSave.rider, bd: sgSave.board, ph: ph,
       x: Math.round(sg.x - sg.peak.peakX), dz: Math.round((sg.dz || 0) * 10) / 10, hd: Math.round((sg.hd || 0) * 100) / 100, h: Math.round((sg.h || 0) * 100) / 100,
-      sc: Math.round(sgTen(sg.score) * 100) / 100, best: sg.peak.best } }); } catch(e){}
+      sc: Math.round(sgTen(sg.score) * 100) / 100, best: sg.peak.best, cr: sgSave.car, cc: sgSave.carColor, rk: sgSave.rack ? 1 : 0, lo: sgSave.look && sgSave.look.on ? sgSave.look : null, bz: sgSave.bd && sgSave.bd.on ? sgSave.bd : null,
+      cx: sg.car && sgLot ? Math.round((sg.car.x - sgLot.parkX) * 10) / 10 : undefined, cz: sg.car ? Math.round(sg.car.z * 10) / 10 : undefined, ch: sg.car ? Math.round(sg.car.hd * 100) / 100 : undefined } }); } catch(e){}
   }
   // the others who are still here (heard from lately)
   function sgNetList(){
@@ -4777,6 +4862,52 @@
     return Object.keys(sgNet.others).map(function(id){ var o = sgNet.others[id]; o.id = id; return o; })
       .filter(function(o){ return o.seen && now - o.seen < PEAK_SILENT_MS && sgNet.names[o.id]; });
   }
+  // the lot opposite the peak for this visit (cleared when you leave the spot)
+  var sgLot = null;
+  function sgBeginDrive(){
+    var parkX = (sg.curl + 300) * SG3_M;
+    sgLot = { parkX: parkX, car: null };
+    sg.car = { x: parkX - sgDriveM(sg.spot), z: SG_ROAD_Z, hd: 0, v: 0, t: 0, park: 0, crank: 0, dist0: sgDriveM(sg.spot) };
+    sg.phase = 'drive'; sg.x = sg.car.x / SG3_M;
+  }
+  // parked: out of the car and into the water, a little way in from the take-off line
+  // the beach: flat sand down to SG_EDGE_Z, then sloping into the sea; you drop onto the board at SG_WADE_Z
+  var SG_EDGE_Z = 180, SG_WADE_Z = 172.5;
+  function sgGroundY(z){ return z >= SG_EDGE_Z ? SG_SAND_Y : SG_SAND_Y - (SG_EDGE_Z - z) * 0.2; }
+  function sgParked(){
+    var C = sg.car;
+    sgLot.car = { x: C.x, z: C.z, hd: C.hd };
+    // you climb out on the side nearer the sea, and take the board off the rack
+    var sx0 = Math.sin(C.hd);
+    sg.walk = { x: C.x + (Math.abs(sx0) > 0.7 ? 1.6 : 0), z: Math.min(C.z - 1.6, SG_LOT_Z - 2.6), t: 0, ph: 0, hd: -Math.PI / 2 };
+    sgLot.boardTaken = true;
+    sg.phase = 'walk'; sg.x = sg.walk.x / SG3_M; sg.car = null;
+    sgAddText(L('🅿️ חניתם! לקחתם את הגלשן — טיילו בחוף או לכו למים', '🅿️ Parked! Board in hand — walk the beach or head into the sea'), '#7fffb0');
+  }
+  // in the water: lie down on the board and paddle out from here
+  function sgWalkDone(){
+    var Wk = sg.walk;
+    sg.phase = 'paddle'; sg.x = Wk.x / SG3_M; sg.hd = Math.PI; sg.walk = null;
+    sg.dz = SG_WADE_Z - (typeof sg3ZLine === 'function' && sg3.state === 'ready' ? sg3ZLine(Wk.x) : 10);
+    sgAddText(L('🌊 במים! חתרו החוצה אל המצוף', '🌊 In the water! Paddle out to the buoy'), '#7fffb0');
+  }
+  var SG_HUTS = [
+    { id: 'surf',  x: -20, name: L('🏄 חנות גלישה', '🏄 Surf shop'),   color: 0x3a7bd5, roof: 0xf2f2ec },
+    { id: 'kiosk', x: -5,  name: L('🍦 קיוסק', '🍦 Kiosk'),           color: 0xf5a623, roof: 0xe74c3c },
+    { id: 'salon', x: 10,  name: L('💇 סלון יופי', '💇 Beauty salon'), color: 0xff7eb6, roof: 0xffffff }
+  ];
+  var SG_HUT_Z = 201.5, SG_DOOR_Z = 198.6;
+  // the kiosk's menu: a little boost for this visit
+  var SG_KIOSK = [
+    { id: 'ice',   icon: '🍦', name: L('גלידה', 'Ice cream'),       price: 60, desc: L('+20% צדפים על הגלים בביקור הזה', '+20% shells on this visit\'s waves') },
+    { id: 'drink', icon: '🥤', name: L('שתייה קרה', 'Cold drink'),   price: 40, desc: L('חתירה חזקה יותר בביקור הזה', 'Stronger paddling this visit') },
+    { id: 'melon', icon: '🍉', name: L('אבטיח', 'Watermelon'),       price: 30, desc: L('+10% צדפים על הגלים בביקור הזה', '+10% shells on this visit\'s waves') }
+  ];
+  var sgBoost = { shells: 1, paddle: 1, ate: {} };
+  // your looks from the salon, over the surfer you picked
+  function sgRiderOf(id, look){ var rd = sgItem(SG_RIDERS, id); if(!look) return rd;
+    return { id: rd.id + '|' + [look.hair, look.skin, look.suit, look.accent].join(','), name: rd.name, skin: look.skin || rd.skin, hair: look.hair || rd.hair, suit: look.suit || rd.suit, accent: look.accent || rd.accent }; }
+  function sgMyRider(){ return sgRiderOf(sgSave.rider, sgSave.look && sgSave.look.on ? sgSave.look : null); }
   function sgPeakNext(final, completed){
     var S = sg.peak, endX = sg.x;
     S.rides.push(final); S.best = Math.max(S.best, final);
@@ -4818,6 +4949,43 @@
       if(w.t > 1.7) sgEnd(false);
       return;
     }
+    if(sg.phase === 'walk'){
+      // on foot: ⬆️ walk, ⬇️ step back, ⬅️➡️ turn -- around the beach, into the huts, into the sea
+      var Wk = sg.walk, Jw = sgJoyVec(); Wk.t += dt; sg.pad.t += dt;
+      if(Wk.t > 0.8 && sgHutOpen === null){
+        if(Math.abs(Jw.x) > 0.3) Wk.hd += Jw.x * 3.0 * dt;
+        var wade = Wk.z < SG_EDGE_Z ? Math.min(1, (SG_EDGE_Z - Wk.z) / (SG_EDGE_Z - SG_WADE_Z)) : 0;
+        var go = Jw.y < -0.3 ? 5.2 : Jw.y > 0.3 ? -2.2 : 0, spdW = go * (1 - 0.5 * wade);      // a light jog
+        var nx = Wk.x + Math.cos(Wk.hd) * spdW * dt, nz = Wk.z + Math.sin(Wk.hd) * spdW * dt;
+        // not through the huts
+        SG_HUTS.forEach(function(hu){ var cx = sgLot.parkX + hu.x, dx = nx - cx, dzh = nz - SG_HUT_Z;
+          if(Math.abs(dx) < 3.3 && Math.abs(dzh) < 2.6){ if(Math.abs(dx) / 3.3 > Math.abs(dzh) / 2.6) nx = cx + Math.sign(dx) * 3.3; else nz = SG_HUT_Z + Math.sign(dzh) * 2.6; } });
+        Wk.x = Math.max(sgLot.parkX - 130, Math.min(sgLot.parkX + 130, nx)); Wk.z = Math.max(SG_WADE_Z - 0.5, Math.min(206, nz));
+        if(spdW) Wk.ph += dt * Math.abs(spdW) * 3.2;
+        // at a hut's door
+        Wk.door = null; SG_HUTS.forEach(function(hu){ if(Math.abs(Wk.x - (sgLot.parkX + hu.x)) < 1.8 && Math.abs(Wk.z - SG_DOOR_Z) < 1.6) Wk.door = hu.id; });
+        if(Wk.z <= SG_WADE_Z) sgWalkDone();
+      }
+      return;
+    }
+    if(sg.phase === 'drive'){
+      // ⬆️ gas, ⬇️ brake (then reverse), ⬅️➡️ steer -- on the sand between the water and the dunes
+      var C = sg.car, Jd = sgJoyVec(); C.t += dt; sg.pad.t += dt;
+      var gas = Jd.y < -0.3 ? 1 : 0, brake = Jd.y > 0.3 ? 1 : 0;
+      var bike = sgSave.car === 'bike';
+      C.v += (gas * (bike ? 4 : 10) - brake * (C.v > 0.3 ? (bike ? 9 : 16) : (bike ? 2 : 6))) * dt;
+      if(!gas && !brake) C.v *= Math.pow(bike ? 0.6 : 0.4, dt);
+      C.v = Math.max(bike ? -1.5 : -6, Math.min(bike ? 9 : 24, C.v));
+      C.crank += C.v * dt / 0.55;
+      C.hd += Jd.x * 1.5 * dt * Math.max(-1, Math.min(1, C.v / 5));
+      C.x += Math.cos(C.hd) * C.v * dt; C.z += Math.sin(C.hd) * C.v * dt;
+      C.z = Math.max(182.5, Math.min(201, C.z));
+      sg.x = C.x / SG3_M;
+      // stopped in the lot: parked
+      var inLot = Math.abs(C.x - sgLot.parkX) < SG_BAY * 4.5 && Math.abs(C.z - SG_LOT_Z) < 3.2;
+      if(inLot && Math.abs(C.v) < 1.2){ C.park += dt; if(C.park > 0.7) sgParked(); } else C.park = 0;
+      return;
+    }
     if(sg.phase === 'paddle'){
       var P = sg.pad, Jp = sgJoyVec(), Hp = SG3_H[spot.id] || 3; P.t += dt;
       if(sg.peak && sg.peak.shared){
@@ -4827,7 +4995,7 @@
         P.t = (nowS - nS * PEAK_PERIOD) / 1000;
       }
       // strokes build up paddling speed; it fades when you stop
-      while(P.taps > 0){ P.taps--; P.pw = Math.min(1.25, P.pw + 0.3); P.side = -P.side; P[P.side > 0 ? 'kR' : 'kL'] = 1; }
+      while(P.taps > 0){ P.taps--; P.pw = Math.min(1.25, P.pw + 0.3 * sgBoost.paddle); P.side = -P.side; P[P.side > 0 ? 'kR' : 'kL'] = 1; }
       P.pw = Math.max(0, P.pw - dt * 0.16); P.kR = Math.max(0, P.kR - dt * 2.4); P.kL = Math.max(0, P.kL - dt * 2.4);
       // ⬅️ ➡️ turn the board
       if(Math.abs(Jp.x) > 0.3) sg.hd -= Jp.x * 2.3 * dt;
@@ -4835,7 +5003,7 @@
       var toX = (sg.curl + 300 - sg.x) / 40, dist = Math.sqrt(toX * toX + sg.dz * sg.dz);
       var spd = (0.3 + P.pw * 2.4) * (P.stage === 'go' ? 1 : 1 + Math.min(6, Math.max(0, dist - 35) / 40));
       sg.x += Math.sin(sg.hd) * spd * 40 * dt; sg.dz += Math.cos(sg.hd) * spd * dt;
-      sg.dz = Math.max(-Hp * 9, Math.min(Hp * 5, sg.dz));
+      sg.dz = Math.max(-Hp * 9, Math.min(175, sg.dz));
       sg.v = 40 + P.pw * 260; sg.th = 0; sg.h = 0.04;
       var pg = sg.x - sg.curl;
       // the set: rolling in steadily; it reaches you where you are
@@ -5457,12 +5625,14 @@
     if(sg3.state === 'ready'){
       var p3 = sg3Render(); sgHud(p3.sx, p3.sy, p3.sc);
       document.getElementById('sgCamBtn').hidden = !(sg.phase === 'ride' || sg.phase === 'air' || sg.phase === 'tow' || sg.phase === 'done');
-      document.getElementById('sgPeakBtn').hidden = !(sg.peak && sg.phase === 'paddle' && (Math.abs(sg.x - sg.curl - 300) > 500 || Math.abs(sg.dz) > 12));
+      document.getElementById('sgPeakBtn').hidden = !(sg.phase === 'paddle' && !sg.tour && (Math.abs(sg.x - sg.curl - 300) > 500 || Math.abs(sg.dz) > 12));   // in the water, far from the peak
       document.getElementById('sgExitBtn').hidden = !sg.peak || sg.phase === 'over';
+      document.getElementById('sgSkipBtn').hidden = sg.phase !== 'drive' && sg.phase !== 'walk';
+      document.getElementById('sgDoorBtn').hidden = !(sg.phase === 'walk' && sg.walk && sg.walk.door && sgHutOpen === null);
       return;
     }
     sgDrawScene();
-    var gm = sgFaceGeom(), K = sgK(), rider = sgItem(SG_RIDERS, sgSave.rider), board = sgItem(SG_BOARDS, sgSave.board);
+    var gm = sgFaceGeom(), K = sgK(), rider = sgMyRider(), board = sgMyBoard2D();
     var sx = gm.sx, sy, lean;
     if(sg.phase === 'air'){
       sy = gm.top - sg.air.y * gm.faceH;
@@ -5498,6 +5668,33 @@
   }
   // the numbers and words over the ride (2D and 3D), and the joystick
   function sgHud(sx, sy, sc){
+    if(sg.phase === 'walk'){
+      ctx.save(); ctx.textAlign = 'center'; ctx.lineWidth = 6; ctx.strokeStyle = 'rgba(0,30,50,0.6)'; ctx.fillStyle = '#ffffff';
+      ctx.font = (W < 560 ? 'bold 18px' : 'bold 24px') + ' Suez One, Rubik, sans-serif';
+      var wm = sg.walk && sg.walk.z < SG_EDGE_Z ? L('🌊 נכנסים למים...', '🌊 Wading in...')
+             : sg.walk && sg.walk.door ? L('🚪 ', '🚪 ') + sgItem(SG_HUTS, sg.walk.door).name + L(' — לחצו "היכנס"', ' — tap "Go in"')
+             : L('🚶 החוף: 🏄 חנות גלישה · 🍦 קיוסק · 💇 סלון יופי מאחורי הכביש · הים מקדימה', '🚶 The beach: 🏄 surf shop · 🍦 kiosk · 💇 salon behind the road · the sea ahead');
+      ctx.font = (W < 560 ? 'bold 15px' : 'bold 19px') + ' Suez One, Rubik, sans-serif';
+      ctx.strokeText(wm, W / 2, H * 0.3); ctx.fillText(wm, W / 2, H * 0.3);
+      ctx.font = 'bold 15px Rubik, sans-serif'; var wk2 = L('⬆️ ללכת · ⬇️ אחורה · ⬅️➡️ להסתובב', '⬆️ walk · ⬇️ back · ⬅️➡️ turn');
+      ctx.strokeText(wk2, W / 2, H - 28); ctx.fillText(wk2, W / 2, H - 28); ctx.restore();
+    }
+    if(sg.phase === 'drive' && sg.car){
+      var dl = Math.round(Math.abs(sg.car.x - sgLot.parkX));
+      ctx.save(); ctx.textAlign = 'center'; ctx.lineWidth = 6; ctx.strokeStyle = 'rgba(0,30,50,0.6)'; ctx.fillStyle = '#ffffff';
+      ctx.font = (W < 560 ? 'bold 18px' : 'bold 24px') + ' Suez One, Rubik, sans-serif';
+      var eta = Math.round(dl / Math.max(4, Math.abs(sg.car.v) || 10));
+      var dm = dl > 60 ? L('🧭 ' + sg.spot.name + ' · ' + dl + ' מ\' · ' + Math.floor(eta / 60) + ':' + pad2(eta % 60) + ' · המשיכו ישר בכביש החוף', '🧭 ' + sg.spot.name + ' · ' + dl + ' m · ' + Math.floor(eta / 60) + ':' + pad2(eta % 60) + ' · keep on along the coast road')
+             : dl > 20 ? L('🧭 החניון בעוד ' + dl + ' מ\' — האטו ופנו לחניה ⬅️ בצד הים', '🧭 Car park in ' + dl + ' m — slow down and pull into the lot ⬅️ on the sea side')
+                       : L('🅿️ עצרו באחד המקומות בחניה', '🅿️ Stop in one of the bays');
+      ctx.strokeText(dm, W / 2, H * 0.3); ctx.fillText(dm, W / 2, H * 0.3);
+      ctx.font = 'bold 15px Rubik, sans-serif';
+      var dk = L('⬆️ גז · ⬇️ ברקס/רוורס · ⬅️➡️ הגה', '⬆️ gas · ⬇️ brake/reverse · ⬅️➡️ steer');
+      ctx.strokeText(dk, W / 2, H - 28); ctx.fillText(dk, W / 2, H - 28);
+      ctx.font = 'bold 20px Rubik, sans-serif'; var kmh = Math.round(Math.abs(sg.car.v) * 3.6) + L(' קמ"ש', ' km/h');
+      ctx.strokeText(kmh, W / 2, H * 0.3 + 30); ctx.fillText(kmh, W / 2, H * 0.3 + 30);
+      ctx.restore();
+    }
     if(sg.peak && sg.peak.shared){
       ctx.save(); ctx.textAlign = 'center'; ctx.lineWidth = 4; ctx.strokeStyle = 'rgba(0,30,50,0.65)';
       (sg3.tags || []).forEach(function(tg){
@@ -5533,7 +5730,7 @@
              : !inSpot && canCatch && sg.dz < -Hq * 1.3 ? L('🌊 אתם בחוץ — אפשר לתפוס גם מכאן, רק לחתור חזק יותר', '🌊 You\'re out the back — you can catch it from here too, just paddle harder')
              : !inSpot && canCatch && (pg > SG_SPOT_HI || pg < SG_SPOT_LO) ? L('🌊 אתם בכתף של הגל — אפשר לתפוס גם מכאן', '🌊 You\'re on the shoulder — you can catch it from here too')
              : inSpot ? L('✅ אתם בפיק! כשהגל קרוב — הסתובבו לחוף וחתרו', '✅ You\'re at the peak! When it\'s close — turn to the beach and paddle')
-             : sg.peak && bd > 30 ? L('🟠 חתרו אל המצוף (' + bd + ' מ\') — או 🚀 השתגרו', '🟠 Paddle to the buoy (' + bd + ' m) — or 🚀 jump there')
+             : bd > 30 ? L('🟠 חתרו אל המצוף (' + bd + ' מ\') — או 🚀 השתגרו', '🟠 Paddle to the buoy (' + bd + ' m) — or 🚀 jump there')
              : L('🟠 חתרו אל המצוף הכתום (' + bd + ' מ\') · ⬅️➡️ להסתובב, רווח לחתור', '🟠 Paddle to the orange buoy (' + bd + ' m) · ⬅️➡️ turn, Space to paddle');
       ctx.save(); ctx.textAlign = 'center';
       ctx.globalAlpha = go ? 0.75 + 0.25 * Math.sin(sg.t * 12) : 1;
@@ -5761,10 +5958,10 @@
     var list = sg.peak && sg.peak.shared ? sgNetList().slice(0, 7) : [];
     while(sg3.ghosts.length < list.length){ var nr = sg3MakeRider(T); sg3.scene.add(nr.g); sg3.ghosts.push({ r: nr, g: nr.g, key: '' }); }
     sg3.ghosts.forEach(function(G, i){
-      var o = list[i]; G.g.visible = !!o; if(!o) return;
-      var R = G.r, rd = sgItem(SG_RIDERS, o.rd), bd = sgItem(SG_BOARDS, o.bd);
-      if(G.key !== rd.id + bd.id){ G.key = rd.id + bd.id; R.suitM.color.set(rd.suit); R.skinM.color.set(rd.skin); R.hairM.color.set(rd.hair); R.accM.color.set(rd.accent);
-        R.board.material.color.set(bd.deck); R.stripe.material.color.set(bd.stripe); }
+      var o = list[i]; G.g.visible = !!o && o.ph !== 'd'; if(!o || o.ph === 'd') return;
+      var R = G.r, rd = sgRiderOf(o.rd, o.lo), lkO = sgLookOf(o.bz, o.bd);
+      if(G.key !== rd.id + lkO.key){ G.key = rd.id + lkO.key; R.suitM.color.set(rd.suit); R.skinM.color.set(rd.skin); R.hairM.color.set(rd.hair); R.accM.color.set(rd.accent);
+        sg3ApplyLook(T, R.board, R.stripe, lkO); }
       G.nm = o.nm; G.sc = o.sc; G.riding = o.ph === 'r' || o.ph === 'a';
       var gx = ((sg.peak.peakX || 0) + (o.x || 0)) * SG3_M, fwd, pos;
       // the wave where they are (the same set as yours): its profile at their x
@@ -5824,8 +6021,434 @@
     var qP = new T.Quaternion().setFromAxisAngle(new T.Vector3(0, 0, 1), -Math.PI / 2), oP = new T.Vector3(-0.92, 0.22, 0);
     R.body.children.forEach(function(ch){ if(ch === R.board || ch === R.stripe || ch === R.fin) return; ch.position.applyQuaternion(qP).add(oP); ch.quaternion.premultiply(qP); });
   }
+  // a vehicle: x forward, y up. lk = the board's look (for the rack), rack = carry it
+  function sg3MakeCar(T, type, color, lk, rack){
+    var g = new T.Group(), paint = new T.MeshStandardMaterial({ color: color, roughness: 0.28, metalness: 0.45 });
+    var glass = new T.MeshStandardMaterial({ color: 0x18222c, roughness: 0.06, metalness: 0.75 }), dark = new T.MeshStandardMaterial({ color: 0x151515, roughness: 0.85 });
+    var trim = new T.MeshStandardMaterial({ color: 0x2b2b2b, roughness: 0.55 }), chrome = new T.MeshStandardMaterial({ color: 0xc8ced6, roughness: 0.18, metalness: 0.9 });
+    var white = new T.MeshStandardMaterial({ color: 0xf1efe8, roughness: 0.4 }), tyreM = new T.MeshStandardMaterial({ color: 0x101010, roughness: 0.95 });
+    var lampM = new T.MeshStandardMaterial({ color: 0xfff7e0, emissive: 0xfff0c0, emissiveIntensity: 0.7, roughness: 0.2 }), tailM = new T.MeshStandardMaterial({ color: 0xb0101a, emissive: 0x80000a, emissiveIntensity: 0.7 });
+    function box(w, hh, d, m, x, y, z){ var b = new T.Mesh(new T.BoxGeometry(w, hh, d), m); b.position.set(x, y, z); g.add(b); return b; }
+    function tube(a, b, r, m){ var d = new T.Vector3(b[0] - a[0], b[1] - a[1], b[2] - a[2]), len = d.length();
+      var c = new T.Mesh(new T.CylinderGeometry(r, r, len, 10), m); c.position.set((a[0] + b[0]) / 2, (a[1] + b[1]) / 2, (a[2] + b[2]) / 2);
+      c.quaternion.setFromUnitVectors(new T.Vector3(0, 1, 0), d.normalize()); g.add(c); return c; }
+    // a side profile given depth: cmds are [x, y] points or ['q', cx, cy, x, y] curves or ['a', cx, cy, r] wheel arches
+    function shapeOf(cmds){ var s = new T.Shape(); cmds.forEach(function(c, i){
+        if(c[0] === 'q') s.quadraticCurveTo(c[1], c[2], c[3], c[4]);
+        else if(c[0] === 'a'){ s.lineTo(c[1] - c[3], c[2]); s.absarc(c[1], c[2], c[3], Math.PI, 0, true); }
+        else if(i === 0) s.moveTo(c[0], c[1]); else s.lineTo(c[0], c[1]); }); return s; }
+    function slab(cmds, width, m, bev){ bev = bev === undefined ? 0.06 : bev;
+      var geo = new T.ExtrudeGeometry(shapeOf(cmds), { depth: Math.max(0.01, width - 2 * bev), bevelEnabled: bev > 0, bevelThickness: bev, bevelSize: bev, bevelSegments: 3, curveSegments: 16 });
+      geo.translate(0, 0, -(width - 2 * bev) / 2); var me = new T.Mesh(geo, m); g.add(me); return me; }
+    function wheel(x, z, r){
+      var w = new T.Group(); w.position.set(x, r, z); g.add(w);
+      var ty = new T.Mesh(new T.TorusGeometry(r * 0.74, r * 0.27, 12, 28), tyreM); w.add(ty);
+      var rim = new T.Mesh(new T.CylinderGeometry(r * 0.52, r * 0.52, 0.16, 24), chrome); rim.rotation.x = Math.PI / 2; w.add(rim);
+      for(var k = 0; k < 5; k++){ var sp = new T.Mesh(new T.BoxGeometry(r * 0.95, 0.07, 0.17), trim); sp.rotation.z = k * Math.PI / 5; w.add(sp); }
+      var hub = new T.Mesh(new T.CylinderGeometry(r * 0.15, r * 0.15, 0.2, 12), chrome); hub.rotation.x = Math.PI / 2; w.add(hub);
+      return w; }
+    function round(x, y, z, r, m){ var c = new T.Mesh(new T.CylinderGeometry(r, r, 0.06, 18), m); c.rotation.z = Math.PI / 2; c.position.set(x, y, z); g.add(c); return c; }
+    function mirrors(x, y, w){ [-1, 1].forEach(function(s){ box(0.08, 0.05, 0.22, trim, x, y - 0.06, s * (w / 2 + 0.08)); box(0.1, 0.16, 0.12, paint, x, y, s * (w / 2 + 0.18)); }); }
+    function rackBoard(y, len, x){
+      if(!rack || !lk) return;
+      var b = sg3LooseBoard(T); sg3ApplyLook(T, b, b.userData.stringer, lk); b.scale.set(len / 1.87, 1, 1); b.position.set(x || 0, y, 0); g.add(b); return b; }
+    function roofBars(y, x0, x1, w){ if(!rack) return; [x0, x1].forEach(function(x){ tube([x, y, -w / 2], [x, y, w / 2], 0.03, trim);
+      [-1, 1].forEach(function(s){ box(0.12, 0.08, 0.06, trim, x, y - 0.05, s * w / 2); }); }); }
+    var W, R;
+    if(type === 'van'){
+      W = 1.95; R = 0.4;
+      slab([[-2.36, 0.42], ['a', -1.5, 0.4, 0.47], ['a', 1.5, 0.4, 0.47], [2.36, 0.42], [2.42, 0.95], [2.36, 1.25], [2.14, 1.92], [1.9, 2.02], [-2.15, 2.02], [-2.33, 1.85]], W, paint);
+      slab([[-2.24, 1.3], [2.4, 1.3], [2.19, 1.92], [1.9, 1.96], [-2.18, 1.96]], W + 0.04, glass, 0.05);
+      [1.2, 0.05, -1.1].forEach(function(x){ box(0.13, 0.62, W + 0.08, paint, x, 1.62, 0); });          // the pillars
+      slab([[-2.4, 0.95], [2.46, 0.95], [2.44, 1.2], [-2.4, 1.2]], W + 0.03, white, 0.03);                   // the two-tone band
+      box(0.22, 0.24, W + 0.06, chrome, 2.44, 0.55, 0); box(0.22, 0.24, W + 0.06, chrome, -2.42, 0.55, 0);
+      [-1, 1].forEach(function(s){ round(2.47, 1.0, s * 0.64, 0.14, lampM); box(0.05, 0.3, 0.16, tailM, -2.43, 1.05, s * 0.78); });
+      round(2.48, 1.32, 0, 0.17, white); mirrors(1.95, 1.35, W);
+      roofBars(2.14, -0.9, 0.9, 1.7); rackBoard(2.22, 2.2);
+      [1.5, -1.5].forEach(function(x){ wheel(x, 0.86, R); wheel(x, -0.86, R); });
+    } else if(type === 'jeep'){
+      W = 1.85; R = 0.48;
+      slab([[-2.0, 0.55], ['a', -1.3, 0.5, 0.57], ['a', 1.3, 0.5, 0.57], [2.0, 0.55], [2.03, 1.38], [1.95, 1.46], [0.55, 1.46], [0.5, 1.33], [-1.95, 1.33], [-2.0, 1.25]], W, paint);
+      box(0.06, 0.6, 1.15, dark, 2.04, 1.0, 0); for(var gs = -4; gs <= 4; gs++) box(0.07, 0.48, 0.05, paint, 2.06, 1.0, gs * 0.12);   // the grille
+      [-1, 1].forEach(function(s){ round(2.06, 1.12, s * 0.66, 0.13, lampM); box(0.05, 0.18, 0.12, tailM, -2.02, 1.05, s * 0.8);
+        box(0.9, 0.08, 0.3, dark, 1.3, 1.07, s * (W / 2 + 0.1)); box(0.9, 0.08, 0.3, dark, -1.3, 1.07, s * (W / 2 + 0.1)); });   // fender flares
+      box(0.06, 0.75, W - 0.1, glass, 0.56, 1.85, 0); box(0.08, 0.06, W, paint, 0.56, 2.24, 0);
+      [-1, 1].forEach(function(s){ box(0.08, 0.8, 0.07, paint, 0.56, 1.85, s * (W / 2 - 0.04)); });
+      // the roll cage and the seats
+      [-1, 1].forEach(function(s){ var z = s * 0.82; tube([0.5, 2.22, z], [-1.75, 2.22, z], 0.04, dark); tube([-0.25, 1.33, z], [-0.25, 2.22, z], 0.04, dark); tube([-1.75, 1.33, z], [-1.75, 2.22, z], 0.04, dark); });
+      tube([-0.25, 2.22, -0.82], [-0.25, 2.22, 0.82], 0.04, dark); tube([-1.75, 2.22, -0.82], [-1.75, 2.22, 0.82], 0.04, dark);
+      [-0.42, 0.42].forEach(function(z){ box(0.5, 0.12, 0.5, dark, 0.0, 1.4, z); box(0.12, 0.6, 0.5, dark, -0.25, 1.68, z); });
+      var sp = new T.Group(); sp.position.set(-2.12, 1.15, 0); sp.rotation.y = Math.PI / 2; g.add(sp);
+      sp.add(new T.Mesh(new T.TorusGeometry(0.34, 0.13, 10, 24), tyreM)); var spr = new T.Mesh(new T.CylinderGeometry(0.24, 0.24, 0.1, 18), chrome); spr.rotation.x = Math.PI / 2; sp.add(spr);
+      box(0.2, 0.2, W + 0.05, trim, 2.08, 0.62, 0); box(0.2, 0.2, W + 0.05, trim, -2.06, 0.62, 0); mirrors(0.62, 1.55, W);
+      rackBoard(2.32, 2.1, -0.6);
+      [1.3, -1.3].forEach(function(x){ wheel(x, 0.86, R); wheel(x, -0.86, R); });
+    } else if(type === 'truck'){
+      W = 1.95; R = 0.45;
+      slab([[-2.72, 0.5], ['a', -1.75, 0.47, 0.54], ['a', 1.75, 0.47, 0.54], [2.72, 0.5], [2.78, 1.0], [2.66, 1.38], [1.45, 1.48], [0.95, 2.05], [-0.45, 2.08], [-0.55, 1.95], [-0.6, 1.4], [-2.72, 1.4]], W, paint);
+      slab([[-0.5, 1.5], [1.47, 1.5], [0.99, 2.0], [-0.42, 2.02]], W + 0.04, glass, 0.04);
+      box(0.12, 0.55, W + 0.08, paint, 0.42, 1.75, 0);
+      // the open bed: a dark floor with the sides and tailgate standing up round it
+      box(2.05, 0.03, W - 0.22, dark, -1.65, 1.42, 0);
+      [-1, 1].forEach(function(s){ box(2.15, 0.2, 0.09, paint, -1.65, 1.5, s * (W / 2 - 0.05)); }); box(0.09, 0.2, W - 0.02, paint, -2.68, 1.5, 0);
+      box(0.06, 0.42, 1.3, chrome, 2.8, 1.02, 0); for(var gt = -3; gt <= 3; gt++) box(0.07, 0.03, 1.2, dark, 2.82, 1.02 + gt * 0.055, 0);
+      [-1, 1].forEach(function(s){ box(0.06, 0.16, 0.36, lampM, 2.8, 1.22, s * 0.74); box(0.06, 0.34, 0.14, tailM, -2.74, 1.15, s * 0.86); });
+      box(0.24, 0.26, W + 0.08, chrome, 2.82, 0.6, 0); box(0.24, 0.24, W + 0.08, chrome, -2.78, 0.6, 0); mirrors(1.35, 1.62, W);
+      rackBoard(1.5, 2.0, -1.62);
+      [1.75, -1.75].forEach(function(x){ wheel(x, 0.86, R); wheel(x, -0.86, R); });
+    } else if(type === 'lux'){
+      W = 1.9; R = 0.36;
+      slab([[-2.32, 0.32], ['a', -1.48, 0.36, 0.43], ['a', 1.48, 0.36, 0.43], [2.3, 0.32], [2.38, 0.6], [2.2, 0.78], ['q', 1.6, 0.95, 0.7, 0.98], [-1.6, 0.98], ['q', -2.2, 0.98, -2.32, 0.78]], W, paint, 0.1);
+      slab([[0.78, 0.94], ['q', 0.2, 1.3, -0.5, 1.3], ['q', -1.2, 1.25, -1.72, 0.94]], 1.62, glass, 0.08);
+      [-1, 1].forEach(function(s){ box(0.05, 0.07, 0.42, lampM, 2.34, 0.7, s * 0.6); box(0.04, 0.06, 0.6, tailM, -2.34, 0.82, s * 0.42); });
+      box(0.04, 0.1, 0.8, dark, 2.37, 0.48, 0); box(0.3, 0.04, 1.6, paint, -2.1, 1.02, 0); mirrors(0.62, 1.02, W);
+      roofBars(1.36, -0.7, 0.2, 1.3); rackBoard(1.43, 2.0, -0.25);
+      [1.48, -1.48].forEach(function(x){ wheel(x, 0.84, R); wheel(x, -0.84, R); });
+    } else {
+      // the bicycle: a diamond frame, spoked wheels, turning cranks; the board on a side rack
+      var RH = [-0.52, 0.36, 0], BB = [0, 0.32, 0], ST = [-0.12, 0.9, 0], HT = [0.42, 0.92, 0], HB = [0.47, 0.72, 0], FH = [0.55, 0.36, 0];
+      tube(BB, ST, 0.024, paint); tube(ST, HT, 0.022, paint); tube(HB, BB, 0.026, paint); tube(HB, HT, 0.028, paint);
+      [-1, 1].forEach(function(s){ tube([BB[0], BB[1], 0], [RH[0], RH[1], s * 0.06], 0.014, paint); tube([ST[0], ST[1], 0], [RH[0], RH[1], s * 0.06], 0.012, paint); tube(HB, [FH[0], FH[1], s * 0.05], 0.014, chrome); });
+      tube(ST, [-0.15, 1.02, 0], 0.014, chrome); box(0.27, 0.05, 0.14, dark, -0.17, 1.05, 0);
+      tube(HT, [0.45, 1.05, 0], 0.018, chrome); tube([0.45, 1.05, -0.3], [0.45, 1.05, 0.3], 0.014, chrome);
+      [-1, 1].forEach(function(s){ tube([0.45, 1.05, s * 0.22], [0.45, 1.05, s * 0.3], 0.02, dark); });
+      [RH, FH].forEach(function(p){ var w = new T.Group(); w.position.set(p[0], p[1], 0); g.add(w);
+        w.add(new T.Mesh(new T.TorusGeometry(0.335, 0.028, 8, 36), tyreM)); w.add(new T.Mesh(new T.TorusGeometry(0.3, 0.01, 6, 36), chrome));
+        for(var k = 0; k < 12; k++){ var spk = new T.Mesh(new T.CylinderGeometry(0.003, 0.003, 0.3, 4), chrome); spk.rotation.z = k * Math.PI / 6; spk.position.set(Math.sin(-k * Math.PI / 6) * 0.15, Math.cos(k * Math.PI / 6) * 0.15, 0); w.add(spk); }
+        var hb = new T.Mesh(new T.CylinderGeometry(0.03, 0.03, 0.12, 10), chrome); hb.rotation.x = Math.PI / 2; w.add(hb); });
+      var crank = new T.Group(); crank.position.set(BB[0], BB[1], 0); g.add(crank);
+      var ring = new T.Mesh(new T.CylinderGeometry(0.09, 0.09, 0.012, 20), chrome); ring.rotation.x = Math.PI / 2; ring.position.z = 0.05; crank.add(ring);
+      [-1, 1].forEach(function(s){ var arm = new T.Mesh(new T.BoxGeometry(0.03, 0.17, 0.02), chrome); arm.position.set(0, s * 0.085, s * 0.07); crank.add(arm);
+        var ped = new T.Mesh(new T.BoxGeometry(0.1, 0.02, 0.08), dark); ped.position.set(0, s * 0.17, s * 0.11); crank.add(ped); });
+      if(rack && lk){ tube([-0.3, 0.6, 0], [-0.3, 0.6, -0.3], 0.012, chrome); tube([0.2, 0.6, 0], [0.2, 0.6, -0.3], 0.012, chrome);
+        var bb = sg3LooseBoard(T); sg3ApplyLook(T, bb, bb.userData.stringer, lk); bb.rotation.x = -Math.PI / 2; bb.position.set(-0.05, 0.62, -0.36); g.add(bb); }   // deck facing out
+      return { g: g, paint: paint, type: type, crank: crank };
+    }
+    return { g: g, paint: paint, type: type };
+  }
+  // you on the bicycle: on the saddle, hands on the bars, feet going round with the pedals
+  function sg3PoseBike(T, R, a){
+    var P = R.parts, X = R.extra, V = function(x, y, z){ return new T.Vector3(x, y, z); };
+    var hip = V(-0.17, 1.1, 0), sh = V(0.16, 1.55, 0), nk = V(0.24, 1.66, 0), hd = V(0.32, 1.79, 0);
+    sg3Limb(T, P.torso, hip, sh); sg3Limb(T, P.stripe, V(hip.x + 0.03, hip.y + 0.05, -0.14), V(sh.x - 0.02, sh.y - 0.05, -0.14)); sg3Limb(T, P.neck, sh, nk);
+    [[P.thighB, P.shinB, X.footB, 1], [P.thighF, P.shinF, X.footF, -1]].forEach(function(L){
+      var an = a + (L[3] > 0 ? 0 : Math.PI), ft = V(Math.sin(an) * 0.17, 0.32 - Math.cos(an) * 0.17 + 0.03, L[3] * 0.12), hp = V(hip.x, hip.y - 0.04, L[3] * 0.1);
+      var kn = hp.clone().lerp(ft, 0.5).add(V(0.2, 0.1, 0));
+      sg3Limb(T, L[0], hp, kn); sg3Limb(T, L[1], kn, ft); L[2].position.copy(ft).add(V(0.03, 0, 0)); });
+    [[P.uArmB, P.fArmB, X.handB, 1], [P.uArmF, P.fArmF, X.handF, -1]].forEach(function(A){
+      var s0 = V(sh.x, sh.y - 0.03, A[3] * 0.18), hn = V(0.45, 1.07, A[3] * 0.26), el = s0.clone().lerp(hn, 0.5).add(V(-0.04, 0.05, A[3] * 0.05));
+      sg3Limb(T, A[0], s0, el); sg3Limb(T, A[1], el, hn); A[2].position.copy(hn); });
+    var dC = V(0, 0, 0).subVectors(sh, hip).normalize();
+    X.chest.position.copy(hip).lerp(sh, 0.72); X.chest.quaternion.setFromUnitVectors(V(0, 1, 0), dC); X.hips.position.copy(hip);
+    R.head.position.copy(hd); R.head.rotation.set(0, 0, -0.35); R.hair.position.copy(hd).add(V(-0.02, 0.03, 0)); R.hair.rotation.set(0, 0, 0.2);
+  }
+  // the beach road, the parking lot opposite the peak, and every car in it
+  var SG_ROAD_Z = 192, SG_LOT_Z = 186, SG_SAND_Y = 0.9, SG_BAY = 4.8;
+  function sg3Cars(T, now){
+    if(!sg3.road){
+      sg3.road = new T.Mesh(new T.PlaneGeometry(4000, 7), new T.MeshStandardMaterial({ color: 0x55585c, roughness: 0.95 }));
+      sg3.road.rotation.x = -Math.PI / 2; sg3.road.position.set(1000, SG_SAND_Y + 0.02, SG_ROAD_Z); sg3.scene.add(sg3.road);
+      var lot = new T.Group(), lineM = new T.MeshStandardMaterial({ color: 0xf5f5f5, roughness: 0.8 });
+      var pad = new T.Mesh(new T.PlaneGeometry(SG_BAY * 9 + 1, 7), new T.MeshStandardMaterial({ color: 0x6a6d70, roughness: 0.95 })); pad.rotation.x = -Math.PI / 2; pad.position.set(0, 0.01, 0); lot.add(pad);
+      for(var k = -4.5; k <= 4.5; k++){ var ln = new T.Mesh(new T.BoxGeometry(0.15, 0.02, 5), lineM); ln.position.set(k * SG_BAY, 0.03, -0.6); lot.add(ln); }
+      var cv = document.createElement('canvas'); cv.width = cv.height = 64; var cg = cv.getContext('2d'); cg.fillStyle = '#1565c0'; cg.fillRect(0, 0, 64, 64); cg.fillStyle = '#fff'; cg.font = 'bold 50px Arial'; cg.textAlign = 'center'; cg.fillText('P', 32, 50);
+      var sign = new T.Mesh(new T.PlaneGeometry(1.4, 1.4), new T.MeshBasicMaterial({ map: new T.CanvasTexture(cv), side: T.DoubleSide })); sign.position.set(-SG_BAY * 5, 3.2, 2.6); lot.add(sign);
+      var pole = new T.Mesh(new T.CylinderGeometry(0.06, 0.06, 2.6, 8), new T.MeshStandardMaterial({ color: 0x777777 })); pole.position.set(-SG_BAY * 5, 1.3, 2.62); lot.add(pole);
+      lot.visible = false; sg3.scene.add(lot); sg3.lot = lot; sg3.carPool = [];
+      // the sand runs on down into the water (no step at the edge)
+      var slope = new T.Mesh(new T.PlaneGeometry(4000, 16), sg3.shore.wetM); slope.rotation.x = -Math.PI / 2 - Math.atan(0.2);
+      slope.position.set(1000, SG_SAND_Y - 8 * Math.sin(Math.atan(0.2)), SG_EDGE_Z - 8 * Math.cos(Math.atan(0.2))); sg3.scene.add(slope); sg3.slope = slope;
+    }
+    var on = !!sgLot;
+    sg3.road.visible = on; sg3.lot.visible = on;
+    var want = [];
+    if(on){
+      sg3.lot.position.set(sgLot.parkX, SG_SAND_Y, SG_LOT_Z);
+      // you: driving in, or parked
+      var me = sg.phase === 'drive' && sg.car ? sg.car : sgLot.car;
+      if(me) want.push({ type: sgSave.car, color: sgSave.carColor, x: me.x, z: me.z, hd: me.hd, lk: sgMyLook(), rack: sgSave.rack && !sgLot.boardTaken, mine: true, crank: me.crank || 0 });
+      // the others in a shared peak: on the road if still driving in, otherwise in the next free bay
+      var bay = 0;
+      (sg.peak && sg.peak.shared ? sgNetList() : []).forEach(function(o){
+        if(!o.cr) return;
+        var lkO = sgLookOf(o.bz, o.bd);
+        if(o.ph === 'd' && o.cx !== undefined){ want.push({ type: o.cr, color: o.cc || '#e74c3c', x: sgLot.parkX + o.cx, z: o.cz, hd: o.ch, lk: lkO, rack: !!o.rk }); return; }
+        bay++; var off = (bay % 2 ? 1 : -1) * Math.ceil(bay / 2) * SG_BAY;
+        want.push({ type: o.cr, color: o.cc || '#e74c3c', x: sgLot.parkX + off, z: SG_LOT_Z - 0.6, hd: -Math.PI / 2, lk: lkO, rack: !!o.rk });
+      });
+    }
+    while(sg3.carPool.length < want.length) sg3.carPool.push(null);
+    var bikeShown = false;
+    // the way: arrows on the road ahead of you (up to the lot), and signs for the car park
+    if(!sg3.arrows){
+      var acv = document.createElement('canvas'); acv.width = 64; acv.height = 128; var ac = acv.getContext('2d');
+      ac.fillStyle = 'rgba(255,255,255,0.95)'; ac.beginPath(); ac.moveTo(32, 4); ac.lineTo(60, 44); ac.lineTo(42, 44); ac.lineTo(42, 124); ac.lineTo(22, 124); ac.lineTo(22, 44); ac.lineTo(4, 44); ac.closePath(); ac.fill();
+      var aM = new T.MeshBasicMaterial({ map: new T.CanvasTexture(acv), transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -4 });
+      sg3.arrows = []; for(var ai = 0; ai < 14; ai++){ var am = new T.Mesh(new T.PlaneGeometry(1.5, 3.4), aM.clone()); am.rotation.x = -Math.PI / 2; am.visible = false; sg3.scene.add(am); sg3.arrows.push(am); }
+      sg3.signs = [0, 1].map(function(){ var cv = document.createElement('canvas'); cv.width = 256; cv.height = 128;
+        var sm = new T.Mesh(new T.PlaneGeometry(3.2, 1.6), new T.MeshBasicMaterial({ map: new T.CanvasTexture(cv), side: T.DoubleSide }));
+        var pole = new T.Mesh(new T.CylinderGeometry(0.06, 0.06, 2.6, 8), new T.MeshStandardMaterial({ color: 0x8a8f96 })); pole.position.y = -1.6; sm.add(pole);
+        sm.visible = false; sg3.scene.add(sm); return { m: sm, cv: cv, txt: '' }; });
+    }
+    var drv = sg.phase === 'drive' && sg.car && sgLot;
+    sg3.arrows.forEach(function(am, ai){
+      if(!drv){ am.visible = false; return; }
+      var ax = Math.ceil((sg.car.x + 6) / 12) * 12 + ai * 12;
+      am.visible = ax < sgLot.parkX - 6; if(!am.visible) return;
+      am.position.set(ax, SG_SAND_Y + 0.07, SG_ROAD_Z); am.rotation.z = -Math.PI / 2;
+      am.material.opacity = 0.7 + 0.3 * Math.max(0, Math.sin(now * 4 - ai * 0.6));
+    });
+    // two signs before the lot: 200 m and right at it
+    sg3.signs.forEach(function(S, si){
+      S.m.visible = !!sgLot; if(!sgLot) return;
+      var txt = si === 0 ? '200m' : 'P';
+      var key = sg.spot.id + txt;
+      if(S.txt !== key){ S.txt = key; var c = S.cv.getContext('2d'); c.fillStyle = '#0f5aa8'; c.fillRect(0, 0, 256, 128); c.strokeStyle = '#fff'; c.lineWidth = 6; c.strokeRect(6, 6, 244, 116);
+        c.fillStyle = '#fff'; c.textAlign = 'center'; c.font = 'bold 30px Rubik, Arial'; c.fillText(sg.spot.name, 128, 50);
+        c.font = 'bold 34px Rubik, Arial'; c.fillText(si === 0 ? L('🅿️ חניון · 200 מ\'', '🅿️ Car park · 200 m') : L('🅿️ חניון החוף ⬇', '🅿️ Beach car park ⬇'), 128, 100); S.m.material.map.needsUpdate = true; }
+      S.m.position.set(sgLot.parkX - (si === 0 ? 200 : 26), SG_SAND_Y + 3.2, SG_ROAD_Z + 4.6); S.m.rotation.y = -Math.PI / 2;
+    });
+    sg3.carPool.forEach(function(c, i){
+      var w = want[i];
+      if(!w){ if(c) c.g.visible = false; return; }
+      var key = w.type + '|' + (w.rack ? w.lk.key : '-');
+      if(!c || c.key !== key){ if(c) sg3Dispose(c.g); c = sg3.carPool[i] = sg3MakeCar(T, w.type, w.color, w.lk, w.rack); c.key = key; sg3.scene.add(c.g); }
+      c.paint.color.set(w.color); c.g.visible = true;
+      c.g.position.set(w.x, SG_SAND_Y, w.z); c.g.rotation.set(0, -w.hd, 0);
+      if(c.crank) c.crank.rotation.z = -(w.crank || 0);
+      // you, riding your bicycle in
+      if(w.mine && w.type === 'bike' && sg.phase === 'drive'){
+        if(!sg3.cyclist){ sg3.cyclist = sg3MakeRider(T); sg3.scene.add(sg3.cyclist.g); [sg3.cyclist.board, sg3.cyclist.stripe, sg3.cyclist.fin].forEach(function(o){ o.visible = false; }); sg3.cyclist.vest.visible = false; }
+        var cy = sg3.cyclist, rdC = sgMyRider();
+        cy.suitM.color.set(rdC.suit); cy.skinM.color.set(rdC.skin); cy.hairM.color.set(rdC.hair); cy.accM.color.set(rdC.accent);
+        cy.g.visible = true; cy.g.position.copy(c.g.position); cy.g.rotation.copy(c.g.rotation); cy.body.rotation.set(0, 0, 0);
+        sg3PoseBike(T, cy, w.crank || 0); bikeShown = true;
+      }
+    });
+    if(sg3.cyclist && !bikeShown) sg3.cyclist.g.visible = false;
+  }
+  function sg3ZLine(xm){
+    var Hm = SG3_H[sg.spot.id] || 3, br = sg3Break(xm, Hm), rows = sg3ProfileQ(br[0], br[1], Hm, br[2]);
+    var fr = sg3RowForH(0), r0 = Math.floor(fr), r1 = Math.min(SG3_ROWS - 1, r0 + 1), f = fr - r0;
+    return rows[r0][0] + (rows[r1][0] - rows[r0][0]) * f + 0.6;
+  }
+  // walking with the board under the arm: legs striding, the free arm swinging (body frame: x ahead)
+  function sg3PoseWalk(T, R, ph, sink){
+    var P = R.parts, X = R.extra, V = function(x, y, z){ return new T.Vector3(x, y, z); }, s = Math.sin(ph), c = Math.cos(ph);
+    var hip = V(0, 0.94 + 0.02 * Math.abs(c), 0), sh = V(0.03, 1.46, 0), nk = V(0.05, 1.56, 0), hd = V(0.07, 1.7, 0);
+    sg3Limb(T, P.torso, hip, sh); sg3Limb(T, P.stripe, V(0.04, 1.0, -0.12), V(0.06, 1.4, -0.12)); sg3Limb(T, P.neck, sh, nk);
+    [[P.thighB, P.shinB, X.footB, 1], [P.thighF, P.shinF, X.footF, -1]].forEach(function(Lg){
+      var k = Lg[3] * s, lift = Math.max(0, Lg[3] * c) * 0.12;
+      var ft = V(0.28 * k, 0.07 + lift, Lg[3] * 0.11), hp = V(0, hip.y - 0.05, Lg[3] * 0.1), kn = hp.clone().lerp(ft, 0.5).add(V(0.09 + lift * 0.6, 0.04, 0));
+      sg3Limb(T, Lg[0], hp, kn); sg3Limb(T, Lg[1], kn, ft); Lg[2].position.copy(ft).add(V(0.05, 0, 0)); });
+    // the arm on the board side holds it under; the other swings
+    var sB = V(sh.x, sh.y - 0.04, 0.19), hB = V(0.06, 1.0, 0.27), eB = sB.clone().lerp(hB, 0.5).add(V(-0.05, 0, 0.05));
+    sg3Limb(T, P.uArmB, sB, eB); sg3Limb(T, P.fArmB, eB, hB); X.handB.position.copy(hB);
+    var sF = V(sh.x, sh.y - 0.04, -0.19), hF = V(-0.22 * s, 0.86 + 0.05 * Math.abs(s), -0.27), eF = sF.clone().lerp(hF, 0.5).add(V(0, 0, -0.04));
+    sg3Limb(T, P.uArmF, sF, eF); sg3Limb(T, P.fArmF, eF, hF); X.handF.position.copy(hF);
+    var dC = V(0, 0, 0).subVectors(sh, hip).normalize();
+    X.chest.position.copy(hip).lerp(sh, 0.7); X.chest.quaternion.setFromUnitVectors(V(0, 1, 0), dC); X.hips.position.copy(hip);
+    R.head.position.copy(hd); R.head.rotation.set(0, 0, -0.1); R.hair.position.copy(hd).add(V(-0.02, 0.03, 0)); R.hair.rotation.set(0, 0, 0.3);
+    // the board under the arm: on its rail, deck out, nose ahead
+    R.board.position.set(0.0, 0.98, 0.36); R.board.rotation.set(-Math.PI / 2, 0, 0.08);
+  }
+  // the beach around the lot: huts, the lifeguard tower, umbrellas and towels, people, showers, the sign
+  function sg3Beach(T, now){
+    var on = !!sgLot && sg.spot && !sg.spot.tow;
+    if(sg3.beach && (!on || sg3.beach.userData.key !== sg.spot.id + ':' + Math.round(sgLot.parkX))){ sg3Dispose(sg3.beach); sg3.beach = null; }
+    if(!on) return;
+    if(!sg3.beach){ sg3.beach = sg3BuildBeach(T, sg.spot); sg3.beach.userData.key = sg.spot.id + ':' + Math.round(sgLot.parkX); sg3.beach.position.x = sgLot.parkX; sg3.scene.add(sg3.beach); }
+    // only near it: far up the road it's hidden and still
+    sg3.beach.visible = Math.abs(sg3.cam.position.x - sgLot.parkX) < 170;
+    if(!sg3.beach.visible) return;
+    // the flag flutters, the walkers walk
+    var U = sg3.beach.userData, camX = sg3.cam.position.x - sgLot.parkX;
+    function near(r, x){ var v = Math.abs(x - camX) < 70; r.g.visible = v; return v; }
+    if(U.flag) U.flag.rotation.y = 0.25 * Math.sin(now * 3.1) + 0.1 * Math.sin(now * 7.3);
+    (U.walkers || []).forEach(function(wk){ var t = now * wk.sp + wk.ph, x = wk.x0 + Math.sin(t) * wk.range, dir = Math.cos(t) >= 0 ? 0 : Math.PI;
+      if(!near(wk.r, x)) return;
+      wk.r.g.position.set(x, sgGroundY(wk.z) + (wk.jog ? 0.04 * Math.abs(Math.sin(now * 9 + wk.ph)) : 0), wk.z); wk.r.g.rotation.set(0, -dir, 0);
+      sg3PoseWalk(T, wk.r, now * (wk.jog ? 10 : 6) + wk.ph, 0); wk.r.board.visible = false;
+      if(wk.jog){ var sw = Math.sin(now * 10 + wk.ph); [[wk.r.parts.uArmB, wk.r.parts.fArmB, wk.r.extra.handB, 1], [wk.r.parts.uArmF, wk.r.parts.fArmF, wk.r.extra.handF, -1]].forEach(function(A){
+        var s0 = new T.Vector3(0.03, 1.42, A[3] * 0.19), hn = new T.Vector3(0.12 * sw * A[3] + 0.12, 1.05, A[3] * 0.22), el = new T.Vector3(-0.08 * sw * A[3], 1.15, A[3] * 0.26);
+        sg3Limb(T, A[0], s0, el); sg3Limb(T, A[1], el, hn); A[2].position.copy(hn); }); } });
+    // sunbathers: now and then they stretch or turn over a little
+    (U.sunb || []).forEach(function(sb){ var c = Math.max(0, Math.sin(now * 0.45 + sb.ph)), k = c * c;
+      if(!near(sb.r, sb.r.g.position.x)) return;
+      sg3PoseProne(T, sb.r, k * 0.8 * Math.max(0, Math.sin(now * 2 + sb.ph)), k * 0.8 * Math.max(0, Math.sin(now * 2 + sb.ph + 2)));
+      sb.r.head.rotation.y = 0.6 * Math.sin(now * 0.3 + sb.ph); sb.r.board.visible = false; });
+    (U.sitters || []).forEach(function(st){ if(!near(st.r, st.r.g.position.x)) return; sg3PoseSit(T, st.r, now + st.ph); st.r.board.visible = false; });
+    // matkot: the ball flies between the two, each swings as it comes
+    (U.matkot || []).forEach(function(mk){
+      var nv = near(mk.a, mk.x); mk.b.g.visible = nv; mk.ball.visible = nv; if(!nv) return;
+      var cyc = (now * 0.75 + mk.ph) % 2, toB = cyc < 1, f = toB ? cyc : cyc - 1, xa = mk.x - mk.gap / 2, xb = mk.x + mk.gap / 2;
+      var bx = toB ? xa + (xb - xa) * f : xb + (xa - xb) * f, gy = sgGroundY(mk.z);
+      mk.ball.position.set(bx, gy + 1.2 + Math.sin(f * Math.PI) * 1.4, mk.z);
+      [[mk.a, xa, 0, toB ? 1 - f : f], [mk.b, xb, Math.PI, toB ? f : 1 - f]].forEach(function(P){
+        var pp = P[0], near = P[3]; pp.g.position.set(P[1] + 0.3 * Math.sin(now * 1.7 + P[2]), gy, mk.z); pp.g.rotation.set(0, -P[2], 0);
+        sg3PoseWalk(T, pp, Math.sin(now * 3 + P[2]) * 0.5, 0); pp.board.visible = false;
+        var sw = Math.max(0, near - 0.75) * 4, s0 = new T.Vector3(0.03, 1.42, 0.19), hn = new T.Vector3(0.35 - 0.5 * sw, 1.25 + 0.25 * sw, 0.42), el = new T.Vector3(0.12, 1.32, 0.36);
+        sg3Limb(T, pp.parts.uArmB, s0, el); sg3Limb(T, pp.parts.fArmB, el, hn); pp.extra.handB.position.copy(hn); });
+    });
+    // swimmers: stroking along, heads bobbing in the shallows
+    (U.swim || []).forEach(function(sw2){ var t = now * 0.25 + sw2.ph, x = sw2.x + Math.sin(t) * 10, dir = Math.cos(t) * sw2.dir >= 0 ? 0 : Math.PI;
+      if(!near(sw2.r, x)) return;
+      sw2.r.g.position.set(x, -0.32 + 0.06 * Math.sin(now * 2.2 + sw2.ph), sw2.z); sw2.r.g.rotation.set(0, -dir, 0);
+      var cyc2 = (now * 1.2 + sw2.ph) % 1; sg3PoseProne(T, sw2.r, Math.max(0, 1 - cyc2 * 2), Math.max(0, 1 - ((cyc2 + 0.5) % 1) * 2)); sw2.r.board.visible = false; });
+  }
+  // sitting on the sand, leaning back on one hand, the other bringing a drink up now and then
+  // the beach city along the drive: blocks and hotels, lamps, a promenade, traffic
+  // take something out of the scene for good: its geometry and materials go too
+  function sg3Dispose(obj){
+    sg3.scene.remove(obj);
+    obj.traverse(function(o){ if(!o.isMesh) return; if(o.geometry && o.geometry !== sg3.boardGeo) o.geometry.dispose();
+      (Array.isArray(o.material) ? o.material : [o.material]).forEach(function(mt){ if(mt) mt.dispose(); }); });
+  }
+  function sg3City(T, now){
+    var on = !!sgLot && sg.spot && !sg.spot.tow;
+    var key = on ? sg.spot.id + ':' + Math.round(sgLot.parkX) : '';
+    if(sg3.city && sg3.city.userData.key !== key){ sg3Dispose(sg3.city); sg3.city = null; }
+    if(!on) return;
+    if(!sg3.city){ sg3.city = sg3BuildCity(T, sg.spot); sg3.city.userData.key = key; sg3.scene.add(sg3.city); }
+    // the traffic, coming the other way down the coast road
+    var U = sg3.city.userData, x0 = sgLot.parkX - 780, x1 = sgLot.parkX - 30;
+    U.traffic.forEach(function(c){ var span = x1 - x0, x = x1 - ((now * c.v + c.off) % span); c.car.g.position.set(x, SG_SAND_Y, SG_ROAD_Z + 2.1); c.car.g.rotation.set(0, Math.PI, 0); });
+  }
+  function sg3BuildCity(T, spot){
+    var g = new T.Group(), U = g.userData, x0 = sgLot.parkX - 780, x1 = sgLot.parkX - 70;
+    var rnd = (function(s){ return function(){ s = (s * 16807) % 2147483647; return (s - 1) / 2147483646; }; })(surfHash('city' + spot.id) % 100000 + 11);
+    // a wall of windows: light walls, darker glass, a few lit
+    var wcv = document.createElement('canvas'); wcv.width = wcv.height = 64; var wc = wcv.getContext('2d');
+    wc.fillStyle = '#ffffff'; wc.fillRect(0, 0, 64, 64);
+    for(var wy = 0; wy < 4; wy++) for(var wx = 0; wx < 4; wx++){ var lit = (wx * 7 + wy * 3) % 5 === 0;
+      wc.fillStyle = lit ? '#f4e2a6' : '#5f7184'; wc.fillRect(wx * 16 + 3, wy * 16 + 4, 10, 9); wc.fillStyle = 'rgba(255,255,255,0.5)'; wc.fillRect(wx * 16 + 2, wy * 16 + 13, 12, 2); }
+    var wtex = new T.CanvasTexture(wcv); wtex.wrapS = wtex.wrapT = T.RepeatWrapping;
+    var pastel = [0xf3efe6, 0xe9e4d8, 0xf4e6d0, 0xdfe8ec, 0xf0dcd4, 0xe6efe2, 0xffffff, 0xd8d2c6];
+    var mats = pastel.map(function(c){ return new T.MeshStandardMaterial({ color: c, roughness: 0.85, map: wtex }); });
+    var panM = new T.MeshStandardMaterial({ color: 0x1d2b44, roughness: 0.3, metalness: 0.5 }), tankM = new T.MeshStandardMaterial({ color: 0xdddddd });
+    // a box whose texture repeats by its size (faces: +x, -x, +y, -y, +z, -z)
+    function block(w, hh, d){ var geo = new T.BoxGeometry(w, hh, d), uv = geo.attributes.uv;
+      for(var f = 0; f < 6; f++){ var su = Math.max(1, Math.round((f < 2 ? d : w) / 3.2)), sv = Math.max(1, Math.round((f === 2 || f === 3 ? d : hh) / 3.1));
+        for(var k = 0; k < 4; k++){ var i = f * 4 + k; uv.setXY(i, uv.getX(i) * su, uv.getY(i) * sv); } }
+      return geo; }
+    for(var x = x0; x < x1; ){
+      var w = 12 + rnd() * 10, d = 10 + rnd() * 8, hh = 9 + Math.pow(rnd(), 1.6) * 52, z = 214 + rnd() * 10;
+      var bm = mats[Math.floor(rnd() * mats.length)];
+      var b = new T.Mesh(block(w, hh, d), bm); b.position.set(x + w / 2, SG_SAND_Y + hh / 2, z); g.add(b);
+      // the roof: solar water heaters and a tank (like every roof here)
+      var nr = 1 + Math.floor(rnd() * 3); for(var r = 0; r < nr; r++){ var px = x + 2 + rnd() * (w - 4), pz = z - d / 2 + 2 + rnd() * (d - 4);
+        var pan = new T.Mesh(new T.BoxGeometry(2, 0.08, 1.2), panM); pan.rotation.x = -0.6; pan.position.set(px, SG_SAND_Y + hh + 0.6, pz); g.add(pan);
+        var tank = new T.Mesh(new T.CylinderGeometry(0.3, 0.3, 1.4, 10), tankM); tank.rotation.z = Math.PI / 2; tank.position.set(px, SG_SAND_Y + hh + 1.05, pz + 0.6); g.add(tank); }
+      if(hh > 40 && rnd() < 0.6){ var top = new T.Mesh(block(w * 0.6, 3, d * 0.6), bm); top.position.set(x + w / 2, SG_SAND_Y + hh + 1.5, z); g.add(top); }   // a hotel's top floor
+      x += w + 3 + rnd() * 7;
+    }
+    // the promenade and its lamps
+    var pcv = document.createElement('canvas'); pcv.width = pcv.height = 32; var pc = pcv.getContext('2d'); pc.fillStyle = '#d9d4cb'; pc.fillRect(0, 0, 32, 32); pc.strokeStyle = '#b9b2a6'; pc.lineWidth = 2; pc.strokeRect(0, 0, 32, 32);
+    var ptex = new T.CanvasTexture(pcv); ptex.wrapS = ptex.wrapT = T.RepeatWrapping; ptex.repeat.set((x1 - x0) / 2, 2);
+    var prom = new T.Mesh(new T.PlaneGeometry(x1 - x0, 4), new T.MeshStandardMaterial({ map: ptex, roughness: 0.9 })); prom.rotation.x = -Math.PI / 2; prom.position.set((x0 + x1) / 2, SG_SAND_Y + 0.03, 198); g.add(prom);
+    var lm = new T.MeshStandardMaterial({ color: 0x5b6168, roughness: 0.5, metalness: 0.4 }), lampM = new T.MeshStandardMaterial({ color: 0xfff4d0, emissive: 0xffe9a0, emissiveIntensity: 0.6 });
+    for(var lx = x0 + 10; lx < x1; lx += 28){ var pole = new T.Mesh(new T.CylinderGeometry(0.08, 0.11, 6.5, 8), lm); pole.position.set(lx, SG_SAND_Y + 3.25, 196.6); g.add(pole);
+      var arm = new T.Mesh(new T.BoxGeometry(0.08, 0.08, 1.8), lm); arm.position.set(lx, SG_SAND_Y + 6.4, 195.8); g.add(arm);
+      var head = new T.Mesh(new T.BoxGeometry(0.5, 0.14, 0.3), lampM); head.position.set(lx, SG_SAND_Y + 6.3, 194.95); g.add(head); }
+    // cars coming the other way
+    var types = ['van', 'jeep', 'truck', 'lux'], cols = ['#e74c3c', '#f5f5f0', '#111418', '#3498db', '#95a5a6', '#f4d03f', '#2ecc71'];
+    U.traffic = [0, 1, 2, 3, 4].map(function(k){ var c = sg3MakeCar(T, types[k % 4], cols[Math.floor(rnd() * cols.length)], null, false); g.add(c.g); return { car: c, v: 11 + rnd() * 6, off: k * 150 + rnd() * 60 }; });
+    return g;
+  }
+  function sg3PoseSit(T, R, t){
+    var P = R.parts, X = R.extra, V = function(x, y, z){ return new T.Vector3(x, y, z); };
+    var hip = V(0, 0.2, 0), sh = V(-0.16, 0.68, 0), nk = V(-0.12, 0.78, 0), hd = V(-0.07, 0.92, 0);
+    sg3Limb(T, P.torso, hip, sh); sg3Limb(T, P.stripe, V(0.02, 0.24, -0.12), V(-0.13, 0.64, -0.12)); sg3Limb(T, P.neck, sh, nk);
+    [[P.thighB, P.shinB, X.footB, 1], [P.thighF, P.shinF, X.footF, -1]].forEach(function(Lg){ var kn = V(0.34, 0.46, Lg[3] * 0.13), ft = V(0.62, 0.07, Lg[3] * 0.15), hp = V(0, 0.18, Lg[3] * 0.1);
+      sg3Limb(T, Lg[0], hp, kn); sg3Limb(T, Lg[1], kn, ft); Lg[2].position.copy(ft).add(V(0.05, 0, 0)); });
+    var sB = V(sh.x, sh.y - 0.04, 0.19), hB = V(-0.42, 0.06, 0.26), eB = sB.clone().lerp(hB, 0.5).add(V(-0.04, 0, 0.04));
+    sg3Limb(T, P.uArmB, sB, eB); sg3Limb(T, P.fArmB, eB, hB); X.handB.position.copy(hB);
+    var d = Math.pow(Math.max(0, Math.sin(t * 0.5)), 2), sF = V(sh.x, sh.y - 0.04, -0.19), hF = V(0.28 - 0.3 * d, 0.44 + 0.42 * d, -0.2 + 0.1 * d), eF = sF.clone().lerp(hF, 0.5).add(V(0.08, -0.08, -0.06));
+    sg3Limb(T, P.uArmF, sF, eF); sg3Limb(T, P.fArmF, eF, hF); X.handF.position.copy(hF);
+    var dC = V(0, 0, 0).subVectors(sh, hip).normalize(); X.chest.position.copy(hip).lerp(sh, 0.7); X.chest.quaternion.setFromUnitVectors(V(0, 1, 0), dC); X.hips.position.copy(hip);
+    R.head.position.copy(hd); R.head.rotation.set(0, 0.4 * Math.sin(t * 0.2), -0.1 - 0.4 * d); R.hair.position.copy(hd).add(V(-0.02, 0.03, 0)); R.hair.rotation.set(0, 0, 0.3);
+  }
+  function sg3BuildBeach(T, spot){
+    var g = new T.Group(), U = g.userData;
+    function m(c, r){ return new T.MeshStandardMaterial({ color: c, roughness: r === undefined ? 0.7 : r }); }
+    function box(w, hh, d, mat, x, y, z){ var b = new T.Mesh(new T.BoxGeometry(w, hh, d), mat); b.position.set(x, y, z); g.add(b); return b; }
+    function post(x, z, hh, r, mat){ return box(r, hh, r, mat, x, SG_SAND_Y + hh / 2, z); }
+    function signTex(lines, bg, fg, w, hh){ var cv = document.createElement('canvas'); cv.width = w; cv.height = hh; var c = cv.getContext('2d'); c.fillStyle = bg; c.fillRect(0, 0, w, hh);
+      c.fillStyle = fg; c.textAlign = 'center'; lines.forEach(function(ln, i){ c.font = 'bold ' + ln[1] + 'px Rubik, Arial'; c.fillText(ln[0], w / 2, ln[2]); }); return new T.CanvasTexture(cv); }
+    var rnd = (function(s){ return function(){ s = (s * 16807) % 2147483647; return (s - 1) / 2147483646; }; })(surfHash(spot.id) % 100000 + 7);
+    var wood = m(0x9a6b3f, 0.9), white = m(0xf3f1ea, 0.6), steel = m(0xa9b0b8, 0.35);
+    // the huts, doors toward the sea, a sign over each door
+    SG_HUTS.forEach(function(hu){
+      var wall = m(hu.color, 0.75);
+      box(6, 3.0, 4.6, wall, hu.x, SG_SAND_Y + 1.5, SG_HUT_Z);
+      var roof = new T.Mesh(new T.ConeGeometry(4.6, 1.6, 4), m(hu.roof, 0.6)); roof.rotation.y = Math.PI / 4; roof.scale.set(1, 1, 0.78); roof.position.set(hu.x, SG_SAND_Y + 3.8, SG_HUT_Z); g.add(roof);
+      box(1.3, 2.2, 0.08, m(0x3a2614, 0.8), hu.x, SG_SAND_Y + 1.1, SG_HUT_Z - 2.33);                       // the door
+      [-1, 1].forEach(function(s){ box(1.2, 0.9, 0.06, m(0x9fd3f0, 0.1), hu.x + s * 1.9, SG_SAND_Y + 1.7, SG_HUT_Z - 2.33); });   // windows
+      var sg_ = new T.Mesh(new T.PlaneGeometry(4.2, 1.0), new T.MeshBasicMaterial({ map: signTex([[hu.name, 44, 62]], '#fff8e8', '#3a2614', 384, 92) }));
+      sg_.position.set(hu.x, SG_SAND_Y + 2.6, SG_HUT_Z - 2.36); sg_.rotation.y = Math.PI; g.add(sg_);
+      box(1.5, 0.03, 1.2, m(0xd8c49a, 1), hu.x, SG_SAND_Y + 0.02, SG_DOOR_Z);                              // a doormat
+      if(hu.id === 'surf') for(var sb = 0; sb < 4; sb++){ var bd = sg3LooseBoard(T); sg3ApplyLook(T, bd, bd.userData.stringer, sgLookOf(null, SG_BOARDS[(sb * 2 + 1) % SG_BOARDS.length].id));
+        bd.rotation.set(-Math.PI / 2, 0, Math.PI / 2 - 0.15); bd.position.set(hu.x + 2.2 + sb * 0.45, SG_SAND_Y + 0.95, SG_HUT_Z - 2.45); g.add(bd); }
+      if(hu.id === 'kiosk'){ box(3.4, 0.12, 1.0, white, hu.x, SG_SAND_Y + 1.15, SG_HUT_Z - 2.9);
+        var aw = new T.Mesh(new T.PlaneGeometry(6.2, 1.6), new T.MeshStandardMaterial({ map: (function(){ var cv = document.createElement('canvas'); cv.width = 64; cv.height = 8; var c = cv.getContext('2d'); for(var k = 0; k < 8; k++){ c.fillStyle = k % 2 ? '#ffffff' : '#e74c3c'; c.fillRect(k * 8, 0, 8, 8); } return new T.CanvasTexture(cv); })(), side: T.DoubleSide }));
+        aw.rotation.x = Math.PI / 2 - 0.5; aw.position.set(hu.x, SG_SAND_Y + 2.45, SG_HUT_Z - 2.95); g.add(aw); }
+      if(hu.id === 'salon'){ [-1, 1].forEach(function(s){ var pl = new T.Mesh(new T.SphereGeometry(0.35, 12, 10), m(0x3c9a4a, 0.9)); pl.position.set(hu.x + s * 2.9, SG_SAND_Y + 0.6, SG_HUT_Z - 2.7); g.add(pl);
+        box(0.5, 0.4, 0.5, m(0xffffff, 0.5), hu.x + s * 2.9, SG_SAND_Y + 0.2, SG_HUT_Z - 2.7); }); }
+    });
+    // the lifeguard's tower by the water, with its flag
+    var tx = 24, tz = 182.2;
+    [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(function(q){ post(tx + q[0] * 1.1, tz + q[1] * 1.1, 3.0, 0.16, wood); });
+    box(2.8, 0.15, 2.8, wood, tx, SG_SAND_Y + 3.05, tz);
+    box(2.6, 1.6, 2.6, white, tx, SG_SAND_Y + 3.9, tz); box(2.62, 0.5, 2.62, m(0x1f6fd1, 0.5), tx, SG_SAND_Y + 4.15, tz);
+    box(2.0, 0.6, 0.05, m(0x9fd3f0, 0.1), tx, SG_SAND_Y + 4.0, tz - 1.33);
+    var troof = new T.Mesh(new T.ConeGeometry(2.4, 0.9, 4), m(0xd23a2a, 0.6)); troof.rotation.y = Math.PI / 4; troof.position.set(tx, SG_SAND_Y + 5.15, tz); g.add(troof);
+    for(var st = 0; st < 7; st++) box(1.0, 0.06, 0.25, wood, tx, SG_SAND_Y + 0.4 + st * 0.42, tz + 1.5 + st * 0.18);         // the ladder
+    post(tx + 1.4, tz - 1.4, 6.5, 0.08, steel);
+    var flag = new T.Group(); flag.position.set(tx + 1.4, SG_SAND_Y + 6.2, tz - 1.4); g.add(flag); U.flag = flag;
+    var fm = new T.Mesh(new T.PlaneGeometry(1.2, 0.8), new T.MeshStandardMaterial({ color: 0xffffff, side: T.DoubleSide })); fm.position.x = 0.6; flag.add(fm);
+    var lgs = new T.Mesh(new T.PlaneGeometry(2.4, 0.6), new T.MeshBasicMaterial({ map: signTex([[L('מציל · LIFEGUARD', 'LIFEGUARD'), 36, 42]], '#d23a2a', '#ffffff', 320, 64) }));
+    lgs.position.set(tx, SG_SAND_Y + 4.75, tz - 1.33); lgs.rotation.y = Math.PI; g.add(lgs);
+    // umbrellas over towels, along the sand on both sides of the lot
+    var colors = [0xe74c3c, 0xf1c40f, 0x3498db, 0x2ecc71, 0xff7eb6, 0xff8c1a, 0x9b59b6, 0x1abc9c];
+    var spots = [];
+    for(var u = 0; u < 22; u++){
+      var side = u % 2 ? 1 : -1, ux = side * (30 + rnd() * 95), uz = 181.2 + rnd() * 5.6;
+      if(Math.abs(ux - tx) < 4) ux += 6;
+      var col = colors[Math.floor(rnd() * colors.length)];
+      post(ux, uz, 2.4, 0.06, white);
+      var can = new T.Mesh(new T.ConeGeometry(1.4, 0.55, 12, 1, true), new T.MeshStandardMaterial({ color: col, side: T.DoubleSide, roughness: 0.7 })); can.position.set(ux, SG_SAND_Y + 2.45, uz); g.add(can);
+      var tw = box(1.0, 0.02, 1.9, m(colors[Math.floor(rnd() * colors.length)], 0.95), ux + 0.9, SG_SAND_Y + 0.02, uz + 0.2); tw.rotation.y = (rnd() - 0.5) * 0.4;
+      if(rnd() < 0.5) box(0.6, 0.35, 0.45, m(0x2c3e50, 0.5), ux - 0.9, SG_SAND_Y + 0.18, uz + 0.4);                   // a cool box
+      spots.push([ux + 0.9, uz + 0.2, tw.rotation.y]);
+    }
+    // people: sunbathing on the towels, and a couple walking along the water
+    var suits = ['#e74c3c', '#2c3e50', '#ff5fa2', '#f1c40f', '#3498db', '#1abc9c', '#111418', '#9b59b6'], skins = ['#f1c7a0', '#e2ab80', '#c08a5e', '#8a5534', '#f6d7bd'], hairs = ['#1a0f08', '#7a4a22', '#d9b26a', '#3b2414'];
+    function person(){ var r = sg3MakeRider(T); r.suitM.color.set(suits[Math.floor(rnd() * suits.length)]); r.skinM.color.set(skins[Math.floor(rnd() * skins.length)]);
+      r.hairM.color.set(hairs[Math.floor(rnd() * hairs.length)]); r.accM.color.copy(r.suitM.color); [r.board, r.stripe, r.fin].forEach(function(o){ o.visible = false; }); r.vest.visible = false; g.add(r.g); return r; }
+    // sunbathing on the towels (they shift and stretch now and then)
+    U.sunb = []; for(var p = 0; p < 5; p++){ var s = spots[p * 3 % spots.length], r = person();
+      r.g.position.set(s[0], SG_SAND_Y, s[1]); r.g.rotation.y = Math.PI / 2 + s[2]; U.sunb.push({ r: r, ph: rnd() * 20 }); }
+    // sitting under the umbrellas with a drink
+    U.sitters = []; for(var q = 0; q < 4; q++){ var s2 = spots[(q * 3 + 1) % spots.length], r2 = person();
+      r2.g.position.set(s2[0] - 1.6, SG_SAND_Y, s2[1] - 0.2); r2.g.rotation.y = Math.PI / 2 + s2[2]; U.sitters.push({ r: r2, ph: rnd() * 20 }); }
+    // walking and jogging along the water
+    U.walkers = [0, 1, 2, 3].map(function(k){ var jog = k % 2 === 1; return { r: person(), x0: (k - 2.5) * 30 + rnd() * 10, z: 179.4 - (k % 3) * 0.6, range: 22 + rnd() * 20, sp: (jog ? 0.13 : 0.06) + rnd() * 0.03, ph: rnd() * 6, jog: jog }; });
+    // matkot: two pairs hitting the ball back and forth on the wet sand
+    U.matkot = [-46, 52].map(function(mx){ var a = person(), b = person(), ball = new T.Mesh(new T.SphereGeometry(0.06, 10, 8), m(0x1b1b1b, 0.4)); g.add(ball);
+      [a, b].forEach(function(pp){ var pad = new T.Mesh(new T.CylinderGeometry(0.15, 0.15, 0.03, 16), m(0xc8102e, 0.5)); pad.rotation.z = Math.PI / 2; pad.position.y = 0.1; pp.extra.handB.add(pad); });
+      return { a: a, b: b, ball: ball, x: mx, z: 180.4, gap: 7, ph: rnd() * 4 }; });
+    // swimming in the shallows
+    U.swim = [0, 1].map(function(k){ return { r: person(), x: (k - 1) * 26 + rnd() * 8, z: 171.5 - rnd() * 4, ph: rnd() * 6, dir: rnd() < 0.5 ? 1 : -1 }; });
+    // two showers at the edge of the lot, and the beach's sign
+    [-9, 9].forEach(function(x){ post(x, 183.2, 2.4, 0.09, steel); box(0.5, 0.05, 0.12, steel, x, SG_SAND_Y + 2.38, 183.0); var hd = new T.Mesh(new T.CylinderGeometry(0.14, 0.06, 0.12, 12), steel); hd.position.set(x, SG_SAND_Y + 2.3, 182.78); g.add(hd);
+      box(1.1, 0.06, 1.1, m(0xcfd4d8, 0.4), x, SG_SAND_Y + 0.03, 183.2); });
+    var ws = new T.Mesh(new T.PlaneGeometry(4.4, 1.6), new T.MeshBasicMaterial({ map: signTex([[spot.name, 50, 62], [L('רחצה מותרת רק מול המציל', 'Swim only in front of the lifeguard'), 26, 112], [L('🚿 מקלחות · 🏄 חנות · 🍦 קיוסק', '🚿 showers · 🏄 shop · 🍦 kiosk'), 24, 146]], '#0f5aa8', '#ffffff', 448, 164), side: T.DoubleSide }));
+    ws.position.set(-30, SG_SAND_Y + 2.7, 186); ws.rotation.y = Math.PI; g.add(ws);
+    post(-31.9, 186.02, 1.9, 0.1, steel); post(-28.1, 186.02, 1.9, 0.1, steel);
+    return g;
+  }
   function sg3Break(xm, Hm){
-    if(sg.phase === 'paddle'){
+    if(sg.phase === 'paddle' || sg.phase === 'drive' || sg.phase === 'walk'){
       // a peak: highest where it will break, falling away to the shoulders; growing as it
       // comes in, and standing up and feathering at the peak just before it reaches you
       var kp = sg.pad.k || 0, kq = Math.min(1, kp), dp = (xm - sg.curl * SG3_M) / Hm;
@@ -6124,10 +6747,44 @@
   }
 
   // the coast: a strip of sand, a ridge of hills behind it, landmarks per spot
+  // a sand texture: fine light and dark grains over faint wind ripples (grey, so the spot's sand colour tints it)
+  function sg3SandTex(T){
+    var cv = document.createElement('canvas'); cv.width = cv.height = 256; var c = cv.getContext('2d');
+    c.fillStyle = 'rgb(226,226,226)'; c.fillRect(0, 0, 256, 256);
+    for(var y = 0; y < 256; y++){ var r = 0.5 + 0.5 * Math.sin(y * 0.39 + Math.sin(y * 0.05) * 3); c.fillStyle = 'rgba(255,255,255,' + (0.08 * r).toFixed(3) + ')'; c.fillRect(0, y, 256, 1);
+      c.fillStyle = 'rgba(0,0,0,' + (0.07 * (1 - r)).toFixed(3) + ')'; c.fillRect(0, y, 256, 1); }
+    for(var i = 0; i < 14000; i++){ var v = Math.random(), gx = Math.random() * 256, gy = Math.random() * 256, s = Math.random() < 0.85 ? 1 : 2;
+      c.fillStyle = v < 0.5 ? 'rgba(90,80,60,' + (0.25 + v * 0.5).toFixed(2) + ')' : 'rgba(255,255,250,' + (v * 0.6).toFixed(2) + ')'; c.fillRect(gx, gy, s, s); }
+    var t = new T.CanvasTexture(cv); t.wrapS = t.wrapT = T.RepeatWrapping; t.anisotropy = 4; return t;
+  }
   function sg3MakeShore(T){
     var g = new T.Group();
-    var sandM = new T.MeshStandardMaterial({ color: 0xe8d3a8, roughness: 1 });
-    var sand = new T.Mesh(new T.BoxGeometry(4000, 1.2, 40), sandM); sand.position.set(1000, 0.3, 200); g.add(sand);
+    var stex = sg3SandTex(T), stexTop = stex.clone(); stexTop.needsUpdate = true; stexTop.repeat.set(1400, 16); stex.repeat.set(1400, 1);
+    var slabM = new T.MeshStandardMaterial({ color: 0xe8d3a8, roughness: 1, map: stex });
+    var sand = new T.Mesh(new T.BoxGeometry(4000, 1.2, 40), slabM); sand.position.set(1000, 0.3, 200); g.add(sand);
+    // the beach's surface: tinted by its colour, darker where it's wet, dunes behind the road
+    var sandM = new T.MeshStandardMaterial({ color: 0xe8d3a8, roughness: 0.97, map: stexTop, bumpMap: stexTop, bumpScale: 0.5, vertexColors: true });
+    var tg = new T.PlaneGeometry(4000, 44, 800, 44); tg.rotateX(-Math.PI / 2);
+    var tp = tg.attributes.position, cols = new Float32Array(tp.count * 3);
+    for(var i = 0; i < tp.count; i++){
+      var x = tp.getX(i) + 1000, z = tp.getZ(i) + 200;
+      var dune = Math.max(0, Math.min(1, (z - 197) / 9)), hh = dune * dune * (0.6 + 0.35 * Math.sin(x * 0.031) + 0.25 * Math.sin(x * 0.083 + z * 0.21));
+      hh += 0.05 * Math.sin(x * 0.7 + z * 0.3) * dune;                 // (the road and the lot stay flat)
+      tp.setY(i, Math.max(0, hh) + 0.01);
+      var wet = Math.max(0, Math.min(1, (184 - z) / 4)), vary = 1 + 0.05 * Math.sin(x * 0.013 + z * 0.4) + 0.04 * Math.sin(x * 0.11);
+      var k = (1 - 0.4 * wet) * vary; cols[i * 3] = k * (1 - 0.06 * wet); cols[i * 3 + 1] = k; cols[i * 3 + 2] = k * (1 + 0.04 * wet);
+    }
+    tg.setAttribute('color', new T.BufferAttribute(cols, 3)); tg.computeVertexNormals();
+    var top = new T.Mesh(tg, sandM); top.position.set(1000, 0.9, 200); g.add(top);
+    // wet sand (the slope into the sea) and the wash of foam at the water's edge
+    var wtex = stex.clone(); wtex.needsUpdate = true; wtex.repeat.set(1400, 6);
+    var wetM = new T.MeshStandardMaterial({ color: 0x9c8a66, roughness: 0.55, metalness: 0.05, map: wtex, bumpMap: wtex, bumpScale: 0.25 });
+    var fcv = document.createElement('canvas'); fcv.width = 256; fcv.height = 128; var fc = fcv.getContext('2d');
+    for(var f = 0; f < 600; f++){ var fy = 64 + (Math.random() - 0.5) * 60 * Math.random(), fx = Math.random() * 256;
+      fc.fillStyle = 'rgba(255,255,255,' + (0.15 + Math.random() * 0.5).toFixed(2) + ')'; fc.beginPath(); fc.ellipse(fx, fy, 3 + Math.random() * 12, 1 + Math.random() * 2.5, 0, 0, Math.PI * 2); fc.fill(); }
+    var ftex = new T.CanvasTexture(fcv); ftex.wrapS = T.RepeatWrapping; ftex.repeat.set(520, 1);
+    var wash = new T.Mesh(new T.PlaneGeometry(4000, 3.5), new T.MeshBasicMaterial({ map: ftex, transparent: true, depthWrite: false, opacity: 0.6 }));
+    wash.rotation.x = -Math.PI / 2; wash.position.set(1000, 0.04, 176); g.add(wash);
     var hg = new T.PlaneGeometry(4000, 1, 240, 1), hp = hg.attributes.position;
     for(var i = 0; i < hp.count; i++){
       var x = hp.getX(i);
@@ -6137,11 +6794,11 @@
     var hillM = new T.MeshStandardMaterial({ color: 0x5f8f4a, roughness: 1, side: T.DoubleSide });
     var hills = new T.Mesh(hg, hillM); hills.position.set(1000, 0, 236); g.add(hills);
     var props = new T.Group(); g.add(props);
-    return { g: g, sandM: sandM, hillM: hillM, hills: hills, props: props };
+    return { g: g, sandM: sandM, slabM: slabM, wetM: wetM, wash: wash, ftex: ftex, hillM: hillM, hills: hills, props: props };
   }
   function sg3SetShore(T, S, id){
     var C = { pool: [0xc9c2b6, 0x9b9387, 0.6], olga: [0xe8d3a8, 0xc9a979, 0.9], pipe: [0xf2dba5, 0x3b7a3a, 1.8], naz: [0xb9a58a, 0x8b4a3a, 1.6] }[id] || [0xe8d3a8, 0x5f8f4a, 1];
-    S.sandM.color.setHex(C[0]); S.hillM.color.setHex(C[1]); S.hills.scale.y = C[2];
+    S.sandM.color.setHex(C[0]); S.slabM.color.setHex(C[0]); S.wetM.color.setHex(C[0]).multiplyScalar(0.62); S.hillM.color.setHex(C[1]); S.hills.scale.y = C[2];
     while(S.props.children.length) S.props.remove(S.props.children[0]);
     function m(c){ return new T.MeshStandardMaterial({ color: c, roughness: 0.8 }); }
     if(id === 'olga'){
@@ -6167,13 +6824,9 @@
       for(var q = 0; q < 14; q++){ var bl = new T.Mesh(new T.BoxGeometry(18, 12 + (q % 4) * 6, 14), m(q % 2 ? 0xd8d2c6 : 0xc2b8a8)); bl.position.set(-60 + q * 40, 8, 214); S.props.add(bl); }
     }
   }
-  // a person: legs, hips, a chest broader than the waist, neck, head with
-  // hair, arms with hands, feet on a shaped shortboard; posed every frame
-  function sg3MakeRider(T){
-    var g = new T.Group(), body = new T.Group(); g.add(body);
-    function mat(c, rough){ return new T.MeshStandardMaterial({ color: c, roughness: rough === undefined ? 0.6 : rough }); }
-    // the board: a real outline (pointed nose, rounded tail), rails, a little
-    // rocker, a stringer down the middle and three fins
+  // the board's shape (a real outline, rails, rocker), made once
+  function sg3BoardGeo(T){
+    if(sg3.boardGeo) return sg3.boardGeo;
     var sh = new T.Shape();
     sh.moveTo(-0.9, 0);
     sh.bezierCurveTo(-0.9, 0.1, -0.8, 0.2, -0.55, 0.245);
@@ -6187,7 +6840,48 @@
     var bp = bgeo.attributes.position;
     for(var i = 0; i < bp.count; i++){ var x = bp.getX(i); bp.setY(i, bp.getY(i) + (x > 0 ? 0.13 * Math.pow(x / 0.97, 3) : 0.035 * Math.pow(x / 0.9, 2))); }
     bgeo.computeVertexNormals();
-    var board = new T.Mesh(bgeo, mat(0xff7a3d, 0.35)); body.add(board);
+    return (sg3.boardGeo = bgeo);
+  }
+  // the deck's decoration: two side stripes and a picture, riding on the board
+  function sg3BoardDeco(T, board){
+    var m = new T.MeshStandardMaterial({ color: 0xffffff, roughness: 0.4 });
+    board.userData.lines = [-0.075, 0.075].map(function(z){ var l = new T.Mesh(new T.BoxGeometry(1.5, 0.006, 0.022), m); l.position.set(-0.05, 0.047, z); board.add(l); return l; });
+    var dc = new T.Mesh(new T.PlaneGeometry(0.26, 0.26), new T.MeshStandardMaterial({ transparent: true, roughness: 0.5, depthWrite: false }));
+    dc.rotation.set(-Math.PI / 2, 0, -Math.PI / 2); dc.position.set(0.12, 0.06, 0); dc.visible = false; board.add(dc);
+    board.userData.decal = dc;
+  }
+  // a picture as a texture (made once per picture and colour)
+  function sg3IconTex(T, icon, color){
+    sg3.iconTex = sg3.iconTex || {}; var k = icon + color;
+    if(!sg3.iconTex[k]){ var cv = document.createElement('canvas'); cv.width = cv.height = 128; sgDrawIcon(cv.getContext('2d'), icon, 64, 64, 120, color); sg3.iconTex[k] = new T.CanvasTexture(cv); }
+    return sg3.iconTex[k];
+  }
+  // dress a board (and its stringer, if it has its own) in a look
+  function sg3ApplyLook(T, board, stringer, lk){
+    board.material.color.set(lk.deck); board.material.emissive = new T.Color(lk.glow ? 0x332200 : 0x000000);
+    if(stringer){ stringer.visible = lk.line === 1; stringer.material.color.set(lk.lineC); }
+    board.userData.lines.forEach(function(l){ l.visible = lk.line === 2; l.material.color.set(lk.lineC); });
+    var dc = board.userData.decal; dc.visible = !!lk.icon && lk.icon !== 'none';
+    if(dc.visible){ dc.material.map = sg3IconTex(T, lk.icon, lk.iconC); dc.material.needsUpdate = true; }
+  }
+  // a loose board, for a rack
+  function sg3LooseBoard(T){
+    var b = new T.Mesh(sg3BoardGeo(T), new T.MeshStandardMaterial({ color: 0xffffff, roughness: 0.35 })); sg3BoardDeco(T, b);
+    var st = new T.Mesh(new T.BoxGeometry(1.75, 0.006, 0.012), new T.MeshStandardMaterial({ color: 0xffffff, roughness: 0.4 })); st.position.y = 0.045; b.add(st);
+    var fm = new T.MeshStandardMaterial({ color: 0x1a1a1a, roughness: 0.3 });
+    [[-0.78, 0], [-0.68, -0.12], [-0.68, 0.12]].forEach(function(f){ var fn = new T.Mesh(new T.BoxGeometry(0.11, 0.1, 0.012), fm); fn.position.set(f[0], -0.075, f[1]); b.add(fn); });
+    b.userData.stringer = st;
+    return b;
+  }
+  // a person: legs, hips, a chest broader than the waist, neck, head with
+  // hair, arms with hands, feet on a shaped shortboard; posed every frame
+  function sg3MakeRider(T){
+    var g = new T.Group(), body = new T.Group(); g.add(body);
+    function mat(c, rough){ return new T.MeshStandardMaterial({ color: c, roughness: rough === undefined ? 0.6 : rough }); }
+    // the board: a real outline (pointed nose, rounded tail), rails, a little
+    // rocker, a stringer down the middle and three fins
+    var bgeo = sg3BoardGeo(T);
+    var board = new T.Mesh(bgeo, mat(0xff7a3d, 0.35)); body.add(board); sg3BoardDeco(T, board);
     var stripe = new T.Mesh(new T.BoxGeometry(1.75, 0.006, 0.012), mat(0xffffff, 0.4)); stripe.position.y = 0.045; body.add(stripe);
     var finM = mat(0x1a1a1a, 0.3), fin = new T.Mesh(new T.BoxGeometry(0.12, 0.11, 0.012), finM); fin.position.set(-0.78, -0.08, 0); body.add(fin);
     [-0.12, 0.12].forEach(function(z){ var sf = new T.Mesh(new T.BoxGeometry(0.1, 0.09, 0.01), finM); sf.position.set(-0.68, -0.07, z); sf.rotation.x = z > 0 ? 0.12 : -0.12; board.add(sf); });
@@ -6270,7 +6964,7 @@
     var U2 = sg3.wm.uniforms; U2.uT.value = now % 1000; U2.uCurlX.value = sg.curl * SG3_M; sg3.skyMat.uniforms.uT.value = now % 1000;
     var sx = sg.x * SG3_M, rows = sg3.rows, pos = sg3.pos, foam = sg3.foam, thin = sg3.thin, curt = sg3.curt, cave = sg3.cave;
     var x0 = sx - Hm * 9 - 30, span = Hm * 22 + 110, dx = span / (SG3_COLS - 1);
-    var zOff = sg.phase === 'paddle' ? sgSetOff(sg.pad.k, Hm) : 0;    // the set, rolling in from the horizon (and on past, if you missed it)
+    var zOff = sg.phase === 'paddle' || sg.phase === 'drive' || sg.phase === 'walk' ? sgSetOff(Math.min(1, sg.pad.k), Hm) : 0;    // the set, rolling in from the horizon (and on past, if you missed it)
     for(var c = 0; c < SG3_COLS; c++){
       var xm = x0 + c * dx, br = sg3Break(xm, Hm);
       var endF = Math.min(1, c / (SG3_COLS * 0.12), (SG3_COLS - 1 - c) / (SG3_COLS * 0.2));   // flattens away at both ends
@@ -6339,12 +7033,23 @@
       sg3.buoy.visible = true; sg3.buoy.position.set((sg.curl + 300) * SG3_M, Math.sin(now * 1.3 + 1) * 0.08, zLine);
     } else if(sg3.buoy) sg3.buoy.visible = false;
     sg3Ghosts(T, Hm, rows, faceAt(0)[0] + 0.6, zOff, now);
+    sg3Cars(T, now);
+    sg3Beach(T, now);
+    sg3City(T, now);
+    if(sg3.shore.ftex){ var wv = Math.sin(now * 0.55); sg3.shore.ftex.offset.set(now * 0.004, 0.18 * wv); sg3.shore.wash.position.z = 176 + 0.9 * wv; sg3.shore.wash.material.opacity = 0.35 + 0.25 * (0.5 + 0.5 * wv); }
     var side = new T.Vector3().crossVectors(fwd, up).normalize();
     up = new T.Vector3().crossVectors(side, fwd).normalize();
     var m4 = new T.Matrix4().makeBasis(fwd, up, side);
     var R = sg3.rider;
     R.g.position.copy(p).addScaledVector(up, 0.03);
     R.g.quaternion.setFromRotationMatrix(m4);
+    R.g.visible = sg.phase !== 'drive';
+    if(sg.phase === 'walk' && sg.walk){
+      var Wk3 = sg.walk, gy = sgGroundY(Wk3.z), wfw = new T.Vector3(Math.cos(Wk3.hd), 0, Math.sin(Wk3.hd)), wup = new T.Vector3(0, 1, 0);
+      R.g.position.set(Wk3.x, gy, Wk3.z); R.g.quaternion.setFromRotationMatrix(new T.Matrix4().makeBasis(wfw, wup, new T.Vector3().crossVectors(wfw, wup)));
+      R.body.rotation.set(0, 0, 0);
+      R.g.visible = Wk3.t > 0.35;                                       // out of the car
+    }
     R.body.rotation.set(0, 0, 0);
     // bank into the turn: climbing turns lean into the wave (local -z), the
     // snap down and the cutback lean out over the open face
@@ -6357,12 +7062,11 @@
     if(sg.phase === 'air' && sg.air && sg.air.fl) R.body.rotation.z = sg.air.fl;   // the backflip: nose up and over
     if(sg.phase === 'wipe' || sg.phase === 'over'){ var wt = sg.wipe ? sg.wipe.t : 1; R.body.rotation.set(wt * 5, 0, wt * 7); R.g.position.y -= Math.min(1, wt) * 0.8; }
     // colours of the chosen board and surfer
-    var rd = sgItem(SG_RIDERS, sgSave.rider), bd = sgItem(SG_BOARDS, sgSave.board);
-    if(R.key !== rd.id + bd.id){
-      R.key = rd.id + bd.id;
+    var rd = sgMyRider(), lkMe = sgMyLook();
+    if(R.key !== rd.id + lkMe.key){
+      R.key = rd.id + lkMe.key;
       R.suitM.color.set(rd.suit); R.skinM.color.set(rd.skin); R.hairM.color.set(rd.hair); R.accM.color.set(rd.accent);
-      R.board.material.color.set(bd.deck); R.stripe.material.color.set(bd.stripe);
-      R.board.material.emissive = new T.Color(bd.glow ? 0x332200 : 0x000000);
+      sg3ApplyLook(T, R.board, R.stripe, lkMe);
     }
     var riding3 = sg.phase === 'ride' || sg.phase === 'air' || sg.phase === 'tow' || sg.phase === 'done' || sg.phase === 'paddle';
     var povNow = (sg3.camMode === 'pov' && riding3) || sg.phase === 'paddle';
@@ -6370,6 +7074,8 @@
     R.body.children.forEach(function(ch){ if(ch !== R.board && ch !== R.stripe && ch !== R.fin) ch.visible = !povNow; });
     sg3Pose(sg.phase === 'paddle' ? 0.05 : sg.phase === 'air' && sg.air && sg.air.sup > 0.01 ? 0.3 : sg.tube > 0.1 ? 0.95 : sg.phase === 'ride' && (sg.joy && sg.joy.y < -0.3) ? 0.25 : 0.65);
     if(sg.phase === 'paddle') sg3PoseProne(T, R, sg.pad.kL || 0, sg.pad.kR || 0);
+    if(sg.phase === 'walk' && sg.walk){ sg3PoseWalk(T, R, sg.walk.ph, 0); R.stripe.visible = false; R.fin.visible = false; }
+    else if(R.board.position.y !== 0){ R.board.position.set(0, 0, 0); R.board.rotation.set(0, 0, 0); R.fin.visible = true; R.stripe.visible = sgMyLook().line === 1; }
     if(sg.phase === 'air' && sg.air && sg.air.sup > 0.01){
       // superman: the body swings out flat above the board, legs kicked back,
       // hands on the rails
@@ -6411,7 +7117,7 @@
     }
     function emit(P, x, y, z, vx, vy, vz, life, size, alpha){
       if(sg3.lowQ && Math.random() < 0.5) return;
-      if(sg.phase === 'paddle') return;
+      if(sg.phase === 'paddle' || sg.phase === 'drive' || sg.phase === 'walk') return;
       var k = P.next; P.next = (P.next + 1) % P.n;
       P.pos[k * 3] = x; P.pos[k * 3 + 1] = y; P.pos[k * 3 + 2] = z; P.vel[k * 3] = vx; P.vel[k * 3 + 1] = vy; P.vel[k * 3 + 2] = vz;
       P.life[k] = life; P.max[k] = life; P.size[k] = size; P.base[k] = alpha; P.alpha[k] = 0;
@@ -6561,6 +7267,23 @@
         a.ha.quaternion.copy(a.fo.quaternion); a.ha.position.copy(hap).add(new T.Vector3(0, 0.06, 0).applyQuaternion(a.fo.quaternion));
       });
     }
+    if(sg.phase === 'walk' && sg.walk){
+      var Wc = sg.walk, wf = new T.Vector3(Math.cos(Wc.hd), 0, Math.sin(Wc.hd)), gyc = sgGroundY(Wc.z);
+      var we = new T.Vector3(Wc.x + 1.2, Math.max(gyc, 0) + 2.1, Wc.z).addScaledVector(wf, -4.2), wt = new T.Vector3(Wc.x, gyc + 1.0, Wc.z).addScaledVector(wf, 4);
+      if(!sg3.wkE || Wc.t < 0.05){ sg3.wkE = sg3.drE ? sg3.drE.clone() : we.clone(); sg3.wkT = sg3.drT ? sg3.drT.clone() : wt.clone(); }
+      sg3.wkE.lerp(we, Math.min(1, dtR * 3)); sg3.wkT.lerp(wt, Math.min(1, dtR * 4));
+      sg3.cam.up.set(0, 1, 0); sg3.cam.position.copy(sg3.wkE); sg3.cam.lookAt(sg3.wkT); U2.uCam.value.copy(sg3.cam.position);
+    }
+    if(sg.phase === 'drive' && sg.car){
+      var Cc = sg.car, cf = new T.Vector3(Math.cos(Cc.hd), 0, Math.sin(Cc.hd));
+      var onBike = sgSave.car === 'bike';
+      var de = new T.Vector3(Cc.x, SG_SAND_Y, Cc.z).addScaledVector(cf, onBike ? -4.6 : -8.5); de.y += onBike ? 2.3 : 3.4;
+      var dt2 = new T.Vector3(Cc.x, SG_SAND_Y + (onBike ? 1.1 : 1.2), Cc.z).addScaledVector(cf, onBike ? 4 : 6);
+      if(!sg3.drE || sg.car.t < 0.1){ sg3.drE = de.clone(); sg3.drT = dt2.clone(); }
+      sg3.drE.lerp(de, Math.min(1, dtR * 5)); sg3.drT.lerp(dt2, Math.min(1, dtR * 7));
+      sg3.cam.up.set(0, 1, 0); sg3.cam.position.copy(sg3.drE); sg3.cam.lookAt(sg3.drT);
+      U2.uCam.value.copy(sg3.cam.position);
+    }
     // the others' names, where they are on the screen
     sg3.tags = [];
     (sg3.ghosts || []).forEach(function(G){
@@ -6569,7 +7292,7 @@
       var q = hp.project(sg3.cam); if(q.z > 1 || Math.abs(q.x) > 1.1 || Math.abs(q.y) > 1.1) return;
       sg3.tags.push({ x: (q.x + 1) / 2 * W, y: (1 - q.y) / 2 * H, nm: G.nm, sc: G.riding ? G.sc : null });
     });
-    var fovWant = povNow ? 74 : chaseNow ? 60 : 36;
+    var fovWant = sg.phase === 'drive' || sg.phase === 'walk' ? 62 : povNow ? 74 : chaseNow ? 60 : 36;
     if(sg3.cam.fov !== fovWant){ sg3.cam.fov = fovWant; sg3.cam.updateProjectionMatrix(); }
     U2.uCam.value.copy(sg3.cam.position);
     sg3.oceanNear.position.set(Math.round(sg3.cam.position.x / 4.67) * 4.67, 0, Math.round(sg3.cam.position.z / 4.67) * 4.67);
@@ -6597,6 +7320,8 @@
       b.style.background = 'linear-gradient(135deg,' + spot.face[0] + ',' + spot.sea[1] + ')';
       var nm = document.createElement('div'); nm.className = 'sg-spot-name'; nm.textContent = spot.emoji + ' ' + spot.name;
       var ds = document.createElement('div'); ds.className = 'sg-spot-desc';
+      if(!spot.tow){ var dmN = sgDriveM(spot), vv = sgSave.car === 'bike' ? 7 : 18, tm = Math.round(dmN / vv);
+        var nv = document.createElement('div'); nv.className = 'sg-spot-desc'; nv.textContent = L('🧭 ' + dmN + ' מ\' · כ-' + tm + ' שניות נסיעה', '🧭 ' + dmN + ' m · about ' + tm + ' s drive'); b.appendChild(nv); }
       ds.textContent = spot.desc;
       var bs = document.createElement('div'); bs.className = 'sg-spot-best'; bs.textContent = L('🏆 הציון הכי גבוה: ', '🏆 Best score: ') + (sgSave.best10[spot.id] || 0).toFixed(2) + ' / 10';
       b.appendChild(nm); b.appendChild(ds); b.appendChild(bs);
@@ -6606,7 +7331,8 @@
           var shared = !!isOnlineBoard;
           sg.peak = { peakX: shared ? 0 : sg.curl, rides: [], best: 0, shared: shared };
           if(shared){ sg.pad.n = -1; sg.curl = sgPeakJitter(sg.spot.id, Math.floor(Date.now() / PEAK_PERIOD)); sg.x = sg.curl + 300 + 260; sgNetJoin(sg.spot); }
-        } });
+        }
+        if(!sg.spot.tow && sg3.state === 'ready') sgBeginDrive(); });
       list.appendChild(b);
     });
   }
@@ -6620,7 +7346,7 @@
     sgRenderMenu();
     sgMenu.hidden = false;
   }
-  function sgPeakBtnsOff(){ document.getElementById('sgPeakBtn').hidden = true; document.getElementById('sgExitBtn').hidden = true; sgNetLeave(); }
+  function sgPeakBtnsOff(){ sgBoost = { shells: 1, paddle: 1, ate: {} }; sgHutOpen = null; document.getElementById('sgHut').hidden = true; document.getElementById('sgDoorBtn').hidden = true; document.getElementById('sgPeakBtn').hidden = true; document.getElementById('sgExitBtn').hidden = true; document.getElementById('sgSkipBtn').hidden = true; sgNetLeave(); sgLot = null; }
   function sgLeave(){
     sgPeakBtnsOff();
     sg = { active: false, phase: 'menu' };
@@ -6628,6 +7354,27 @@
     sgMenu.hidden = true; sgOver.hidden = true; sgShop.hidden = true;
     state = 'start';
     startOverlay.hidden = false;
+  }
+  function sgDrawCar2D(g, type, color){
+    g.save(); g.translate(48, 50);
+    function rr(x, y, w, hh, r){ g.beginPath(); g.moveTo(x + r, y); g.arcTo(x + w, y, x + w, y + hh, r); g.arcTo(x + w, y + hh, x, y + hh, r); g.arcTo(x, y + hh, x, y, r); g.arcTo(x, y, x + w, y, r); g.closePath(); g.fill(); }
+    var glass = '#2b3a4a', R = 7;
+    g.fillStyle = color;
+    if(type === 'van'){ rr(-40, -34, 80, 30, 6); g.fillStyle = glass; rr(-34, -30, 18, 10, 2); rr(-12, -30, 18, 10, 2); rr(12, -30, 22, 10, 2);
+      g.fillStyle = '#f5f5f0'; rr(-36, -42, 72, 5, 2); }
+    else if(type === 'jeep'){ rr(-36, -22, 72, 18, 4); g.fillStyle = '#333'; g.fillRect(-14, -36, 3, 14); g.fillRect(14, -36, 3, 14); g.fillRect(-14, -37, 31, 3);
+      g.fillStyle = glass; g.fillRect(17, -32, 3, 10); g.fillStyle = '#222'; g.beginPath(); g.arc(-40, -14, 7, 0, Math.PI * 2); g.fill(); R = 9; }
+    else if(type === 'truck'){ rr(-40, -18, 80, 14, 3); rr(0, -34, 26, 18, 4); g.fillStyle = glass; rr(4, -30, 18, 9, 2);
+      g.fillStyle = color; g.fillRect(-40, -26, 3, 9); g.fillStyle = '#f5f5f0'; rr(-36, -24, 32, 4, 2); }
+    else if(type === 'bike'){ g.strokeStyle = '#222'; g.lineWidth = 3; [-24, 24].forEach(function(x){ g.beginPath(); g.arc(x, -12, 13, 0, Math.PI * 2); g.stroke(); });
+      g.strokeStyle = color; g.lineWidth = 4; g.beginPath(); g.moveTo(-24, -12); g.lineTo(-4, -12); g.lineTo(-10, -34); g.lineTo(18, -34); g.lineTo(-4, -12); g.moveTo(-24, -12); g.lineTo(-10, -34);
+      g.moveTo(18, -34); g.lineTo(24, -12); g.stroke(); g.fillStyle = '#222'; g.fillRect(-16, -40, 12, 4); g.fillRect(14, -42, 3, 8); g.fillRect(10, -43, 12, 3);
+      g.restore(); return; }
+    else { rr(-42, -16, 84, 12, 6); g.beginPath(); g.moveTo(-18, -16); g.quadraticCurveTo(0, -32, 22, -16); g.fill(); g.fillStyle = glass;
+      g.beginPath(); g.moveTo(-13, -16); g.quadraticCurveTo(0, -28, 17, -16); g.fill(); R = 6; }
+    g.fillStyle = '#1b1b1b'; [-24, 24].forEach(function(x){ g.beginPath(); g.arc(x, -4, R, 0, Math.PI * 2); g.fill(); });
+    g.fillStyle = '#9aa3ad'; [-24, 24].forEach(function(x){ g.beginPath(); g.arc(x, -4, R * 0.45, 0, Math.PI * 2); g.fill(); });
+    g.restore();
   }
   function sgCard(title, sub, btnText, btnOn, onClick, draw){
     var c = document.createElement('div'); c.className = 'skin-card sg-card';
@@ -6639,10 +7386,34 @@
     c.appendChild(b);
     return c;
   }
+  // the board designer: colour, stripes, a picture; a live preview on top
+  function sgRenderDesigner(el){
+    var D = sgSave.bd, pr = Math.min(2, window.devicePixelRatio || 1);
+    var cv = document.createElement('canvas'); cv.width = 240 * pr; cv.height = 96 * pr; var g = cv.getContext('2d'); g.setTransform(pr, 0, 0, pr, 0, 0);
+    sgDrawBoardTop(g, sgLookOf(D), 120, 48, 220); el.appendChild(cv);
+    function set(k, v){ D[k] = v; D.on = true; sgStore(); sgRenderShop(); }
+    function title(t){ var s = document.createElement('div'); s.className = 'sg-sub'; s.textContent = t; el.appendChild(s); }
+    function swatches(k){ var row = document.createElement('div'); row.className = 'sg-colors is-small';
+      SG_CAR_COLORS.concat(['#ffffff', '#ffd9a0', '#a8e6ff']).forEach(function(c){ var b = document.createElement('button'); b.type = 'button'; b.className = 'sg-color' + (D[k] === c ? ' is-on' : ''); b.style.background = c;
+        b.addEventListener('click', function(){ set(k, c); }); row.appendChild(b); }); el.appendChild(row); }
+    function opts(k, list){ var row = document.createElement('div'); row.className = 'sg-opts';
+      list.forEach(function(o){ var b = document.createElement('button'); b.type = 'button'; b.className = 'sg-opt' + (D[k] === o[0] ? ' is-on' : ''); b.textContent = o[1];
+        b.addEventListener('click', function(){ set(k, o[0]); }); row.appendChild(b); }); el.appendChild(row); }
+    title(L('צבע הגלשן', 'Board colour')); swatches('deck');
+    title(L('פסים', 'Stripes')); opts('line', [[0, L('בלי', 'None')], [1, L('פס באמצע', 'One')], [2, L('שני פסים', 'Two')]]);
+    if(D.line) { title(L('צבע הפסים', 'Stripe colour')); swatches('lineC'); }
+    title(L('ציור על הגלשן', 'A picture on the deck')); opts('icon', [['none', L('בלי', 'None')], ['star', '⭐'], ['heart', '❤️'], ['flame', '🔥'], ['wave', '🌊']]);
+    if(D.icon !== 'none') { title(L('צבע הציור', 'Picture colour')); swatches('iconC'); }
+    var use = document.createElement('button'); use.type = 'button'; use.className = 'skin-btn'; use.style.marginTop = '6px';
+    use.textContent = D.on ? L('✔ גולשים עם הגלשן שעיצבתי · לחץ לחזור לגלשן שקנית', '✔ Riding my design · tap for the bought board') : L('לגלוש עם הגלשן שעיצבתי', 'Ride my design');
+    use.addEventListener('click', function(){ D.on = !D.on; sgStore(); sgRenderShop(); }); el.appendChild(use);
+  }
   function sgRenderShop(){
     document.getElementById('sgShopShells').textContent = '🐚 ' + fmtScore(sgSave.shells);
     var bl = document.getElementById('sgShopBoards'), rl = document.getElementById('sgShopRiders'), ul = document.getElementById('sgShopUps');
-    bl.innerHTML = ''; rl.innerHTML = ''; ul.innerHTML = '';
+    var cl = document.getElementById('sgShopCars'), col = document.getElementById('sgShopColors'), dz = document.getElementById('sgShopDesign');
+    bl.innerHTML = ''; rl.innerHTML = ''; ul.innerHTML = ''; cl.innerHTML = ''; col.innerHTML = ''; dz.innerHTML = '';
+    sgRenderDesigner(dz);
     function buyOrPick(kind, item){
       var owned = sgSave[kind + 's'].indexOf(item.id) !== -1, sel = sgSave[kind] === item.id;
       return { text: sel ? L('✔ נבחר', '✔ Picked') : owned ? L('בחר', 'Pick') : '🐚 ' + fmtScore(item.price), on: !sel && (owned || sgSave.shells >= item.price),
@@ -6654,7 +7425,21 @@
     });
     SG_RIDERS.forEach(function(rd){
       var a = buyOrPick('rider', rd);
-      rl.appendChild(sgCard(rd.name, '', a.text, a.on, a.go, function(g){ g.translate(44, 64); g.scale(0.72, 0.72); sgDrawRider(g, rd, sgItem(SG_BOARDS, sgSave.board), 0, 0.5, 0); }));
+      rl.appendChild(sgCard(rd.name, '', a.text, a.on, a.go, function(g){ g.translate(44, 64); g.scale(0.72, 0.72); sgDrawRider(g, rd, sgMyBoard2D(), 0, 0.5, 0); }));
+    });
+    SG_CARS.forEach(function(cr){
+      var a = buyOrPick('car', cr);
+      cl.appendChild(sgCard(cr.name, '', a.text, a.on, a.go, function(g){ sgDrawCar2D(g, cr.id, sgSave.carColor); }));
+    });
+    // the rack on the vehicle, with your board on it
+    var rk = document.createElement('button'); rk.type = 'button'; rk.className = 'sg-opt' + (sgSave.rack ? ' is-on' : '');
+    rk.textContent = sgSave.rack ? L('🏄 מנשא גלשן על הרכב: מותקן ✔', '🏄 Board rack on the vehicle: on ✔') : L('🏄 מנשא גלשן על הרכב: לא מותקן', '🏄 Board rack on the vehicle: off');
+    rk.addEventListener('click', function(){ sgSave.rack = !sgSave.rack; sgStore(); sgRenderShop(); });
+    var rkRow = document.createElement('div'); rkRow.className = 'sg-opts'; rkRow.style.margin = '6px 0'; rkRow.appendChild(rk); col.parentNode.insertBefore(rkRow, col);
+    SG_CAR_COLORS.forEach(function(c){
+      var b = document.createElement('button'); b.type = 'button'; b.className = 'sg-color' + (sgSave.carColor === c ? ' is-on' : ''); b.style.background = c;
+      b.addEventListener('click', function(){ sgSave.carColor = c; sgStore(); sgRenderShop(); });
+      col.appendChild(b);
     });
     SG_UPGRADES.forEach(function(u){
       var lvl = sgSave.up[u.id], max = lvl >= SG_UP_COST.length, cost = SG_UP_COST[lvl];
@@ -6672,11 +7457,18 @@
   // straight to the peak: into the spot, ready for the next set
   document.getElementById('sgPeakBtn').addEventListener('click', function(e){
     e.stopPropagation();
-    if(!sg.peak || sg.phase !== 'paddle') return;
+    if(sg.phase !== 'paddle' || sg.tour) return;
     sg.x = sg.curl + 300; sg.dz = 0; sg.hd = Math.PI;
     sgAddText(L('🚀 השתגרתם לפיק!', '🚀 You\'re at the peak!'), '#7fffb0');
   });
   document.getElementById('sgExitBtn').addEventListener('click', function(e){ e.stopPropagation(); sgOpenMenu(); });
+  // skip the drive: the car's parked in the lot, you're in the water
+  document.getElementById('sgSkipBtn').addEventListener('click', function(e){
+    e.stopPropagation();
+    if(sg.phase === 'walk'){ sgWalkDone(); return; }
+    if(sg.phase !== 'drive' || !sg.car) return;
+    sg.car.x = sgLot.parkX; sg.car.z = SG_LOT_Z - 0.6; sg.car.hd = -Math.PI / 2; sgParked(); sgWalkDone();
+  });
   document.getElementById('sgCamBtn').addEventListener('click', function(e){
     e.stopPropagation();
     sg3.camMode = SG3_CAMS[(SG3_CAMS.indexOf(sg3.camMode) + 1) % SG3_CAMS.length]; sgSave.cam = sg3.camMode; sgStore();
@@ -6684,7 +7476,44 @@
   });
   document.getElementById('sgBackBtn').addEventListener('click', sgLeave);
   document.getElementById('sgShopBtn').addEventListener('click', function(){ sgMenu.hidden = true; sgRenderShop(); sgShop.hidden = false; });
-  document.getElementById('sgShopBack').addEventListener('click', function(){ sgShop.hidden = true; sgRenderMenu(); sgMenu.hidden = false; });
+  document.getElementById('sgShopBack').addEventListener('click', function(){
+    sgShop.hidden = true;
+    if(sgHutOpen === 'surf'){ sgHutOpen = null; return; }            // back out of the surf shop onto the beach
+    sgRenderMenu(); sgMenu.hidden = false; });
+  // the huts on the beach
+  var sgHutOpen = null;
+  function sgOpenHut(id){
+    sgHutOpen = id;
+    if(id === 'surf'){ sgRenderShop(); sgShop.hidden = false; return; }
+    var el = document.getElementById('sgHutBody'); el.innerHTML = '';
+    document.getElementById('sgHutTitle').textContent = sgItem(SG_HUTS, id).name;
+    document.getElementById('sgHutShells').textContent = '🐚 ' + fmtScore(sgSave.shells);
+    if(id === 'kiosk'){
+      var gr = document.createElement('div'); gr.className = 'sg-grid'; el.appendChild(gr);
+      SG_KIOSK.forEach(function(it){ var had = sgBoost.ate[it.id];
+        gr.appendChild(sgCard(it.icon + ' ' + it.name, it.desc, had ? L('✔ נהנית!', '✔ Enjoyed!') : '🐚 ' + it.price, !had && sgSave.shells >= it.price, function(){
+          sgSave.shells -= it.price; sgStore(); sgBoost.ate[it.id] = 1;
+          if(it.id === 'ice') sgBoost.shells += 0.2; else if(it.id === 'melon') sgBoost.shells += 0.1; else sgBoost.paddle = 1.35;
+          sgOpenHut('kiosk'); }, function(g){ g.font = '44px serif'; g.textAlign = 'center'; g.fillText(it.icon, 48, 50); })); });
+    } else {
+      // the salon: your colours
+      var Lk = sgSave.look = sgSave.look || { on: false }, base = sgItem(SG_RIDERS, sgSave.rider), cur = sgMyRider();
+      var pv = document.createElement('canvas'), pr = Math.min(2, window.devicePixelRatio || 1); pv.width = 120 * pr; pv.height = 130 * pr; pv.style.width = '120px'; pv.style.height = '130px';
+      var pg = pv.getContext('2d'); pg.setTransform(pr, 0, 0, pr, 0, 0); pg.translate(60, 118); sgDrawRider(pg, cur, sgMyBoard2D(), 0, 0.5, 0); el.appendChild(pv);
+      function row(title, key, list){ var t = document.createElement('div'); t.className = 'sg-sub'; t.style.cssText = 'font:bold 13px Rubik,sans-serif;color:#5a3b1a;margin-top:6px'; t.textContent = title; el.appendChild(t);
+        var r = document.createElement('div'); r.className = 'sg-colors is-small'; list.forEach(function(c){ var b = document.createElement('button'); b.type = 'button'; b.className = 'sg-color' + ((Lk[key] || base[key]) === c ? ' is-on' : ''); b.style.background = c;
+          b.addEventListener('click', function(){ Lk[key] = c; Lk.on = true; sgStore(); sgOpenHut('salon'); }); r.appendChild(b); }); el.appendChild(r); }
+      row(L('💇 צבע שיער', '💇 Hair colour'), 'hair', ['#1a0f08', '#3b2414', '#7a4a22', '#b5733a', '#d9b26a', '#f2e2b0', '#c0392b', '#ff5fa2', '#3498db', '#2ecc71', '#ecf0f1']);
+      row(L('🧴 גוון עור', '🧴 Skin tone'), 'skin', ['#f6d7bd', '#f1c7a0', '#e2ab80', '#d9a47c', '#c08a5e', '#a86f48', '#8a5534', '#6b3f24']);
+      row(L('🩱 בגד ים / חליפה', '🩱 Swimsuit / wetsuit'), 'suit', SG_CAR_COLORS);
+      row(L('✨ צבע משני', '✨ Accent colour'), 'accent', SG_CAR_COLORS);
+      var rs = document.createElement('button'); rs.type = 'button'; rs.className = 'skin-btn'; rs.style.marginTop = '8px'; rs.textContent = L('↩️ חזרה למראה המקורי', '↩️ Back to the original look');
+      rs.addEventListener('click', function(){ sgSave.look = { on: false }; sgStore(); sgOpenHut('salon'); }); el.appendChild(rs);
+    }
+    document.getElementById('sgHut').hidden = false;
+  }
+  document.getElementById('sgHutBack').addEventListener('click', function(){ document.getElementById('sgHut').hidden = true; sgHutOpen = null; });
+  document.getElementById('sgDoorBtn').addEventListener('click', function(e){ e.stopPropagation(); if(sg.phase === 'walk' && sg.walk && sg.walk.door) sgOpenHut(sg.walk.door); });
   document.getElementById('sgAgainBtn').addEventListener('click', function(){
     if(sgTourNext){ sgOver.hidden = true; if(surfCanEnter(surfMine(surfState))) surfEnterHeat(); else { surfSendPend(sgTourNext); sgOpenMenu(); } sgTourNext = null; return; }
     var i = sg.spotIdx; var nx = SG_SPOTS[i + 1]; sgStart(i); sg.wasUnlocked = !!(nx && sgUnlocked(i + 1)); });
@@ -12680,7 +13509,7 @@
   // never while the name field is being typed in. Everything worth keeping
   // (coins, skins, name, league) is in localStorage, so a reload loses nothing.
   // 'dev' = a local or preview copy: the updater stays off entirely.
-  var BUILD_VERSION = '20261027-154122';
+  var BUILD_VERSION = '20261029-153436';
   var UPDATE_CHECK_MS = 60000;
   var UPDATE_TRIED_KEY = 'canyonChaseTriedUpdate';
   var pendingSubmits = 0;
