@@ -5085,7 +5085,9 @@
     sgAddText(L('🙌 הצטרפתם! הכדור יגיע אליכם — לחצו כשהוא יורד', '🙌 You\'re in! The ball will come to you — tap as it drops'), '#7fffb0');
   }
   // before you play, the board goes down on the sand where you stand
-  function sgBallBoardDown(){ if(sg.walk) sgBG.board = { x: sg.walk.x + Math.cos(sg.walk.hd + 1.7) * 1.4, z: sg.walk.z + Math.sin(sg.walk.hd + 1.7) * 1.4, hd: sg.walk.hd + 0.4 }; }
+  function sgBallBoardDown(){ var G = sgBG.in; if(!sg.walk || !G || !sgLot) return;
+    var cx = sgLot.parkX + G.x, a = Math.atan2(sg.walk.z - G.z, sg.walk.x - cx) + 0.5, d = G.r + 3.2;
+    sgBG.board = { x: cx + Math.cos(a) * d, z: G.z + Math.sin(a) * d, hd: a + Math.PI / 2 }; }
   function sgBallLeave(){
     var G = sgBG.in; if(!G) return; var me = sgMeK(); sgBG.in = null; sgBG.pend = null;
     if(G.own){ sgBG.list = sgBG.list.filter(function(x){ return x !== G; }); return; }
@@ -7511,11 +7513,11 @@
       if(sgBG.in){ var Gm = sgBG.in, mk = sgMeK(), mvd = sg3.lastWk && Math.hypot(sg.walk.x - sg3.lastWk.x, sg.walk.z - sg3.lastWk.z) > 0.004, dvM = sgBallDive(Gm, mk);
         if(mvd && !dvM) sg3PoseWalk(T, R, sg.walk.ph, 0); else sg3PoseBall(T, R, Gm.k, sgBallK(Gm, mk), sgBallStyle(Gm, mk));
         var fcM = sgBallFace(Gm, mk, sg.walk.x - sgLot.parkX, sg.walk.z), qM = new T.Quaternion().setFromAxisAngle(new T.Vector3(0, 1, 0), -fcM); R.g.quaternion.copy(qM);
-        sg3Dive(T, R, dvM); R.board.visible = !!sgBG.in.boardOn; }
-      else if(R.body.position.y !== 0) R.body.position.set(0, 0, 0);
+        sg3Dive(T, R, dvM); R.board.visible = false; }
+      else { R.board.visible = true; if(R.body.position.lengthSq() > 0) R.body.position.set(0, 0, 0); }
       sg3.lastWk = { x: sg.walk.x, z: sg.walk.z };
       sg3Paddle(T, R, !!sgBG.in && sgBG.in.k === 'matkot'); }
-    else if(R.paddle && R.paddle.visible) R.paddle.visible = false;
+    else { if(R.paddle && R.paddle.visible) R.paddle.visible = false; R.board.visible = true; if(R.body.position.lengthSq() > 0) R.body.position.set(0, 0, 0); }
     // your board lying on the sand while you play
     if(!sg3.sandBoard){ sg3.sandBoard = sg3LooseBoard(T); sg3.scene.add(sg3.sandBoard); sg3.sandBoard.userData.key = ''; }
     sg3.sandBoard.visible = sg.phase === 'walk' && !!sgBG.in && !!sgBG.board;
@@ -13990,7 +13992,7 @@
   // never while the name field is being typed in. Everything worth keeping
   // (coins, skins, name, league) is in localStorage, so a reload loses nothing.
   // 'dev' = a local or preview copy: the updater stays off entirely.
-  var BUILD_VERSION = '20261029-164810';
+  var BUILD_VERSION = '20261029-224908';
   var UPDATE_CHECK_MS = 60000;
   var UPDATE_TRIED_KEY = 'canyonChaseTriedUpdate';
   var pendingSubmits = 0;
