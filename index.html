@@ -676,6 +676,7 @@
   .sg-peak-btn{ position:absolute; top:12px; left:12px; z-index:6; height:42px; padding:0 14px; border-radius:21px; border:2px solid rgba(255,255,255,.75);
     background:rgba(255,140,40,.85); color:#fff; font:bold 16px Rubik, sans-serif; cursor:pointer; }
   .sg-exit-btn{ top:62px; background:rgba(0,30,50,.55); }
+  .sg-beach-btn{ top:112px; background:rgba(214,170,90,.92); }
   .sg-design{ display:flex; flex-direction:column; align-items:center; gap:4px; margin:4px 0 10px; }
   .sg-design canvas{ width:240px; height:96px; }
   .sg-design .sg-sub{ font:bold 13px Rubik, sans-serif; color:#5a3b1a; margin-top:4px; }
@@ -688,6 +689,10 @@
   .sg-color.is-on{ border-color:#ffd447; transform:scale(1.12); }
   .sg-door-btn{ top:auto; bottom:90px; left:50%; transform:translateX(-50%); background:rgba(46,160,90,.92); font-size:18px; height:48px; }
   .sg-skip-btn{ top:12px; left:auto; right:12px; background:rgba(0,30,50,.6); }
+  .sg-ball-btn{ top:auto; bottom:150px; left:50%; transform:translateX(-50%); background:rgba(40,110,210,.92); font-size:17px; height:46px; white-space:nowrap; }
+  .sg-ball-btn.is-leave{ bottom:16px; left:16px; transform:none; height:40px; font-size:15px; background:rgba(0,30,50,.6); }
+  .sg-spec-btn{ top:auto; bottom:196px; left:auto; right:30px; width:88px; height:88px; border-radius:50%; padding:0; background:rgba(200,40,60,.92); font-size:15px; }
+  .sg-hit-btn{ top:auto; bottom:70px; left:auto; right:18px; width:112px; height:112px; border-radius:50%; padding:0; background:rgba(255,140,40,.92); font-size:19px; }
   .sg-row{ display:flex; gap:8px; }
   .sg-row .go-btn{ margin:0; }
   /* ---------- daily streak & badges ---------- */
@@ -967,6 +972,7 @@
   <button class="sg-cam-btn" id="sgCamBtn" type="button" hidden>🎥</button>
   <button class="sg-peak-btn" id="sgPeakBtn" type="button" hidden>🚀 לפיק</button>
   <button class="sg-peak-btn sg-exit-btn" id="sgExitBtn" type="button" hidden>🏁 סיום</button>
+  <button class="sg-peak-btn sg-beach-btn" id="sgBeachBtn" type="button" hidden></button>
   <button class="sg-peak-btn sg-skip-btn" id="sgSkipBtn" type="button" hidden>⏭️ לים</button>
 
   <div class="hud" id="hud" hidden>
@@ -1281,6 +1287,9 @@
     </div>
   </div>
   <button class="sg-peak-btn sg-door-btn" id="sgDoorBtn" type="button" hidden>🚪 היכנס</button>
+  <button class="sg-peak-btn sg-ball-btn" id="sgBallBtn" type="button" hidden></button>
+  <button class="sg-peak-btn sg-hit-btn" id="sgHitBtn" type="button" hidden></button>
+  <button class="sg-peak-btn sg-spec-btn" id="sgSpecBtn" type="button" hidden></button>
 
   <div class="overlay" id="sgOver" hidden>
     <div class="tablet">
@@ -4829,7 +4838,9 @@
         var o = sgNet.others[m.id] = sgNet.others[m.id] || { best: 0 };
         if(o.ph === 'p' && m.ph === 'r') sgAddText('🏄 ' + (m.nm || L('גולש', 'A surfer')) + L(' תפס/ה גל!', ' caught a wave!'), '#bfe9ff');
         Object.assign(o, m); o.seen = Date.now();
+        sgBallNetPk(m);
       });
+      ['bb', 'bd', 'bk', 'bj', 'bl'].forEach(function(ev){ ch.on('broadcast', { event: ev }, function(msg){ var m = msg && msg.payload; if(m && m.id && m.id !== duelMyId) sgBallNetMsg(ev, m); }); });
       ch.on('broadcast', { event: 'pw' }, function(msg){
         var m = msg && msg.payload; if(!m || !m.id) return;
         var o = sgNet.others[m.id] = sgNet.others[m.id] || { best: 0 };
@@ -4854,6 +4865,8 @@
     try { sgNet.ch.send({ type: 'broadcast', event: 'pk', payload: { id: duelMyId, nm: playerNick() || L('גולש', 'Surfer'), rd: sgSave.rider, bd: sgSave.board, ph: ph,
       x: Math.round(sg.x - sg.peak.peakX), dz: Math.round((sg.dz || 0) * 10) / 10, hd: Math.round((sg.hd || 0) * 100) / 100, h: Math.round((sg.h || 0) * 100) / 100,
       sc: Math.round(sgTen(sg.score) * 100) / 100, best: sg.peak.best, cr: sgSave.car, cc: sgSave.carColor, rk: sgSave.rack ? 1 : 0, lo: sgSave.look && sgSave.look.on ? sgSave.look : null, bz: sgSave.bd && sgSave.bd.on ? sgSave.bd : null,
+      wx: sg.walk && sgLot ? Math.round((sg.walk.x - sgLot.parkX) * 10) / 10 : undefined, wz: sg.walk ? Math.round(sg.walk.z * 10) / 10 : undefined, wh: sg.walk ? Math.round(sg.walk.hd * 100) / 100 : undefined,
+      bg: (function(){ var O = sgBG.list.filter(function(x){ return x.own; })[0]; return O ? { k: O.k, x: Math.round(O.x * 10) / 10, z: Math.round(O.z * 10) / 10, a: Math.round(O.a0 * 100) / 100, p: O.ppl } : undefined; })(),
       cx: sg.car && sgLot ? Math.round((sg.car.x - sgLot.parkX) * 10) / 10 : undefined, cz: sg.car ? Math.round(sg.car.z * 10) / 10 : undefined, ch: sg.car ? Math.round(sg.car.hd * 100) / 100 : undefined } }); } catch(e){}
   }
   // the others who are still here (heard from lately)
@@ -4882,10 +4895,11 @@
     sg.walk = { x: C.x + (Math.abs(sx0) > 0.7 ? 1.6 : 0), z: Math.min(C.z - 1.6, SG_LOT_Z - 2.6), t: 0, ph: 0, hd: -Math.PI / 2 };
     sgLot.boardTaken = true;
     sg.phase = 'walk'; sg.x = sg.walk.x / SG3_M; sg.car = null;
-    sgAddText(L('🅿️ חניתם! לקחתם את הגלשן — טיילו בחוף או לכו למים', '🅿️ Parked! Board in hand — walk the beach or head into the sea'), '#7fffb0');
+    sgAddText(L('🅿️ חניתם! הים מקדימה · החנויות מאחוריכם מעבר לכביש (החצים למעלה)', '🅿️ Parked! The sea ahead · the shops behind you across the road (arrows up top)'), '#7fffb0');
   }
   // in the water: lie down on the board and paddle out from here
   function sgWalkDone(){
+    sgBallLeave();
     var Wk = sg.walk;
     sg.phase = 'paddle'; sg.x = Wk.x / SG3_M; sg.hd = Math.PI; sg.walk = null;
     sg.dz = SG_WADE_Z - (typeof sg3ZLine === 'function' && sg3.state === 'ready' ? sg3ZLine(Wk.x) : 10);
@@ -4894,7 +4908,8 @@
   var SG_HUTS = [
     { id: 'surf',  x: -20, name: L('🏄 חנות גלישה', '🏄 Surf shop'),   color: 0x3a7bd5, roof: 0xf2f2ec },
     { id: 'kiosk', x: -5,  name: L('🍦 קיוסק', '🍦 Kiosk'),           color: 0xf5a623, roof: 0xe74c3c },
-    { id: 'salon', x: 10,  name: L('💇 סלון יופי', '💇 Beauty salon'), color: 0xff7eb6, roof: 0xffffff }
+    { id: 'salon', x: 10,  name: L('💇 סלון יופי', '💇 Beauty salon'), color: 0xff7eb6, roof: 0xffffff },
+    { id: 'balls', x: 25,  name: L('⚽ חנות כדורים', '⚽ Ball shop'),  color: 0x27ae60, roof: 0xfff3c4 }
   ];
   var SG_HUT_Z = 201.5, SG_DOOR_Z = 198.6;
   // the kiosk's menu: a little boost for this visit
@@ -4904,6 +4919,221 @@
     { id: 'melon', icon: '🍉', name: L('אבטיח', 'Watermelon'),       price: 30, desc: L('+10% צדפים על הגלים בביקור הזה', '+10% shells on this visit\'s waves') }
   ];
   var sgBoost = { shells: 1, paddle: 1, ate: {} };
+  // the ball shop: a ball of your own, to start a game anywhere on the sand
+  var SG_BALLS = [
+    { id: 'foot',   icon: '⚽', name: L('כדורגל', 'Football'),   price: 150, desc: L('הקפצות ברגל, בברך ובראש — בלי שייגע בחול', 'Keepy-ups with feet, knees and head — keep it off the sand') },
+    { id: 'volley', icon: '🏐', name: L('כדורעף', 'Volleyball'), price: 150, desc: L('אמות וסטים במעגל', 'Bumps and sets in a circle') },
+    { id: 'matkot', icon: '🏓', name: L('מטקות', 'Matkot'),     price: 200, desc: L('שני מחבטים וכדור — המשחק של החוף', 'Two paddles and a ball — the beach game') }
+  ];
+  // ---- ball games on the sand: circles of beach-goers to join, or your own ball with a friend.
+  // Each touch sends the ball to the next player; tap as it drops to you to keep it up.
+  // (heights of the touches in metres: foot / knee / head, a bump / a set, a paddle)
+  var SG_BK = {
+    foot:   { T: 1.2,  up: 2.6, hs: [0.35, 0.35, 0.6, 1.72], r: 2.5, miss: 0.04,  off: 1.7, reach: 0.75, icon: '⚽', verb: L('בעיטה!', 'Kick!') },
+    volley: { T: 1.45, up: 4.2, hs: [1.0, 1.0, 2.05],         r: 2.9, miss: 0.035, off: 2.3, reach: 0.85, icon: '🏐', verb: L('הקפצה!', 'Bump!') },
+    matkot: { T: 0.9,  up: 0.9, hs: [1.25],                    r: 3.5, miss: 0.025, off: 1.8, reach: 1.05, icon: '🏓', verb: L('מכה!', 'Hit!') }
+  };
+  var SG_BALL_RUN = 4.2;                                             // how fast you (and they) run for a ball, m/s
+  var sgBG = { key: '', list: [], in: null, pend: null, sh: 0, run: 0, chk: 0 };
+  function sgMeK(){ return duelMyId || 'me'; }
+  function sgIsNpc(k){ return k.charAt(0) === '~'; }
+  function sgBallNow(){ return performance.now() / 1000; }
+  function sgBallSend(ev, p){ if(!sgNet.ch) return; p.id = duelMyId; try { sgNet.ch.send({ type: 'broadcast', event: ev, payload: p }); } catch(e){} }
+  // someone's own place in a game (x from the lot, z), around the middle
+  function sgBallPos(G, key){ var i = G.ppl.indexOf(key); if(i < 0) return null; var a = G.a0 + i * Math.PI * 2 / G.ppl.length;
+    return { x: G.x + Math.cos(a) * G.r, z: G.z + Math.sin(a) * G.r, a: a }; }
+  // where someone actually is right now: you where you walked, the beach-goers where they ran, a friend where they said
+  function sgBallAt(G, key){
+    if(key === sgMeK() && sg.walk && sgLot && sgBG.in === G) return { x: sg.walk.x - sgLot.parkX, z: sg.walk.z };
+    if(G.pp && G.pp[key]) return G.pp[key];
+    var o = sgNet.others[key]; if(o && o.wx !== undefined) return { x: o.wx, z: o.wz };
+    return sgBallPos(G, key);
+  }
+  // the circles on this beach (rebuilt for each visit)
+  function sgBallsInit(){
+    var key = sgLot && sg.spot ? sg.spot.id + ':' + Math.round(sgLot.parkX) : '';
+    if(sgBG.key === key) return;
+    sgBG.key = key; sgBG.list = []; sgBG.in = null; sgBG.pend = null; sgBG.sh = 0;
+    if(!key) return;
+    [['foot', -48, 184.4], ['volley', 47, 184.4]].forEach(function(c){
+      var G = { id: 'npc-' + c[0], k: c[0], x: c[1], z: c[2], r: SG_BK[c[0]].r, ppl: ['~0', '~1', '~2'], a0: Math.PI / 2 + 0.4, host: 'local', streak: 0, hitT: {}, ball: null, pp: {} };
+      sgBallServe(G, '~0'); sgBG.list.push(G); });
+  }
+  // the ball leaves `fr` for the next player, to land somewhere around them (in football the beach-goers sometimes touch it to themselves first)
+  // sp: a special touch -- a spike, a smash, a volley: fast and low, landing further off
+  function sgBallServe(G, fr, fromX, fromZ, sp){
+    var K = SG_BK[G.k], others = G.ppl.filter(function(p){ return p !== fr; }), to = others.length ? others[Math.floor(Math.random() * others.length)] : fr;
+    // the beach-goers pass to the real players in the circle more often (half the time)
+    var reals = others.filter(function(p){ return !sgIsNpc(p); });
+    if(sgIsNpc(fr) && reals.length && Math.random() < 0.5) to = reals[Math.floor(Math.random() * reals.length)];
+    else if(G.k === 'foot' && others.length && sgIsNpc(fr) && Math.random() < 0.3) to = fr;
+    var self = to === fr, spd = Math.max(0.62, 1 - 0.012 * G.streak), h0 = G.ball ? G.ball.h1 : 1.0;
+    var a = fromX !== undefined ? { x: fromX, z: fromZ } : sgBallAt(G, fr), b = sgBallPos(G, to) || a;
+    // where it comes down: around their place (or around you, for a touch to yourself) -- most passes near, some wild
+    sp = !!sp && !self;
+    var base = self ? a : b, off = (self ? 0.5 : K.off) * (sp ? 0.6 + 0.8 * Math.random() : Math.pow(Math.random(), 1.4)) * (1 + Math.min(0.5, G.streak * 0.015)), dir = Math.random() * Math.PI * 2;
+    var lx = base.x + Math.cos(dir) * off, lz = base.z + Math.sin(dir) * off, dc = Math.hypot(lx - G.x, lz - G.z), lim = G.r + 1.4;
+    if(dc > lim){ lx = G.x + (lx - G.x) * lim / dc; lz = G.z + (lz - G.z) * lim / dc; }
+    lz = Math.max(SG_EDGE_Z - 3.5, Math.min(197.5, lz));
+    // it leaves from just in front of whoever touched it
+    var tw = Math.hypot(lx - a.x, lz - a.z) || 1, ax = a.x + (lx - a.x) / tw * Math.min(0.35, tw * 0.5), az = a.z + (lz - a.z) / tw * Math.min(0.35, tw * 0.5);
+    G.ball = { fr: fr, to: to, t: 0, T: (self ? 0.8 : K.T) * spd * (sp ? 0.62 : 1), h0: sp ? Math.max(h0, 1.6) : h0, h1: sp ? K.hs[0] : K.hs[Math.floor(Math.random() * K.hs.length)], up: self ? K.up * 0.45 : sp ? K.up * 0.25 : K.up,
+      n: (G.ball ? G.ball.n : 0) + 1, st: 'fly', ax: ax, az: az, lx: lx, lz: lz, sp: sp ? 1 : 0 };
+    if(sp && (G === sgBG.in) && to === sgMeK()) sgAddText(L('💥 מכה חזקה אליכם — זוזו!', '💥 A hard one at you — move!'), '#ff9a6b');
+    if(G.own && sgNet.ch) sgBallSend('bb', { h: sgMeK(), k: G.k, x: G.x, z: G.z, a: G.a0, p: G.ppl, n: G.ball.n, fr: fr, to: to, T: G.ball.T, h0: G.ball.h0, h1: G.ball.h1, up: G.ball.up, s: G.streak, sp: G.ball.sp,
+      ax: Math.round(ax * 100) / 100, az: Math.round(az * 100) / 100, lx: Math.round(lx * 100) / 100, lz: Math.round(lz * 100) / 100 });
+  }
+  // the ball in the air (x from the lot), or rolling on the sand after a drop
+  function sgBallXYZ(G){
+    var B = G.ball; if(!B) return null;
+    if(B.st === 'drop') return { x: B.px, y: B.py, z: B.pz };
+    if(B.ax === undefined) return null;
+    var u = B.t / B.T, y = B.h0 + (B.h1 - B.h0) * u + B.up * 4 * u * (1 - u);
+    return { x: B.ax + (B.lx - B.ax) * u, y: Math.max(0.1, y), z: B.az + (B.lz - B.az) * u };
+  }
+  function sgBallDrop(G, mine){
+    var B = G.ball, p = sgBallXYZ(G); if(!B || !p) return;
+    var vx = 0, vz = 0; if(B.st === 'fly' && B.ax !== undefined){ vx = (B.lx - B.ax) / B.T * 0.5; vz = (B.lz - B.az) / B.T * 0.5; }
+    B.st = 'drop'; B.t = 0; B.px = p.x; B.py = p.y; B.pz = p.z; B.vx = vx; B.vz = vz; B.vy = -1;
+    if(G === sgBG.in && G.streak >= 2) sgAddText(L('💥 הכדור נפל · רצף ', '💥 Dropped · streak ') + G.streak, '#ff9a6b');
+    G.streak = 0;
+    if(mine && G.host !== 'local' && !G.own) sgBallSend('bk', { h: G.host, n: B.n, ok: 0 });
+    if(G.own) sgBallSend('bd', { h: sgMeK(), n: B.n });
+  }
+  function sgBallsTick(dt){
+    sgBallsInit(); if(!sgLot) return;
+    var me = sgMeK(), nowS = sgBallNow();
+    // the others' games go when they do
+    sgBG.chk += dt; if(sgBG.chk > 1){ sgBG.chk = 0; var live = {}; sgNetList().forEach(function(o){ live[o.id] = 1; });
+      sgBG.list = sgBG.list.filter(function(G){ if(G.host === 'local' || G.own || live[G.host]) return true; if(sgBG.in === G){ sgBG.in = null; sgAddText(L('המשחק נגמר', 'The game ended'), '#bfe9ff'); } return false; }); }
+    sgBG.list.forEach(function(G){
+      var B = G.ball, K = SG_BK[G.k]; G.pp = G.pp || {};
+      // the beach-goers run to where their ball comes down, and back to their place after
+      G.ppl.forEach(function(key){ if(!sgIsNpc(key)) return; var home = sgBallPos(G, key), p = G.pp[key] || (G.pp[key] = { x: home.x, z: home.z });
+        var tg = B && B.st === 'fly' && B.to === key && B.lx !== undefined ? { x: B.lx, z: B.lz } : home, dx = tg.x - p.x, dz = tg.z - p.z, d = Math.hypot(dx, dz);
+        var v = tg === home ? 1.6 : SG_BALL_RUN * 0.92; if(d > 0.02){ var s = Math.min(d, v * dt); p.x += dx / d * s; p.z += dz / d * s; p.mv = s / dt; } else p.mv = 0; });
+      Object.keys(G.pp).forEach(function(k){ if(G.ppl.indexOf(k) < 0) delete G.pp[k]; });
+      if(!B) return; B.t += dt;
+      var runs = G.host === 'local' || G.own;
+      if(B.st === 'fly'){
+        var u = B.t / B.T;
+        if(runs && sgIsNpc(B.to) && u >= 1){
+          var pn = G.pp[B.to], far = pn && B.lx !== undefined ? Math.hypot(pn.x - B.lx, pn.z - B.lz) : 0;
+          if(far > K.reach * 1.9 || Math.random() < K.miss * (1 + G.streak * 0.03)) sgBallDrop(G);
+          else { G.hitT[B.to] = nowS; if(far > K.reach) G.dive = G.dive || {}, G.dive[B.to] = nowS; G.streak++;
+            // now and then a beach-goer goes for a hard one (more often at the real players)
+            var spN = !B.sp && Math.random() < (G.ppl.some(function(p){ return !sgIsNpc(p); }) ? 0.14 : 0.06); if(spN) G.hitT[B.to] = nowS;
+            sgBallServe(G, B.to, undefined, undefined, spN); }
+        } else if(B.to === me && u > 1.1){ if(G === sgBG.in) sgAddText(L('⏰ מאוחר מדי!', '⏰ Too late!'), '#ff9a6b'); sgBallDrop(G, true); }
+        else if(G.own && !sgIsNpc(B.to) && B.to !== me && u > 1.8) sgBallDrop(G);      // a friend who went quiet
+      } else if(B.st === 'drop'){
+        // bouncing to a stop on the sand, then someone picks it up and starts again
+        B.vy -= 9.8 * dt; B.px += B.vx * dt; B.pz += B.vz * dt; B.py += B.vy * dt; B.vx *= 1 - dt * 1.5; B.vz *= 1 - dt * 1.5;
+        var gy = 0.11; if(B.py < gy){ B.py = gy; B.vy = Math.abs(B.vy) > 0.6 ? -B.vy * 0.4 : 0; }
+        if(runs && B.t > 1.8){ var npcs = G.ppl.filter(sgIsNpc), sv = G.own ? (G.ppl.indexOf(B.to) >= 0 ? B.to : me) : npcs[Math.floor(Math.random() * npcs.length)];
+          if(sgIsNpc(sv) || sv === me) G.hitT[sv] = nowS; G.ball.h1 = 1.0; sgBallServe(G, sv); }
+      }
+    });
+  }
+  // you, keeping it up: be under it, and touch it as it drops to you.
+  // special: a spike / smash / volley -- only off a ball you're right under, timed just right
+  function sgBallHit(special){
+    var G = sgBG.in; if(!G) return;
+    var B = G.ball, me = sgMeK(), nowS = sgBallNow(), K = SG_BK[G.k]; G.hitT[me] = nowS; G.spT = special ? nowS : G.spT;
+    if(!B || B.st !== 'fly' || B.to !== me) return;
+    var u = B.t / B.T;
+    if(u < 0.55) return;                                                // nothing coming yet: just a swing
+    if(u < 0.86){ sgAddText(L('⏰ מוקדם מדי!', '⏰ Too early!'), '#ff9a6b'); sgBallDrop(G, true); return; }
+    if(special){ var bpS = sgBallXYZ(G), mpS = sgBallAt(G, me);
+      if(Math.abs(u - 1) > 0.09 || !bpS || Math.hypot(bpS.x - mpS.x, bpS.z - mpS.z) > K.reach){ sgAddText(L('💨 המכה המיוחדת פספסה', '💨 The special shot missed'), '#ff9a6b'); sgBallDrop(G, true); return; }
+      G.streak += 2; sgBG.run++; sgSave.ballBest = sgSave.ballBest || {}; if(G.streak > (sgSave.ballBest[G.k] || 0)) sgSave.ballBest[G.k] = G.streak;
+      if(sgBG.sh < 60){ sgSave.shells += 3; sgBG.sh += 3; } sgStore();
+      sgAddText({ foot: L('💥 וולה!', '💥 Volley!'), volley: L('💥 הנחתה!', '💥 Spike!'), matkot: L('💥 סמאש!', '💥 Smash!') }[G.k] + ' ' + G.streak, '#ffd447');
+      if(G.host === 'local' || G.own) sgBallServe(G, me, mpS.x, mpS.z, true);
+      else { sgBallSend('bk', { h: G.host, n: B.n, ok: 1, sp: 1, x: Math.round(mpS.x * 100) / 100, z: Math.round(mpS.z * 100) / 100 }); B.st = 'wait'; }
+      return; }
+    // how far the ball is from you: in reach a touch, a stretch further a save, beyond that it's gone
+    var bp = sgBallXYZ(G), mp = sgBallAt(G, me), far = bp && mp ? Math.hypot(bp.x - mp.x, bp.z - mp.z) : 0;
+    if(far > K.reach * 1.9){ sgAddText(L('🏃 רחוק מדי — רוצו אל הכדור!', '🏃 Too far — run to the ball!'), '#ff9a6b'); sgBallDrop(G, true); return; }
+    var save = far > K.reach; if(save){ G.dive = G.dive || {}; G.dive[me] = nowS; }
+    var perfect = !save && Math.abs(u - 1) < 0.05;
+    G.streak++; sgBG.run++;
+    sgSave.ballBest = sgSave.ballBest || {}; if(G.streak > (sgSave.ballBest[G.k] || 0)) sgSave.ballBest[G.k] = G.streak;
+    if(sgBG.sh < 60){ var add = perfect || save ? 2 : 1; sgSave.shells += add; sgBG.sh += add; }
+    sgStore();
+    sgAddText((save ? L('🤸 הצלה! ', '🤸 Saved! ') : perfect ? L('✨ מושלם! ', '✨ Perfect! ') : K.icon + ' ') + G.streak, save ? '#ffd447' : perfect ? '#7fffb0' : '#ffffff');
+    if(G.host === 'local' || G.own) sgBallServe(G, me, mp.x, mp.z);
+    else { sgBallSend('bk', { h: G.host, n: B.n, ok: 1, x: Math.round(mp.x * 100) / 100, z: Math.round(mp.z * 100) / 100 }); B.st = 'wait'; }
+  }
+  // the game you're standing by (not in yet)
+  function sgBallNear(){
+    if(!sg.walk || sgBG.in || !sgLot) return null;
+    var best = null, bd = 1e9;
+    sgBG.list.forEach(function(G){ if(G.own) return;
+      if(G.k === 'matkot' && G.ppl.filter(function(p){ return !sgIsNpc(p); }).length >= 2) return;      // matkot is for two
+      if(G.ppl.length >= 6) return;
+      var d = Math.hypot(sg.walk.x - (sgLot.parkX + G.x), sg.walk.z - G.z); if(d < G.r + 2.6 && d < bd){ bd = d; best = G; } });
+    return best;
+  }
+  function sgBallJoin(G){
+    var me = sgMeK();
+    if(G.host !== 'local'){ sgBG.pend = G.host; sgBallSend('bj', { h: G.host }); sgAddText(L('⏳ מבקשים להצטרף...', '⏳ Asking to join...'), '#bfe9ff'); return; }
+    // into the circle on your side of it
+    var am = Math.atan2(sg.walk.z - G.z, sg.walk.x - (sgLot.parkX + G.x));
+    G.ppl.push(me); G.a0 = am - (G.ppl.length - 1) * Math.PI * 2 / G.ppl.length;
+    sgBG.in = G; sgBG.run = 0; sgBallBoardDown();
+    sgAddText(L('🙌 הצטרפתם! הכדור יגיע אליכם — לחצו כשהוא יורד', '🙌 You\'re in! The ball will come to you — tap as it drops'), '#7fffb0');
+  }
+  // before you play, the board goes down on the sand where you stand
+  function sgBallBoardDown(){ if(sg.walk) sgBG.board = { x: sg.walk.x + Math.cos(sg.walk.hd + 1.7) * 1.4, z: sg.walk.z + Math.sin(sg.walk.hd + 1.7) * 1.4, hd: sg.walk.hd + 0.4 }; }
+  function sgBallLeave(){
+    var G = sgBG.in; if(!G) return; var me = sgMeK(); sgBG.in = null; sgBG.pend = null;
+    if(G.own){ sgBG.list = sgBG.list.filter(function(x){ return x !== G; }); return; }
+    if(G.host !== 'local'){ sgBallSend('bl', { h: G.host }); return; }
+    G.ppl = G.ppl.filter(function(p){ return p !== me; });
+    if(G.ball && (G.ball.to === me || G.ball.fr === me)) sgBallServe(G, '~0');
+  }
+  // your own ball: the game starts right in front of you
+  function sgBallStart(kind){
+    var Wk = sg.walk; if(!Wk || !sgLot) return; sgBallLeave();
+    var K = SG_BK[kind], me = sgMeK();
+    var cz = Math.max(SG_EDGE_Z - 2.5, Math.min(196.5 - K.r, Wk.z + Math.sin(Wk.hd) * K.r)), cx = Wk.x - sgLot.parkX + Math.cos(Wk.hd) * K.r;
+    var G = { id: 'own', k: kind, x: cx, z: cz, r: K.r, ppl: [me], a0: Math.atan2(Wk.z - cz, Wk.x - sgLot.parkX - cx), host: me, own: true, streak: 0, hitT: {}, ball: null, pp: {} };
+    if(kind === 'matkot') G.ppl.push('~1');                         // someone from the beach plays with you until a friend comes
+    sgBG.list.push(G); sgBG.in = G; sgBG.run = 0; sgBallBoardDown();
+    G.ball = { fr: me, to: me, t: 0, T: 0.1, h0: 1, h1: 1, up: 0, n: 0, st: 'drop', px: cx, py: 0.11, pz: cz, vx: 0, vy: 0, vz: 0 }; G.ball.t = 1.2;
+    sgAddText(L('🎉 המשחק שלכם! שחקנים בחוף יכולים לבוא ולהצטרף', '🎉 Your game! Players on the beach can walk over and join'), '#7fffb0');
+  }
+  // the channel: the others' games (from where they are), each touch, joining and leaving
+  function sgBallNetPk(m){
+    var me = sgMeK(), id = 'net-' + m.id, G = sgBG.list.filter(function(x){ return x.id === id; })[0];
+    if(m.bg && SG_BK[m.bg.k]){
+      if(!G){ G = { id: id, k: m.bg.k, host: m.id, streak: 0, hitT: {}, ball: null, pp: {} }; sgBG.list.push(G); }
+      G.k = m.bg.k; G.x = m.bg.x; G.z = m.bg.z; G.r = SG_BK[G.k].r; G.a0 = m.bg.a; G.ppl = m.bg.p || [m.id]; G.nm = m.nm;
+      if(sgBG.pend === m.id && G.ppl.indexOf(me) >= 0){ sgBG.pend = null; sgBG.in = G; sgBG.run = 0; sgBallBoardDown(); sgAddText(L('🙌 הצטרפתם למשחק של ', '🙌 You joined ') + (m.nm || ''), '#7fffb0'); }
+      if(sgBG.in === G && G.ppl.indexOf(me) < 0) sgBG.in = null;
+    } else if(G){ sgBG.list = sgBG.list.filter(function(x){ return x !== G; }); if(sgBG.in === G){ sgBG.in = null; sgAddText(L('המשחק נגמר', 'The game ended'), '#bfe9ff'); } }
+  }
+  function sgBallNetMsg(ev, m){
+    var me = sgMeK();
+    if(ev === 'bb'){
+      if(!SG_BK[m.k]) return;
+      sgBallNetPk({ id: m.h, nm: (sgNet.others[m.h] || {}).nm, bg: { k: m.k, x: m.x, z: m.z, a: m.a, p: m.p } });
+      var G = sgBG.list.filter(function(x){ return x.id === 'net-' + m.h; })[0]; if(!G) return;
+      G.ball = { fr: m.fr, to: m.to, t: 0, T: m.T, h0: m.h0, h1: m.h1, up: m.up, n: m.n, st: 'fly', ax: m.ax, az: m.az, lx: m.lx, lz: m.lz, sp: m.sp || 0 }; G.streak = m.s || 0; G.hitT[m.fr] = sgBallNow();
+      return;
+    }
+    if(ev === 'bd'){ var Gd = sgBG.list.filter(function(x){ return x.id === 'net-' + m.h; })[0]; if(Gd && Gd.ball && Gd.ball.st !== 'drop') sgBallDrop(Gd); return; }
+    // the rest are for the one running the game: you
+    var O = sgBG.list.filter(function(x){ return x.own; })[0]; if(!O || m.h !== me) return;
+    if(ev === 'bk'){ if(!O.ball || O.ball.n !== m.n || O.ball.to !== m.id || O.ball.st !== 'fly') return;
+      if(m.ok){ O.streak += m.sp ? 2 : 1; O.hitT[m.id] = sgBallNow(); sgBallServe(O, m.id, m.x, m.z, !!m.sp); } else sgBallDrop(O); }
+    if(ev === 'bj' && O.ppl.indexOf(m.id) < 0 && O.ppl.length < 6){
+      if(O.k === 'matkot'){ var ni = O.ppl.indexOf('~1'); if(ni < 0) return; O.ppl[ni] = m.id; } else O.ppl.push(m.id);
+      sgAddText('🙌 ' + ((sgNet.others[m.id] || {}).nm || L('חבר', 'A friend')) + L(' הצטרף/ה למשחק!', ' joined your game!'), '#7fffb0'); sgNet.last = 0; }
+    if(ev === 'bl'){ O.ppl = O.ppl.filter(function(p){ return p !== m.id; }); if(O.k === 'matkot' && O.ppl.length < 2) O.ppl.push('~1');
+      if(O.ball && (O.ball.to === m.id || O.ball.fr === m.id)) sgBallDrop(O); }
+  }
   // your looks from the salon, over the surfer you picked
   function sgRiderOf(id, look){ var rd = sgItem(SG_RIDERS, id); if(!look) return rd;
     return { id: rd.id + '|' + [look.hair, look.skin, look.suit, look.accent].join(','), name: rd.name, skin: look.skin || rd.skin, hair: look.hair || rd.hair, suit: look.suit || rd.suit, accent: look.accent || rd.accent }; }
@@ -4925,6 +5155,7 @@
   function sgUpdate(dt){
     var spot = sg.spot, F = sgFaceUnits(), up = sgSave.up;
     if(sg.peak && sg.peak.shared) sgNetTick();
+    if(sgLot || sgBG.key) sgBallsTick(dt);
     sg.t += dt;
     sg.hint = Math.max(0, sg.hint - dt);
     sg.chainT = Math.max(0, sg.chainT - dt);
@@ -4952,6 +5183,21 @@
     if(sg.phase === 'walk'){
       // on foot: ⬆️ walk, ⬇️ step back, ⬅️➡️ turn -- around the beach, into the huts, into the sea
       var Wk = sg.walk, Jw = sgJoyVec(); Wk.t += dt; sg.pad.t += dt;
+      if(Wk.t > 0.8 && sgHutOpen === null && sgBG.in){
+        // ⬆️ in, ⬇️ back, ⬅️➡️ to the sides -- always facing the middle, so the view stays on the game
+        var Gw = sgBG.in, cxw = sgLot.parkX + Gw.x, hdW = Math.atan2(Gw.z - Wk.z, cxw - Wk.x);
+        Wk.hd += Math.atan2(Math.sin(hdW - Wk.hd), Math.cos(hdW - Wk.hd)) * Math.min(1, dt * 6);
+        var fwx = Math.cos(Wk.hd), fwz = Math.sin(Wk.hd), mf = -Jw.y, ms = Jw.x, ml = Math.hypot(mf, ms);
+        if(ml > 0.25){ if(ml > 1){ mf /= ml; ms /= ml; } var vW = SG_BALL_RUN;
+          var nxw = Wk.x + (fwx * mf - fwz * ms) * vW * dt, nzw = Wk.z + (fwz * mf + fwx * ms) * vW * dt;
+          // not out of the game, and not into the middle of it
+          var rx = nxw - cxw, rz = nzw - Gw.z, rr = Math.hypot(rx, rz), rMax = Gw.r + 2, rMin = 0.6;
+          if(rr > rMax){ nxw = cxw + rx / rr * rMax; nzw = Gw.z + rz / rr * rMax; } else if(rr < rMin && rr > 0){ nxw = cxw + rx / rr * rMin; nzw = Gw.z + rz / rr * rMin; }
+          nzw = Math.max(SG_EDGE_Z - 3.5, Math.min(198, nzw));
+          Wk.ph += Math.hypot(nxw - Wk.x, nzw - Wk.z) * 3.2; Wk.x = nxw; Wk.z = nzw; }
+        Wk.door = null;
+        return;
+      }
       if(Wk.t > 0.8 && sgHutOpen === null){
         if(Math.abs(Jw.x) > 0.3) Wk.hd += Jw.x * 3.0 * dt;
         var wade = Wk.z < SG_EDGE_Z ? Math.min(1, (SG_EDGE_Z - Wk.z) / (SG_EDGE_Z - SG_WADE_Z)) : 0;
@@ -5627,8 +5873,21 @@
       document.getElementById('sgCamBtn').hidden = !(sg.phase === 'ride' || sg.phase === 'air' || sg.phase === 'tow' || sg.phase === 'done');
       document.getElementById('sgPeakBtn').hidden = !(sg.phase === 'paddle' && !sg.tour && (Math.abs(sg.x - sg.curl - 300) > 500 || Math.abs(sg.dz) > 12));   // in the water, far from the peak
       document.getElementById('sgExitBtn').hidden = !sg.peak || sg.phase === 'over';
+      var bchB = document.getElementById('sgBeachBtn'); bchB.hidden = !(sg.phase === 'paddle' && sgLot && !sg.tour);
+      if(!bchB.hidden && !bchB.textContent) bchB.textContent = L('🏖️ חזרה לחוף', '🏖️ Back to the beach');
       document.getElementById('sgSkipBtn').hidden = sg.phase !== 'drive' && sg.phase !== 'walk';
-      document.getElementById('sgDoorBtn').hidden = !(sg.phase === 'walk' && sg.walk && sg.walk.door && sgHutOpen === null);
+      document.getElementById('sgDoorBtn').hidden = !(sg.phase === 'walk' && sg.walk && sg.walk.door && sgHutOpen === null && !sgBG.in);
+      var bTx = '', onFoot = sg.phase === 'walk' && sg.walk && sg.walk.t > 0.8 && sgHutOpen === null;
+      if(onFoot){ var bn = sgBallNear(), own = Object.keys(sgSave.balls || {}).length;
+        if(sgBG.in) bTx = L('🚪 צאו מהמשחק', '🚪 Leave the game');
+        else if(sgBG.pend) bTx = L('⏳ מחכים...', '⏳ Waiting...');
+        else if(bn) bTx = SG_BK[bn.k].icon + ' ' + (bn.host === 'local' ? L('הצטרפו למעגל', 'Join the circle') : L('הצטרפו ל', 'Join ') + (bn.nm || L('חבר', 'a friend')));
+        else if(own && !sg.walk.door && sg.walk.z > SG_EDGE_Z - 2) bTx = L('⚽ שחקו בכדור שלכם', '⚽ Play with your ball'); }
+      var bBtn = document.getElementById('sgBallBtn'); bBtn.hidden = !bTx; bBtn.classList.toggle('is-leave', !!sgBG.in); if(bTx && bBtn.textContent !== bTx) bBtn.textContent = bTx;
+      var hBtn = document.getElementById('sgHitBtn'), hTx = sgBG.in ? SG_BK[sgBG.in.k].icon + ' ' + SG_BK[sgBG.in.k].verb : '';
+      hBtn.hidden = !(onFoot && sgBG.in); if(hTx && hBtn.textContent !== hTx) hBtn.textContent = hTx;
+      var sBtn = document.getElementById('sgSpecBtn'), sTx = sgBG.in ? { foot: L('💥 וולה', '💥 Volley'), volley: L('💥 הנחתה', '💥 Spike'), matkot: L('💥 סמאש', '💥 Smash') }[sgBG.in.k] : '';
+      sBtn.hidden = hBtn.hidden || (sgBG.in && sgBG.in.ppl.length < 2); if(sTx && sBtn.textContent !== sTx) sBtn.textContent = sTx;
       return;
     }
     sgDrawScene();
@@ -5671,12 +5930,35 @@
     if(sg.phase === 'walk'){
       ctx.save(); ctx.textAlign = 'center'; ctx.lineWidth = 6; ctx.strokeStyle = 'rgba(0,30,50,0.6)'; ctx.fillStyle = '#ffffff';
       ctx.font = (W < 560 ? 'bold 18px' : 'bold 24px') + ' Suez One, Rubik, sans-serif';
-      var wm = sg.walk && sg.walk.z < SG_EDGE_Z ? L('🌊 נכנסים למים...', '🌊 Wading in...')
+      var Gin = sgBG.in, bnH = Gin ? null : sgBallNear();
+      var wm = Gin ? SG_BK[Gin.k].icon + L(' רצף: ', ' Streak: ') + Gin.streak + L(' · השיא שלכם: ', ' · your best: ') + ((sgSave.ballBest || {})[Gin.k] || 0)
+             : sg.walk && sg.walk.z < SG_EDGE_Z - 1 ? L('🌊 נכנסים למים...', '🌊 Wading in...')
              : sg.walk && sg.walk.door ? L('🚪 ', '🚪 ') + sgItem(SG_HUTS, sg.walk.door).name + L(' — לחצו "היכנס"', ' — tap "Go in"')
-             : L('🚶 החוף: 🏄 חנות גלישה · 🍦 קיוסק · 💇 סלון יופי מאחורי הכביש · הים מקדימה', '🚶 The beach: 🏄 surf shop · 🍦 kiosk · 💇 salon behind the road · the sea ahead');
+             : bnH ? SG_BK[bnH.k].icon + L(' מעגל הקפצות — לחצו "הצטרפו"', ' A keepy-up circle — tap "Join"')
+             : L('🚶 טיילו בחוף · החצים מראים איפה החנויות · הים מקדימה', '🚶 Walk the beach · the arrows show the shops · the sea ahead');
+      // the shops: one arrow each, turned the way to its door as you see it, and how far
+      if(!Gin && sg.walk && sgLot){
+        var Wh = sg.walk, fx = Math.cos(Wh.hd), fz = Math.sin(Wh.hd), cw = W < 560 ? 74 : 92, gap = 6, x0 = W / 2 - (SG_HUTS.length * cw + (SG_HUTS.length - 1) * gap) / 2, cy = W < 560 ? 96 : 104;
+        ctx.save(); ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        SG_HUTS.forEach(function(hu, i){
+          var dx = sgLot.parkX + hu.x - Wh.x, dz = SG_DOOR_Z - Wh.z, dd = Math.hypot(dx, dz), th = Math.atan2(dx * -fz + dz * fx, dx * fx + dz * fz), cx = x0 + i * (cw + gap) + cw / 2;
+          var here = Wh.door === hu.id;
+          ctx.fillStyle = here ? 'rgba(46,160,90,0.9)' : 'rgba(0,30,50,0.55)'; ctx.beginPath(); if(ctx.roundRect) ctx.roundRect(cx - cw / 2, cy - 21, cw, 42, 12); else ctx.rect(cx - cw / 2, cy - 21, cw, 42); ctx.fill();
+          ctx.font = '20px serif'; ctx.fillStyle = '#fff'; ctx.fillText(hu.name.split(' ')[0], cx - cw / 2 + 16, cy);
+          ctx.save(); ctx.translate(cx - 4, cy); ctx.rotate(th); ctx.fillStyle = '#ffd447'; ctx.beginPath(); ctx.moveTo(0, -12); ctx.lineTo(8, 2); ctx.lineTo(3, 2); ctx.lineTo(3, 11); ctx.lineTo(-3, 11); ctx.lineTo(-3, 2); ctx.lineTo(-8, 2); ctx.closePath(); ctx.fill(); ctx.restore();
+          ctx.font = 'bold 13px Rubik, sans-serif'; ctx.fillStyle = '#fff'; ctx.fillText(here ? '✔' : Math.round(dd) + L('מ\'', 'm'), cx + cw / 2 - 20, cy);
+        });
+        ctx.restore();
+      }
+      // the ball coming to you: a ring that closes on it, green when it's time
+      if(Gin && Gin.ball && Gin.ball.st === 'fly' && Gin.ball.to === sgMeK() && sgBG.scr){
+        var uu = Gin.ball.t / Gin.ball.T, ok = uu >= 0.86 && uu <= 1.1;
+        ctx.save(); ctx.lineWidth = 4; ctx.strokeStyle = ok ? 'rgba(80,255,140,0.95)' : 'rgba(255,255,255,0.7)';
+        ctx.beginPath(); ctx.arc(sgBG.scr.x, sgBG.scr.y, 14 + 70 * Math.max(0, 1 - uu), 0, Math.PI * 2); ctx.stroke(); ctx.restore();
+      }
       ctx.font = (W < 560 ? 'bold 15px' : 'bold 19px') + ' Suez One, Rubik, sans-serif';
-      ctx.strokeText(wm, W / 2, H * 0.3); ctx.fillText(wm, W / 2, H * 0.3);
-      ctx.font = 'bold 15px Rubik, sans-serif'; var wk2 = L('⬆️ ללכת · ⬇️ אחורה · ⬅️➡️ להסתובב', '⬆️ walk · ⬇️ back · ⬅️➡️ turn');
+      var wmY = Gin ? Math.max(96, H * 0.16) : H * 0.3; ctx.strokeText(wm, W / 2, wmY); ctx.fillText(wm, W / 2, wmY);
+      ctx.font = 'bold 15px Rubik, sans-serif'; var wk2 = Gin ? L('⬆️⬇️⬅️➡️ לרוץ לעיגול · רווח נגיעה · X מכה מיוחדת', '⬆️⬇️⬅️➡️ run to the ring · space touch · X special') : L('⬆️ ללכת · ⬇️ אחורה · ⬅️➡️ להסתובב', '⬆️ walk · ⬇️ back · ⬅️➡️ turn');
       ctx.strokeText(wk2, W / 2, H - 28); ctx.fillText(wk2, W / 2, H - 28); ctx.restore();
     }
     if(sg.phase === 'drive' && sg.car){
@@ -5815,6 +6097,8 @@
     var j = sgJoy(), v = down ? 1 : 0;
     // a stroke is a new press, not a key held down (auto-repeat)
     if(down && !rep && sg.phase === 'paddle' && (key === ' ' || key === 'ArrowUp' || key === 'w' || key === 'W') && !j.ku) sg.pad.taps++;
+    if(down && !rep && sg.phase === 'walk' && sgBG.in && (key === ' ' || key === 'Enter')) sgBallHit();
+    if(down && !rep && sg.phase === 'walk' && sgBG.in && (key === 'Shift' || key === 'x' || key === 'X')){ sgBallHit(true); return true; }
     if(key === 'ArrowUp' || key === 'w' || key === 'W' || key === ' ') j.ku = v;
     else if(key === 'ArrowDown' || key === 's' || key === 'S') j.kd = v;
     else if(key === 'ArrowLeft' || key === 'a' || key === 'A') j.kl = v;
@@ -5958,10 +6242,30 @@
     var list = sg.peak && sg.peak.shared ? sgNetList().slice(0, 7) : [];
     while(sg3.ghosts.length < list.length){ var nr = sg3MakeRider(T); sg3.scene.add(nr.g); sg3.ghosts.push({ r: nr, g: nr.g, key: '' }); }
     sg3.ghosts.forEach(function(G, i){
-      var o = list[i]; G.g.visible = !!o && o.ph !== 'd'; if(!o || o.ph === 'd') return;
+      var o = list[i], onFoot = !!o && o.ph === 'd' && o.wx !== undefined && !!sgLot;
+      G.g.visible = !!o && (o.ph !== 'd' || onFoot); if(!o || !G.g.visible) return;
       var R = G.r, rd = sgRiderOf(o.rd, o.lo), lkO = sgLookOf(o.bz, o.bd);
       if(G.key !== rd.id + lkO.key){ G.key = rd.id + lkO.key; R.suitM.color.set(rd.suit); R.skinM.color.set(rd.skin); R.hairM.color.set(rd.hair); R.accM.color.set(rd.accent);
-        sg3ApplyLook(T, R.board, R.stripe, lkO); }
+        sg3ApplyLook(T, R.board, R.stripe, lkO); G.stripeOn = R.stripe.visible; }
+      if(onFoot){
+        // walking (smoothed between their updates), board under the arm -- or standing in a game
+        G.nm = o.nm; G.sc = 0; G.riding = false;
+        var dtG = Math.min(0.1, Math.max(0, now - (G.lt || now))); G.lt = now;
+        var tx = sgLot.parkX + o.wx, tz = o.wz;
+        if(G.wx === undefined || Math.hypot(tx - G.wx, tz - G.wz) > 12){ G.wx = tx; G.wz = tz; }
+        var mv = Math.hypot(tx - G.wx, tz - G.wz); G.wx += (tx - G.wx) * Math.min(1, dtG * 6); G.wz += (tz - G.wz) * Math.min(1, dtG * 6);
+        G.wph = (G.wph || 0) + Math.min(mv, 5 * dtG) * 3.2 * (mv > 0.05 ? 1 : 0);
+        R.g.position.set(G.wx, sgGroundY(G.wz), G.wz); R.g.quaternion.set(0, 0, 0, 1); R.g.rotation.set(0, -(o.wh || 0), 0); R.body.rotation.set(0, 0, 0); R.vest.visible = false;
+        R.stripe.visible = false; R.fin.visible = false; R.board.visible = true;
+        var Gb = sgBG.list.filter(function(x){ return x.ppl.indexOf(o.id) >= 0; })[0];
+        var dvG = Gb ? sgBallDive(Gb, o.id) : 0;
+        if(Gb && (mv < 0.05 || dvG)){ sg3PoseBall(T, R, Gb.k, sgBallK(Gb, o.id), sgBallStyle(Gb, o.id)); R.g.rotation.set(0, -sgBallFace(Gb, o.id, G.wx - sgLot.parkX, G.wz), 0); R.board.visible = false; }
+        else sg3PoseWalk(T, R, G.wph, 0);
+        sg3Dive(T, R, dvG);
+        sg3Paddle(T, R, !!Gb && Gb.k === 'matkot'); G.walked = true;
+        return;
+      }
+      if(G.walked){ G.walked = false; R.body.position.set(0, 0, 0); R.board.visible = true; R.board.position.set(0, 0, 0); R.board.rotation.set(0, 0, 0); R.fin.visible = true; R.stripe.visible = G.stripeOn !== false; sg3Paddle(T, R, false); G.wx = undefined; }
       G.nm = o.nm; G.sc = o.sc; G.riding = o.ph === 'r' || o.ph === 'a';
       var gx = ((sg.peak.peakX || 0) + (o.x || 0)) * SG3_M, fwd, pos;
       // the wave where they are (the same set as yours): its profile at their x
@@ -6252,6 +6556,119 @@
     // the board under the arm: on its rail, deck out, nose ahead
     R.board.position.set(0.0, 0.98, 0.36); R.board.rotation.set(-Math.PI / 2, 0, 0.08);
   }
+  // a beach-goer for the ball games (the same look each time for the same seed)
+  function sg3NpcPerson(T, seed){
+    var suits = ['#e74c3c', '#2c3e50', '#ff5fa2', '#f1c40f', '#3498db', '#1abc9c', '#111418', '#9b59b6'], skins = ['#f1c7a0', '#e2ab80', '#c08a5e', '#8a5534', '#f6d7bd'], hairs = ['#1a0f08', '#7a4a22', '#d9b26a', '#3b2414'];
+    var r = sg3MakeRider(T); r.suitM.color.set(suits[seed % suits.length]); r.skinM.color.set(skins[(seed * 3 + 1) % skins.length]); r.hairM.color.set(hairs[(seed * 7 + 2) % hairs.length]);
+    r.accM.color.copy(r.suitM.color); [r.board, r.stripe, r.fin, r.vest].forEach(function(o){ o.visible = false; }); return r;
+  }
+  // a matkot paddle in the hand (made the first time it's needed)
+  function sg3Paddle(T, R, on){
+    if(!R.paddle){ if(!on) return; R.paddle = new T.Mesh(new T.CylinderGeometry(0.15, 0.15, 0.025, 18), new T.MeshStandardMaterial({ color: 0xc8102e, roughness: 0.5 }));
+      R.paddle.rotation.z = Math.PI / 2; R.paddle.position.set(0.02, 0.12, 0); R.extra.handB.add(R.paddle); }
+    R.paddle.visible = on;
+  }
+  // standing in a ball game: ready, and the touch (k: 0 ready .. 1 the moment of contact).
+  // style by the height of the touch: foot 0 a kick, 1 the knee, 2 a header;
+  // volley 0 a bump on the forearms, 1 a set over the head; matkot the forehand
+  function sg3PoseBall(T, R, kind, k, style){
+    sg3PoseWalk(T, R, 0, 0);
+    var P = R.parts, X = R.extra, V = function(x, y, z){ return new T.Vector3(x, y, z); };
+    function arm(u, f, hand, s0, hn, bend){ var el = s0.clone().lerp(hn, 0.5).add(bend); sg3Limb(T, u, s0, el); sg3Limb(T, f, el, hn); hand.position.copy(hn); }
+    var sB = V(0.03, 1.42, 0.19), sF = V(0.03, 1.42, -0.19);
+    if(style === 3){
+      if(kind === 'foot'){ var hp3 = V(0, 0.89, -0.1), kn3 = V(0.2 + 0.15 * k, 0.75 + 0.3 * k, -0.1), ft3 = V(0.35 + 0.3 * k, 0.55 + 0.65 * k, -0.1);
+        sg3Limb(T, P.thighF, hp3, kn3); sg3Limb(T, P.shinF, kn3, ft3); X.footF.position.copy(ft3).add(V(0.05, 0, 0)); R.head.rotation.set(0, 0, 0.25 * k);
+        arm(P.uArmB, P.fArmB, X.handB, sB, V(-0.15, 1.3, 0.5), V(0, 0, 0.04)); arm(P.uArmF, P.fArmF, X.handF, sF, V(-0.15, 1.3, -0.5), V(0, 0, -0.04)); }
+      else { arm(P.uArmB, P.fArmB, X.handB, sB, V(-0.05 + 0.5 * k, 2.15 - 0.55 * k, 0.2), V(-0.08, 0.05, 0.05)); arm(P.uArmF, P.fArmF, X.handF, sF, V(0.25, 1.75, -0.28), V(0.04, 0, -0.06)); }
+      return;
+    }
+    if(kind === 'foot'){
+      if(style === 2){                       // a header: up on the toes, the head snapping forward
+        R.head.position.set(0.07 + 0.1 * k, 1.7 + 0.03 * k, 0); R.head.rotation.set(0, 0, -0.1 - 0.55 * k); R.hair.position.copy(R.head.position).add(V(-0.02, 0.03, 0));
+      } else {                               // the front leg comes up to it: the instep, or the thigh
+        var hp = V(0, 0.89, -0.1), kn = style === 1 ? V(0.05 + 0.38 * k, 0.5 + 0.36 * k, -0.1) : V(0.04 + 0.16 * k, 0.5 + 0.06 * k, -0.1);
+        var ft = style === 1 ? V(kn.x + 0.06, Math.max(0.07, kn.y - 0.44), -0.1) : V(0.04 + 0.3 * k, 0.07 + 0.32 * k, -0.08);
+        sg3Limb(T, P.thighF, hp, kn); sg3Limb(T, P.shinF, kn, ft); X.footF.position.copy(ft).add(V(0.05, 0, 0));
+      }
+      arm(P.uArmB, P.fArmB, X.handB, sB, V(-0.02, 1.08 + 0.1 * k, 0.48), V(0, 0, 0.04)); arm(P.uArmF, P.fArmF, X.handF, sF, V(-0.02, 1.08 + 0.1 * k, -0.48), V(0, 0, -0.04));
+    } else if(kind === 'volley'){
+      if(style === 1){ arm(P.uArmB, P.fArmB, X.handB, sB, V(0.16, 1.9 + 0.12 * k, 0.11), V(0.06, 0.02, 0.1)); arm(P.uArmF, P.fArmF, X.handF, sF, V(0.16, 1.9 + 0.12 * k, -0.11), V(0.06, 0.02, -0.1)); }
+      else { arm(P.uArmB, P.fArmB, X.handB, sB, V(0.44, 0.98 + 0.16 * k, 0.04), V(0.02, 0, 0.03)); arm(P.uArmF, P.fArmF, X.handF, sF, V(0.44, 0.98 + 0.16 * k, -0.04), V(0.02, 0, -0.03));
+        // knees bent, low under the ball
+        [[P.thighB, P.shinB, X.footB, 1], [P.thighF, P.shinF, X.footF, -1]].forEach(function(Lg){ var hp2 = V(-0.04, 0.84 + 0.05 * k, Lg[3] * 0.12), kn2 = V(0.12, 0.48, Lg[3] * 0.14), ft2 = V(0.02, 0.07, Lg[3] * 0.16);
+          sg3Limb(T, Lg[0], hp2, kn2); sg3Limb(T, Lg[1], kn2, ft2); Lg[2].position.copy(ft2).add(V(0.05, 0, 0)); }); }
+    } else {
+      // matkot: the paddle back, then through the ball
+      arm(P.uArmB, P.fArmB, X.handB, sB, V(-0.1 + 0.5 * k, 1.22 + 0.06 * k, 0.45 - 0.2 * k), V(0, -0.05, 0.06));
+      arm(P.uArmF, P.fArmF, X.handF, sF, V(0.12, 1.05, -0.36), V(0, 0, -0.04));
+    }
+  }
+  // how far into the touch someone is: up as the ball comes, the snap at contact, easing off
+  function sgBallK(G, key){
+    var t0 = G.hitT[key], k = 0, nowS = sgBallNow();
+    if(t0 !== undefined){ var d = nowS - t0; k = d < 0.12 ? d / 0.12 : Math.max(0, 1 - (d - 0.12) / 0.35); }
+    var B = G.ball; if(B && B.st === 'fly' && B.to === key){ var u = B.t / B.T; k = Math.max(k, Math.max(0, Math.min(0.35, (u - 0.6) * 0.9))); }
+    return k;
+  }
+  function sgBallFace(G, key, x, z){ var B = G.ball;
+    if(B && B.st === 'fly' && B.to === key && B.lx !== undefined && B.t / B.T > 0.4){ var bp = sgBallXYZ(G); if(bp && Math.hypot(bp.x - x, bp.z - z) > 0.3) return Math.atan2(bp.z - z, bp.x - x); }
+    return Math.atan2(G.z - z, G.x - x); }
+  // a save: thrown out toward the ball, down onto the sand, then back up (0..1)
+  function sgBallDive(G, key){ var t0 = G.dive && G.dive[key]; if(t0 === undefined) return 0; var d = sgBallNow() - t0; if(d > 1.1) return 0;
+    return d < 0.15 ? d / 0.15 : d < 0.6 ? 1 : 1 - (d - 0.6) / 0.5; }
+  function sg3Dive(T, R, dv){ R.body.rotation.set(0, 0, -1.25 * dv); R.body.position.set(0.5 * dv, -0.55 * dv, 0); }
+  function sgBallStyle(G, key){ var B = G.ball, K = SG_BK[G.k];
+    if(B && B.sp && B.fr === key && B.t < 0.5) return 3; if(key === sgMeK() && G.spT && sgBallNow() - G.spT < 0.45) return 3; if(!B || (B.to !== key && B.fr !== key)) return 0; var hh = B.to === key && B.st === 'fly' ? B.h1 : B.h0;
+    return G.k === 'foot' ? (hh > 1.2 ? 2 : hh > 0.5 ? 1 : 0) : G.k === 'volley' ? (hh > 1.5 ? 1 : 0) : 0; }
+  function sg3BallMesh(T, kind){
+    var cv = document.createElement('canvas'); cv.width = 128; cv.height = 64; var c = cv.getContext('2d');
+    if(kind === 'foot'){ c.fillStyle = '#f7f7f2'; c.fillRect(0, 0, 128, 64); c.fillStyle = '#151515';
+      [[16, 14], [48, 30], [80, 12], [112, 32], [24, 50], [72, 52], [104, 54]].forEach(function(p){ c.beginPath(); for(var i = 0; i < 5; i++){ var a = i / 5 * Math.PI * 2 - Math.PI / 2; c.lineTo(p[0] + Math.cos(a) * 8, p[1] + Math.sin(a) * 7); } c.fill(); }); }
+    else if(kind === 'volley'){ ['#ffd23f', '#1f5fbf', '#ffffff', '#ffd23f', '#1f5fbf', '#ffffff'].forEach(function(col, i){ c.fillStyle = col; c.fillRect(0, i * 64 / 6, 128, 64 / 6 + 1); }); }
+    else { c.fillStyle = '#1b1b1b'; c.fillRect(0, 0, 128, 64); c.fillStyle = '#2f6fd6'; c.fillRect(0, 28, 128, 8); }
+    var r = kind === 'matkot' ? 0.05 : 0.11;
+    var ball = new T.Mesh(new T.SphereGeometry(r, 18, 12), new T.MeshStandardMaterial({ map: new T.CanvasTexture(cv), roughness: kind === 'matkot' ? 0.35 : 0.55 }));
+    var sh = new T.Mesh(new T.CircleGeometry(r * 1.4, 16), new T.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.28, depthWrite: false })); sh.rotation.x = -Math.PI / 2;
+    return { ball: ball, sh: sh, r: r };
+  }
+  function sg3Balls(T, now){
+    sg3.ballG = sg3.ballG || {};
+    var seen = {}, me = sgMeK(), on = !!sgLot && sg.spot && !sg.spot.tow && Math.abs(sg3.cam.position.x - (sgLot ? sgLot.parkX : 0)) < 170;
+    sgBG.scr = null;
+    if(on) sgBG.list.forEach(function(G, gi){
+      var C = sg3.ballG[G.id]; seen[G.id] = 1;
+      if(C && C.k !== G.k){ sg3.scene.remove(C.m.ball); sg3.scene.remove(C.m.sh); C.m.ball.geometry.dispose(); C.m.ball.material.map.dispose(); C.m.ball.material.dispose(); C.m.sh.geometry.dispose(); C.m.sh.material.dispose(); C.m = null; }
+      if(!C) C = sg3.ballG[G.id] = { k: G.k, m: null, npc: {}, pos: {} };
+      if(!C.m){ C.m = sg3BallMesh(T, G.k); C.k = G.k; sg3.scene.add(C.m.ball); sg3.scene.add(C.m.sh); }
+      var far = Math.abs(sg3.cam.position.x - (sgLot.parkX + G.x)) > 80;
+      // the beach-goers in it
+      Object.keys(C.npc).forEach(function(k){ C.npc[k].g.visible = !far && G.ppl.indexOf(k) >= 0; });
+      if(!far) G.ppl.forEach(function(key, i){ if(!sgIsNpc(key)) return;
+        var R = C.npc[key]; if(!R){ R = C.npc[key] = sg3NpcPerson(T, (gi * 5 + i * 3 + 1)); sg3.scene.add(R.g); }
+        var p = sgBallAt(G, key), wx = sgLot.parkX + p.x, cur = C.pos[key];
+        if(!cur) cur = C.pos[key] = { x: wx, z: p.z, ph: 0 }; cur.x += (wx - cur.x) * 0.5; cur.z += (p.z - cur.z) * 0.5;
+        var dv = sgBallDive(G, key);
+        R.g.position.set(cur.x, sgGroundY(cur.z), cur.z); R.g.rotation.set(0, -sgBallFace(G, key, cur.x - sgLot.parkX, cur.z), 0);
+        if(p.mv > 0.3 && !dv){ cur.ph += p.mv * 0.05 * 3.2; sg3PoseWalk(T, R, cur.ph, 0); } else sg3PoseBall(T, R, G.k, sgBallK(G, key), sgBallStyle(G, key));
+        sg3Dive(T, R, dv); sg3Paddle(T, R, G.k === 'matkot'); R.board.visible = false; });
+      // the ball and its shadow on the sand
+      // where your ball will come down: a ring on the sand, green when you're under it
+      if(!C.ring){ C.ring = new T.Mesh(new T.RingGeometry(0.42, 0.55, 28), new T.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.8, depthWrite: false })); C.ring.rotation.x = -Math.PI / 2; sg3.scene.add(C.ring); }
+      var Bq = G.ball, mine = G === sgBG.in && Bq && Bq.st === 'fly' && Bq.to === me && Bq.lx !== undefined;
+      C.ring.visible = !!mine && !far;
+      if(C.ring.visible){ var mpR = sgBallAt(G, me), inR = mpR && Math.hypot(mpR.x - Bq.lx, mpR.z - Bq.lz) <= SG_BK[G.k].reach;
+        C.ring.position.set(sgLot.parkX + Bq.lx, sgGroundY(Bq.lz) + 0.05, Bq.lz); C.ring.material.color.setHex(inR ? 0x50ff8c : 0xffffff); C.ring.scale.setScalar(1 + 0.6 * Math.max(0, 1 - Bq.t / Bq.T)); }
+      var bp = sgBallXYZ(G); C.m.ball.visible = C.m.sh.visible = !!bp && !far; if(!bp || far) return;
+      var gy = sgGroundY(bp.z), wxB = sgLot.parkX + bp.x;
+      C.m.ball.position.set(wxB, gy + bp.y, bp.z); C.m.ball.rotation.x += 0.15; C.m.ball.rotation.z += 0.07;
+      C.m.sh.position.set(wxB, gy + 0.03, bp.z); C.m.sh.material.opacity = 0.3 / (1 + bp.y * 0.6);
+      if(G === sgBG.in){ var q = C.m.ball.position.clone().project(sg3.cam); if(q.z < 1) sgBG.scr = { x: (q.x + 1) / 2 * W, y: (1 - q.y) / 2 * H }; }
+    });
+    Object.keys(sg3.ballG).forEach(function(id){ if(seen[id]) return; var C = sg3.ballG[id];
+      if(C.m){ [C.m.ball, C.m.sh].concat(C.ring ? [C.ring] : []).forEach(function(o){ sg3.scene.remove(o); o.geometry.dispose(); if(o.material.map) o.material.map.dispose(); o.material.dispose(); }); }
+      Object.keys(C.npc).forEach(function(k){ sg3Dispose(C.npc[k].g); }); delete sg3.ballG[id]; });
+  }
   // the beach around the lot: huts, the lifeguard tower, umbrellas and towels, people, showers, the sign
   function sg3Beach(T, now){
     var on = !!sgLot && sg.spot && !sg.spot.tow;
@@ -6265,6 +6682,7 @@
     var U = sg3.beach.userData, camX = sg3.cam.position.x - sgLot.parkX;
     function near(r, x){ var v = Math.abs(x - camX) < 70; r.g.visible = v; return v; }
     if(U.flag) U.flag.rotation.y = 0.25 * Math.sin(now * 3.1) + 0.1 * Math.sin(now * 7.3);
+    (U.marks || []).forEach(function(mk){ mk.s.position.y = SG_SAND_Y + 6.6 + 0.25 * Math.sin(now * 2 + mk.ph); });
     (U.walkers || []).forEach(function(wk){ var t = now * wk.sp + wk.ph, x = wk.x0 + Math.sin(t) * wk.range, dir = Math.cos(t) >= 0 ? 0 : Math.PI;
       if(!near(wk.r, x)) return;
       wk.r.g.position.set(x, sgGroundY(wk.z) + (wk.jog ? 0.04 * Math.abs(Math.sin(now * 9 + wk.ph)) : 0), wk.z); wk.r.g.rotation.set(0, -dir, 0);
@@ -6395,6 +6813,19 @@
       if(hu.id === 'salon'){ [-1, 1].forEach(function(s){ var pl = new T.Mesh(new T.SphereGeometry(0.35, 12, 10), m(0x3c9a4a, 0.9)); pl.position.set(hu.x + s * 2.9, SG_SAND_Y + 0.6, SG_HUT_Z - 2.7); g.add(pl);
         box(0.5, 0.4, 0.5, m(0xffffff, 0.5), hu.x + s * 2.9, SG_SAND_Y + 0.2, SG_HUT_Z - 2.7); }); }
     });
+    // over each hut its sign floats high, seen from all over the beach; a zebra crossing and a boardwalk lead to the doors
+    U.marks = [];
+    SG_HUTS.forEach(function(hu, i){ var mcv = document.createElement('canvas'); mcv.width = mcv.height = 128; var mc = mcv.getContext('2d');
+      mc.fillStyle = '#' + ('000000' + hu.color.toString(16)).slice(-6); mc.beginPath(); mc.arc(64, 60, 54, 0, Math.PI * 2); mc.fill(); mc.lineWidth = 7; mc.strokeStyle = '#ffffff'; mc.stroke();
+      mc.beginPath(); mc.moveTo(48, 108); mc.lineTo(80, 108); mc.lineTo(64, 127); mc.closePath(); mc.fillStyle = '#ffffff'; mc.fill();
+      mc.font = '64px serif'; mc.textAlign = 'center'; mc.textBaseline = 'middle'; mc.fillText(hu.name.split(' ')[0], 64, 64);
+      var spr = new T.Sprite(new T.SpriteMaterial({ map: (function(){ var mt = new T.CanvasTexture(mcv); mt.encoding = T.sRGBEncoding; return mt; })(), fog: false, toneMapped: false })); spr.scale.set(2.3, 2.3, 1); spr.position.set(hu.x, SG_SAND_Y + 6.6, SG_HUT_Z); g.add(spr); U.marks.push({ s: spr, ph: i * 1.3 }); });
+    var zebM = m(0xf2f2f2, 0.8); for(var zs = 188.9; zs < 195.3; zs += 1.0){ var zb = box(3.2, 0.02, 0.5, zebM, -5, SG_SAND_Y + 0.035, zs); zb.material.polygonOffset = true; zb.material.polygonOffsetFactor = -2; }
+    var bwM = new T.MeshStandardMaterial({ color: 0xa47a4c, roughness: 0.9, map: (function(){ var cv = document.createElement('canvas'); cv.width = 64; cv.height = 64; var c = cv.getContext('2d'); c.fillStyle = '#b08455'; c.fillRect(0, 0, 64, 64);
+      c.fillStyle = 'rgba(60,35,15,0.55)'; for(var pl = 0; pl < 4; pl++) c.fillRect(pl * 16, 0, 2, 64); var tx = new T.CanvasTexture(cv); tx.wrapS = tx.wrapT = T.RepeatWrapping; tx.repeat.set(30, 2); return tx; })() });
+    box(56, 0.06, 2.6, bwM, 2.5, SG_SAND_Y + 0.04, 197.0);
+    var sgn = new T.Mesh(new T.PlaneGeometry(3.0, 1.0), new T.MeshBasicMaterial({ map: signTex([[L('🛍️ חנויות ⬆ מעבר לכביש', '🛍️ Shops ⬆ across the road'), 30, 44]], '#27ae60', '#ffffff', 384, 72), side: T.DoubleSide }));
+    sgn.position.set(-15, SG_SAND_Y + 2.3, 182.6); sgn.rotation.y = Math.PI; g.add(sgn); post(-16.3, 182.62, 1.8, 0.08, steel); post(-13.7, 182.62, 1.8, 0.08, steel);
     // the lifeguard's tower by the water, with its flag
     var tx = 24, tz = 182.2;
     [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(function(q){ post(tx + q[0] * 1.1, tz + q[1] * 1.1, 3.0, 0.16, wood); });
@@ -6414,6 +6845,7 @@
     for(var u = 0; u < 22; u++){
       var side = u % 2 ? 1 : -1, ux = side * (30 + rnd() * 95), uz = 181.2 + rnd() * 5.6;
       if(Math.abs(ux - tx) < 4) ux += 6;
+      if(Math.abs(ux + 48) < 6 || Math.abs(ux - 47) < 6) ux += side * 12;               // the ball circles' sand
       var col = colors[Math.floor(rnd() * colors.length)];
       post(ux, uz, 2.4, 0.06, white);
       var can = new T.Mesh(new T.ConeGeometry(1.4, 0.55, 12, 1, true), new T.MeshStandardMaterial({ color: col, side: T.DoubleSide, roughness: 0.7 })); can.position.set(ux, SG_SAND_Y + 2.45, uz); g.add(can);
@@ -6434,7 +6866,7 @@
     // walking and jogging along the water
     U.walkers = [0, 1, 2, 3].map(function(k){ var jog = k % 2 === 1; return { r: person(), x0: (k - 2.5) * 30 + rnd() * 10, z: 179.4 - (k % 3) * 0.6, range: 22 + rnd() * 20, sp: (jog ? 0.13 : 0.06) + rnd() * 0.03, ph: rnd() * 6, jog: jog }; });
     // matkot: two pairs hitting the ball back and forth on the wet sand
-    U.matkot = [-46, 52].map(function(mx){ var a = person(), b = person(), ball = new T.Mesh(new T.SphereGeometry(0.06, 10, 8), m(0x1b1b1b, 0.4)); g.add(ball);
+    U.matkot = [-84, 86].map(function(mx){ var a = person(), b = person(), ball = new T.Mesh(new T.SphereGeometry(0.06, 10, 8), m(0x1b1b1b, 0.4)); g.add(ball);
       [a, b].forEach(function(pp){ var pad = new T.Mesh(new T.CylinderGeometry(0.15, 0.15, 0.03, 16), m(0xc8102e, 0.5)); pad.rotation.z = Math.PI / 2; pad.position.y = 0.1; pp.extra.handB.add(pad); });
       return { a: a, b: b, ball: ball, x: mx, z: 180.4, gap: 7, ph: rnd() * 4 }; });
     // swimming in the shallows
@@ -7035,6 +7467,7 @@
     sg3Ghosts(T, Hm, rows, faceAt(0)[0] + 0.6, zOff, now);
     sg3Cars(T, now);
     sg3Beach(T, now);
+    sg3Balls(T, now);
     sg3City(T, now);
     if(sg3.shore.ftex){ var wv = Math.sin(now * 0.55); sg3.shore.ftex.offset.set(now * 0.004, 0.18 * wv); sg3.shore.wash.position.z = 176 + 0.9 * wv; sg3.shore.wash.material.opacity = 0.35 + 0.25 * (0.5 + 0.5 * wv); }
     var side = new T.Vector3().crossVectors(fwd, up).normalize();
@@ -7074,7 +7507,20 @@
     R.body.children.forEach(function(ch){ if(ch !== R.board && ch !== R.stripe && ch !== R.fin) ch.visible = !povNow; });
     sg3Pose(sg.phase === 'paddle' ? 0.05 : sg.phase === 'air' && sg.air && sg.air.sup > 0.01 ? 0.3 : sg.tube > 0.1 ? 0.95 : sg.phase === 'ride' && (sg.joy && sg.joy.y < -0.3) ? 0.25 : 0.65);
     if(sg.phase === 'paddle') sg3PoseProne(T, R, sg.pad.kL || 0, sg.pad.kR || 0);
-    if(sg.phase === 'walk' && sg.walk){ sg3PoseWalk(T, R, sg.walk.ph, 0); R.stripe.visible = false; R.fin.visible = false; }
+    if(sg.phase === 'walk' && sg.walk){ sg3PoseWalk(T, R, sg.walk.ph, 0); R.stripe.visible = false; R.fin.visible = false;
+      if(sgBG.in){ var Gm = sgBG.in, mk = sgMeK(), mvd = sg3.lastWk && Math.hypot(sg.walk.x - sg3.lastWk.x, sg.walk.z - sg3.lastWk.z) > 0.004, dvM = sgBallDive(Gm, mk);
+        if(mvd && !dvM) sg3PoseWalk(T, R, sg.walk.ph, 0); else sg3PoseBall(T, R, Gm.k, sgBallK(Gm, mk), sgBallStyle(Gm, mk));
+        var fcM = sgBallFace(Gm, mk, sg.walk.x - sgLot.parkX, sg.walk.z), qM = new T.Quaternion().setFromAxisAngle(new T.Vector3(0, 1, 0), -fcM); R.g.quaternion.copy(qM);
+        sg3Dive(T, R, dvM); R.board.visible = !!sgBG.in.boardOn; }
+      else if(R.body.position.y !== 0) R.body.position.set(0, 0, 0);
+      sg3.lastWk = { x: sg.walk.x, z: sg.walk.z };
+      sg3Paddle(T, R, !!sgBG.in && sgBG.in.k === 'matkot'); }
+    else if(R.paddle && R.paddle.visible) R.paddle.visible = false;
+    // your board lying on the sand while you play
+    if(!sg3.sandBoard){ sg3.sandBoard = sg3LooseBoard(T); sg3.scene.add(sg3.sandBoard); sg3.sandBoard.userData.key = ''; }
+    sg3.sandBoard.visible = sg.phase === 'walk' && !!sgBG.in && !!sgBG.board;
+    if(sg3.sandBoard.visible){ var lkS = sgMyLook(); if(sg3.sandBoard.userData.key !== lkS.key){ sg3.sandBoard.userData.key = lkS.key; sg3ApplyLook(T, sg3.sandBoard, sg3.sandBoard.userData.stringer, lkS); }
+      sg3.sandBoard.position.set(sgBG.board.x, sgGroundY(sgBG.board.z) + 0.06, sgBG.board.z); sg3.sandBoard.rotation.set(0, -sgBG.board.hd, 0); }
     else if(R.board.position.y !== 0){ R.board.position.set(0, 0, 0); R.board.rotation.set(0, 0, 0); R.fin.visible = true; R.stripe.visible = sgMyLook().line === 1; }
     if(sg.phase === 'air' && sg.air && sg.air.sup > 0.01){
       // superman: the body swings out flat above the board, legs kicked back,
@@ -7270,6 +7716,9 @@
     if(sg.phase === 'walk' && sg.walk){
       var Wc = sg.walk, wf = new T.Vector3(Math.cos(Wc.hd), 0, Math.sin(Wc.hd)), gyc = sgGroundY(Wc.z);
       var we = new T.Vector3(Wc.x + 1.2, Math.max(gyc, 0) + 2.1, Wc.z).addScaledVector(wf, -4.2), wt = new T.Vector3(Wc.x, gyc + 1.0, Wc.z).addScaledVector(wf, 4);
+      // in a ball game: a little higher and further back, looking into the circle
+      if(sgBG.in && sgLot){ var cG = new T.Vector3(sgLot.parkX + sgBG.in.x, sgGroundY(sgBG.in.z) + 1.5, sgBG.in.z);
+        we = new T.Vector3(Wc.x, Math.max(gyc, 0) + 3.3, Wc.z).addScaledVector(wf, -4.6).add(new T.Vector3(-wf.z, 0, wf.x).multiplyScalar(0.7)); wt = cG; }
       if(!sg3.wkE || Wc.t < 0.05){ sg3.wkE = sg3.drE ? sg3.drE.clone() : we.clone(); sg3.wkT = sg3.drT ? sg3.drT.clone() : wt.clone(); }
       sg3.wkE.lerp(we, Math.min(1, dtR * 3)); sg3.wkT.lerp(wt, Math.min(1, dtR * 4));
       sg3.cam.up.set(0, 1, 0); sg3.cam.position.copy(sg3.wkE); sg3.cam.lookAt(sg3.wkT); U2.uCam.value.copy(sg3.cam.position);
@@ -7346,7 +7795,7 @@
     sgRenderMenu();
     sgMenu.hidden = false;
   }
-  function sgPeakBtnsOff(){ sgBoost = { shells: 1, paddle: 1, ate: {} }; sgHutOpen = null; document.getElementById('sgHut').hidden = true; document.getElementById('sgDoorBtn').hidden = true; document.getElementById('sgPeakBtn').hidden = true; document.getElementById('sgExitBtn').hidden = true; document.getElementById('sgSkipBtn').hidden = true; sgNetLeave(); sgLot = null; }
+  function sgPeakBtnsOff(){ sgBG.in = null; sgBG.pend = null; document.getElementById('sgBallBtn').hidden = true; document.getElementById('sgHitBtn').hidden = true; sgBoost = { shells: 1, paddle: 1, ate: {} }; sgHutOpen = null; document.getElementById('sgHut').hidden = true; document.getElementById('sgDoorBtn').hidden = true; document.getElementById('sgPeakBtn').hidden = true; document.getElementById('sgExitBtn').hidden = true; document.getElementById('sgBeachBtn').hidden = true; document.getElementById('sgSkipBtn').hidden = true; sgNetLeave(); sgLot = null; }
   function sgLeave(){
     sgPeakBtnsOff();
     sg = { active: false, phase: 'menu' };
@@ -7462,6 +7911,15 @@
     sgAddText(L('🚀 השתגרתם לפיק!', '🚀 You\'re at the peak!'), '#7fffb0');
   });
   document.getElementById('sgExitBtn').addEventListener('click', function(e){ e.stopPropagation(); sgOpenMenu(); });
+  // out of the water where you are: up in the shallows, board under the arm, facing the beach
+  document.getElementById('sgBeachBtn').addEventListener('click', function(e){
+    e.stopPropagation();
+    if(sg.phase !== 'paddle' || !sgLot || sg.tour) return;
+    var wx = Math.max(sgLot.parkX - 120, Math.min(sgLot.parkX + 120, sg.x * SG3_M));
+    sg.walk = { x: wx, z: SG_EDGE_Z + 0.6, t: 0.9, ph: 0, hd: Math.PI / 2 };
+    sg.phase = 'walk'; sg.x = wx / SG3_M; sg3.wkE = null; sg3.drE = null; sg3.drT = null;
+    sgAddText(L('🏖️ יצאתם מהמים — החנויות והמשחקים בחוף', '🏖️ Out of the water — the shops and games are on the beach'), '#7fffb0');
+  });
   // skip the drive: the car's parked in the lot, you're in the water
   document.getElementById('sgSkipBtn').addEventListener('click', function(e){
     e.stopPropagation();
@@ -7486,9 +7944,23 @@
     sgHutOpen = id;
     if(id === 'surf'){ sgRenderShop(); sgShop.hidden = false; return; }
     var el = document.getElementById('sgHutBody'); el.innerHTML = '';
-    document.getElementById('sgHutTitle').textContent = sgItem(SG_HUTS, id).name;
+    document.getElementById('sgHutTitle').textContent = id === 'play' ? L('⚽ הכדורים שלכם', '⚽ Your balls') : sgItem(SG_HUTS, id).name;
     document.getElementById('sgHutShells').textContent = '🐚 ' + fmtScore(sgSave.shells);
-    if(id === 'kiosk'){
+    if(id === 'balls' || id === 'play'){
+      var bg2 = document.createElement('div'); bg2.className = 'sg-grid'; el.appendChild(bg2); sgSave.balls = sgSave.balls || {};
+      SG_BALLS.forEach(function(it){ var has = !!sgSave.balls[it.id], best = (sgSave.ballBest || {})[it.id] || 0;
+        if(id === 'play' && !has) return;
+        var sub = it.desc + (best ? L(' · שיא רצף: ', ' · best streak: ') + best : '');
+        var btx = id === 'play' ? L('▶ שחקו', '▶ Play') : has ? L('✔ שלכם', '✔ Yours') : '🐚 ' + it.price;
+        bg2.appendChild(sgCard(it.icon + ' ' + it.name, sub, btx, id === 'play' || (!has && sgSave.shells >= it.price), function(){
+          if(id === 'play'){ document.getElementById('sgHut').hidden = true; sgHutOpen = null; sgBallStart(it.id); return; }
+          sgSave.shells -= it.price; sgSave.balls[it.id] = 1; sgStore(); sgOpenHut('balls');
+          sgAddText(it.icon + L(' קניתם ', ' You bought a ') + it.name + L('! צאו לחול ולחצו "שחקו בכדור"', '! Out on the sand, tap "Play with your ball"'), '#7fffb0');
+        }, function(g){ g.font = '44px serif'; g.textAlign = 'center'; g.fillText(it.icon, 48, 50); })); });
+      var nt = document.createElement('p'); nt.className = 'sg-sub'; nt.style.cssText = 'font:13px Rubik,sans-serif;color:#5a3b1a;text-align:center;margin:8px 0 0';
+      nt.textContent = L('במעגלים בחוף אפשר להצטרף גם בלי כדור. עם כדור משלכם — משחקים איפה שרוצים, וחברים בחוף יכולים להצטרף.', 'You can join the circles on the beach without a ball. With your own — play anywhere, and friends on the beach can join.');
+      el.appendChild(nt);
+    } else if(id === 'kiosk'){
       var gr = document.createElement('div'); gr.className = 'sg-grid'; el.appendChild(gr);
       SG_KIOSK.forEach(function(it){ var had = sgBoost.ate[it.id];
         gr.appendChild(sgCard(it.icon + ' ' + it.name, it.desc, had ? L('✔ נהנית!', '✔ Enjoyed!') : '🐚 ' + it.price, !had && sgSave.shells >= it.price, function(){
@@ -7513,6 +7985,15 @@
     document.getElementById('sgHut').hidden = false;
   }
   document.getElementById('sgHutBack').addEventListener('click', function(){ document.getElementById('sgHut').hidden = true; sgHutOpen = null; });
+  document.getElementById('sgBallBtn').addEventListener('click', function(e){
+    e.stopPropagation(); if(sg.phase !== 'walk' || !sg.walk) return;
+    if(sgBG.in){ sgBallLeave(); return; }
+    if(sgBG.pend) return;
+    var bn = sgBallNear(); if(bn){ sgBallJoin(bn); return; }
+    var own = Object.keys(sgSave.balls || {}); if(own.length === 1) sgBallStart(own[0]); else if(own.length) sgOpenHut('play');
+  });
+  ['pointerdown', 'touchstart'].forEach(function(evn){ document.getElementById('sgSpecBtn').addEventListener(evn, function(e){ e.stopPropagation(); e.preventDefault(); if(evn === 'pointerdown' || !window.PointerEvent) sgBallHit(true); }, { passive: false }); });
+  ['pointerdown', 'touchstart'].forEach(function(evn){ document.getElementById('sgHitBtn').addEventListener(evn, function(e){ e.stopPropagation(); e.preventDefault(); if(evn === 'pointerdown' || !window.PointerEvent) sgBallHit(); }, { passive: false }); });
   document.getElementById('sgDoorBtn').addEventListener('click', function(e){ e.stopPropagation(); if(sg.phase === 'walk' && sg.walk && sg.walk.door) sgOpenHut(sg.walk.door); });
   document.getElementById('sgAgainBtn').addEventListener('click', function(){
     if(sgTourNext){ sgOver.hidden = true; if(surfCanEnter(surfMine(surfState))) surfEnterHeat(); else { surfSendPend(sgTourNext); sgOpenMenu(); } sgTourNext = null; return; }
@@ -13509,7 +13990,7 @@
   // never while the name field is being typed in. Everything worth keeping
   // (coins, skins, name, league) is in localStorage, so a reload loses nothing.
   // 'dev' = a local or preview copy: the updater stays off entirely.
-  var BUILD_VERSION = '20261029-153436';
+  var BUILD_VERSION = '20261029-164810';
   var UPDATE_CHECK_MS = 60000;
   var UPDATE_TRIED_KEY = 'canyonChaseTriedUpdate';
   var pendingSubmits = 0;
