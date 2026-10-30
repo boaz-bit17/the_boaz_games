@@ -700,6 +700,24 @@
   .sg-skip-btn{ top:12px; left:auto; right:12px; background:rgba(0,30,50,.6); }
   .sg-ball-btn{ top:auto; bottom:150px; left:50%; transform:translateX(-50%); background:rgba(40,110,210,.92); font-size:17px; height:46px; white-space:nowrap; }
   .sg-ball-btn.is-leave{ bottom:16px; left:16px; transform:none; height:40px; font-size:15px; background:rgba(0,30,50,.6); }
+  .sg-sp-logo{ display:inline-flex; align-items:center; justify-content:center; width:30px; height:30px; border-radius:50%; font-size:17px; border:2px solid #fff; box-shadow:0 1px 3px rgba(0,0,0,.3); flex:0 0 auto; }
+  .sg-sp-logo.is-big{ width:54px; height:54px; font-size:30px; }
+  .sg-sp-card{ display:flex; flex-wrap:wrap; gap:10px; align-items:center; padding:10px; margin:4px 0 8px; border:3px solid; border-radius:14px; background:#fffaf0; font:13px Rubik, sans-serif; color:#3a2614; text-align:start; }
+  .sg-sp-card > div{ flex:1; min-width:160px; }
+  .sg-sp-card b{ font-size:16px; }
+  .sg-sp-bar{ display:block; height:8px; border-radius:4px; background:rgba(90,59,26,.15); overflow:hidden; margin:5px 0 3px; }
+  .sg-sp-bar em{ display:block; height:100%; }
+  .sg-sp-accept{ width:100%; margin:4px 0 0; }
+  .sg-sp-ms{ display:flex; gap:8px; align-items:center; padding:7px 8px; margin:4px 0; border-radius:10px; background:#fff7e6; font:13px Rubik, sans-serif; color:#3a2614; text-align:start; }
+  .sg-sp-ms .sg-sp-t{ flex:1; }
+  .sg-sp-ms .sg-sp-rw{ font-weight:bold; white-space:nowrap; }
+  .sg-sp-ms.is-done{ opacity:.6; text-decoration:line-through; }
+  .sg-sp-ms.is-lock{ justify-content:center; color:#8a6a4a; }
+  .sg-sp-row{ display:flex; gap:8px; align-items:center; padding:5px 4px; font:13px Rubik, sans-serif; color:#3a2614; border-bottom:1px solid rgba(90,59,26,.12); }
+  .sg-sp-row span:last-child{ margin-inline-start:auto; font-size:12px; }
+  .sg-over-sp{ font:bold 13px Rubik, sans-serif; color:#b8860b; text-align:center; margin:4px 0 8px; }
+  #sgSpBtn.is-hot{ background:linear-gradient(135deg,#ffd447,#ff9a1f); animation:sgHot 1.2s ease-in-out infinite; }
+  @keyframes sgHot{ 50%{ transform:scale(1.04); } }
   .sg-fc-tabs{ display:flex; gap:6px; overflow-x:auto; padding:2px 0 8px; }
   .sg-fc-tab{ flex:0 0 auto; padding:8px 12px; border-radius:10px; border:2px solid rgba(90,59,26,.25); background:#fff7e6; font:bold 13px Rubik, sans-serif; color:#3a2614; cursor:pointer; }
   .sg-fc-tab.is-on{ border-color:#1f6fd1; background:#dcecff; }
@@ -721,6 +739,7 @@
   .sg-fc-line{ font-weight:bold; }
   .sg-fc-chip{ display:inline-block; padding:2px 7px; margin:2px 3px 0 0; border-radius:7px; color:#fff; font-weight:bold; }
   .sg-spec-btn{ top:auto; bottom:196px; left:auto; right:30px; width:88px; height:88px; border-radius:50%; padding:0; background:rgba(200,40,60,.92); font-size:15px; }
+  .sg-home-btn{ top:auto; bottom:90px; left:50%; transform:translateX(-50%); background:rgba(150,90,40,.92); font-size:17px; height:46px; white-space:nowrap; }
   .sg-hit-btn{ top:auto; bottom:70px; left:auto; right:18px; width:112px; height:112px; border-radius:50%; padding:0; background:rgba(255,140,40,.92); font-size:19px; }
   .sg-row{ display:flex; gap:8px; }
   .sg-row .go-btn{ margin:0; }
@@ -1317,6 +1336,7 @@
   </div>
   <button class="sg-peak-btn sg-door-btn" id="sgDoorBtn" type="button" hidden>🚪 היכנס</button>
   <button class="sg-peak-btn sg-ball-btn" id="sgBallBtn" type="button" hidden></button>
+  <button class="sg-peak-btn sg-home-btn" id="sgHomeBtn" type="button" hidden></button>
   <button class="sg-peak-btn sg-hit-btn" id="sgHitBtn" type="button" hidden></button>
   <button class="sg-peak-btn sg-spec-btn" id="sgSpecBtn" type="button" hidden></button>
 
@@ -4667,7 +4687,11 @@
     { id: 'ocean',   name: L('אוקיינוס', 'Ocean'),    price: 800,   deck: '#1fb5c9', stripe: '#ffffff' },
     { id: 'shark',   name: L('כריש', 'Shark'),        price: 1300,  deck: '#8c9aa8', stripe: '#2e3b48' },
     { id: 'sunset',  name: L('שקיעה', 'Sunset'),      price: 2000,  deck: '#ff5e62', stripe: '#ffd447' },
-    { id: 'gold',    name: L('זהב', 'Gold'),          price: 3000,  deck: '#ffd447', stripe: '#b8860b', glow: '#fff1a8' }
+    { id: 'gold',    name: L('זהב', 'Gold'),          price: 3000,  deck: '#ffd447', stripe: '#b8860b', glow: '#fff1a8' },
+    { id: 'spFox',   name: L('שועל גלים', 'Wavefox'),  price: 0, sp: 'fox',   deck: '#ff7a1a', stripe: '#ffffff' },
+    { id: 'spCoral', name: L('קורלון', 'Coralon'),     price: 0, sp: 'coral', deck: '#17b3a3', stripe: '#ff6f61' },
+    { id: 'spTide',  name: L('טיידג\'ט', 'Tidejet'),   price: 0, sp: 'tide',  deck: '#13294b', stripe: '#ffd23f' },
+    { id: 'spStar',  name: L('כוכב מלח', 'Brinestar'), price: 0, sp: 'star',  deck: '#f7f4ec', stripe: '#c9a227', glow: '#fff6c8' }
   ];
   var SG_RIDERS = [
     { id: 'grom',    name: L('הגרום', 'The Grom'),              price: 0,     skin: '#f1c7a0', hair: '#7a4a22', suit: '#1d9bf0', accent: '#ffd400' },
@@ -4736,7 +4760,7 @@
   function sgLen(){ return sgSave.len || 74; }
   function sgSz(len){ return ((len || sgLen()) - 74) / 36; }       // -0.22 (5'6") .. 0 (6'2") .. 1 (9'2")
   // (marked left-to-right, so 7'2" doesn't come out flipped inside Hebrew)
-  function sgFt(inch){ return '‎' + Math.floor(inch / 12) + '\'' + (inch % 12) + '"‎'; }
+  function sgFt(inch){ return '‭' + Math.floor(inch / 12) + '\'' + (inch % 12) + '"‬'; }
   // what fits you: by your level, and the day's waves at this beach
   function sgRecLen(spot){
     var lvl = 0; Object.keys(sgSave.best10 || {}).forEach(function(k){ lvl = Math.max(lvl, sgSave.best10[k] || 0); });
@@ -4746,6 +4770,75 @@
     if(spot && spot.id === 'air') want = Math.min(want, 70);
     var best = SG_LENS[0]; SG_LENS.forEach(function(s){ if(Math.abs(s.len - want) < Math.abs(best.len - want)) best = s; });
     return { len: best.len, why: L('לרמה שלכם (', 'For your level (') + why + ')' + gw };
+  }
+  // ---- sponsors: made-up brands, one after the other; each a contract of six missions ----
+  // mission kinds: score (v, spot?), move (m: [he, en] in the move's name, n per wave), barrel (v s, spot?), complete (spot),
+  // waves (n, peak?), onshore (v), long (v on 8'0"+), ball (n streak). rw: shells; the last one gives the board too
+  var SG_SPONSORS = [
+    { id: 'fox', name: L('שועל גלים', 'Wavefox'), icon: '🦊', col: '#ff7a1a', need: 5, board: 'spFox', ms: [
+      { k: 'score', v: 5.5, rw: 150 }, { k: 'move', m: ['קאטבק', 'Cutback'], n: 2, rw: 150 }, { k: 'waves', n: 10, rw: 200 },
+      { k: 'complete', spot: 'olga', rw: 200 }, { k: 'move', m: ['360', '360'], n: 1, rw: 250 }, { k: 'score', v: 6.5, rw: 300 } ] },
+    { id: 'coral', name: L('קורלון', 'Coralon'), icon: '🪸', col: '#17b3a3', need: 6.5, board: 'spCoral', ms: [
+      { k: 'barrel', v: 2, rw: 250 }, { k: 'score', v: 6, spot: 'pipe', rw: 300 }, { k: 'move', m: ['אוף דה ליפ', 'Off the lip'], n: 2, rw: 250 },
+      { k: 'long', v: 6, rw: 300 }, { k: 'ball', n: 15, rw: 250 }, { k: 'score', v: 7.5, rw: 400 } ] },
+    { id: 'tide', name: L('טיידג\'ט', 'Tidejet'), icon: '🚤', col: '#13294b', need: 7.5, board: 'spTide', ms: [
+      { k: 'move', m: ['סופרמן', 'Superman'], n: 1, rw: 350 }, { k: 'move', m: ['סלטה', 'Backflip'], n: 1, rw: 400 }, { k: 'onshore', v: 6.5, rw: 350 },
+      { k: 'barrel', v: 4, spot: 'pipe', rw: 450 }, { k: 'waves', n: 20, peak: true, rw: 400 }, { k: 'score', v: 8.5, rw: 600 } ] },
+    { id: 'star', name: L('כוכב מלח', 'Brinestar'), icon: '⭐', col: '#c9a227', need: 8.5, board: 'spStar', ms: [
+      { k: 'complete', spot: 'naz', rw: 600 }, { k: 'move', m: ['רודאו', 'Rodeo'], n: 1, rw: 800 }, { k: 'barrel', v: 6, rw: 700 },
+      { k: 'score', v: 9, spot: 'pipe', rw: 800 }, { k: 'ball', n: 30, rw: 600 }, { k: 'score', v: 9.5, rw: 1200 } ] }
+  ];
+  function sgSp(){ var s = sgSave.sp = sgSave.sp || { cur: null, done: {}, c: {}, fin: [] }; s.done = s.done || {}; s.c = s.c || {}; s.fin = s.fin || []; return s; }
+  function sgBestAll(){ var b = 0; Object.keys(sgSave.best10 || {}).forEach(function(k){ b = Math.max(b, sgSave.best10[k] || 0); }); return b; }
+  // the next brand that wants you (in order, once you surf well enough)
+  function sgSpOffer(){ var S = sgSp(); if(S.cur) return null; var nx = SG_SPONSORS.filter(function(p){ return S.fin.indexOf(p.id) < 0; })[0]; return nx && sgBestAll() >= nx.need ? nx : null; }
+  function sgSpName(id){ return sgItem(SG_SPOTS, id).name; }
+  function sgMsText(ms){
+    var mv = ms.m ? L(ms.m[0], ms.m[1]) : '', ft8 = sgFt(96);
+    switch(ms.k){
+      case 'score': return ms.spot ? L('קבלו ' + ms.v + '+ בגל ב' + sgSpName(ms.spot), 'Score ' + ms.v + '+ on a wave at ' + sgSpName(ms.spot)) : L('קבלו ציון ' + ms.v + '+ בגל', 'Score ' + ms.v + '+ on a wave');
+      case 'move': return ms.n > 1 ? L('עשו ' + ms.n + ' ' + mv + ' בגל אחד', 'Do ' + ms.n + ' ' + mv + 's on one wave') : L('עשו ' + mv, 'Land a ' + mv);
+      case 'barrel': return L('צינור של ' + ms.v + ' שניות' + (ms.spot ? ' ב' + sgSpName(ms.spot) : ''), 'A ' + ms.v + '-second barrel' + (ms.spot ? ' at ' + sgSpName(ms.spot) : ''));
+      case 'complete': return L('גלשו גל עד הסוף ב' + sgSpName(ms.spot), 'Ride a wave all the way at ' + sgSpName(ms.spot));
+      case 'waves': return ms.peak ? L('תפסו ' + ms.n + ' גלים בפיק', 'Catch ' + ms.n + ' waves at the peak') : L('תפסו ' + ms.n + ' גלים', 'Catch ' + ms.n + ' waves');
+      case 'onshore': return L('קבלו ' + ms.v + '+ ביום עם רוח ים חזקה', 'Score ' + ms.v + '+ on a strong-onshore day');
+      case 'long': return L('קבלו ' + ms.v + '+ על גלשן ' + ft8 + ' ומעלה', 'Score ' + ms.v + '+ on a ' + ft8 + ' or longer');
+      case 'ball': return L('רצף ' + ms.n + ' בכדור בחוף', 'A ' + ms.n + ' streak with a ball on the beach');
+    }
+    return '';
+  }
+  // the three open missions of the contract (the first three not done yet)
+  function sgSpOpen(){ var S = sgSp(), P = S.cur && sgItem(SG_SPONSORS, S.cur); if(!P) return []; var o = [];
+    P.ms.forEach(function(ms, i){ if(!S.done[i] && o.length < 3) o.push(i); }); return o; }
+  // something happened (a wave ended, a ball streak): does it finish a mission?
+  function sgSponsorEvent(ev){
+    var S = sgSp(), P = S.cur && sgItem(SG_SPONSORS, S.cur); if(!P || P.id !== S.cur) return '';
+    var said = [];
+    sgSpOpen().forEach(function(i){
+      var ms = P.ms[i], ok = false;
+      if(ev.k === 'wave'){
+        var atSpot = !ms.spot || ms.spot === ev.spot;
+        if(ms.k === 'score') ok = atSpot && ev.final >= ms.v;
+        else if(ms.k === 'move'){ var kw = L(ms.m[0], ms.m[1]); ok = ev.moves.filter(function(m){ return m.indexOf(kw) >= 0; }).length >= ms.n; }
+        else if(ms.k === 'barrel') ok = atSpot && ev.tube >= ms.v;
+        else if(ms.k === 'complete') ok = atSpot && ev.completed;
+        else if(ms.k === 'waves'){ if(!ms.peak || ev.peak){ S.c[i] = (S.c[i] || 0) + 1; ok = S.c[i] >= ms.n; } }
+        else if(ms.k === 'onshore') ok = ev.onshore && ev.final >= ms.v;
+        else if(ms.k === 'long') ok = ev.len >= 96 && ev.final >= ms.v;
+      } else if(ev.k === 'ball' && ms.k === 'ball') ok = ev.streak >= ms.n;
+      if(!ok) return;
+      S.done[i] = 1; sgSave.shells += ms.rw;
+      var last = Object.keys(S.done).length >= P.ms.length;
+      said.push(P.icon + L(' משימה הושלמה: ', ' Mission done: ') + sgMsText(ms) + ' · 🐚 +' + ms.rw);
+      if(last){
+        if(sgSave.boards.indexOf(P.board) < 0) sgSave.boards.push(P.board);
+        S.fin.push(P.id); S.cur = null; S.done = {}; S.c = {};
+        said.push(P.icon + L(' החוזה עם ' + P.name + ' הושלם! קיבלתם את הגלשן שלהם 🏄', ' Contract with ' + P.name + ' complete! Their board is yours 🏄'));
+      }
+    });
+    var off = sgSpOffer(); if(off && S.offerSeen !== off.id){ S.offerSeen = off.id; said.push('📩 ' + off.name + L(' רוצים לממן אתכם! ראו בתפריט 🤝 ספונסרים', ' want to sponsor you! See 🤝 Sponsors in the menu')); }
+    if(said.length){ sgStore(); if(sg.texts) said.forEach(function(t){ sgAddText(t, '#ffd447'); }); }
+    return said.join(' · ');
   }
   var SG_UPGRADES = [
     { id: 'speed',   icon: '⚡', name: L('מהירות', 'Speed'),   desc: L('גלשן מהיר יותר', 'A faster board') },
@@ -4908,6 +5001,9 @@
       : L('לא עשית תרגילים בגל הזה', 'No moves on this wave');
     document.getElementById('sgOverBest').textContent = isBest ? L('🏆 הציון הכי גבוה שלך בחוף הזה!', '🏆 Your best score at this spot!') : L('הציון הכי גבוה שלך כאן: ', 'Your best here: ') + (sgSave.best10[sg.spot.id] || 0).toFixed(2);
     document.getElementById('sgOverShells').textContent = '🐚 +' + fmtScore(shells);
+    var spMsg = sgSponsorEvent({ k: 'wave', final: final, completed: completed, spot: sg.spot.id, moves: sg.moves || [], tube: sg.tubeMax || 0, len: sgLen(), peak: !!sg.peak, onshore: sgForecast(sg.spot).wind.id === 'onshore' });
+    var spEl = document.getElementById('sgOverSp'); if(!spEl){ spEl = document.createElement('p'); spEl.id = 'sgOverSp'; spEl.className = 'sg-over-sp'; var mvEl = document.getElementById('sgOverMoves'); mvEl.parentNode.insertBefore(spEl, mvEl.nextSibling); }
+    spEl.textContent = spMsg; spEl.hidden = !spMsg;
     if(sg.peak){ sgPeakNext(final, completed); return; }
     sgOver.hidden = false;
   }
@@ -4974,7 +5070,16 @@
   }
   // the lot opposite the peak for this visit (cleared when you leave the spot)
   var sgLot = null;
+  function sgBeginHome(){
+    var parkX = (sg.curl + 300) * SG3_M;
+    sgLot = { parkX: parkX, car: { x: parkX, z: SG_LOT_Z - 0.6, hd: -Math.PI / 2 }, boardTaken: true };
+    sg.car = null; sg.walk = { x: parkX + SG_HOUSE.x - 3, z: 203, t: 1, ph: 0, hd: -Math.PI / 2 };
+    sg.phase = 'walk'; sg.x = sg.walk.x / SG3_M;
+    sgAddText(L('🏠 בוקר טוב! המרפסת והמדרגות לים מקדימה', '🏠 Good morning! The porch and the stairs to the sea are out front'), '#7fffb0');
+    sgAddText(L('🚗 רוצים חוף אחר? הרכב שלכם בחניה — לכו אליו ולחצו "לנסוע"', '🚗 Another beach? Your car is in the lot — walk to it and tap "Drive"'), '#bfe9ff');
+  }
   function sgBeginDrive(){
+    if(sgFromHome){ sgFromHome = false; sgBeginHome(); return; }
     var parkX = (sg.curl + 300) * SG3_M;
     sgLot = { parkX: parkX, car: null };
     sg.car = { x: parkX - sgDriveM(sg.spot), z: SG_ROAD_Z, hd: 0, v: 0, t: 0, park: 0, crank: 0, dist0: sgDriveM(sg.spot) };
@@ -4998,12 +5103,74 @@
   }
   // in the water: lie down on the board and paddle out from here
   function sgWalkDone(){
-    sgBallLeave();
+    sgBallLeave(); sgBino = null;
     var Wk = sg.walk;
     sg.phase = 'paddle'; sg.x = Wk.x / SG3_M; sg.hd = Math.PI; sg.walk = null;
     sg.dz = SG_WADE_Z - (typeof sg3ZLine === 'function' && sg3.state === 'ready' ? sg3ZLine(Wk.x) : 10);
     sgAddText(L('🌊 במים! חתרו החוצה אל המצוף', '🌊 In the water! Paddle out to the buoy'), '#7fffb0');
   }
+  // ---- your house by your favourite beach: behind the road, on stilts, the porch toward the sea ----
+  // (x from the lot; z: the porch rail 197.6, the front wall 200.5, the back 208.5; stairs down at x -4.6..-3.2)
+  var SG_HOUSE = { x: 62, rail: 197.6, front: 200.5, back: 208.5, hw: 6, floor: 1.4, st0: -4.6, st1: -3.2, foot: 195.8 };
+  function sgHome(){ return sgSave.home || 'olga'; }
+  function sgHomeHere(){ return !!sgLot && !!sg.spot && !sg.spot.tow && sgHome() === sg.spot.id; }
+  function sgHX(){ return sgLot.parkX + SG_HOUSE.x; }
+  // where you are: 2 inside, 1 on the porch, 0 not in the house
+  function sgInHouse(){ if(!sgHomeHere() || !sg.walk) return 0; var rx = sg.walk.x - sgHX(), z = sg.walk.z; if(Math.abs(rx) > SG_HOUSE.hw + 0.05) return 0; return z > SG_HOUSE.front ? 2 : z >= SG_HOUSE.rail ? 1 : 0; }
+  // the height you stand at: the house's floor, the stairs, or the beach
+  function sgWalkY(x, z){
+    if(sgHomeHere()){ var rx = x - sgHX(), F = SG_SAND_Y + SG_HOUSE.floor;
+      if(Math.abs(rx) < SG_HOUSE.hw + 0.1 && z >= SG_HOUSE.rail && z <= SG_HOUSE.back + 0.1) return F;
+      if(rx > SG_HOUSE.st0 - 0.1 && rx < SG_HOUSE.st1 + 0.1 && z > SG_HOUSE.foot && z < SG_HOUSE.rail) return SG_SAND_Y + SG_HOUSE.floor * (z - SG_HOUSE.foot) / (SG_HOUSE.rail - SG_HOUSE.foot); }
+    return sgGroundY(z);
+  }
+  // the walls and rails you can't walk through (x from the house's middle): [x0, x1, z0, z1]
+  var SG_HW = (function(){ var W = [], t = 0.1, H = SG_HOUSE; function F(a, b, c, d){ W.push([a, b, c, d]); }
+    F(-6, -1, H.front - t, H.front + t); F(1, 6, H.front - t, H.front + t); F(-6, 6, H.back - t, H.back + t); F(-6 - t, -6 + t, H.front, H.back); F(6 - t, 6 + t, H.front, H.back);
+    F(-6, -3.6, 204.5 - t, 204.5 + t); F(-2.4, 2.4, 204.5 - t, 204.5 + t); F(3.6, 6, 204.5 - t, 204.5 + t); F(-t, t, 204.5, H.back);
+    F(-6, H.st0, H.rail - t, H.rail + t); F(H.st1, 6, H.rail - t, H.rail + t); F(-6 - t, -6 + t, H.rail, H.front); F(6 - t, 6 + t, H.rail, H.front);
+    F(H.st0 - t, H.st0 + t, H.foot, H.rail); F(H.st1 - t, H.st1 + t, H.foot, H.rail);
+    return W; })();
+  // inside: how far back the camera can sit before it would go through a wall
+  function sgCamBack(x, z, fx, fz, max){ var hx = sgHX();
+    for(var d = 0.3; d <= max; d += 0.1){ var px = x - fx * d - hx, pz = z - fz * d;
+      if(Math.abs(px) > SG_HOUSE.hw - 0.2 || pz > SG_HOUSE.back - 0.2 || pz < SG_HOUSE.front + 0.2 && pz > SG_HOUSE.front - 0.2) return Math.max(0.3, d - 0.15);
+      for(var i = 0; i < SG_HW.length; i++){ var w = SG_HW[i]; if(px > w[0] - 0.2 && px < w[1] + 0.2 && pz > w[2] - 0.2 && pz < w[3] + 0.2) return Math.max(0.3, d - 0.15); } }
+    return max; }
+  function sgHouseCollide(x, z){
+    if(!sgHomeHere()) return [x, z];
+    var hx = sgHX(), rx = x - hx, r = 0.3; if(rx < -7.5 || rx > 7.5 || z < 194.5 || z > 210) return [x, z];
+    // and the big furniture: you walk round it, not through it
+    var FB = { sofa: [-5.7, -3.65, 203.4, 204.3], table: [2.2, 3.8, 201.6, 203.2], bed: [-3.85, -2.15, 206.15, 208.4], aquarium: [-0.67, -0.17, 205.75, 207.05],
+               tv: [-5.9, -5.4, 201.6, 203.2], bbq: [4.9, 5.5, 197.9, 198.5], telescope: [-1.8, -1.2, 197.9, 198.5], hammock: [2.0, 5.5, 198.8, 199.2] };
+    var walls = SG_HW.concat([[0.9, 5.5, 207.8, 208.4], [5.05, 5.85, 206.85, 207.55]]);
+    Object.keys(FB).forEach(function(k){ if(sgHas(k)) walls.push(FB[k]); });
+    walls.forEach(function(w){ var cx = Math.max(w[0], Math.min(w[1], rx)), cz = Math.max(w[2], Math.min(w[3], z)), dx = rx - cx, dz = z - cz, d = Math.hypot(dx, dz);
+      if(d >= r) return;
+      if(d > 1e-4){ rx = cx + dx / d * r; z = cz + dz / d * r; }
+      else { var pl = [rx - w[0], w[1] - rx, z - w[2], w[3] - z], mn = Math.min.apply(null, pl);
+        if(mn === pl[0]) rx = w[0] - r; else if(mn === pl[1]) rx = w[1] + r; else if(mn === pl[2]) z = w[2] - r; else z = w[3] + r; } });
+    return [hx + rx, z];
+  }
+  // furniture for the house (bought with shells; it appears where it belongs)
+  var SG_FURN = [
+    { id: 'sofa',      icon: '🛋️', name: L('ספה', 'Sofa'),                       price: 250 },
+    { id: 'rug',       icon: '🧶', name: L('שטיח', 'Rug'),                        price: 80 },
+    { id: 'tv',        icon: '📺', name: L('טלוויזיה', 'TV'),                     price: 300 },
+    { id: 'table',     icon: '🍽️', name: L('שולחן אוכל', 'Dining table'),          price: 200 },
+    { id: 'bed',       icon: '🛏️', name: L('מיטה זוגית', 'Double bed'),            price: 300 },
+    { id: 'lamp',      icon: '💡', name: L('מנורה עומדת', 'Floor lamp'),           price: 90 },
+    { id: 'plants',    icon: '🪴', name: L('עציצים', 'Plants'),                    price: 100 },
+    { id: 'rack',      icon: '🏄', name: L('מתלה לגלשנים שלכם', 'Rack for your boards'), price: 200 },
+    { id: 'trophy',    icon: '🏆', name: L('מדף גביעים (מהספונסרים)', 'Trophy shelf (from sponsors)'), price: 250 },
+    { id: 'aquarium',  icon: '🐠', name: L('אקווריום', 'Aquarium'),                price: 400 },
+    { id: 'hammock',   icon: '🏝️', name: L('ערסל במרפסת', 'Porch hammock'),         price: 180 },
+    { id: 'bbq',       icon: '🍖', name: L('מנגל במרפסת', 'Porch BBQ'),             price: 150 },
+    { id: 'telescope', icon: '🔭', name: L('טלסקופ (זום חזק יותר)', 'Telescope (stronger zoom)'), price: 350 }
+  ];
+  function sgHas(id){ return !!(sgSave.furn && sgSave.furn[id]); }
+  var sgBino = null;                                                 // looking through the binoculars on the porch: { yaw, fov }
+  var sgFromHome = false;                                            // the next start is from the house, not the car
   var SG_HUTS = [
     { id: 'surf',  x: -20, name: L('🏄 חנות גלישה', '🏄 Surf shop'),   color: 0x3a7bd5, roof: 0xf2f2ec },
     { id: 'kiosk', x: -5,  name: L('🍦 קיוסק', '🍦 Kiosk'),           color: 0xf5a623, roof: 0xe74c3c },
@@ -5160,6 +5327,7 @@
     sgSave.ballBest = sgSave.ballBest || {}; if(G.streak > (sgSave.ballBest[G.k] || 0)) sgSave.ballBest[G.k] = G.streak;
     if(sgBG.sh < 60){ var add = perfect || save ? 2 : 1; sgSave.shells += add; sgBG.sh += add; }
     sgStore();
+    sgSponsorEvent({ k: 'ball', streak: G.streak });
     sgAddText((save ? L('🤸 הצלה! ', '🤸 Saved! ') : perfect ? L('✨ מושלם! ', '✨ Perfect! ') : K.icon + ' ') + G.streak, save ? '#ffd447' : perfect ? '#7fffb0' : '#ffffff');
     if(G.host === 'local' || G.own) sgBallServe(G, me, mp.x, mp.z);
     else { sgBallSend('bk', { h: G.host, n: B.n, ok: 1, x: Math.round(mp.x * 100) / 100, z: Math.round(mp.z * 100) / 100 }); B.st = 'wait'; }
@@ -5284,6 +5452,15 @@
     if(sg.phase === 'walk'){
       // on foot: ⬆️ walk, ⬇️ step back, ⬅️➡️ turn -- around the beach, into the huts, into the sea
       var Wk = sg.walk, Jw = sgJoyVec(); Wk.t += dt; sg.pad.t += dt;
+      // the sets keep rolling in while you're on the beach (to watch from the porch)
+      if(!(sg.peak && sg.peak.shared)){ if(sg.pad.t > sg.pad.T + 4) sg.pad = sgNewSet(false); sg.pad.k = sg.pad.t / sg.pad.T; }
+      if(sgBino){
+        // the binoculars: ⬅️➡️ look along the beach, ⬆️⬇️ zoom
+        if(Math.abs(Jw.x) > 0.2) sgBino.yaw = Math.max(-1.3, Math.min(1.3, sgBino.yaw + Jw.x * 0.7 * dt * sgBino.fov / 20));
+        if(Math.abs(Jw.y) > 0.2) sgBino.fov = Math.max(sgHas('telescope') ? 3 : 7, Math.min(32, sgBino.fov * (1 + Jw.y * 1.3 * dt)));
+        if(sgInHouse() !== 1) sgBino = null;
+        return;
+      }
       if(Wk.t > 0.8 && sgHutOpen === null && sgBG.in){
         // ⬆️ in, ⬇️ back, ⬅️➡️ to the sides -- always facing the middle, so the view stays on the game
         var Gw = sgBG.in, cxw = sgLot.parkX + Gw.x, hdW = Math.atan2(Gw.z - Wk.z, cxw - Wk.x);
@@ -5307,7 +5484,9 @@
         // not through the huts
         SG_HUTS.forEach(function(hu){ var cx = sgLot.parkX + hu.x, dx = nx - cx, dzh = nz - SG_HUT_Z;
           if(Math.abs(dx) < 3.3 && Math.abs(dzh) < 2.6){ if(Math.abs(dx) / 3.3 > Math.abs(dzh) / 2.6) nx = cx + Math.sign(dx) * 3.3; else nz = SG_HUT_Z + Math.sign(dzh) * 2.6; } });
-        Wk.x = Math.max(sgLot.parkX - 130, Math.min(sgLot.parkX + 130, nx)); Wk.z = Math.max(SG_WADE_Z - 0.5, Math.min(206, nz));
+        var hc = sgHouseCollide(nx, nz); nx = hc[0]; nz = hc[1];
+        var zMax = sgHomeHere() && Math.abs(nx - sgHX()) < SG_HOUSE.hw ? SG_HOUSE.back - 0.3 : 206;
+        Wk.x = Math.max(sgLot.parkX - 130, Math.min(sgLot.parkX + 130, nx)); Wk.z = Math.max(SG_WADE_Z - 0.5, Math.min(zMax, nz));
         if(spdW) Wk.ph += dt * Math.abs(spdW) * 3.2;
         // at a hut's door
         Wk.door = null; SG_HUTS.forEach(function(hu){ if(Math.abs(Wk.x - (sgLot.parkX + hu.x)) < 1.8 && Math.abs(Wk.z - SG_DOOR_Z) < 1.6) Wk.door = hu.id; });
@@ -5547,7 +5726,7 @@
       sg.v = Math.min(900, sg.v + 160);
       sgSplash(4); sgFan();
     }
-    sg.tube = 0; sg.lipT2 = 0;
+    sg.tubeMax = Math.max(sg.tubeMax || 0, sg.tube || 0); sg.tube = 0; sg.lipT2 = 0;
   }
   function sgSplash(n){
     var K = sgK();
@@ -5984,7 +6163,11 @@
         if(sgBG.in) bTx = L('🚪 צאו מהמשחק', '🚪 Leave the game');
         else if(sgBG.pend) bTx = L('⏳ מחכים...', '⏳ Waiting...');
         else if(bn) bTx = SG_BK[bn.k].icon + ' ' + (bn.host === 'local' ? L('הצטרפו למעגל', 'Join the circle') : L('הצטרפו ל', 'Join ') + (bn.nm || L('חבר', 'a friend')));
-        else if(own && !sg.walk.door && sg.walk.z > SG_EDGE_Z - 2) bTx = L('⚽ שחקו בכדור שלכם', '⚽ Play with your ball'); }
+        else if(own && !sg.walk.door && sg.walk.z > SG_EDGE_Z - 2 && !sgInHouse()) bTx = L('⚽ שחקו בכדור שלכם', '⚽ Play with your ball'); }
+      var nearCar = onFoot && !sgBG.in && sgLot && sgLot.car && Math.hypot(sg.walk.x - sgLot.car.x, sg.walk.z - sgLot.car.z) < 4;
+      var inHB = onFoot ? sgInHouse() : 0, hmTx = nearCar ? L('🚗 להיכנס לרכב — לנסוע לחוף אחר', '🚗 Get in — drive to another beach') : !onFoot || !inHB ? '' : sgBino ? L('✖ סגרו את המשקפת', '✖ Put the binoculars down') : inHB === 1 ? L('🔭 משקפת — להציץ בגלים', '🔭 Binoculars — check the waves') : L('🛋️ קנו רהיטים לבית', '🛋️ Buy furniture');
+      var hmB = document.getElementById('sgHomeBtn'); hmB.hidden = !hmTx; if(hmTx && hmB.textContent !== hmTx) hmB.textContent = hmTx;
+      if(inHB) bTx = '';
       var bBtn = document.getElementById('sgBallBtn'); bBtn.hidden = !bTx; bBtn.classList.toggle('is-leave', !!sgBG.in); if(bTx && bBtn.textContent !== bTx) bBtn.textContent = bTx;
       var hBtn = document.getElementById('sgHitBtn'), hTx = sgBG.in ? SG_BK[sgBG.in.k].icon + ' ' + SG_BK[sgBG.in.k].verb : '';
       hBtn.hidden = !(onFoot && sgBG.in); if(hTx && hBtn.textContent !== hTx) hBtn.textContent = hTx;
@@ -6032,23 +6215,38 @@
     if(sg.phase === 'walk'){
       ctx.save(); ctx.textAlign = 'center'; ctx.lineWidth = 6; ctx.strokeStyle = 'rgba(0,30,50,0.6)'; ctx.fillStyle = '#ffffff';
       ctx.font = (W < 560 ? 'bold 18px' : 'bold 24px') + ' Suez One, Rubik, sans-serif';
-      var Gin = sgBG.in, bnH = Gin ? null : sgBallNear();
-      var wm = Gin ? SG_BK[Gin.k].icon + L(' רצף: ', ' Streak: ') + Gin.streak + L(' · השיא שלכם: ', ' · your best: ') + ((sgSave.ballBest || {})[Gin.k] || 0)
+      if(sgBino){
+        // the binoculars: two round lenses, black around them
+        var rB = Math.min(W * 0.27, H * 0.42); ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, H); ctx.globalCompositeOperation = 'destination-out';
+        ctx.beginPath(); ctx.arc(W / 2 - rB * 0.62, H / 2, rB, 0, Math.PI * 2); ctx.arc(W / 2 + rB * 0.62, H / 2, rB, 0, Math.PI * 2); ctx.fill(); ctx.globalCompositeOperation = 'source-over';
+        var fcB = sgForecast(sg.spot), cmB = sgFcCm(fcB);
+        var bt = L('🔭 ⬅️➡️ להסתכל · ⬆️⬇️ זום · היום: ', '🔭 ⬅️➡️ look · ⬆️⬇️ zoom · today: ') + (fcB.pool ? '' : cmB[0] + '-' + cmB[1] + L(' ס"מ · ', ' cm · ') + fcB.wind.name);
+        ctx.font = 'bold 15px Rubik, sans-serif'; ctx.fillStyle = '#ffffff'; ctx.strokeStyle = 'rgba(0,0,0,0.7)'; ctx.strokeText(bt, W / 2, H - 28); ctx.fillText(bt, W / 2, H - 28); ctx.restore(); return;
+      }
+      var Gin = sgBG.in, bnH = Gin ? null : sgBallNear(), inHz = sgInHouse();
+      var wm = inHz === 2 ? L('🏠 הבית שלכם · 🛋️ רהיטים בכפתור · המרפסת והמדרגות לים מקדימה', '🏠 Your house · 🛋️ furniture on the button · the porch and the stairs to the sea out front')
+             : inHz === 1 ? L('🌅 המרפסת · 🔭 משקפת לגלים · המדרגות לחוף משמאל', '🌅 The porch · 🔭 binoculars for the waves · the stairs down on the left')
+             : Gin ? SG_BK[Gin.k].icon + L(' רצף: ', ' Streak: ') + Gin.streak + L(' · השיא שלכם: ', ' · your best: ') + ((sgSave.ballBest || {})[Gin.k] || 0)
              : sg.walk && sg.walk.z < SG_EDGE_Z - 1 ? L('🌊 נכנסים למים...', '🌊 Wading in...')
              : sg.walk && sg.walk.door ? L('🚪 ', '🚪 ') + sgItem(SG_HUTS, sg.walk.door).name + L(' — לחצו "היכנס"', ' — tap "Go in"')
              : bnH ? SG_BK[bnH.k].icon + L(' מעגל הקפצות — לחצו "הצטרפו"', ' A keepy-up circle — tap "Join"')
              : L('🚶 טיילו בחוף · החצים מראים איפה החנויות · הים מקדימה', '🚶 Walk the beach · the arrows show the shops · the sea ahead');
       // the shops: one arrow each, turned the way to its door as you see it, and how far
       if(!Gin && sg.walk && sgLot){
-        var Wh = sg.walk, fx = Math.cos(Wh.hd), fz = Math.sin(Wh.hd), cw = W < 560 ? 74 : 92, gap = 6, x0 = W / 2 - (SG_HUTS.length * cw + (SG_HUTS.length - 1) * gap) / 2, cy = W < 560 ? 96 : 104;
+        var CH = SG_HUTS.concat(sgHomeHere() ? [{ id: 'home', x: SG_HOUSE.x + (SG_HOUSE.st0 + SG_HOUSE.st1) / 2, dz: SG_HOUSE.foot - 0.3, name: '🏠 ' }] : [])
+          .concat(sgLot.car ? [{ id: 'car', x: sgLot.car.x - sgLot.parkX, dz: sgLot.car.z - 1.6, name: (sgSave.car === 'bike' ? '🚲' : '🚗') + ' ' }] : []);
+        var Wh = sg.walk, fx = Math.cos(Wh.hd), fz = Math.sin(Wh.hd), gap = 6, cw = Math.min(92, Math.floor((W - 16 - (CH.length - 1) * gap) / CH.length)), x0 = W / 2 - (CH.length * cw + (CH.length - 1) * gap) / 2, cy = W < 560 ? 96 : 104;
         ctx.save(); ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-        SG_HUTS.forEach(function(hu, i){
-          var dx = sgLot.parkX + hu.x - Wh.x, dz = SG_DOOR_Z - Wh.z, dd = Math.hypot(dx, dz), th = Math.atan2(dx * -fz + dz * fx, dx * fx + dz * fz), cx = x0 + i * (cw + gap) + cw / 2;
-          var here = Wh.door === hu.id;
+        CH.forEach(function(hu, i){
+          var dx = sgLot.parkX + hu.x - Wh.x, dz = (hu.dz || SG_DOOR_Z) - Wh.z, dd = Math.hypot(dx, dz), th = Math.atan2(dx * -fz + dz * fx, dx * fx + dz * fz), cx = x0 + i * (cw + gap) + cw / 2;
+          var here = Wh.door === hu.id || (hu.id === 'home' && inHz > 0) || (hu.id === 'car' && dd < 4);
           ctx.fillStyle = here ? 'rgba(46,160,90,0.9)' : 'rgba(0,30,50,0.55)'; ctx.beginPath(); if(ctx.roundRect) ctx.roundRect(cx - cw / 2, cy - 21, cw, 42, 12); else ctx.rect(cx - cw / 2, cy - 21, cw, 42); ctx.fill();
-          ctx.font = '20px serif'; ctx.fillStyle = '#fff'; ctx.fillText(hu.name.split(' ')[0], cx - cw / 2 + 16, cy);
-          ctx.save(); ctx.translate(cx - 4, cy); ctx.rotate(th); ctx.fillStyle = '#ffd447'; ctx.beginPath(); ctx.moveTo(0, -12); ctx.lineTo(8, 2); ctx.lineTo(3, 2); ctx.lineTo(3, 11); ctx.lineTo(-3, 11); ctx.lineTo(-3, 2); ctx.lineTo(-8, 2); ctx.closePath(); ctx.fill(); ctx.restore();
-          ctx.font = 'bold 13px Rubik, sans-serif'; ctx.fillStyle = '#fff'; ctx.fillText(here ? '✔' : Math.round(dd) + L('מ\'', 'm'), cx + cw / 2 - 20, cy);
+          var narrow = cw < 72;     // (a phone: the icon and the arrow in the box, the distance under it)
+          ctx.font = (narrow ? '17px' : '20px') + ' serif'; ctx.fillStyle = '#fff'; ctx.fillText(hu.name.split(' ')[0], cx - cw / 2 + (narrow ? 13 : 16), cy);
+          ctx.save(); ctx.translate(narrow ? cx + cw / 2 - 14 : cx - 4, cy); ctx.rotate(th); ctx.fillStyle = '#ffd447'; ctx.beginPath(); ctx.moveTo(0, -12); ctx.lineTo(8, 2); ctx.lineTo(3, 2); ctx.lineTo(3, 11); ctx.lineTo(-3, 11); ctx.lineTo(-3, 2); ctx.lineTo(-8, 2); ctx.closePath(); ctx.fill(); ctx.restore();
+          var dtx = here ? '✔' : Math.round(dd) + L('מ\'', 'm');
+          if(narrow){ ctx.font = 'bold 11px Rubik, sans-serif'; ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(0,30,50,0.7)'; ctx.strokeText(dtx, cx, cy + 30); ctx.fillStyle = '#fff'; ctx.fillText(dtx, cx, cy + 30); }
+          else { ctx.font = 'bold 13px Rubik, sans-serif'; ctx.fillStyle = '#fff'; ctx.fillText(dtx, cx + cw / 2 - 20, cy); }
         });
         ctx.restore();
       }
@@ -6660,6 +6858,102 @@
     R.head.position.copy(hd); R.head.rotation.set(0, 0, -0.1); R.hair.position.copy(hd).add(V(-0.02, 0.03, 0)); R.hair.rotation.set(0, 0, 0.3);
     // the board under the arm: on its rail, deck out, nose ahead
     R.board.position.set(0.0, 0.98, 0.36); R.board.rotation.set(-Math.PI / 2, 0, 0.08);
+  }
+  function sg3House(T, now){
+    var on = sgHomeHere(), key = on ? sg.spot.id + ':' + Math.round(sgLot.parkX) + ':' + JSON.stringify(sgSave.furn || {}) + ':' + sgSave.boards.join(',') + ':' + sgSp().fin.length : '';
+    if(sg3.house && sg3.house.userData.key !== key){ sg3Dispose(sg3.house); sg3.house = null; }
+    if(!on) return;
+    if(!sg3.house){ sg3.house = sg3BuildHouse(T); sg3.house.userData.key = key; sg3.house.position.x = sgHX(); sg3.scene.add(sg3.house); }
+    var U = sg3.house.userData; sg3.house.visible = Math.abs(sg3.cam.position.x - sgHX()) < 220;
+    U.roof.visible = true; U.walls.scale.y = 1;
+    (U.fish || []).forEach(function(f, i){ var t = now * (0.5 + i * 0.13) + i * 2; f.position.set(f.userData.x + Math.sin(t) * 0.42, f.userData.y + Math.sin(t * 1.7) * 0.06, f.userData.z); f.rotation.y = Math.cos(t) > 0 ? 0 : Math.PI; });
+    if(U.hammock) U.hammock.rotation.x = 0.06 * Math.sin(now * 1.1);
+    if(U.smoke) U.smoke.forEach(function(s, i){ var k = (now * 0.4 + i / 3) % 1; s.position.y = U.smokeY + k * 1.4; s.scale.setScalar(0.5 + k); s.material.opacity = 0.35 * (1 - k); });
+  }
+  function sg3BuildHouse(T){
+    var g = new T.Group(), U = g.userData, H = SG_HOUSE, F0 = SG_SAND_Y + H.floor;
+    function m(c, r){ return new T.MeshStandardMaterial({ color: c, roughness: r === undefined ? 0.8 : r }); }
+    function box(w, hh, d, mat, x, y, z, grp){ var b = new T.Mesh(new T.BoxGeometry(w, hh, d), mat); b.position.set(x, y, z); (grp || g).add(b); return b; }
+    function cyl(r0, r1, hh, mat, x, y, z, seg){ var c = new T.Mesh(new T.CylinderGeometry(r0, r1, hh, seg || 12), mat); c.position.set(x, y, z); g.add(c); return c; }
+    var plank = (function(){ var cv = document.createElement('canvas'); cv.width = 64; cv.height = 64; var c = cv.getContext('2d'); c.fillStyle = '#b48a5a'; c.fillRect(0, 0, 64, 64);
+      c.fillStyle = 'rgba(70,40,15,0.45)'; for(var i = 0; i < 4; i++) c.fillRect(0, i * 16, 64, 2); var tx = new T.CanvasTexture(cv); tx.wrapS = tx.wrapT = T.RepeatWrapping; tx.repeat.set(3, 8); return tx; })();
+    var tiles = (function(){ var cv = document.createElement('canvas'); cv.width = 64; cv.height = 64; var c = cv.getContext('2d'); c.fillStyle = '#ece5d6'; c.fillRect(0, 0, 64, 64);
+      c.strokeStyle = 'rgba(120,100,80,0.35)'; c.lineWidth = 2; c.strokeRect(1, 1, 62, 62); var tx = new T.CanvasTexture(cv); tx.wrapS = tx.wrapT = T.RepeatWrapping; tx.repeat.set(12, 8); return tx; })();
+    var white = m(0xf4f1ea, 0.9), wood = new T.MeshStandardMaterial({ color: 0xffffff, map: plank, roughness: 0.85 }), dark = m(0x3a2c22, 0.7), steel = m(0xb7bec6, 0.4), inner = m(0xfbf8f1, 0.95);
+    var glass = new T.MeshStandardMaterial({ color: 0xa9d8f2, roughness: 0.05, metalness: 0.1, transparent: true, opacity: 0.32, depthWrite: false });
+    // on stilts
+    [-5.8, -2, 2, 5.8].forEach(function(x){ [H.rail + 0.15, H.front, 204.5, H.back - 0.15].forEach(function(z){ box(0.24, H.floor, 0.24, dark, x, SG_SAND_Y + H.floor / 2 - 0.05, z); }); });
+    // the floors: tiles inside, planks on the porch
+    box(12.2, 0.22, H.back - H.front, new T.MeshStandardMaterial({ color: 0xffffff, map: tiles, roughness: 0.6 }), 0, F0 - 0.11, (H.front + H.back) / 2);
+    box(12.2, 0.22, H.front - H.rail, wood, 0, F0 - 0.11, (H.rail + H.front) / 2);
+    // the walls: the front all windows (and the door), the back, the sides; inside, the rooms
+    var WH = 2.7, wy = WH / 2, wG = new T.Group(); wG.position.y = F0; g.add(wG); U.walls = wG;
+    function wall(x0, x1, z0, z1, mat){ box(Math.max(0.16, x1 - x0), WH, Math.max(0.16, z1 - z0), mat || white, (x0 + x1) / 2, wy, (z0 + z1) / 2, wG); }
+    [[-6, -1], [1, 6]].forEach(function(s){ var cx = (s[0] + s[1]) / 2, w = s[1] - s[0];
+      box(w, 0.75, 0.16, white, cx, 0.375, H.front, wG); box(w, 0.45, 0.16, white, cx, WH - 0.225, H.front, wG); box(w - 0.1, 1.5, 0.05, glass, cx, 1.5, H.front, wG);
+      for(var mx = s[0] + 1.25; mx < s[1] - 0.2; mx += 1.25) box(0.06, 1.5, 0.08, dark, mx, 1.5, H.front, wG); });
+    box(2, 0.45, 0.16, white, 0, WH - 0.225, H.front, wG);
+    wall(-6, 6, H.back - 0.08, H.back + 0.08); wall(-6.08, -5.92, H.front, H.back); wall(5.92, 6.08, H.front, H.back);
+    wall(-6, -3.6, 204.42, 204.58, inner); wall(-2.4, 2.4, 204.42, 204.58, inner); wall(3.6, 6, 204.42, 204.58, inner); wall(-0.08, 0.08, 204.5, H.back, inner);
+    [[-6.1, 202.5], [6.1, 202.5], [-6.1, 206.5], [6.1, 206.5]].forEach(function(p){ box(0.04, 1.1, 1.6, glass, p[0], 1.55, p[1], wG); });   // side windows
+    // the flat roof, out over the porch
+    var roof = new T.Group(); g.add(roof); U.roof = roof;
+    box(13, 0.3, H.back - H.rail + 0.6, white, 0, F0 + WH + 0.15, (H.rail + H.back) / 2, roof);
+    // the ceiling, lit by the day coming in through the windows (the sun can't reach under the roof)
+    var ceil = new T.Mesh(new T.PlaneGeometry(12, H.back - H.rail + 0.4), new T.MeshStandardMaterial({ color: 0xf6f3ec, emissive: 0xc9c4b8, emissiveIntensity: 0.75, roughness: 1 }));
+    ceil.rotation.x = Math.PI / 2; ceil.position.set(0, F0 + WH - 0.01, (H.rail + H.back) / 2); roof.add(ceil);
+    var lampC = new T.Mesh(new T.CylinderGeometry(0.25, 0.25, 0.05, 20), new T.MeshBasicMaterial({ color: 0xfff6dc })); lampC.position.set(-3, F0 + WH - 0.04, 202.5); roof.add(lampC);
+    var lampC2 = lampC.clone(); lampC2.position.set(3, F0 + WH - 0.04, 202.5); roof.add(lampC2);
+    [-5.8, 5.8].forEach(function(x){ box(0.14, WH, 0.14, white, x, F0 + wy, H.rail + 0.15); });
+    // the porch's glass rail, and the stairs down to the beach
+    function rail(x0, z0, x1, z1){ var len = Math.hypot(x1 - x0, z1 - z0), cx = (x0 + x1) / 2, cz = (z0 + z1) / 2, ang = Math.atan2(z1 - z0, x1 - x0);
+      var r1 = box(len, 0.06, 0.08, steel, cx, F0 + 1.0, cz); r1.rotation.y = -ang; var gp = box(len, 0.85, 0.03, glass, cx, F0 + 0.5, cz); gp.rotation.y = -ang; }
+    rail(-6, H.rail, H.st0, H.rail); rail(H.st1, H.rail, 6, H.rail); rail(-6, H.rail, -6, H.front); rail(6, H.rail, 6, H.front);
+    var nSt = 8, run = H.rail - H.foot;
+    for(var s = 0; s < nSt; s++) box(H.st1 - H.st0, 0.07, run / nSt + 0.02, wood, (H.st0 + H.st1) / 2, F0 - (s + 1) * H.floor / nSt, H.rail - (s + 0.5) * run / nSt);
+    [H.st0, H.st1].forEach(function(x){ var hr = box(0.05, 0.05, Math.hypot(run, H.floor), steel, x, SG_SAND_Y + H.floor / 2 + 0.95, (H.rail + H.foot) / 2); hr.rotation.x = Math.atan2(H.floor, run); });
+    // the name by the stairs
+    var ncv = document.createElement('canvas'); ncv.width = 256; ncv.height = 64; var nc = ncv.getContext('2d'); nc.fillStyle = '#f4f1ea'; nc.fillRect(0, 0, 256, 64); nc.fillStyle = '#3a2614'; nc.textAlign = 'center'; nc.font = 'bold 26px Rubik, Arial';
+    nc.fillText('🏠 ' + (playerNick() || L('הבית שלי', 'My house')), 128, 42);
+    var nm = new T.Mesh(new T.PlaneGeometry(1.6, 0.4), new T.MeshBasicMaterial({ map: new T.CanvasTexture(ncv) })); nm.position.set(H.st0 - 0.6, SG_SAND_Y + 1.0, H.foot + 0.3); nm.rotation.y = Math.PI; g.add(nm);
+    // the kitchen (it comes with the house)
+    box(4.6, 0.9, 0.62, m(0xdedad2, 0.5), 3.2, F0 + 0.45, H.back - 0.4); box(4.6, 0.05, 0.66, m(0x2d2d2d, 0.3), 3.2, F0 + 0.92, H.back - 0.4);
+    box(0.8, 1.9, 0.7, m(0xe8e8e8, 0.3), 5.45, F0 + 0.95, H.back - 1.3);
+    sg3Furniture(T, g, F0, box, cyl, m, U);
+    return g;
+  }
+  function sg3Furniture(T, g, F0, box, cyl, m, U){
+    var H = SG_HOUSE;
+    if(sgHas('rug')) box(3.2, 0.02, 2.2, m(0xc2553a, 0.95), -3, F0 + 0.012, 202.4);
+    if(sgHas('sofa')){ var sm = m(0x2a8c8c, 0.9), sx = -4.65; box(1.9, 0.42, 0.9, sm, sx, F0 + 0.21, 203.85); box(1.9, 0.55, 0.22, sm, sx, F0 + 0.55, 204.2);
+      [-0.95, 0.95].forEach(function(dx){ box(0.2, 0.6, 0.9, sm, sx + dx, F0 + 0.3, 203.85); }); [-0.45, 0.45].forEach(function(dx){ box(0.8, 0.12, 0.7, m(0x35a7a7, 0.95), sx + dx, F0 + 0.48, 203.8); }); }
+    if(sgHas('tv')){ box(0.45, 0.5, 1.6, m(0x5b4636), -5.65, F0 + 0.25, 202.4); box(0.08, 0.75, 1.3, m(0x111111, 0.2), -5.55, F0 + 0.95, 202.4);
+      var scr = new T.Mesh(new T.PlaneGeometry(1.2, 0.66), new T.MeshBasicMaterial({ color: 0x3d8ee0 })); scr.position.set(-5.5, F0 + 0.95, 202.4); scr.rotation.y = Math.PI / 2; g.add(scr); }
+    if(sgHas('table')){ box(1.6, 0.06, 0.9, m(0x8a6440, 0.6), 3, F0 + 0.75, 202.4); [[-0.7, -0.35], [0.7, -0.35], [-0.7, 0.35], [0.7, 0.35]].forEach(function(p){ box(0.05, 0.72, 0.05, dark(), 3 + p[0], F0 + 0.36, 202.4 + p[1]); });
+      [[-0.45, -0.75], [0.45, -0.75], [-0.45, 0.75], [0.45, 0.75]].forEach(function(p){ box(0.42, 0.05, 0.42, m(0xf2f2f2, 0.5), 3 + p[0], F0 + 0.45, 202.4 + p[1]); box(0.42, 0.45, 0.05, m(0xf2f2f2, 0.5), 3 + p[0], F0 + 0.7, 202.4 + p[1] + (p[1] > 0 ? 0.2 : -0.2)); }); }
+    function dark(){ return m(0x3a2c22, 0.7); }
+    if(sgHas('bed')){ box(1.7, 0.45, 2.1, m(0xfafafa, 0.9), -3, F0 + 0.22, 207.2); box(1.7, 0.9, 0.1, m(0x6b4a30, 0.7), -3, F0 + 0.45, 208.3); box(1.72, 0.08, 1.3, m(0x3a7bd5, 0.9), -3, F0 + 0.48, 206.8);
+      [-0.45, 0.45].forEach(function(dx){ box(0.6, 0.14, 0.4, m(0xffffff, 0.95), -3 + dx, F0 + 0.52, 207.95); }); }
+    if(sgHas('lamp')){ cyl(0.18, 0.18, 0.03, m(0x333333), -1.6, F0 + 0.02, 204.05); cyl(0.02, 0.02, 1.6, m(0x333333), -1.6, F0 + 0.8, 204.05);
+      var sh = cyl(0.16, 0.26, 0.32, new T.MeshStandardMaterial({ color: 0xfff1c8, emissive: 0xffd88a, emissiveIntensity: 0.6 }), -1.6, F0 + 1.65, 204.05, 16); }
+    if(sgHas('plants')) [[-5.4, 200.95], [5.4, 200.95], [-0.5, 207.9]].forEach(function(p){ cyl(0.2, 0.15, 0.36, m(0xc0703a), p[0], F0 + 0.18, p[1]);
+      var lf = new T.Mesh(new T.SphereGeometry(0.36, 12, 10), m(0x3c9a4a, 0.9)); lf.scale.set(1, 1.4, 1); lf.position.set(p[0], F0 + 0.75, p[1]); g.add(lf); });
+    if(sgHas('rack')){ box(1.9, 0.06, 0.25, m(0x6b4a30), 4.8, F0 + 0.4, 204.25); box(1.9, 0.06, 0.25, m(0x6b4a30), 4.8, F0 + 1.6, 204.25);
+      sgSave.boards.slice(-5).forEach(function(id, i){ var bd = sg3LooseBoard(T); sg3ApplyLook(T, bd, bd.userData.stringer, sgLookOf(null, id));
+        bd.rotation.set(0, Math.PI / 2, Math.PI / 2); bd.position.set(4.05 + i * 0.36, F0 + 1.0, 204.2); g.add(bd); }); }
+    if(sgHas('trophy')){ box(0.3, 0.05, 1.6, m(0x6b4a30), -5.75, F0 + 1.55, 203.6);
+      var nT = sgSp().fin.length + Object.keys(sgSave.best10 || {}).filter(function(k){ return sgSave.best10[k] >= 8; }).length;
+      for(var ti = 0; ti < Math.min(6, nT); ti++){ var gm = new T.MeshStandardMaterial({ color: 0xffd447, metalness: 0.8, roughness: 0.25 });
+        cyl(0.05, 0.03, 0.08, gm, -5.75, F0 + 1.62, 203.0 + ti * 0.24); cyl(0.09, 0.04, 0.16, gm, -5.75, F0 + 1.76, 203.0 + ti * 0.24); } }
+    if(sgHas('aquarium')){ box(0.5, 0.7, 1.3, m(0x2b2b2b), -0.42, F0 + 0.35, 206.4); var aq = box(0.45, 0.55, 1.25, new T.MeshStandardMaterial({ color: 0x3fb0d8, transparent: true, opacity: 0.55, roughness: 0.05 }), -0.42, F0 + 0.98, 206.4);
+      U.fish = [0, 1, 2].map(function(i){ var f = new T.Mesh(new T.SphereGeometry(0.05, 8, 6), m([0xff8c1a, 0xffd447, 0xff5fa2][i], 0.4)); f.scale.set(1, 0.7, 1.6); f.userData = { x: -0.42, y: F0 + 0.9 + i * 0.12, z: 206.0 + i * 0.35 }; g.add(f); return f; }); }
+    if(sgHas('hammock')){ [2.1, 5.4].forEach(function(x){ box(0.1, 1.6, 0.1, m(0x6b4a30), x, F0 + 0.8, 199.0); });
+      var hm = new T.Mesh(new T.CylinderGeometry(0.5, 0.5, 3.1, 16, 1, true, Math.PI * 0.15, Math.PI * 0.7), new T.MeshStandardMaterial({ color: 0xf2c14e, side: T.DoubleSide, roughness: 0.95 }));
+      hm.rotation.z = Math.PI / 2; hm.position.set(3.75, F0 + 1.05, 199.0); var hg = new T.Group(); hg.position.set(0, 0, 0); hg.add(hm); g.add(hg); U.hammock = hm; }
+    if(sgHas('bbq')){ cyl(0.3, 0.25, 0.3, m(0x222222, 0.5), 5.2, F0 + 0.8, 198.2, 16); [[-0.15, -0.15], [0.15, -0.15], [0, 0.18]].forEach(function(p){ cyl(0.02, 0.02, 0.65, m(0x222222), 5.2 + p[0], F0 + 0.32, 198.2 + p[1]); });
+      U.smokeY = F0 + 1.0; U.smoke = [0, 1, 2].map(function(){ var s = new T.Mesh(new T.SphereGeometry(0.12, 8, 6), new T.MeshBasicMaterial({ color: 0xdddddd, transparent: true, opacity: 0.3, depthWrite: false })); s.position.set(5.2, U.smokeY, 198.2); g.add(s); return s; }); }
+    if(sgHas('telescope')){ [[0, 0.25], [-0.22, -0.12], [0.22, -0.12]].forEach(function(p){ var lg = cyl(0.02, 0.02, 1.25, m(0x333333), -1.5 + p[0] * 0.5, F0 + 0.6, 198.3 + p[1] * 0.5); lg.rotation.set(p[1] * 0.4, 0, -p[0] * 0.4); });
+      var tb = cyl(0.07, 0.05, 0.9, m(0xeeeeee, 0.3), -1.5, F0 + 1.3, 198.2); tb.rotation.x = Math.PI / 2 - 0.15; }
   }
   // a beach-goer for the ball games (the same look each time for the same seed)
   function sg3NpcPerson(T, seed){
@@ -7573,6 +7867,7 @@
     sg3Cars(T, now);
     sg3Beach(T, now);
     sg3Balls(T, now);
+    sg3House(T, now);
     sg3City(T, now);
     if(sg3.shore.ftex){ var wv = Math.sin(now * 0.55); sg3.shore.ftex.offset.set(now * 0.004, 0.18 * wv); sg3.shore.wash.position.z = 176 + 0.9 * wv; sg3.shore.wash.material.opacity = 0.35 + 0.25 * (0.5 + 0.5 * wv); }
     var side = new T.Vector3().crossVectors(fwd, up).normalize();
@@ -7583,7 +7878,7 @@
     R.g.quaternion.setFromRotationMatrix(m4);
     R.g.visible = sg.phase !== 'drive';
     if(sg.phase === 'walk' && sg.walk){
-      var Wk3 = sg.walk, gy = sgGroundY(Wk3.z), wfw = new T.Vector3(Math.cos(Wk3.hd), 0, Math.sin(Wk3.hd)), wup = new T.Vector3(0, 1, 0);
+      var Wk3 = sg.walk, gy = sgWalkY(Wk3.x, Wk3.z), wfw = new T.Vector3(Math.cos(Wk3.hd), 0, Math.sin(Wk3.hd)), wup = new T.Vector3(0, 1, 0);
       R.g.position.set(Wk3.x, gy, Wk3.z); R.g.quaternion.setFromRotationMatrix(new T.Matrix4().makeBasis(wfw, wup, new T.Vector3().crossVectors(wfw, wup)));
       R.body.rotation.set(0, 0, 0);
       R.g.visible = Wk3.t > 0.35;                                       // out of the car
@@ -7627,7 +7922,8 @@
     sg3.sandBoard.visible = sg.phase === 'walk' && !!sgBG.in && !!sgBG.board;
     if(sg3.sandBoard.visible){ var lkS = sgMyLook(); if(sg3.sandBoard.userData.key !== lkS.key){ sg3.sandBoard.userData.key = lkS.key; sg3ApplyLook(T, sg3.sandBoard, sg3.sandBoard.userData.stringer, lkS); }
       sg3.sandBoard.position.set(sgBG.board.x, sgGroundY(sgBG.board.z) + 0.06, sgBG.board.z); sg3.sandBoard.rotation.set(0, -sgBG.board.hd, 0); }
-    else if(R.board.position.y !== 0){ R.board.position.set(0, 0, 0); R.board.rotation.set(0, 0, 0); R.fin.visible = true; R.stripe.visible = sgMyLook().line === 1; }
+    // off the beach: the board back under your feet
+    if(sg.phase !== 'walk' && R.board.position.y !== 0){ R.board.position.set(0, 0, 0); R.board.rotation.set(0, 0, 0); R.fin.visible = true; R.stripe.visible = sgMyLook().line === 1; }
     if(sg.phase === 'air' && sg.air && sg.air.sup > 0.01){
       // superman: the body swings out flat above the board, legs kicked back,
       // hands on the rails
@@ -7820,14 +8116,18 @@
       });
     }
     if(sg.phase === 'walk' && sg.walk){
-      var Wc = sg.walk, wf = new T.Vector3(Math.cos(Wc.hd), 0, Math.sin(Wc.hd)), gyc = sgGroundY(Wc.z);
+      var Wc = sg.walk, wf = new T.Vector3(Math.cos(Wc.hd), 0, Math.sin(Wc.hd)), gyc = sgWalkY(Wc.x, Wc.z);
       var we = new T.Vector3(Wc.x + 1.2, Math.max(gyc, 0) + 2.1, Wc.z).addScaledVector(wf, -4.2), wt = new T.Vector3(Wc.x, gyc + 1.0, Wc.z).addScaledVector(wf, 4);
       // in a ball game: a little higher and further back, looking into the circle
       if(sgBG.in && sgLot){ var cG = new T.Vector3(sgLot.parkX + sgBG.in.x, sgGroundY(sgBG.in.z) + 1.5, sgBG.in.z);
         we = new T.Vector3(Wc.x, Math.max(gyc, 0) + 3.3, Wc.z).addScaledVector(wf, -4.6).add(new T.Vector3(-wf.z, 0, wf.x).multiplyScalar(0.7)); wt = cG; }
+      var inH = sgInHouse();
+      if(inH === 2){ var dB = sgCamBack(Wc.x, Wc.z, wf.x, wf.z, 2.4); we = new T.Vector3(Wc.x, gyc + 1.95, Wc.z).addScaledVector(wf, -dB); wt = new T.Vector3(Wc.x, gyc + 1.25, Wc.z).addScaledVector(wf, 2.2); }
       if(!sg3.wkE || Wc.t < 0.05){ sg3.wkE = sg3.drE ? sg3.drE.clone() : we.clone(); sg3.wkT = sg3.drT ? sg3.drT.clone() : wt.clone(); }
       sg3.wkE.lerp(we, Math.min(1, dtR * 3)); sg3.wkT.lerp(wt, Math.min(1, dtR * 4));
       sg3.cam.up.set(0, 1, 0); sg3.cam.position.copy(sg3.wkE); sg3.cam.lookAt(sg3.wkT); U2.uCam.value.copy(sg3.cam.position);
+      if(sgBino){ var eyeB = new T.Vector3(Wc.x, gyc + 1.65, Wc.z - 0.35), dirB = new T.Vector3(Math.sin(sgBino.yaw), -0.035, -Math.cos(sgBino.yaw));
+        sg3.cam.position.copy(eyeB); sg3.cam.lookAt(eyeB.clone().addScaledVector(dirB, 100)); U2.uCam.value.copy(eyeB); sg3.rider.g.visible = false; }
     }
     if(sg.phase === 'drive' && sg.car){
       var Cc = sg.car, cf = new T.Vector3(Math.cos(Cc.hd), 0, Math.sin(Cc.hd));
@@ -7847,7 +8147,7 @@
       var q = hp.project(sg3.cam); if(q.z > 1 || Math.abs(q.x) > 1.1 || Math.abs(q.y) > 1.1) return;
       sg3.tags.push({ x: (q.x + 1) / 2 * W, y: (1 - q.y) / 2 * H, nm: G.nm, sc: G.riding ? G.sc : null });
     });
-    var fovWant = sg.phase === 'drive' || sg.phase === 'walk' ? 62 : povNow ? 74 : chaseNow ? 60 : 36;
+    var fovWant = sgBino && sg.phase === 'walk' ? sgBino.fov : sg.phase === 'drive' || sg.phase === 'walk' ? 62 : povNow ? 74 : chaseNow ? 60 : 36;
     if(sg3.cam.fov !== fovWant){ sg3.cam.fov = fovWant; sg3.cam.updateProjectionMatrix(); }
     U2.uCam.value.copy(sg3.cam.position);
     sg3.oceanNear.position.set(Math.round(sg3.cam.position.x / 4.67) * 4.67, 0, Math.round(sg3.cam.position.z / 4.67) * 4.67);
@@ -7870,6 +8170,14 @@
     if(!document.getElementById('sgFcBtn')){ var fb = document.createElement('button'); fb.type = 'button'; fb.className = 'shop-btn'; fb.id = 'sgFcBtn';
       fb.addEventListener('click', function(){ sgOpenForecast(); }); var mb = document.getElementById('sgModeBtn'); mb.parentNode.insertBefore(fb, mb); }
     document.getElementById('sgFcBtn').textContent = L('📅 תחזית גלים ורוח לשבוע', '📅 Wave & wind forecast for the week');
+    if(!document.getElementById('sgHomeMBtn')){ var hmb = document.createElement('button'); hmb.type = 'button'; hmb.className = 'shop-btn'; hmb.id = 'sgHomeMBtn';
+      hmb.addEventListener('click', sgOpenHome); var fcb0 = document.getElementById('sgFcBtn'); fcb0.parentNode.insertBefore(hmb, fcb0); }
+    document.getElementById('sgHomeMBtn').textContent = L('🏠 הבית שלי — ', '🏠 My house — ') + sgItem(SG_SPOTS, sgHome()).name;
+    if(!document.getElementById('sgSpBtn')){ var spb = document.createElement('button'); spb.type = 'button'; spb.className = 'shop-btn'; spb.id = 'sgSpBtn';
+      spb.addEventListener('click', sgOpenSponsors); var fcb = document.getElementById('sgFcBtn'); fcb.parentNode.insertBefore(spb, fcb); }
+    var spO = sgSpOffer(), spC = sgSp().cur && sgItem(SG_SPONSORS, sgSp().cur);
+    document.getElementById('sgSpBtn').textContent = spO ? L('📩 הצעת חסות מ' + spO.name + '!', '📩 A sponsor offer from ' + spO.name + '!') : spC ? spC.icon + L(' הספונסר שלכם: ' + spC.name, ' Your sponsor: ' + spC.name) : L('🤝 ספונסרים', '🤝 Sponsors');
+    document.getElementById('sgSpBtn').classList.toggle('is-hot', !!spO);
     var list = document.getElementById('sgSpots');
     list.innerHTML = '';
     SG_SPOTS.forEach(function(spot, i){
@@ -7909,7 +8217,7 @@
     sgRenderMenu();
     sgMenu.hidden = false;
   }
-  function sgPeakBtnsOff(){ sgBG.in = null; sgBG.pend = null; document.getElementById('sgBallBtn').hidden = true; document.getElementById('sgHitBtn').hidden = true; sgBoost = { shells: 1, paddle: 1, ate: {} }; sgHutOpen = null; document.getElementById('sgHut').hidden = true; document.getElementById('sgDoorBtn').hidden = true; document.getElementById('sgPeakBtn').hidden = true; document.getElementById('sgExitBtn').hidden = true; document.getElementById('sgBeachBtn').hidden = true; document.getElementById('sgSkipBtn').hidden = true; sgNetLeave(); sgLot = null; }
+  function sgPeakBtnsOff(){ sgBino = null; document.getElementById('sgHomeBtn').hidden = true; sgBG.in = null; sgBG.pend = null; document.getElementById('sgBallBtn').hidden = true; document.getElementById('sgHitBtn').hidden = true; sgBoost = { shells: 1, paddle: 1, ate: {} }; sgHutOpen = null; document.getElementById('sgHut').hidden = true; document.getElementById('sgDoorBtn').hidden = true; document.getElementById('sgPeakBtn').hidden = true; document.getElementById('sgExitBtn').hidden = true; document.getElementById('sgBeachBtn').hidden = true; document.getElementById('sgSkipBtn').hidden = true; sgNetLeave(); sgLot = null; }
   function sgLeave(){
     sgPeakBtnsOff();
     sg = { active: false, phase: 'menu' };
@@ -8006,6 +8314,7 @@
     }
     SG_BOARDS.forEach(function(bd){
       var a = buyOrPick('board', bd);
+      if(bd.sp && sgSave.boards.indexOf(bd.id) < 0) a = { text: L('🤝 רק מהספונסר', '🤝 Sponsor only'), on: false, go: null };
       bl.appendChild(sgCard(bd.name, '', a.text, a.on, a.go, function(g){ g.translate(48, 40); g.scale(0.95, 0.95); sgDrawRider(g, { skin: 'rgba(0,0,0,0)', hair: 'rgba(0,0,0,0)', suit: 'rgba(0,0,0,0)', accent: 'rgba(0,0,0,0)' }, bd, 0, 0, 0); }));
     });
     SG_RIDERS.forEach(function(rd){
@@ -8034,7 +8343,14 @@
         function(){ sgSave.shells -= cost; sgSave.up[u.id]++; sgStore(); sgRenderShop(); }));
     });
   }
-  document.getElementById('sgEnterBtn').addEventListener('click', sgOpenMenu);
+  document.getElementById('sgEnterBtn').addEventListener('click', function(){ sgOpenMenu(); sgStartAtHome(0); });
+  // into the surf game: the day starts in your house (once the 3D is ready; the menu until then)
+  function sgStartAtHome(n){
+    if(sg.phase !== 'menu' || sgMenu.hidden || sg3.state === 'failed') return;
+    if(sg3.state !== 'ready'){ if(n < 120) setTimeout(function(){ sgStartAtHome(n + 1); }, 150); return; }
+    var i = SG_SPOTS.indexOf(sgItem(SG_SPOTS, sgHome())), card = document.querySelectorAll('#sgSpots .sg-spot')[i];
+    if(!card) return; sgFromHome = true; card.click(); sgFromHome = false;
+  }
   var SG3_CAMS = ['chase', 'pov', 'beach'];
   sg3.camMode = SG3_CAMS.indexOf(sgSave.cam) !== -1 ? sgSave.cam : 'chase';
   var sgWeak = ('ontouchstart' in window && Math.min(screen.width, screen.height) < 520) || (navigator.hardwareConcurrency || 4) <= 4;
@@ -8076,6 +8392,60 @@
     if(sgHutOpen === 'surf'){ sgHutOpen = null; return; }            // back out of the surf shop onto the beach
     sgRenderMenu(); sgMenu.hidden = false; });
   // the huts on the beach
+  function sgOpenHome(){
+    var el = document.getElementById('sgHutBody'); el.innerHTML = '';
+    document.getElementById('sgHutTitle').textContent = L('🏠 הבית שלי', '🏠 My house');
+    document.getElementById('sgHutShells').textContent = '🐚 ' + fmtScore(sgSave.shells) + ' · ' + Object.keys(sgSave.furn || {}).length + '/' + SG_FURN.length + L(' רהיטים', ' furniture');
+    document.getElementById('sgHutBack').textContent = L('חזרה', 'Back');
+    var p = document.createElement('p'); p.className = 'sg-fc-note'; p.textContent = L('בית על החוף האהוב עליכם: סלון, חדר שינה ומטבח, מרפסת עם משקפת לגלים, ומדרגות ישר לים.', 'A house at your favourite beach: a living room, a bedroom and a kitchen, a porch with binoculars for the waves, and stairs straight to the sea.'); el.appendChild(p);
+    var t = document.createElement('div'); t.className = 'mission-title'; t.textContent = L('החוף של הבית', 'The beach of the house'); el.appendChild(t);
+    var row = document.createElement('div'); row.className = 'sg-fc-tabs';
+    SG_SPOTS.forEach(function(s){ if(s.tow) return; var b = document.createElement('button'); b.type = 'button'; b.className = 'sg-fc-tab' + (sgHome() === s.id ? ' is-on' : ''); b.textContent = s.emoji + ' ' + s.name;
+      b.addEventListener('click', function(){ sgSave.home = s.id; sgStore(); sgOpenHome(); }); row.appendChild(b); });
+    el.appendChild(row);
+    var go = document.createElement('button'); go.type = 'button'; go.className = 'go-btn'; go.style.width = '100%'; go.textContent = L('🏠 להתחיל את היום בבית — ', '🏠 Start the day at home — ') + sgItem(SG_SPOTS, sgHome()).name;
+    go.addEventListener('click', function(){ var i = SG_SPOTS.indexOf(sgItem(SG_SPOTS, sgHome())); document.getElementById('sgHut').hidden = true; sgHutOpen = null; sgFromHome = true;
+      var card = document.querySelectorAll('#sgSpots .sg-spot')[i]; if(card) card.click(); if(sgFromHome){ sgFromHome = false; } });
+    el.appendChild(go);
+    var fb = document.createElement('button'); fb.type = 'button'; fb.className = 'shop-btn'; fb.style.width = '100%'; fb.textContent = L('🛋️ רהיטים לבית', '🛋️ Furniture for the house');
+    fb.addEventListener('click', function(){ sgOpenHut('furn'); }); el.appendChild(fb);
+    sgHutOpen = 'fc'; sgMenu.hidden = true; document.getElementById('sgHut').hidden = false;
+  }
+  function sgOpenSponsors(){
+    var el = document.getElementById('sgHutBody'); el.innerHTML = '';
+    var S = sgSp(), P = S.cur && sgItem(SG_SPONSORS, S.cur), off = sgSpOffer();
+    document.getElementById('sgHutTitle').textContent = L('🤝 ספונסרים', '🤝 Sponsors');
+    document.getElementById('sgHutShells').textContent = '🐚 ' + fmtScore(sgSave.shells) + L(' · הציון הכי טוב שלכם: ', ' · your best wave: ') + sgBestAll().toFixed(2);
+    document.getElementById('sgHutBack').textContent = L('חזרה', 'Back');
+    function logo(p, big){ return '<span class="sg-sp-logo' + (big ? ' is-big' : '') + '" style="background:' + p.col + '">' + p.icon + '</span>'; }
+    if(P){
+      var nDone = Object.keys(S.done).length, card = document.createElement('div'); card.className = 'sg-sp-card'; card.style.borderColor = P.col;
+      card.innerHTML = logo(P, true) + '<div><b>' + P.name + '</b><br>' + L('הספונסר שלכם · משימה ', 'Your sponsor · mission ') + Math.min(P.ms.length, nDone + 1) + L(' מתוך ', ' of ') + P.ms.length +
+        '<i class="sg-sp-bar"><em style="width:' + Math.round(nDone / P.ms.length * 100) + '%;background:' + P.col + '"></em></i><small>' + L('בסוף החוזה: הגלשן של ', 'At the end: the board of ') + P.name + ' 🏄</small></div>';
+      el.appendChild(card);
+      P.ms.forEach(function(ms, i){ var open = sgSpOpen().indexOf(i) >= 0, done = !!S.done[i];
+        if(!open && !done) return;
+        var r = document.createElement('div'); r.className = 'sg-sp-ms' + (done ? ' is-done' : '');
+        var prog = ms.k === 'waves' && !done ? ' (' + (S.c[i] || 0) + '/' + ms.n + ')' : '';
+        r.innerHTML = '<span>' + (done ? '✅' : '🎯') + '</span><span class="sg-sp-t">' + sgMsText(ms) + prog + '</span><span class="sg-sp-rw">🐚 ' + ms.rw + (i === P.ms.length - 1 ? ' + 🏄' : '') + '</span>';
+        el.appendChild(r); });
+      var left = P.ms.length - Object.keys(S.done).length - sgSpOpen().length; if(left > 0){ var lk = document.createElement('div'); lk.className = 'sg-sp-ms is-lock'; lk.textContent = L('🔒 עוד ' + left + ' משימות נפתחות כשמסיימים', '🔒 ' + left + ' more missions open as you finish'); el.appendChild(lk); }
+    }
+    if(off){
+      var oc = document.createElement('div'); oc.className = 'sg-sp-card is-offer'; oc.style.borderColor = off.col;
+      oc.innerHTML = logo(off, true) + '<div><b>📩 ' + off.name + L(' רוצים לממן אתכם!', ' want to sponsor you!') + '</b><br><small>' + L('6 משימות · צדפים על כל אחת · ובסוף הגלשן שלהם', '6 missions · shells for each · and their board at the end') + '</small></div>';
+      var ac = document.createElement('button'); ac.type = 'button'; ac.className = 'go-btn sg-sp-accept'; ac.textContent = L('✍️ לחתום על החוזה', '✍️ Sign the contract');
+      ac.addEventListener('click', function(){ var S2 = sgSp(); S2.cur = off.id; S2.done = {}; S2.c = {}; sgStore(); sgOpenSponsors(); });
+      oc.appendChild(ac); el.appendChild(oc);
+    }
+    // all the brands: done, yours, offering, or not yet
+    var t = document.createElement('div'); t.className = 'mission-title'; t.textContent = L('המותגים', 'The brands'); el.appendChild(t);
+    SG_SPONSORS.forEach(function(p){ var r = document.createElement('div'); r.className = 'sg-sp-row';
+      var st = S.fin.indexOf(p.id) >= 0 ? L('✔ החוזה הושלם', '✔ Contract done') : S.cur === p.id ? L('⭐ הספונסר שלכם', '⭐ Your sponsor') : off && off.id === p.id ? L('📩 הצעה!', '📩 Offer!')
+        : L('🔒 צריך גל של ' + p.need + '+', '🔒 Needs a ' + p.need + '+ wave') + (sgBestAll() >= p.need ? L(' · קודם מסיימים את החוזה הקודם', ' · finish the current contract first') : '');
+      r.innerHTML = logo(p) + '<b>' + p.name + '</b><span>' + st + '</span>'; el.appendChild(r); });
+    sgHutOpen = 'fc'; sgMenu.hidden = true; document.getElementById('sgHut').hidden = false;
+  }
   function sgOpenForecast(spotId){
     var el = document.getElementById('sgHutBody'); el.innerHTML = '';
     var ocean = SG_SPOTS.filter(function(s){ return !sgIsPool(s); }), cur = sgItem(ocean, typeof spotId === 'string' ? spotId : (sg.spot && !sgIsPool(sg.spot) ? sg.spot.id : 'olga'));
@@ -8116,9 +8486,18 @@
     sgHutOpen = id; document.getElementById('sgHutBack').textContent = L('חזרה לחוף', 'Back to the beach');
     if(id === 'surf'){ sgRenderShop(); sgShop.hidden = false; return; }
     var el = document.getElementById('sgHutBody'); el.innerHTML = '';
-    document.getElementById('sgHutTitle').textContent = id === 'play' ? L('⚽ הכדורים שלכם', '⚽ Your balls') : sgItem(SG_HUTS, id).name;
+    document.getElementById('sgHutTitle').textContent = id === 'play' ? L('⚽ הכדורים שלכם', '⚽ Your balls') : id === 'furn' ? L('🛋️ רהיטים לבית', '🛋️ Furniture for the house') : sgItem(SG_HUTS, id).name;
+    if(id === 'furn') document.getElementById('sgHutBack').textContent = L('חזרה לבית', 'Back to the house');
     document.getElementById('sgHutShells').textContent = '🐚 ' + fmtScore(sgSave.shells);
-    if(id === 'balls' || id === 'play'){
+    if(id === 'furn'){
+      var fg = document.createElement('div'); fg.className = 'sg-grid'; el.appendChild(fg); sgSave.furn = sgSave.furn || {};
+      SG_FURN.forEach(function(it){ var has = !!sgSave.furn[it.id];
+        fg.appendChild(sgCard(it.icon + ' ' + it.name, '', has ? L('✔ בבית', '✔ In the house') : '🐚 ' + it.price, !has && sgSave.shells >= it.price, function(){
+          sgSave.shells -= it.price; sgSave.furn[it.id] = 1; sgStore(); sgOpenHut('furn');
+          if(sg.texts) sgAddText(it.icon + L(' ' + it.name + ' — בבית!', ' ' + it.name + ' — in the house!'), '#7fffb0');
+        }, function(g){ g.font = '44px serif'; g.textAlign = 'center'; g.fillText(it.icon, 48, 50); })); });
+      if(!sg.active || sg.phase !== 'walk'){ sgHutOpen = 'fc'; sgMenu.hidden = true; }
+    } else if(id === 'balls' || id === 'play'){
       var bg2 = document.createElement('div'); bg2.className = 'sg-grid'; el.appendChild(bg2); sgSave.balls = sgSave.balls || {};
       SG_BALLS.forEach(function(it){ var has = !!sgSave.balls[it.id], best = (sgSave.ballBest || {})[it.id] || 0;
         if(id === 'play' && !has) return;
@@ -8157,6 +8536,14 @@
     document.getElementById('sgHut').hidden = false;
   }
   document.getElementById('sgHutBack').addEventListener('click', function(){ document.getElementById('sgHut').hidden = true; if(sgHutOpen === 'fc') sgMenu.hidden = false; sgHutOpen = null; });
+  document.getElementById('sgHomeBtn').addEventListener('click', function(e){
+    e.stopPropagation(); if(sg.phase !== 'walk') return;
+    if(sgLot && sgLot.car && sg.walk && Math.hypot(sg.walk.x - sgLot.car.x, sg.walk.z - sgLot.car.z) < 4){ sgOpenMenu(); return; }
+    var w = sgInHouse(); if(sgBino){ sgBino = null; return; }
+    if(w === 1){ var pkX = (sg.curl + 300) * SG3_M, pkZ = typeof sg3ZLine === 'function' && sg3.state === 'ready' ? sg3ZLine(pkX) : 160;
+      sgBino = { yaw: Math.max(-1.3, Math.min(1.3, Math.atan2(pkX - sg.walk.x, sg.walk.z - pkZ))), fov: 16 }; return; }
+    if(w === 2) sgOpenHut('furn');
+  });
   document.getElementById('sgBallBtn').addEventListener('click', function(e){
     e.stopPropagation(); if(sg.phase !== 'walk' || !sg.walk) return;
     if(sgBG.in){ sgBallLeave(); return; }
@@ -14163,7 +14550,7 @@
   // never while the name field is being typed in. Everything worth keeping
   // (coins, skins, name, league) is in localStorage, so a reload loses nothing.
   // 'dev' = a local or preview copy: the updater stays off entirely.
-  var BUILD_VERSION = '20261030-121003';
+  var BUILD_VERSION = '20261030-130035';
   var UPDATE_CHECK_MS = 60000;
   var UPDATE_TRIED_KEY = 'canyonChaseTriedUpdate';
   var pendingSubmits = 0;
