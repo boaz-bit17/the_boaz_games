@@ -677,6 +677,15 @@
     background:rgba(255,140,40,.85); color:#fff; font:bold 16px Rubik, sans-serif; cursor:pointer; }
   .sg-exit-btn{ top:62px; background:rgba(0,30,50,.55); }
   .sg-beach-btn{ top:112px; background:rgba(214,170,90,.92); }
+  .sg-size{ margin:4px 0 10px; }
+  .sg-size-rec{ font:bold 13px Rubik, sans-serif; color:#1f5fbf; text-align:center; margin:2px 0 6px; }
+  .sg-len{ height:auto; padding:4px 8px; line-height:1.2; }
+  .sg-len small{ font-weight:normal; font-size:10px; }
+  .sg-size-bars{ max-width:300px; margin:8px auto 0; font:12px Rubik, sans-serif; color:#3a2614; }
+  .sg-size-bars div{ display:flex; align-items:center; gap:8px; margin:3px 0; }
+  .sg-size-bars span{ flex:0 0 110px; }
+  .sg-size-bars i{ flex:1; height:9px; border-radius:5px; background:rgba(90,59,26,.15); overflow:hidden; }
+  .sg-size-bars em{ display:block; height:100%; background:linear-gradient(90deg,#ff9a1f,#2fb24c); }
   .sg-design{ display:flex; flex-direction:column; align-items:center; gap:4px; margin:4px 0 10px; }
   .sg-design canvas{ width:240px; height:96px; }
   .sg-design .sg-sub{ font:bold 13px Rubik, sans-serif; color:#5a3b1a; margin-top:4px; }
@@ -691,6 +700,26 @@
   .sg-skip-btn{ top:12px; left:auto; right:12px; background:rgba(0,30,50,.6); }
   .sg-ball-btn{ top:auto; bottom:150px; left:50%; transform:translateX(-50%); background:rgba(40,110,210,.92); font-size:17px; height:46px; white-space:nowrap; }
   .sg-ball-btn.is-leave{ bottom:16px; left:16px; transform:none; height:40px; font-size:15px; background:rgba(0,30,50,.6); }
+  .sg-fc-tabs{ display:flex; gap:6px; overflow-x:auto; padding:2px 0 8px; }
+  .sg-fc-tab{ flex:0 0 auto; padding:8px 12px; border-radius:10px; border:2px solid rgba(90,59,26,.25); background:#fff7e6; font:bold 13px Rubik, sans-serif; color:#3a2614; cursor:pointer; }
+  .sg-fc-tab.is-on{ border-color:#1f6fd1; background:#dcecff; }
+  .sg-fc-now{ display:flex; gap:6px; margin-bottom:8px; }
+  .sg-fc-now > div{ flex:1; border-radius:10px; padding:8px 6px; text-align:center; font:12px Rubik, sans-serif; color:#fff; line-height:1.4; }
+  .sg-fc-now b{ font:bold 20px Rubik, sans-serif; }
+  .sg-fc-now span{ font-weight:bold; }
+  .sg-fc-now .sg-fc-now-s{ background:#fff7e6; color:#3a2614; border:2px solid rgba(90,59,26,.2); }
+  .sg-fc-now .sg-fc-now-s b{ font-size:13px; letter-spacing:-1px; }
+  .sg-fc{ width:100%; border-collapse:separate; border-spacing:0 3px; font:13px Rubik, sans-serif; color:#3a2614; }
+  .sg-fc th{ font-weight:bold; padding:4px; font-size:12px; color:#7a5a3a; }
+  .sg-fc td{ text-align:center; padding:6px 4px; background:#fff7e6; line-height:1.25; }
+  .sg-fc td.sg-fc-day{ font-weight:bold; border-radius:0 8px 8px 0; }
+  .sg-fc td.sg-fc-h, .sg-fc td.sg-fc-w{ color:#fff; }
+  .sg-fc td.sg-fc-st{ font-size:10px; letter-spacing:-1px; border-radius:8px 0 0 8px; }
+  .sg-fc small{ font-size:10px; }
+  .sg-fc-arr{ display:inline-block; font-size:12px; }
+  .sg-fc-note{ font:12px Rubik, sans-serif; color:#5a3b1a; text-align:center; margin:8px 0 0; }
+  .sg-fc-line{ font-weight:bold; }
+  .sg-fc-chip{ display:inline-block; padding:2px 7px; margin:2px 3px 0 0; border-radius:7px; color:#fff; font-weight:bold; }
   .sg-spec-btn{ top:auto; bottom:196px; left:auto; right:30px; width:88px; height:88px; border-radius:50%; padding:0; background:rgba(200,40,60,.92); font-size:15px; }
   .sg-hit-btn{ top:auto; bottom:70px; left:auto; right:18px; width:112px; height:112px; border-radius:50%; padding:0; background:rgba(255,140,40,.92); font-size:19px; }
   .sg-row{ display:flex; gap:8px; }
@@ -4619,8 +4648,8 @@
     { id: 'pool', emoji: '🏊', name: L('בריכת הגלים', 'The Wave Pool'), dur: 28, man: 0.62, tubeLen: 170, need: 0, curl: 1, size: 0.45, barrel: 0.12, hazard: null,
       desc: L('גלים מושלמים, אחד אחרי השני. המקום ללמוד.', 'Perfect waves, one after another. The place to learn.'),
       sky: ['#3d8ee0', '#cfe6f6'], sea: ['#3fb0d8', '#0d4f86'], face: ['#3d8fc4', '#0a4a88'] },
-    { id: 'olga', emoji: '🇮🇱', name: L('חוף אולגה', 'Olga Beach'), dur: 30, man: 0.58, tubeLen: 200, need: 0, curl: 1.08, size: 0.55, barrel: 0.2, hazard: 'jelly',
-      desc: L('הבית! גלים של הים התיכון, ושימו לב למדוזות.', 'Home! Mediterranean waves, and watch out for jellyfish.'),
+    { id: 'olga', emoji: '🇮🇱', name: L('חוף אולגה', 'Olga Beach'), dur: 30, man: 0.58, tubeLen: 200, need: 0, curl: 1.08, size: 0.55, barrel: 0.2, hazard: null,
+      desc: L('הבית! גלים של הים התיכון.', 'Home! Mediterranean waves.'),
       sky: ['#4a98e2', '#e2eef4'], sea: ['#3aa8d0', '#0c4c80'], face: ['#3f95c6', '#0b4a84'] },
     { id: 'pipe', emoji: '🌺', name: L('פייפליין, הוואי', 'Pipeline, Hawaii'), dur: 24, man: 0.42, tubeLen: 330, need: 0, curl: 1.2, size: 0.72, barrel: 0.6, hazard: null,
       desc: L('גל הצינור הכי מפורסם בעולם. הרבה צינורות!', 'The most famous barrel in the world. Lots of barrels!'),
@@ -4694,6 +4723,30 @@
     if(lk.icon && lk.icon !== 'none') sgDrawIcon(g, lk.icon, len * 0.08, 0, w * 0.7, lk.iconC);
     g.restore();
   }
+  // ---- board sizes (inches). Longer: paddles and catches easier, glides, but turns slowly and hardly flies
+  var SG_LENS = [
+    { len: 66,  name: L('פיש לאיירים', 'Air fish') },
+    { len: 70,  name: L('שורטבורד קטן', 'Small shortboard') },
+    { len: 74,  name: L('שורטבורד', 'Shortboard') },
+    { len: 78,  name: L('סטפ-אפ לגלים גדולים', 'Step-up for big waves') },
+    { len: 86,  name: L('פאנבורד', 'Funboard') },
+    { len: 96,  name: L('מיני-מאליבו', 'Mini-mal') },
+    { len: 110, name: L('לונגבורד', 'Longboard') }
+  ];
+  function sgLen(){ return sgSave.len || 74; }
+  function sgSz(len){ return ((len || sgLen()) - 74) / 36; }       // -0.22 (5'6") .. 0 (6'2") .. 1 (9'2")
+  // (marked left-to-right, so 7'2" doesn't come out flipped inside Hebrew)
+  function sgFt(inch){ return '‎' + Math.floor(inch / 12) + '\'' + (inch % 12) + '"‎'; }
+  // what fits you: by your level, and the day's waves at this beach
+  function sgRecLen(spot){
+    var lvl = 0; Object.keys(sgSave.best10 || {}).forEach(function(k){ lvl = Math.max(lvl, sgSave.best10[k] || 0); });
+    var want = lvl < 3 ? 96 : lvl < 5 ? 86 : lvl < 7 ? 78 : lvl < 8.5 ? 74 : 70, why = lvl < 3 ? L('מתחילים', 'beginner') : lvl < 5 ? L('מתקדמים', 'improving') : lvl < 7 ? L('טובים', 'good') : L('מקצוענים', 'pro');
+    var f = spot ? sgForecast(spot) : null, gw = '';
+    if(f && !f.pool){ if(f.hm >= 4.5){ want += 6; gw = L(' · גלים גדולים היום', ' · big waves today'); } else if(f.hm < 2.4){ want += 6; gw = L(' · גלים קטנים היום', ' · small waves today'); } }
+    if(spot && spot.id === 'air') want = Math.min(want, 70);
+    var best = SG_LENS[0]; SG_LENS.forEach(function(s){ if(Math.abs(s.len - want) < Math.abs(best.len - want)) best = s; });
+    return { len: best.len, why: L('לרמה שלכם (', 'For your level (') + why + ')' + gw };
+  }
   var SG_UPGRADES = [
     { id: 'speed',   icon: '⚡', name: L('מהירות', 'Speed'),   desc: L('גלשן מהיר יותר', 'A faster board') },
     { id: 'air',     icon: '🚀', name: L('קפיצה', 'Air'),      desc: L('קפיצות גבוהות יותר', 'Higher airs') },
@@ -4716,8 +4769,51 @@
   var SG_SET_RUN = 20;      // the swell rolls in over this many wave heights, steadily
   function sgSetOff(k, Hm){ return Hm * SG_SET_RUN * (1 - k); }
   function sgPeakGap(){ return Math.random() < 0.5 ? 65 + Math.random() * 45 : 500 + Math.random() * 120; }
+  // ---- the forecast: each day every ocean beach gets its swell (height), wind and period --
+  // the same for everyone, from the date. The pools are machines: the same wave every day.
+  var SG_FC_WIND = [
+    { id: 'glassy',  name: L('🪞 חלק כמו זכוכית', '🪞 Glassy'),   chop: 0.55, hollow: 1.35 },
+    { id: 'light',   name: L('🍃 רוח קלה מהיבשה', '🍃 Light offshore'), chop: 0.9, hollow: 1.15 },
+    { id: 'onshore', name: L('💨 רוח ים חזקה', '💨 Strong onshore'), chop: 1.8, hollow: 0.5 }
+  ];
+  function sgDayKey(off){ var d = new Date(Date.now() + (off || 0) * 864e5); return d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate(); }
+  function sgIsPool(spot){ return spot.id === 'pool' || spot.look === 'pool'; }
+  var SG3_H0 = {};                                                   // each beach's usual wave height (before the day's swell)
+  function sgForecast(spot, off){
+    if(SG3_H0[spot.id] === undefined) SG3_H0[spot.id] = SG3_H[spot.id] || 3;
+    var H0 = SG3_H0[spot.id];
+    if(sgIsPool(spot)) return { pool: true, h: 1, hm: H0, wind: SG_FC_WIND[0], kmh: 0, per: 0, stars: 4 };
+    var r = surfHash('fc:' + spot.id + ':' + sgDayKey(off)), r1 = (r % 1009) / 1009, r2 = ((r >>> 10) % 1013) / 1013, r3 = ((r >>> 20) % 997) / 997;
+    var hk = spot.tow ? 0.75 + r1 * 0.5 : 0.55 + r1 * 0.85;           // the swell: 55%..140% of the usual (Nazaré is always huge)
+    var wind = SG_FC_WIND[r2 < 0.3 ? 0 : r2 < 0.72 ? 1 : 2], per = Math.round(7 + r3 * 9);
+    // the stars: good size, clean wind, a long period
+    var q = 1 + (hk > 0.85 ? 1 : 0) + (hk > 1.05 ? 1 : 0) + (wind.id === 'onshore' ? -1 : wind.id === 'glassy' ? 1 : 0.5) + (per >= 12 ? 1 : 0);
+    var r4 = ((r >>> 5) % 991) / 991, kmh = Math.round(wind.id === 'glassy' ? 2 + r4 * 5 : wind.id === 'light' ? 7 + r4 * 9 : 18 + r4 * 17);
+    return { pool: false, h: hk, hm: Math.round(H0 * hk * 10) / 10, wind: wind, kmh: kmh, per: per, stars: Math.max(1, Math.min(5, Math.round(q))) };
+  }
+  function sgFcCm(f){ var c = f.hm * 100; return [Math.round(c * 0.75 / 10) * 10, Math.round(c * 1.05 / 10) * 10]; }
+  function sgFcWord(m){ return m < 0.15 ? L('פלטה', 'Flat') : m < 0.4 ? L('קרסול', 'Ankle') : m < 0.6 ? L('ברך', 'Knee') : m < 0.9 ? L('מעל ברך', 'Thigh') : m < 1.1 ? L('מותן', 'Waist')
+    : m < 1.4 ? L('חזה', 'Chest') : m < 1.8 ? L('ראש', 'Head high') : m < 2.6 ? L('מעל הראש', 'Overhead') : m < 4.2 ? L('כפול ראש', 'Double overhead') : m < 7 ? L('ענק', 'Huge') : L('מפלצתי', 'Monster'); }
+  // the height's box: pale for small, deep blue for big; the wind's: green clean, yellow, orange, red blown out
+  function sgFcHCol(m){ var k = Math.max(0, Math.min(1, m / 5)); return 'hsl(' + Math.round(196 + 26 * k) + ',' + Math.round(70 + 10 * k) + '%,' + Math.round(62 - 44 * k) + '%)'; }
+  function sgFcWCol(f){ return f.pool ? '#8aa1b1' : f.wind.id === 'glassy' ? '#2fb24c' : f.wind.id === 'light' ? (f.kmh > 12 ? '#9ccc2a' : '#3cbf55') : f.kmh > 26 ? '#e2462a' : '#f39a1f'; }
+  // the wind's arrow: offshore blows from the land out to sea, onshore from the sea in
+  function sgFcArrow(f){ return '<span class="sg-fc-arr" style="transform:rotate(' + (f.wind.id === 'onshore' ? 200 : 20) + 'deg)">➤</span>'; }
+  function sgStars(n){ return '⭐'.repeat(n) + '☆'.repeat(5 - n); }
+  // the day's surf on this beach: the wave's height, its pace, how hollow it gets
+  function sgApplyForecast(spot){
+    if(SG3_H0[spot.id] === undefined) SG3_H0[spot.id] = SG3_H[spot.id] || 3;
+    spot.base = spot.base || { size: spot.size, curl: spot.curl, barrel: spot.barrel, tubeLen: spot.tubeLen };
+    var f = sgForecast(spot), B = spot.base;
+    SG3_H[spot.id] = SG3_H0[spot.id] * f.h;
+    spot.size = Math.min(1, B.size * (0.65 + 0.35 * f.h));
+    spot.curl = B.curl * (0.9 + 0.1 * f.h) * (f.pool ? 1 : 0.96 + 0.01 * (f.per - 8));
+    spot.barrel = Math.min(0.85, B.barrel * f.wind.hollow * (0.7 + 0.3 * f.h));
+    spot.tubeLen = Math.round(B.tubeLen * (0.8 + 0.2 * f.wind.hollow));
+    return f;
+  }
   function sgStart(i){
-    var spot = SG_SPOTS[i];
+    var spot = SG_SPOTS[i]; sgApplyForecast(spot);
     sg = { active: true, phase: spot.tow ? 'tow' : 'paddle', spot: spot, spotIdx: i, t: 0, x: 0, v: spot.tow ? 620 : 40, h: spot.tow ? 0.35 : 0.04, th: spot.tow ? -0.3 : 0, hold: false,
            pad: sgNewSet(), catchT: 0, dz: 0, hd: Math.PI,
            curl: spot.tow ? -460 : -sgPeakGap(), score: 0, chain: 0, chainT: 0, lastMove: '', texts: [], spray: [], hazards: [], closeouts: [], throwT: 0, throwLen: 0,
@@ -4772,6 +4868,7 @@
     sgTourNext = tourWave && tourPd && !tourDone ? tourWave.key : null;
     sgSave.shells += shells;
     if(isBest) sgSave.best10[sg.spot.id] = final;
+    usageSend('run', 'surf:' + sg.spot.id, sg.t, Math.round(final * 100));
     sgStore();
     var R = {
       falls: L('השפה תפסה אותך — נפלת מעל המפל!', 'The lip caught you — over the falls!'),
@@ -4864,7 +4961,7 @@
     var ph = sg.phase === 'drive' || sg.phase === 'walk' ? 'd' : sg.phase === 'paddle' ? 'p' : sg.phase === 'ride' || sg.phase === 'done' || sg.phase === 'tow' ? 'r' : sg.phase === 'air' ? 'a' : 'w';
     try { sgNet.ch.send({ type: 'broadcast', event: 'pk', payload: { id: duelMyId, nm: playerNick() || L('גולש', 'Surfer'), rd: sgSave.rider, bd: sgSave.board, ph: ph,
       x: Math.round(sg.x - sg.peak.peakX), dz: Math.round((sg.dz || 0) * 10) / 10, hd: Math.round((sg.hd || 0) * 100) / 100, h: Math.round((sg.h || 0) * 100) / 100,
-      sc: Math.round(sgTen(sg.score) * 100) / 100, best: sg.peak.best, cr: sgSave.car, cc: sgSave.carColor, rk: sgSave.rack ? 1 : 0, lo: sgSave.look && sgSave.look.on ? sgSave.look : null, bz: sgSave.bd && sgSave.bd.on ? sgSave.bd : null,
+      sc: Math.round(sgTen(sg.score) * 100) / 100, best: sg.peak.best, ln: sgLen(), cr: sgSave.car, cc: sgSave.carColor, rk: sgSave.rack ? 1 : 0, lo: sgSave.look && sgSave.look.on ? sgSave.look : null, bz: sgSave.bd && sgSave.bd.on ? sgSave.bd : null,
       wx: sg.walk && sgLot ? Math.round((sg.walk.x - sgLot.parkX) * 10) / 10 : undefined, wz: sg.walk ? Math.round(sg.walk.z * 10) / 10 : undefined, wh: sg.walk ? Math.round(sg.walk.hd * 100) / 100 : undefined,
       bg: (function(){ var O = sgBG.list.filter(function(x){ return x.own; })[0]; return O ? { k: O.k, x: Math.round(O.x * 10) / 10, z: Math.round(O.z * 10) / 10, a: Math.round(O.a0 * 100) / 100, p: O.ppl } : undefined; })(),
       cx: sg.car && sgLot ? Math.round((sg.car.x - sgLot.parkX) * 10) / 10 : undefined, cz: sg.car ? Math.round(sg.car.z * 10) / 10 : undefined, ch: sg.car ? Math.round(sg.car.hd * 100) / 100 : undefined } }); } catch(e){}
@@ -4882,6 +4979,8 @@
     sgLot = { parkX: parkX, car: null };
     sg.car = { x: parkX - sgDriveM(sg.spot), z: SG_ROAD_Z, hd: 0, v: 0, t: 0, park: 0, crank: 0, dist0: sgDriveM(sg.spot) };
     sg.phase = 'drive'; sg.x = sg.car.x / SG3_M;
+    var recD = sgRecLen(sg.spot); if(Math.abs(recD.len - sgLen()) >= 8) sgAddText(L('📏 לגלים של היום מומלץ ', '📏 For today\'s waves try a ') + sgFt(recD.len) + L(' (יש לכם ', ' (yours is ') + sgFt(sgLen()) + L(') — בחנות הגלישה', ') — in the surf shop'), '#ffd447');
+    var fcD = sgForecast(sg.spot); if(!fcD.pool){ var cmD = sgFcCm(fcD); sgAddText(L('📅 היום ב', '📅 Today at ') + sg.spot.name + ': ' + cmD[0] + '-' + cmD[1] + L(' ס"מ (', ' cm (') + sgFcWord(fcD.hm) + ') · ' + fcD.wind.name, '#bfe9ff'); }
   }
   // parked: out of the car and into the water, a little way in from the take-off line
   // the beach: flat sand down to SG_EDGE_Z, then sloping into the sea; you drop onto the board at SG_WADE_Z
@@ -5243,13 +5342,13 @@
         P.t = (nowS - nS * PEAK_PERIOD) / 1000;
       }
       // strokes build up paddling speed; it fades when you stop
-      while(P.taps > 0){ P.taps--; P.pw = Math.min(1.25, P.pw + 0.3 * sgBoost.paddle); P.side = -P.side; P[P.side > 0 ? 'kR' : 'kL'] = 1; }
+      while(P.taps > 0){ P.taps--; P.pw = Math.min(1.25, P.pw + 0.3 * sgBoost.paddle * (1 + 0.3 * sgSz())); P.side = -P.side; P[P.side > 0 ? 'kR' : 'kL'] = 1; }
       P.pw = Math.max(0, P.pw - dt * 0.16); P.kR = Math.max(0, P.kR - dt * 2.4); P.kL = Math.max(0, P.kL - dt * 2.4);
       // ⬅️ ➡️ turn the board
       if(Math.abs(Jp.x) > 0.3) sg.hd -= Jp.x * 2.3 * dt;
       // paddle where you're facing (quicker when the peak is far off)
       var toX = (sg.curl + 300 - sg.x) / 40, dist = Math.sqrt(toX * toX + sg.dz * sg.dz);
-      var spd = (0.3 + P.pw * 2.4) * (P.stage === 'go' ? 1 : 1 + Math.min(6, Math.max(0, dist - 35) / 40));
+      var spd = (0.3 + P.pw * 2.4) * (1 + 0.2 * sgSz()) * (P.stage === 'go' ? 1 : 1 + Math.min(6, Math.max(0, dist - 35) / 40));
       sg.x += Math.sin(sg.hd) * spd * 40 * dt; sg.dz += Math.cos(sg.hd) * spd * dt;
       sg.dz = Math.max(-Hp * 9, Math.min(175, sg.dz));
       sg.v = 40 + P.pw * 260; sg.th = 0; sg.h = 0.04;
@@ -5263,7 +5362,7 @@
         if(toReach <= 0){
           var dz0 = P.dzGo === undefined ? sg.dz : P.dzGo, facing = Math.cos(sg.hd) > 0.3, outside = dz0 < -Hp * 4, inside = dz0 > Hp * 1.6, why = '';
           // further out than the take-off line you can still catch it, but you have to be paddling harder
-          var needPw = 0.75 + Math.min(0.4, 0.15 * Math.max(0, -dz0 / Hp - 1.3));
+          var needPw = 0.75 + Math.min(0.4, 0.15 * Math.max(0, -dz0 / Hp - 1.3)) - 0.18 * sgSz();      // a longer board catches it with less
           if(!outside && !inside && pg < 55){ sg.h = 0.5; sgWipe('late'); return; }        // right under the peak: the lip takes you
           if(!outside && !inside && pg <= 900 && facing && P.pw >= needPw){
             // in! the closer to the peak, the deeper the take-off
@@ -5300,7 +5399,7 @@
       sg.x += a.vx * dt;
       var Ja = sgJoyVec();
       // spinning: in a superman (the stick held up) a small tilt to the side is enough
-      if(Math.abs(Ja.x) > ((a.sup || 0) > 0.5 ? 0.18 : 0.35)) a.rot += SG_SPIN * dt * (Ja.x < 0 ? -1 : 1);
+      if(Math.abs(Ja.x) > ((a.sup || 0) > 0.5 ? 0.18 : 0.35)) a.rot += SG_SPIN * (1 - 0.3 * sgSz()) * dt * (Ja.x < 0 ? -1 : 1);
       // ⬇️ flips end over end
       if(Ja.y > 0.5) a.fl = (a.fl || 0) + SG_SPIN * 1.05 * dt;
       // ⬆️ let go and pushed again: superman (stretch out over the board, then pull it back)
@@ -5336,20 +5435,21 @@
     // riding the face
     var J = sgJoyVec();
     var target = J.on ? Math.max(-0.95, Math.min(1.05, -J.y * 1.1)) : sg.tube > 0 ? 0 : -0.3;
-    sg.th += (target - sg.th) * Math.min(1, dt * 4.6);
+    var bSz = sgSz();
+    sg.th += (target - sg.th) * Math.min(1, dt * 4.6 * (1 - 0.32 * bSz));          // a long board turns slowly
     // far out on the shoulder the wave has no push left
     var push = Math.max(0.25, Math.min(1, 1 - (gap - 900) / 700));
     sg.v += -Math.sin(sg.th) * SG_G * push * dt;
-    sg.v -= sg.v * 0.1 * dt;
+    sg.v -= sg.v * 0.1 * (1 - 0.3 * bSz) * dt;                         // ...and glides
     if(sg.h <= 0.001 && sg.th < 0){ sg.v -= 120 * dt; }            // flat water at the bottom
-    var vmax = 720 * (1 + 0.06 * up.speed);
+    var vmax = 720 * (1 + 0.06 * up.speed) * (1 + 0.04 * bSz);
     sg.v = Math.max(200, Math.min(vmax, sg.v));
     sg.h += Math.sin(sg.th) * sg.v * dt / F;
     // a cutback: hold back on the stick and the board carves all the way
     // round (psi: 0 = down the line, pi = back at the curl); let go and it
     // carves back. Ride back into the foam and you bounce off it
     if(sg.rebound) sg.psi = Math.max(0, sg.psi - dt * 9);
-    else if(J.x < -0.4) sg.psi = Math.min(Math.PI, sg.psi + dt * (2 + 1.6 * -J.x));
+    else if(J.x < -0.4) sg.psi = Math.min(Math.PI, sg.psi + dt * (2 + 1.6 * -J.x) * (1 - 0.35 * bSz));
     else sg.psi = Math.max(0, sg.psi - dt * (J.x > 0.4 ? 4 : 2.8));
     sg.psiMax = Math.max(sg.psiMax, sg.psi);
     var fwdK = Math.cos(sg.psi), prevX = sg.x;
@@ -5392,7 +5492,7 @@
     if(sg.h >= 1){
       var onWall = sgWallAt(sg.x) > 0.05;
       if(onWall ? J.y < -0.3 && sg.psi < 0.8 : sg.th > 0.4 && sg.v > 360 && J.y < -0.5 && sg.psi < 0.6){
-        var lift = (1 + 0.1 * up.air) * (onWall ? 1.5 : 1);
+        var lift = (1 + 0.1 * up.air) * (onWall ? 1.5 : 1) * (1 - 0.3 * bSz);      // a long board hardly flies
         // the wall throws you up even if you came up it slowly
         if(onWall){ sg.v = Math.max(sg.v, 430); sg.th = Math.max(sg.th, 0.75); }
         sg.phase = 'air';
@@ -6239,6 +6339,9 @@
     return rows[0][1];
   }
   // the others in the lineup: a model each, lying and paddling, or up and riding
+  // a board as long as its size (the model is about 5'11")
+  function sg3BoardLen(R, len){ if(R.lenK === len) return; R.lenK = len; var k = len / 71, w = 1 + 0.14 * sgSz(len);
+    R.board.scale.set(k, 1, w); R.stripe.scale.x = k; R.fin.position.x = -0.78 * k; }
   function sg3Ghosts(T, Hm, rows, zLine, zOff, now){
     sg3.ghosts = sg3.ghosts || [];
     var list = sg.peak && sg.peak.shared ? sgNetList().slice(0, 7) : [];
@@ -6251,7 +6354,7 @@
         sg3ApplyLook(T, R.board, R.stripe, lkO); G.stripeOn = R.stripe.visible; }
       if(onFoot){
         // walking (smoothed between their updates), board under the arm -- or standing in a game
-        G.nm = o.nm; G.sc = 0; G.riding = false;
+        G.nm = o.nm; G.sc = 0; G.riding = false; sg3BoardLen(R, +o.ln || 74);
         var dtG = Math.min(0.1, Math.max(0, now - (G.lt || now))); G.lt = now;
         var tx = sgLot.parkX + o.wx, tz = o.wz;
         if(G.wx === undefined || Math.hypot(tx - G.wx, tz - G.wz) > 12){ G.wx = tx; G.wz = tz; }
@@ -6268,7 +6371,7 @@
         return;
       }
       if(G.walked){ G.walked = false; R.body.position.set(0, 0, 0); R.board.visible = true; R.board.position.set(0, 0, 0); R.board.rotation.set(0, 0, 0); R.fin.visible = true; R.stripe.visible = G.stripeOn !== false; sg3Paddle(T, R, false); G.wx = undefined; }
-      G.nm = o.nm; G.sc = o.sc; G.riding = o.ph === 'r' || o.ph === 'a';
+      G.nm = o.nm; G.sc = o.sc; G.riding = o.ph === 'r' || o.ph === 'a'; sg3BoardLen(R, +o.ln || 74);
       var gx = ((sg.peak.peakX || 0) + (o.x || 0)) * SG3_M, fwd, pos;
       // the wave where they are (the same set as yours): its profile at their x
       var bG = sg3Break(gx, Hm), rG = sg3ProfileQ(bG[0], bG[1], Hm, bG[2]);
@@ -7375,8 +7478,8 @@
     }
     sg3.cv.style.display = 'block';
     if(sg3.w !== W || sg3.h !== H){ sg3.r.setSize(W, H, false); sg3.cam.aspect = W / H; sg3.cam.updateProjectionMatrix(); sg3.w = W; sg3.h = H; }
-    if(sg3.spotId !== spot.id){
-      sg3.spotId = spot.id;
+    if(sg3.spotId !== spot.id + ':' + Hm){
+      sg3.spotId = spot.id + ':' + Hm;
       sg3.skyMat.uniforms.uTop.value.set(spot.sky[0]); sg3.skyMat.uniforms.uHz.value.set(spot.sky[1]);
       var U = sg3.wm.uniforms;
       U.uDeep.value.set(spot.face[1]).multiplyScalar(0.7); U.uFace.value.set(spot.face[0]); U.uSea.value.set(spot.sea[0]);
@@ -7386,7 +7489,7 @@
       if(BED){ U.uBedD.value = BED[1] * Hm; U.uBedSand.value.setHex(BED[2]); U.uBedReef.value.setHex(BED[3]); U.uExt.value.fromArray(BED[4]); U.uScat.value.setHex(BED[5]); }
       U.uGlow.value.set({ pool: 0x5ab6e0, olga: 0x56bcd8, pipe: 0x48c6d8, naz: 0x3ab8c4 }[spot.look || spot.id] || 0x2fe0b8); U.uSkyC.value.set(spot.sky[1]); U.uFog.value.set(spot.sky[1]);
       U.uH.value = Hm; U.uSkyTop.value.set(spot.sky[0]);
-      U.uAmp.value = { pool: 0.25, olga: 0.7, pipe: 0.85, naz: 1.5 }[spot.look || spot.id] || 0.7;
+      U.uAmp.value = ({ pool: 0.25, olga: 0.7, pipe: 0.85, naz: 1.5 }[spot.look || spot.id] || 0.7) * sgForecast(spot).wind.chop;
       sg3.skyMat.uniforms.uCloud.value = { pool: 0.0, olga: 0.15, pipe: 0.3, naz: 1 }[spot.look || spot.id] || 0.3;
       sg3.r.setClearColor(spot.sky[1]);
       sg3SetShore(T, sg3.shore, spot.look || spot.id);
@@ -7503,6 +7606,7 @@
       R.suitM.color.set(rd.suit); R.skinM.color.set(rd.skin); R.hairM.color.set(rd.hair); R.accM.color.set(rd.accent);
       sg3ApplyLook(T, R.board, R.stripe, lkMe);
     }
+    sg3BoardLen(R, sgLen());
     var riding3 = sg.phase === 'ride' || sg.phase === 'air' || sg.phase === 'tow' || sg.phase === 'done' || sg.phase === 'paddle';
     var povNow = (sg3.camMode === 'pov' && riding3) || sg.phase === 'paddle';
     var chaseNow = sg3.camMode === 'chase' && (riding3 || sg.phase === 'wipe' || sg.phase === 'over') && sg.phase !== 'paddle';
@@ -7763,6 +7867,9 @@
       : L('מצב: 🌊 גל אחד (לחץ להחליף לפיק)', 'Mode: 🌊 One wave (tap to switch to the peak)');
     renderSurfBanner(); fetchSurf();
     document.getElementById('sgShells').textContent = '🐚 ' + fmtScore(sgSave.shells);
+    if(!document.getElementById('sgFcBtn')){ var fb = document.createElement('button'); fb.type = 'button'; fb.className = 'shop-btn'; fb.id = 'sgFcBtn';
+      fb.addEventListener('click', function(){ sgOpenForecast(); }); var mb = document.getElementById('sgModeBtn'); mb.parentNode.insertBefore(fb, mb); }
+    document.getElementById('sgFcBtn').textContent = L('📅 תחזית גלים ורוח לשבוע', '📅 Wave & wind forecast for the week');
     var list = document.getElementById('sgSpots');
     list.innerHTML = '';
     SG_SPOTS.forEach(function(spot, i){
@@ -7774,6 +7881,11 @@
       if(!spot.tow){ var dmN = sgDriveM(spot), vv = sgSave.car === 'bike' ? 7 : 18, tm = Math.round(dmN / vv);
         var nv = document.createElement('div'); nv.className = 'sg-spot-desc'; nv.textContent = L('🧭 ' + dmN + ' מ\' · כ-' + tm + ' שניות נסיעה', '🧭 ' + dmN + ' m · about ' + tm + ' s drive'); b.appendChild(nv); }
       ds.textContent = spot.desc;
+      var fcT = sgForecast(spot), fcd = document.createElement('div'); fcd.className = 'sg-spot-desc sg-fc-line';
+      if(fcT.pool) fcd.textContent = L('🏊 בריכה — אותו גל מושלם כל יום', '🏊 A pool — the same perfect wave every day');
+      else { var cmT = sgFcCm(fcT); fcd.innerHTML = L('היום ', 'Today ') + '<span class="sg-fc-chip" style="background:' + sgFcHCol(fcT.hm) + '">' + cmT[0] + '-' + cmT[1] + L(' ס"מ · ', ' cm · ') + sgFcWord(fcT.hm) + '</span>' +
+        '<span class="sg-fc-chip" style="background:' + sgFcWCol(fcT) + '">' + sgFcArrow(fcT) + ' ' + fcT.kmh + L(' קמ"ש', ' km/h') + '</span> ' + sgStars(fcT.stars); }
+      b.appendChild(fcd);
       var bs = document.createElement('div'); bs.className = 'sg-spot-best'; bs.textContent = L('🏆 הציון הכי גבוה: ', '🏆 Best score: ') + (sgSave.best10[spot.id] || 0).toFixed(2) + ' / 10';
       b.appendChild(nm); b.appendChild(ds); b.appendChild(bs);
       if(open) b.addEventListener('click', function(){ sg.wasUnlocked = false; var nx = SG_SPOTS[i + 1]; sgStart(i); sg.wasUnlocked = !!(nx && sgUnlocked(i + 1));
@@ -7837,6 +7949,26 @@
     c.appendChild(b);
     return c;
   }
+  // board sizes: the lengths, what each does, and what fits you today
+  function sgRenderSizes(el){
+    el.innerHTML = '';
+    var spot = sg.spot || sgItem(SG_SPOTS, 'olga'), rec = sgRecLen(spot), cur = sgLen();
+    var t = document.createElement('div'); t.className = 'mission-title'; t.textContent = L('📏 מידת הגלשן', '📏 Board size'); el.appendChild(t);
+    var rc = document.createElement('div'); rc.className = 'sg-size-rec';
+    rc.innerHTML = L('⭐ מומלץ לכם: ', '⭐ Recommended for you: ') + '<bdi dir="ltr">' + sgFt(rec.len) + '</bdi> — ' + sgItem(SG_LENS.map(function(s){ return { id: s.len, name: s.name }; }), rec.len).name + ' · ' + rec.why + (sg.spot ? L(' ב', ' at ') + spot.name : '');
+    el.appendChild(rc);
+    var row = document.createElement('div'); row.className = 'sg-opts';
+    SG_LENS.forEach(function(s){ var b = document.createElement('button'); b.type = 'button'; b.className = 'sg-opt sg-len' + (s.len === cur ? ' is-on' : '');
+      b.innerHTML = '<b>' + sgFt(s.len) + '</b>' + (s.len === rec.len ? ' ⭐' : '') + '<br><small>' + s.name + '</small>';
+      b.addEventListener('click', function(){ sgSave.len = s.len; sgStore(); sgRenderShop(); }); row.appendChild(b); });
+    el.appendChild(row);
+    // what the one you have does
+    var z = sgSz(cur), bars = [[L('🌊 תפיסת גלים', '🌊 Catching waves'), 0.45 + 0.5 * z], [L('💨 גלישה ומהירות', '💨 Glide & speed'), 0.5 + 0.4 * z], [L('↩️ פניות', '↩️ Turns'), 0.75 - 0.6 * z], [L('🚀 איירים', '🚀 Airs'), 0.8 - 0.75 * z]];
+    var bx = document.createElement('div'); bx.className = 'sg-size-bars';
+    bars.forEach(function(br){ var v = Math.max(0.08, Math.min(1, br[1])), d = document.createElement('div');
+      d.innerHTML = '<span>' + br[0] + '</span><i><em style="width:' + Math.round(v * 100) + '%"></em></i>'; bx.appendChild(d); });
+    el.appendChild(bx);
+  }
   // the board designer: colour, stripes, a picture; a live preview on top
   function sgRenderDesigner(el){
     var D = sgSave.bd, pr = Math.min(2, window.devicePixelRatio || 1);
@@ -7865,6 +7997,8 @@
     var cl = document.getElementById('sgShopCars'), col = document.getElementById('sgShopColors'), dz = document.getElementById('sgShopDesign');
     bl.innerHTML = ''; rl.innerHTML = ''; ul.innerHTML = ''; cl.innerHTML = ''; col.innerHTML = ''; dz.innerHTML = '';
     sgRenderDesigner(dz);
+    var szEl = document.getElementById('sgShopSize'); if(!szEl){ szEl = document.createElement('div'); szEl.id = 'sgShopSize'; szEl.className = 'sg-size'; dz.parentNode.insertBefore(szEl, dz.nextSibling); }
+    sgRenderSizes(szEl);
     function buyOrPick(kind, item){
       var owned = sgSave[kind + 's'].indexOf(item.id) !== -1, sel = sgSave[kind] === item.id;
       return { text: sel ? L('✔ נבחר', '✔ Picked') : owned ? L('בחר', 'Pick') : '🐚 ' + fmtScore(item.price), on: !sel && (owned || sgSave.shells >= item.price),
@@ -7886,7 +8020,8 @@
     var rk = document.createElement('button'); rk.type = 'button'; rk.className = 'sg-opt' + (sgSave.rack ? ' is-on' : '');
     rk.textContent = sgSave.rack ? L('🏄 מנשא גלשן על הרכב: מותקן ✔', '🏄 Board rack on the vehicle: on ✔') : L('🏄 מנשא גלשן על הרכב: לא מותקן', '🏄 Board rack on the vehicle: off');
     rk.addEventListener('click', function(){ sgSave.rack = !sgSave.rack; sgStore(); sgRenderShop(); });
-    var rkRow = document.createElement('div'); rkRow.className = 'sg-opts'; rkRow.style.margin = '6px 0'; rkRow.appendChild(rk); col.parentNode.insertBefore(rkRow, col);
+    var rkOld = document.getElementById('sgRackRow'); if(rkOld) rkOld.remove();
+    var rkRow = document.createElement('div'); rkRow.id = 'sgRackRow'; rkRow.className = 'sg-opts'; rkRow.style.margin = '6px 0'; rkRow.appendChild(rk); col.parentNode.insertBefore(rkRow, col);
     SG_CAR_COLORS.forEach(function(c){
       var b = document.createElement('button'); b.type = 'button'; b.className = 'sg-color' + (sgSave.carColor === c ? ' is-on' : ''); b.style.background = c;
       b.addEventListener('click', function(){ sgSave.carColor = c; sgStore(); sgRenderShop(); });
@@ -7941,9 +8076,44 @@
     if(sgHutOpen === 'surf'){ sgHutOpen = null; return; }            // back out of the surf shop onto the beach
     sgRenderMenu(); sgMenu.hidden = false; });
   // the huts on the beach
+  function sgOpenForecast(spotId){
+    var el = document.getElementById('sgHutBody'); el.innerHTML = '';
+    var ocean = SG_SPOTS.filter(function(s){ return !sgIsPool(s); }), cur = sgItem(ocean, typeof spotId === 'string' ? spotId : (sg.spot && !sgIsPool(sg.spot) ? sg.spot.id : 'olga'));
+    document.getElementById('sgHutTitle').textContent = L('📅 תחזית גלים ורוח', '📅 Wave & wind forecast');
+    document.getElementById('sgHutShells').textContent = L('לשבוע הקרוב · זהה לכל השחקנים', 'For the week ahead · the same for every player');
+    document.getElementById('sgHutBack').textContent = L('חזרה', 'Back');
+    // the beaches, as tabs
+    var tabs = document.createElement('div'); tabs.className = 'sg-fc-tabs';
+    ocean.forEach(function(s){ var t = document.createElement('button'); t.type = 'button'; t.className = 'sg-fc-tab' + (s === cur ? ' is-on' : ''); t.textContent = s.emoji + ' ' + s.name;
+      t.addEventListener('click', function(){ sgOpenForecast(s.id); }); tabs.appendChild(t); });
+    el.appendChild(tabs);
+    // now: big
+    var f0 = sgForecast(cur, 0), cm = sgFcCm(f0), now = document.createElement('div'); now.className = 'sg-fc-now';
+    now.innerHTML = '<div class="sg-fc-now-h" style="background:' + sgFcHCol(f0.hm) + '"><b>' + cm[0] + ' - ' + cm[1] + '</b> ' + L('ס"מ', 'cm') + '<br><span>' + sgFcWord(f0.hm) + '</span></div>' +
+      '<div class="sg-fc-now-w" style="background:' + sgFcWCol(f0) + '">' + sgFcArrow(f0) + '<b>' + f0.kmh + '</b> ' + L('קמ"ש', 'km/h') + '<br><span>' + f0.wind.name + '</span></div>' +
+      '<div class="sg-fc-now-s">' + L('עכשיו', 'Now') + '<br><b>' + sgStars(f0.stars) + '</b><br>' + f0.per + L(' שניות בין גלים', ' s between waves') + '</div>';
+    el.appendChild(now);
+    // the week
+    var tb = document.createElement('table'); tb.className = 'sg-fc';
+    tb.innerHTML = '<tr><th>' + L('יום', 'Day') + '</th><th>' + L('גובה', 'Height') + '</th><th>' + L('גלים', 'Waves') + '</th><th>' + L('רוח', 'Wind') + '</th><th></th></tr>';
+    var dn = [L('ראשון', 'Sun'), L('שני', 'Mon'), L('שלישי', 'Tue'), L('רביעי', 'Wed'), L('חמישי', 'Thu'), L('שישי', 'Fri'), L('שבת', 'Sat')];
+    for(var o = 0; o < 7; o++){ var f = sgForecast(cur, o), c2 = sgFcCm(f), d = new Date(Date.now() + o * 864e5), tr = document.createElement('tr');
+      tr.innerHTML = '<td class="sg-fc-day">' + (o === 0 ? L('היום', 'Today') : o === 1 ? L('מחר', 'Tomorrow') : dn[d.getDay()]) + '</td>' +
+        '<td class="sg-fc-h" style="background:' + sgFcHCol(f.hm) + '"><b>' + c2[0] + ' - ' + c2[1] + '</b> <small>' + L('ס"מ', 'cm') + '</small></td>' +
+        '<td>' + sgFcWord(f.hm) + '</td>' +
+        '<td class="sg-fc-w" style="background:' + sgFcWCol(f) + '">' + sgFcArrow(f) + ' <b>' + f.kmh + '</b><br><small>' + L('קמ"ש', 'km/h') + '</small></td>' +
+        '<td class="sg-fc-st">' + sgStars(f.stars) + '</td>';
+      tb.appendChild(tr); }
+    el.appendChild(tb);
+    var nt = document.createElement('p'); nt.className = 'sg-fc-note';
+    nt.textContent = L('🟩 רוח מהיבשה / חלק = גלים נקיים וחלולים (יותר צינורות) · 🟧 רוח ים = מבולגן, פחות צינורות · הבריכות — אותו גל כל יום.',
+                       '🟩 offshore / glassy = clean, hollow waves (more barrels) · 🟧 onshore = messy, fewer barrels · the pools — the same wave every day.');
+    el.appendChild(nt);
+    sgHutOpen = 'fc'; sgMenu.hidden = true; document.getElementById('sgHut').hidden = false;
+  }
   var sgHutOpen = null;
   function sgOpenHut(id){
-    sgHutOpen = id;
+    sgHutOpen = id; document.getElementById('sgHutBack').textContent = L('חזרה לחוף', 'Back to the beach');
     if(id === 'surf'){ sgRenderShop(); sgShop.hidden = false; return; }
     var el = document.getElementById('sgHutBody'); el.innerHTML = '';
     document.getElementById('sgHutTitle').textContent = id === 'play' ? L('⚽ הכדורים שלכם', '⚽ Your balls') : sgItem(SG_HUTS, id).name;
@@ -7986,7 +8156,7 @@
     }
     document.getElementById('sgHut').hidden = false;
   }
-  document.getElementById('sgHutBack').addEventListener('click', function(){ document.getElementById('sgHut').hidden = true; sgHutOpen = null; });
+  document.getElementById('sgHutBack').addEventListener('click', function(){ document.getElementById('sgHut').hidden = true; if(sgHutOpen === 'fc') sgMenu.hidden = false; sgHutOpen = null; });
   document.getElementById('sgBallBtn').addEventListener('click', function(e){
     e.stopPropagation(); if(sg.phase !== 'walk' || !sg.walk) return;
     if(sgBG.in){ sgBallLeave(); return; }
@@ -10008,6 +10178,7 @@
     overOverlay.hidden = false;
     duelBanner.hidden = true; duelAgainBtn.hidden = true;
     if(trackSeed) duelRunOver(scoreVal);
+    usageSend('run', trackSeed ? 'duel' : (bossMode ? 'boss' : 'run'), elapsed, scoreVal);
   }
 
   // the old-style score: what coins earned, mission letter timing and the
@@ -13992,7 +14163,7 @@
   // never while the name field is being typed in. Everything worth keeping
   // (coins, skins, name, league) is in localStorage, so a reload loses nothing.
   // 'dev' = a local or preview copy: the updater stays off entirely.
-  var BUILD_VERSION = '20261029-224908';
+  var BUILD_VERSION = '20261030-121003';
   var UPDATE_CHECK_MS = 60000;
   var UPDATE_TRIED_KEY = 'canyonChaseTriedUpdate';
   var pendingSubmits = 0;
@@ -14080,6 +14251,69 @@
     langOverlay.hidden = false;
     startOverlay.hidden = true;
   }
+
+  // ---------- usage metrics ----------
+  // Anonymous play statistics for the owner's dashboard (stats.html). A
+  // random device code, made once and kept on the device -- no name, no
+  // account -- and insert-only rows in usage_events (nobody can read them
+  // back; the dashboard sees only daily totals): 'open' when the game loads,
+  // 'ping' every 30 s while it's on screen with what you were doing, 'run'
+  // when a run or a wave ends (mode, seconds, score) and 'tap' for the main
+  // buttons. Rows say app or web, and main or beta, so the dashboard can
+  // leave the beta and local test copies out.
+  var USAGE_KEY = 'canyonChaseDevice', USAGE_PING_S = 30;
+  var usageDevice = (function(){
+    try {
+      var d = localStorage.getItem(USAGE_KEY);
+      if(!d){ d = 'd' + Math.random().toString(36).slice(2, 12) + Date.now().toString(36); localStorage.setItem(USAGE_KEY, d); }
+      return d;
+    } catch(e){ return 'nostore'; }
+  })();
+  var usageSession = 's' + Math.random().toString(36).slice(2, 12) + Date.now().toString(36);
+  // the Google Play app opens the site full screen (and says so once, in the referrer)
+  var usagePlatform = (function(){
+    var app = false;
+    try { app = sessionStorage.getItem('canyonChaseApp') === '1'; } catch(e){}
+    if(document.referrer.indexOf('android-app://') === 0) app = true;
+    if(window.matchMedia && (matchMedia('(display-mode: fullscreen)').matches || matchMedia('(display-mode: standalone)').matches)) app = true;
+    try { if(app) sessionStorage.setItem('canyonChaseApp', '1'); } catch(e){}
+    return app ? 'app' : 'web';
+  })();
+  var USAGE_TAPS = ['startBtn', 'sgEnterBtn', 'shopBtn', 'leaderboardBtn', 'leagueBtn', 'missionsBtn', 'badgesBtn',
+    'duelBtn', 'passBtn', 'bossFightBtn', 'thuChestBtn', 'tourneyBanner', 'surfBanner', 'duelRandomBtn', 'duelCreateBtn',
+    'duelJoinBtn', 'duelWatchBtn', 'sgShopBtn', 'sgSpotsBtn', 'sgAgainBtn', 'sgModeBtn', 'retryBtn', 'continueBtn',
+    'homeBtn', 'langBtn', 'shopBtnOver', 'duelAgainBtn'];
+
+  function usageSend(kind, mode, value, score){
+    if(!isOnlineBoard) return;
+    // a local copy with the real keys stays out of the numbers
+    if(BUILD_VERSION === 'dev' && SUPABASE_URL.indexOf('mock') < 0) return;
+    var body = {
+      device: usageDevice, session: usageSession, kind: kind, mode: String(mode || '').slice(0, 32),
+      platform: usagePlatform, lang: LANG, channel: BUILD_VERSION === 'dev' ? 'dev' : (IS_BETA ? 'beta' : 'main'),
+      version: String(BUILD_VERSION).slice(0, 24),
+      value: Math.max(0, Math.min(86400, Math.round(value || 0))),
+      score: Math.max(0, Math.min(2000000000, Math.round(score || 0)))
+    };
+    try {
+      fetch(SUPABASE_URL + '/rest/v1/usage_events', { method: 'POST', headers: supabaseHeaders(), body: JSON.stringify(body), keepalive: true })
+        .catch(function(){});
+    } catch(e){}
+  }
+  // what the player is doing right now: a game mode, or the screen that's open
+  function usageMode(){
+    if(state === 'playing' || state === 'countdown' || state === 'revive') return trackSeed ? 'duel' : (bossMode ? 'boss' : 'run');
+    if(state === 'surfgame') return 'surf' + (sg && sg.spot ? ':' + sg.spot.id : '');
+    if(state === 'watch') return 'watch';
+    var open = document.querySelector('.overlay:not([hidden])');
+    return 'menu' + (open ? ':' + open.id.replace(/Overlay$/, '') : '');
+  }
+  usageSend('open', usageMode(), 0, 0);
+  setInterval(function(){ if(!document.hidden) usageSend('ping', usageMode(), USAGE_PING_S, 0); }, USAGE_PING_S * 1000);
+  document.addEventListener('click', function(e){
+    var b = e.target && e.target.closest ? e.target.closest('[id]') : null;
+    if(b && USAGE_TAPS.indexOf(b.id) !== -1) usageSend('tap', b.id, 0, 0);
+  }, true);
 
   // idle player pose before first game
   resetGame();

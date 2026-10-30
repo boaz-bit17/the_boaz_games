@@ -1,0 +1,196 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>Canyon Surfers · נתוני שימוש</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<style>
+  :root{ --bg:#1b1230; --card:#2a1d45; --ink:#f4ecff; --muted:#b9a8d6; --accent:#ffb347; --good:#59d98e; --line:rgba(255,255,255,.08); }
+  *{ box-sizing:border-box; }
+  body{ margin:0; background:var(--bg); color:var(--ink); font-family:system-ui,-apple-system,'Segoe UI',Arial,sans-serif; }
+  main{ max-width:1100px; margin:0 auto; padding:20px 16px 40px; }
+  header{ display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:10px; margin-bottom:16px; }
+  h1{ margin:0; font-size:24px; }
+  .sub{ color:var(--muted); font-size:13px; }
+  button{ font:inherit; font-weight:700; color:var(--bg); background:var(--accent); border:none; border-radius:999px; padding:8px 16px; cursor:pointer; }
+  .tiles{ display:grid; grid-template-columns:repeat(auto-fit, minmax(150px, 1fr)); gap:10px; margin-bottom:14px; }
+  .tile{ background:var(--card); border-radius:14px; padding:12px 14px; }
+  .tile .lbl{ color:var(--muted); font-size:12.5px; }
+  .tile .num{ font-size:28px; font-weight:800; margin-top:2px; }
+  .tile .hint{ color:var(--muted); font-size:11.5px; margin-top:2px; }
+  .grid{ display:grid; grid-template-columns:repeat(auto-fit, minmax(320px, 1fr)); gap:12px; }
+  .card{ background:var(--card); border-radius:14px; padding:14px; }
+  .card h2{ margin:0 0 8px; font-size:16px; }
+  .card .chart{ position:relative; height:240px; }
+  table{ width:100%; border-collapse:collapse; font-size:13.5px; }
+  th, td{ text-align:start; padding:6px 4px; border-bottom:1px solid var(--line); }
+  th{ color:var(--muted); font-weight:600; }
+  td.n{ font-variant-numeric:tabular-nums; }
+  .bar{ height:6px; border-radius:3px; background:var(--accent); opacity:.8; }
+  .msg{ background:var(--card); border-radius:14px; padding:16px; color:var(--muted); }
+  .demo{ background:#ff6b6b; color:#fff; border-radius:8px; padding:2px 8px; font-size:12px; font-weight:700; margin-inline-start:8px; }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <div>
+      <h1>📊 נתוני שימוש — Canyon Surfers <span class="demo" id="demoTag" hidden>דמו</span></h1>
+      <div class="sub" id="updated">טוען...</div>
+    </div>
+    <button id="refresh" type="button">🔄 רענון</button>
+  </header>
+  <div id="msg" class="msg" hidden></div>
+  <section class="tiles" id="tiles"></section>
+  <section class="grid">
+    <div class="card"><h2>👥 משתמשים ביום (DAU) וחדשים</h2><div class="chart"><canvas id="cUsers"></canvas></div></div>
+    <div class="card"><h2>⏱️ דקות משחק ממוצעות לשחקן ביום</h2><div class="chart"><canvas id="cMinutes"></canvas></div></div>
+    <div class="card"><h2>🚪 כניסות וריצות ביום</h2><div class="chart"><canvas id="cOpens"></canvas></div></div>
+    <div class="card"><h2>📱 אפליקציה מול אתר</h2><div class="chart"><canvas id="cPlatform"></canvas></div></div>
+    <div class="card"><h2>🔁 חזרה של שחקנים חדשים</h2><div class="chart"><canvas id="cRetention"></canvas></div>
+      <div class="sub" style="margin-top:6px">מכל השחקנים שהתחילו באותו יום: כמה אחוז חזרו למחרת (יום 1) ואחרי שבוע (יום 7)</div></div>
+    <div class="card"><h2>🎮 מה משחקים (30 יום)</h2><table id="tModes"></table></div>
+    <div class="card"><h2>🖱️ כפתורים פופולריים (30 יום)</h2><table id="tTaps"></table></div>
+  </section>
+</main>
+<script>
+(function(){
+  // the same public key the game uses; the views hold totals only, never a device or a name
+  var URL = 'https://psyqxrmsxdchvktphvxu.supabase.co/rest/v1/';
+  var KEY = 'sb_publishable_Ljk_0HMAGVb8fwb_0usxxw_cOPZ8zWb';
+  var DEMO = /[?&]demo=1/.test(location.search);
+  var charts = {};
+  var MODE_NAMES = { run: '🏃 ריצה בקניון', boss: '☠️ בוס', duel: '⚔️ ראש בראש', watch: '👀 צפייה ביריב', surf: '🌊 גלישה', menu: '📋 תפריטים ומסכים' };
+  var SCREEN_NAMES = { start: 'מסך ראשי', shop: 'חנות סקינים', leaderboard: 'שיאים', league: 'ליגות', missions: 'משימות', pass: 'באטל פס',
+    duel: 'ראש בראש', thuChest: 'תיבת חמישי', boss: 'בוס', sgMenu: 'תפריט גלישה', sgShop: 'חנות הגלישה', sgHut: 'בקתה', sgOver: 'סוף גל',
+    badges: 'תגים', surf: 'טורניר גלישה', world: 'עולם', tourney: 'טורניר', special: 'תיבה מיוחדת', over: 'סוף ריצה', revive: 'אבן תחייה', lang: 'בחירת שפה' };
+  var TAP_NAMES = { startBtn: 'התחל גלישה (ריצה)', sgEnterBtn: 'מעבר למשחק גלישה', shopBtn: 'חנות סקינים', leaderboardBtn: 'שיאים', leagueBtn: 'ליגות',
+    missionsBtn: 'משימות', badgesBtn: 'תגים', duelBtn: 'ראש בראש', passBtn: 'באטל פס', bossFightBtn: 'הילחם בבוס', thuChestBtn: 'תיבת חמישי',
+    tourneyBanner: 'באנר טורניר', surfBanner: 'באנר טורניר גלישה', duelRandomBtn: 'יריב אקראי', duelCreateBtn: 'פתח חדר', duelJoinBtn: 'הצטרף לחדר',
+    duelWatchBtn: 'צפה ביריב', sgShopBtn: 'חנות הגלישה', sgSpotsBtn: 'חופים', sgAgainBtn: 'עוד גל', sgModeBtn: 'מצב גלישה', retryBtn: 'נסה שוב',
+    continueBtn: 'אבן תחייה', homeBtn: 'חזרה למסך הראשי', langBtn: 'החלפת שפה', shopBtnOver: 'חנות (מסוף ריצה)', duelAgainBtn: 'עוד קרב' };
+
+  function get(view){
+    return fetch(URL + view + '?select=*', { headers: { apikey: KEY } }).then(function(r){
+      if(!r.ok) throw new Error(view + ' ' + r.status);
+      return r.json();
+    });
+  }
+  function fmt(n, d){ return (n == null || isNaN(n)) ? '—' : Number(n).toLocaleString('he-IL', { maximumFractionDigits: d || 0 }); }
+  function pct(a, b){ return b ? Math.round(a / b * 100) : null; }
+  function dayLabel(s){ var p = String(s).split('-'); return +p[2] + '.' + +p[1]; }
+  function isoDay(d){ return d.toISOString().slice(0, 10); }
+
+  // fake but plausible numbers, to see the page before real players arrive (?demo=1)
+  function demoData(){
+    var daily = [], ret = [], today = new Date();
+    for(var i = 29; i >= 0; i--){
+      var d = new Date(today - i * 864e5), u = Math.round(12 + (29 - i) * 1.4 + Math.random() * 8), nu = Math.round(u * (0.25 + Math.random() * 0.15));
+      var app = Math.round(u * (0.3 + (29 - i) / 60));
+      daily.push({ day: isoDay(d), users: u, new_users: nu, app_users: app, web_users: u - app + Math.round(Math.random() * 2), opens: Math.round(u * 2.6), sessions: Math.round(u * 2.2), play_minutes: Math.round(u * (11 + Math.random() * 6)), runs: Math.round(u * 7.5) });
+      if(i >= 1) ret.push({ cohort: isoDay(d), new_users: nu, back_d1: Math.round(nu * (0.3 + Math.random() * 0.15)), back_d7: i >= 7 ? Math.round(nu * (0.1 + Math.random() * 0.1)) : 0, back_week: Math.round(nu * 0.45) });
+    }
+    var modes = [['run', 1900, 2450, 140, 52], ['surf:pool', 800, 520, 70, 64], ['surf:pipe', 300, 180, 30, 58], ['duel', 420, 300, 55, 61], ['boss', 160, 120, 25, 70],
+      ['menu:start', 260, 0, 150, 0], ['menu:shop', 190, 0, 120, 0], ['menu:pass', 60, 0, 40, 0], ['menu:over', 240, 0, 140, 0]].map(function(m){ return { mode: m[0], minutes: m[1], runs: m[2], users: m[3], avg_run_seconds: m[4] }; });
+    var taps = [['startBtn', 980, 140], ['retryBtn', 1500, 130], ['sgEnterBtn', 420, 90], ['shopBtn', 380, 110], ['duelBtn', 160, 60], ['passBtn', 120, 70], ['homeBtn', 300, 100]].map(function(t){ return { button: t[0], taps: t[1], users: t[2] }; });
+    return Promise.resolve([daily, ret, modes, taps]);
+  }
+
+  function tile(lbl, num, hint){ return '<div class="tile"><div class="lbl">' + lbl + '</div><div class="num">' + num + '</div>' + (hint ? '<div class="hint">' + hint + '</div>' : '') + '</div>'; }
+  function chart(id, cfg){
+    if(charts[id]) charts[id].destroy();
+    cfg.options = Object.assign({ responsive: true, maintainAspectRatio: false, plugins: { legend: { labels: { color: '#f4ecff' } } },
+      scales: { x: { ticks: { color: '#b9a8d6' }, grid: { color: 'rgba(255,255,255,.06)' } }, y: { beginAtZero: true, ticks: { color: '#b9a8d6' }, grid: { color: 'rgba(255,255,255,.06)' } } } }, cfg.options || {});
+    charts[id] = new Chart(document.getElementById(id), cfg);
+  }
+
+  function render(d){
+    var daily = d[0], ret = d[1], modes = d[2], taps = d[3];
+    var last = daily[daily.length - 1] || {}, today = isoDay(new Date());
+    if(last.day !== today) last = { day: today, users: 0, new_users: 0, opens: 0, play_minutes: 0, runs: 0 };
+    var week = daily.slice(-7), wu = 0, wm = 0;
+    week.forEach(function(r){ wu += r.users; wm += +r.play_minutes; });
+    // retention over cohorts whose day 1 / day 7 has already come
+    var dn = 0, d1 = 0, sn = 0, d7 = 0, now = new Date(today);
+    ret.forEach(function(r){
+      var age = Math.round((now - new Date(r.cohort)) / 864e5);
+      if(age >= 2){ dn += r.new_users; d1 += r.back_d1; }
+      if(age >= 8){ sn += r.new_users; d7 += r.back_d7; }
+    });
+    document.getElementById('tiles').innerHTML =
+      tile('שחקנים היום', fmt(last.users), 'חדשים: ' + fmt(last.new_users)) +
+      tile('ממוצע שחקנים ביום (7 ימים)', fmt(week.length ? wu / week.length : 0, 1)) +
+      tile('כניסות היום', fmt(last.opens)) +
+      tile('דקות לשחקן היום', fmt(last.users ? last.play_minutes / last.users : 0, 1), '7 ימים: ' + fmt(wu ? wm / wu : 0, 1)) +
+      tile('ריצות וגלים היום', fmt(last.runs)) +
+      tile('חזרו למחרת', pct(d1, dn) == null ? '—' : pct(d1, dn) + '%', 'אחרי שבוע: ' + (pct(d7, sn) == null ? '—' : pct(d7, sn) + '%'));
+
+    var labels = daily.map(function(r){ return dayLabel(r.day); });
+    chart('cUsers', { type: 'line', data: { labels: labels, datasets: [
+      { label: 'משתמשים (DAU)', data: daily.map(function(r){ return r.users; }), borderColor: '#ffb347', backgroundColor: 'rgba(255,179,71,.15)', fill: true, tension: .3 },
+      { label: 'חדשים', data: daily.map(function(r){ return r.new_users; }), borderColor: '#59d98e', tension: .3 } ] } });
+    chart('cMinutes', { type: 'bar', data: { labels: labels, datasets: [
+      { label: 'דקות לשחקן', data: daily.map(function(r){ return r.users ? Math.round(r.play_minutes / r.users * 10) / 10 : 0; }), backgroundColor: '#8f7cff' } ] } });
+    chart('cOpens', { type: 'line', data: { labels: labels, datasets: [
+      { label: 'כניסות', data: daily.map(function(r){ return r.opens; }), borderColor: '#4fc3f7', tension: .3 },
+      { label: 'ריצות וגלים', data: daily.map(function(r){ return r.runs; }), borderColor: '#ff7eb3', tension: .3 } ] } });
+    chart('cPlatform', { type: 'bar', data: { labels: labels, datasets: [
+      { label: 'אפליקציה', data: daily.map(function(r){ return r.app_users; }), backgroundColor: '#59d98e', stack: 's' },
+      { label: 'אתר', data: daily.map(function(r){ return r.web_users; }), backgroundColor: '#4fc3f7', stack: 's' } ] },
+      options: { scales: { x: { stacked: true, ticks: { color: '#b9a8d6' } }, y: { stacked: true, beginAtZero: true, ticks: { color: '#b9a8d6' } } } } });
+    chart('cRetention', { type: 'bar', data: { labels: ret.map(function(r){ return dayLabel(r.cohort); }), datasets: [
+      { label: 'חזרו למחרת %', data: ret.map(function(r){ return pct(r.back_d1, r.new_users) || 0; }), backgroundColor: '#ffb347' },
+      { label: 'חזרו אחרי שבוע %', data: ret.map(function(r){ return pct(r.back_d7, r.new_users) || 0; }), backgroundColor: '#8f7cff' } ] },
+      options: { scales: { y: { beginAtZero: true, max: 100, ticks: { color: '#b9a8d6' } }, x: { ticks: { color: '#b9a8d6' } } } } });
+
+    // what people play: game modes first (spots folded into surf), then screens
+    var byMode = {}, screens = [];
+    modes.forEach(function(m){
+      var top = String(m.mode).split(':')[0];
+      if(top === 'menu'){ screens.push(m); return; }
+      var r = byMode[top] = byMode[top] || { minutes: 0, runs: 0, users: 0, secs: 0 };
+      r.minutes += +m.minutes; r.runs += m.runs; r.users = Math.max(r.users, m.users); r.secs += (m.avg_run_seconds || 0) * m.runs;
+    });
+    var rows = Object.keys(byMode).map(function(k){ return [k, byMode[k]]; }).sort(function(a, b){ return b[1].minutes - a[1].minutes; });
+    var maxM = rows.length ? rows[0][1].minutes : 1;
+    var html = '<tr><th>מצב</th><th>דקות</th><th>ריצות</th><th>זמן ממוצע לריצה</th></tr>';
+    rows.forEach(function(r){
+      var v = r[1];
+      html += '<tr><td>' + (MODE_NAMES[r[0]] || r[0]) + '<div class="bar" style="width:' + Math.max(4, v.minutes / maxM * 100) + '%"></div></td><td class="n">' + fmt(v.minutes) + '</td><td class="n">' + fmt(v.runs) + '</td><td class="n">' + (v.runs ? fmt(v.secs / v.runs) + ' שנ׳' : '—') + '</td></tr>';
+    });
+    var surfSpots = modes.filter(function(m){ return /^surf:/.test(m.mode); });
+    if(surfSpots.length){
+      html += '<tr><th colspan="4">🏝️ חופי גלישה</th></tr>';
+      surfSpots.sort(function(a, b){ return b.minutes - a.minutes; }).forEach(function(m){ html += '<tr><td>' + m.mode.split(':')[1] + '</td><td class="n">' + fmt(m.minutes) + '</td><td class="n">' + fmt(m.runs) + '</td><td class="n">' + (m.avg_run_seconds ? fmt(m.avg_run_seconds) + ' שנ׳' : '—') + '</td></tr>'; });
+    }
+    if(screens.length){
+      html += '<tr><th colspan="4">📋 זמן במסכים</th></tr>';
+      screens.sort(function(a, b){ return b.minutes - a.minutes; }).forEach(function(m){ var s = m.mode.split(':')[1] || ''; html += '<tr><td>' + (SCREEN_NAMES[s] || s || 'תפריט') + '</td><td class="n">' + fmt(m.minutes) + '</td><td></td><td></td></tr>'; });
+    }
+    document.getElementById('tModes').innerHTML = rows.length || screens.length ? html : '<tr><td>עוד אין נתונים</td></tr>';
+
+    taps.sort(function(a, b){ return b.taps - a.taps; });
+    var maxT = Math.max.apply(null, taps.map(function(t){ return t.taps; }).concat([1]));
+    var th = '<tr><th>כפתור</th><th>לחיצות</th><th>שחקנים</th></tr>';
+    taps.forEach(function(t){ th += '<tr><td>' + (TAP_NAMES[t.button] || t.button) + '<div class="bar" style="width:' + Math.max(4, t.taps / maxT * 100) + '%"></div></td><td class="n">' + fmt(t.taps) + '</td><td class="n">' + fmt(t.users) + '</td></tr>'; });
+    document.getElementById('tTaps').innerHTML = taps.length ? th : '<tr><td>עוד אין נתונים</td></tr>';
+
+    document.getElementById('updated').textContent = 'עודכן ' + new Date().toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' }) + ' · שעון ישראל · בלי הבטא';
+  }
+
+  function load(){
+    var msg = document.getElementById('msg');
+    msg.hidden = true;
+    (DEMO ? demoData() : Promise.all([get('usage_daily'), get('usage_retention'), get('usage_modes'), get('usage_taps')]))
+      .then(render)
+      .catch(function(e){ msg.hidden = false; msg.textContent = 'אין חיבור לנתונים (' + e.message + '). אם עוד לא הרצת את ה-SQL של המדדים — זה הזמן.'; document.getElementById('updated').textContent = ''; });
+  }
+  document.getElementById('demoTag').hidden = !DEMO;
+  document.getElementById('refresh').addEventListener('click', load);
+  load();
+})();
+</script>
+</body>
+</html>
