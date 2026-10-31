@@ -6507,7 +6507,7 @@
   // the pocket: the face stands near vertical, the lip thrown out high over it
   var SG3_CPM = [[-3.2,-0.05],[-1.6,0.38],[-0.05,1.05],[0.55,1.13],[0.98,0.8],[0.8,0.86],[0.42,0.96],[0.18,0.84],[0.26,0.4],[0.8,0.08],[2.2,-0.05]];
   var SG3_CPC = [[-3.2,-0.05],[-1.6,0.22],[-0.3,0.5],[0.1,0.56],[0.45,0.48],[0.5,0.42],[0.45,0.4],[0.5,0.35],[0.75,0.22],[1.15,0.06],[2.2,-0.05]];
-  var SG3_SEG = 6, SG3_ROWS = (SG3_CP0.length - 1) * SG3_SEG + 1, SG3_COLS = 200;
+  var SG3_SEG = 6, SG3_ROWS = (SG3_CP0.length - 1) * SG3_SEG + 1, SG3_COLS = 160;
   function sg3Cr(a, b, c, d, t){ var t2 = t * t, t3 = t2 * t; return 0.5 * ((2 * b) + (-a + c) * t + (2 * a - 5 * b + 4 * c - d) * t2 + (-a + 3 * b - 3 * c + d) * t3); }
   // the profile at a spot along the wave -> rows of [z, y] in metres
   function sg3Profile(b, c, Hm, out, s){
@@ -15195,7 +15195,7 @@
   // normals (so the light follows): sections (the wave a little higher here,
   // lower there, drifting down the line), swells running up the face, and a
   // lip whose edge wobbles instead of being one straight line.
-  var labWave = { on: true };
+  var labWave = { on: true, opt: !/[?&]noopt/.test(location.search) };     // (?noopt: without the beach/city merge, to compare)
   // (integer hash: thousands of these a frame, so no Math.sin)
   function labHash(i, j){ var h = Math.imul(i, 374761393) + Math.imul(j, 668265263) | 0; h = Math.imul(h ^ (h >>> 13), 1274126177); return ((h ^ (h >>> 16)) >>> 0) / 4294967296; }
   function labNoise(x, y){
@@ -15287,9 +15287,102 @@
     LAB_BEND_U.uLabBendCx.value = cx; LAB_BEND_U.uLabBendH.value = Hm;
     LAB_BEND_U.uLabBendRef.value = labBendRaw(sg.x * SG3_M, cx, Hm);
   }
+  // ---------- surf lab: lighter beach and city ----------
+  // The beach and the city are ~2000 separate little meshes (huts, umbrellas,
+  // towels, blocks, lamps...), and every one of them costs the computer work every
+  // frame even though most never move. Once built, everything that doesn't move is
+  // baked into one mesh per look (same colour, texture and finish); what the game
+  // moves -- whatever it keeps in the group's userData: people, the flag, the
+  // floating signs, the matkot ball, the traffic -- stays as it is.
+  var LAB_BGU = 'https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/utils/BufferGeometryUtils.js';
+  function labLoadBGU(){
+    if(lab.bgu) return; lab.bgu = 'loading';
+    var s = document.createElement('script'); s.src = LAB_BGU;
+    s.onload = function(){ lab.bgu = THREE.BufferGeometryUtils ? 'ready' : 'failed'; };
+    s.onerror = function(){ lab.bgu = 'failed'; };
+    document.head.appendChild(s);
+  }
+  function labDynamic(v, out, depth){
+    if(!v || depth > 4) return;
+    if(v.isObject3D){ out.add(v); return; }
+    if(Array.isArray(v)){ v.forEach(function(x){ labDynamic(x, out, depth + 1); }); return; }
+    if(typeof v === 'object' && !(v instanceof sg3.T.Vector3)) Object.keys(v).forEach(function(k){ labDynamic(v[k], out, depth + 1); });
+  }
+  function labMatKey(m){
+    var c = function(x){ return x && x.getHexString ? x.getHexString() : ''; }, u = function(t){ return t ? t.uuid : ''; };
+    return [m.type, c(m.color), c(m.emissive), u(m.map), u(m.bumpMap), m.bumpScale, u(m.normalMap), u(m.envMap), u(m.alphaMap), m.roughness, m.metalness, m.envMapIntensity,
+      m.transparent, m.opacity, m.side, m.vertexColors, m.flatShading, m.toneMapped, m.depthWrite, m.depthTest, m.alphaTest, m.polygonOffset, m.polygonOffsetFactor, m.polygonOffsetUnits,
+      m.clearcoat, m.clearcoatRoughness, m.emissiveIntensity, m.fog].join('|');
+  }
+  function labOptimize(g){
+    var T = sg3.T, BGU = THREE.BufferGeometryUtils, dyn = new Set();
+    labDynamic(g.userData, dyn, 0);
+    g.updateMatrixWorld(true);
+    var inv = new T.Matrix4().copy(g.matrixWorld).invert(), groups = {}, before = 0, moved = 0;
+    g.traverse(function(o){ if(o.isMesh) before++; });
+    (function walk(o, isDyn){
+      o.children.slice().forEach(function(ch){
+        var d = isDyn || dyn.has(ch);
+        if(!d && ch.isMesh && !ch.isSkinnedMesh && !ch.isInstancedMesh && !Array.isArray(ch.material) && ch.visible && ch.geometry && !ch.geometry.morphAttributes.position){
+          var geo = ch.geometry, attrs = Object.keys(geo.attributes).sort().join(','), key = labMatKey(ch.material) + '#' + attrs + '#' + (geo.index ? 'i' : 'n');
+          (groups[key] = groups[key] || { mat: ch.material, list: [] }).list.push(ch);
+        }
+        walk(ch, d);
+      });
+    })(g, false);
+    var made = 0;
+    Object.keys(groups).forEach(function(k){
+      var G = groups[k]; if(G.list.length < 2) return;
+      var geos = G.list.map(function(m){ var gc = m.geometry.clone(); gc.applyMatrix4(new T.Matrix4().multiplyMatrices(inv, m.matrixWorld)); return gc; });
+      var merged = null; try { merged = BGU.mergeBufferGeometries(geos, false); } catch(e){}
+      geos.forEach(function(gc){ gc.dispose(); });
+      if(!merged) return;
+      var mesh = new T.Mesh(merged, G.mat); mesh.castShadow = G.list[0].castShadow; mesh.receiveShadow = G.list[0].receiveShadow;
+      mesh.matrixAutoUpdate = false; mesh.updateMatrix(); g.add(mesh); made++;
+      G.list.forEach(function(m){ m.parent.remove(m); moved++; });
+    });
+    // what's left that never moves: its matrices are worked out once, not every frame
+    (function freeze(o, isDyn){
+      o.children.forEach(function(ch){ var d = isDyn || dyn.has(ch); if(!d){ ch.updateMatrix(); ch.matrixAutoUpdate = false; } freeze(ch, d); });
+    })(g, false);
+    var after = 0; g.traverse(function(o){ if(o.isMesh) after++; });
+    g.userData.labOpt = { before: before, after: after, merged: moved, into: made };
+    return g.userData.labOpt;
+  }
+  function labOptFrame(){
+    if(labWave.opt === false) return;
+    labLoadBGU();
+    if(lab.bgu !== 'ready') return;
+    [sg3.beach, sg3.city].forEach(function(g){ if(g && !g.userData.labOpt){ try { labOptimize(g); } catch(e){ g.userData.labOpt = { error: String(e) }; console.warn('lab optimize:', e); } } });
+  }
+  // ---------- surf lab: automatic resolution ----------
+  // Most of a frame is the graphics card painting water on every pixel (shown by
+  // measuring: a quarter of the resolution took the frame from 23 ms to 10).
+  // So: never more than ~1.3 million pixels however big the screen, and the frame
+  // time is watched -- slower than ~40 a second and the picture gets a little
+  // softer (down to 55%), quick again and it sharpens back. The game's own
+  // post-processing follows the new size by itself.
+  var LAB_RES = { budget: 1.3e6, slow: 1 / 40, fast: 1 / 55, min: 0.55 };
+  function labResFrame(){
+    if(labWave.res === false || !sg3.r) return;
+    var R = lab.res = lab.res || { s: 1, ema: 1 / 60, n: 0, last: 0, pr: 0 };
+    var now = performance.now() / 1000, dt = now - (R.last || now); R.last = now;
+    if(dt > 0 && dt < 0.25){ R.ema += (dt - R.ema) * 0.08; R.n++; }
+    if(R.n >= 40){
+      R.n = 0;
+      if(R.ema > LAB_RES.slow && R.s > LAB_RES.min) R.s = Math.max(LAB_RES.min, R.s * 0.85);
+      else if(R.ema < LAB_RES.fast && R.s < 1) R.s = Math.min(1, R.s * 1.08);
+    }
+    var W = sg3.cv.clientWidth || 800, H = sg3.cv.clientHeight || 600;
+    var cap = Math.min(sg3.lowQ ? 1 : Math.min(1.35, window.devicePixelRatio || 1), Math.sqrt(LAB_RES.budget / (W * H)));
+    var pr = Math.max(0.3, cap * R.s);
+    if(Math.abs(pr - sg3.r.getPixelRatio()) > 0.02){ R.pr = pr; sg3.r.setPixelRatio(pr); sg3.w = 0; }
+  }
   function labFrame(){
     if(!sg3.T || !sg3.rider) return;
     labBendFrame(sg3.T);                     // (before anything is drawn, so every shader gets it)
+    labOptFrame();
+    labResFrame();
     if(lab.state === 'none') labLoad();
     if(lab.state !== 'ready') return;
     var T = sg3.T;
