@@ -7985,11 +7985,11 @@
     }
     var U2 = sg3.wm.uniforms; U2.uT.value = now % 1000; U2.uCurlX.value = sg.curl * SG3_M; sg3.skyMat.uniforms.uT.value = now % 1000;
     var sx = sg.x * SG3_M, rows = sg3.rows, pos = sg3.pos, foam = sg3.foam, thin = sg3.thin, curt = sg3.curt, cave = sg3.cave;
-    var x0 = sx - Hm * 9 - 30, span = Hm * 22 + 110, dx = span / (SG3_COLS - 1);
+    var span = Hm * 22 + 110, dx = span / (SG3_COLS - 1), x0r = sx - Hm * 9 - 30, x0 = Math.floor(x0r / dx) * dx;
     var zOff = sg.phase === 'paddle' || sg.phase === 'drive' || sg.phase === 'walk' ? sgSetOff(Math.min(1, sg.pad.k), Hm) : 0;    // the set, rolling in from the horizon (and on past, if you missed it)
     for(var c = 0; c < SG3_COLS; c++){
       var xm = x0 + c * dx, br = sg3Break(xm, Hm);
-      var endF = Math.min(1, c / (SG3_COLS * 0.12), (SG3_COLS - 1 - c) / (SG3_COLS * 0.2));   // flattens away at both ends
+      var cf = (xm - x0r) / dx, endF = Math.max(0, Math.min(1, cf / (SG3_COLS * 0.12), (SG3_COLS - 1 - cf) / (SG3_COLS * 0.2)));   // flattens away at both ends
       rows = sg3ProfileQ(br[0], br[1], Hm, Math.max(0.05, (br[2] || 1) * endF * endF * (3 - 2 * endF)));
       for(var r = 0; r < SG3_ROWS; r++){
         var i = c * SG3_ROWS + r;
@@ -15188,6 +15188,33 @@
       setW(s[0] + 'ForeArm', hand.clone().sub(wp(B[s[0] + 'ForeArm'])), back);
     });
   }
+  // ---------- surf lab: smooth wave motion ----------
+  // The game keeps ready-made wave profiles in steps (how far it's breaking in 20
+  // steps, its size in 40) and each slice takes the nearest one -- so as the wave
+  // breaks, every slice hops from one shape to the next (measured: the crest at a
+  // fixed point jumped up to 4-5 cm between frames for no reason). Here each slice
+  // blends the neighbouring profiles by how far between the steps it is, so the
+  // shape changes continuously. (Results go round a ring of buffers: the game keeps
+  // a few profiles in hand at once -- the surfer's, the ghosts'.)
+  var labOrigQ = sg3ProfileQ, labQRing = [], labQi = 0;
+  sg3ProfileQ = function(b, c, Hm, s){
+    s = s || 1; b = Math.max(0, Math.min(1, b)); c = Math.max(0, Math.min(1, c));
+    var fb = b * 20, b0 = Math.min(19, Math.floor(fb)), wb = fb - b0;
+    var fc = c * 20, c0 = Math.min(19, Math.floor(fc)), wc = fc - c0;
+    var fs = s * 40, s0 = Math.floor(fs), ws = fs - s0;
+    if(wb < 1e-4 && wc < 1e-4 && ws < 1e-4) return labOrigQ(b0 / 20, c0 / 20, Hm, s0 / 40);
+    var out = labQRing[labQi]; if(!out){ out = []; for(var i = 0; i < SG3_ROWS; i++) out.push([0, 0]); labQRing[labQi] = out; }
+    labQi = (labQi + 1) % 24;
+    for(var r = 0; r < SG3_ROWS; r++){ out[r][0] = 0; out[r][1] = 0; }
+    for(var k = 0; k < 8; k++){
+      var db = k & 1, dc = (k >> 1) & 1, ds = (k >> 2) & 1;
+      var w = (db ? wb : 1 - wb) * (dc ? wc : 1 - wc) * (ds ? ws : 1 - ws);
+      if(w < 1e-5) continue;
+      var P = labOrigQ((b0 + db) / 20, (c0 + dc) / 20, Hm, (s0 + ds) / 40);
+      for(var r2 = 0; r2 < SG3_ROWS; r2++){ out[r2][0] += P[r2][0] * w; out[r2][1] += P[r2][1] * w; }
+    }
+    return out;
+  };
   // ---------- surf lab: a wave with real shape ----------
   // The game builds the wave as slices along the beach, every slice the same
   // smooth profile -- the detail was only painted on. Here the mesh itself gets
@@ -15365,13 +15392,17 @@
   var LAB_RES = { budget: 1.3e6, slow: 1 / 40, fast: 1 / 55, min: 0.55 };
   function labResFrame(){
     if(labWave.res === false || !sg3.r) return;
-    var R = lab.res = lab.res || { s: 1, ema: 1 / 60, n: 0, last: 0, pr: 0 };
+    var R = lab.res = lab.res || { s: 1, ema: 1 / 60, n: 0, last: 0, pr: 0, slowN: 0, fastN: 0 };
+    if(document.hidden){ R.last = 0; return; }
     var now = performance.now() / 1000, dt = now - (R.last || now); R.last = now;
     if(dt > 0 && dt < 0.25){ R.ema += (dt - R.ema) * 0.08; R.n++; }
     if(R.n >= 40){
       R.n = 0;
-      if(R.ema > LAB_RES.slow && R.s > LAB_RES.min) R.s = Math.max(LAB_RES.min, R.s * 0.85);
-      else if(R.ema < LAB_RES.fast && R.s < 1) R.s = Math.min(1, R.s * 1.08);
+      // (calmly: each change resizes the picture, a small hitch of its own -- down after two
+      // slow stretches in a row, back up only after five quick ones)
+      R.slowN = R.ema > LAB_RES.slow ? R.slowN + 1 : 0; R.fastN = R.ema < LAB_RES.fast ? R.fastN + 1 : 0;
+      if(R.slowN >= 2 && R.s > LAB_RES.min){ R.s = Math.max(LAB_RES.min, R.s * 0.85); R.slowN = 0; }
+      else if(R.fastN >= 5 && R.s < 1){ R.s = Math.min(1, R.s * 1.1); R.fastN = 0; }
     }
     var W = sg3.cv.clientWidth || 800, H = sg3.cv.clientHeight || 600;
     var cap = Math.min(sg3.lowQ ? 1 : Math.min(1.35, window.devicePixelRatio || 1), Math.sqrt(LAB_RES.budget / (W * H)));
