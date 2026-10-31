@@ -14987,7 +14987,9 @@
     hair.traverse(function(o){ if(o.isSkinnedMesh) hairMeshes.push(o); });
     hairMeshes.forEach(function(o){ labRebind(T, o, bones); o.material = o.material.clone(); o.userData.hair = true; o.frustumCulled = false; o.castShadow = true; root.add(o); });
     var suitU = labDress(T, root, R);
-    R.body.add(root);
+    // (on the rider group, not the body: the game turns everything on the body for the prone
+    // and superman poses each frame, which would pile up on a body that isn't re-posed from scratch)
+    R.g.add(root);
     var B = {}; Object.keys(LAB_BONES).forEach(function(n){ B[n] = bones[LAB_BONES[n]]; if(!B[n]) throw new Error('no bone ' + LAB_BONES[n]); });
     // scale so the legs are as long as the doll's (hip to sole ~0.86 m)
     R.g.updateMatrixWorld(true);
@@ -15189,7 +15191,13 @@
     if(lab.state !== 'ready') return;
     var T = sg3.T;
     if(!sg3.rider.lab){ try { labAttach(T, sg3.rider); } catch(e){ lab.state = 'failed'; console.warn('lab attach:', e); return; } }
-    lab.bodies.forEach(function(b){ if(b.R.g.visible && b.R.g.parent) labPose(T, b); });
+    lab.bodies.forEach(function(b){
+      // shown when the doll would be -- or when the camera isn't at the eyes: the game hides the
+      // body while paddling (seen from the eyes), but the beach camera looks from far away
+      var R = b.R, eye = R.head.getWorldPosition(new T.Vector3());
+      b.root.visible = R.parts.torso.visible || sg3.cam.position.distanceTo(eye) > 0.6;
+      if(R.g.visible && R.g.parent && b.root.visible) labPose(T, b);
+    });
   }
   sg3PostRender = (function(orig){ return function(){ try { labFrame(); } catch(e){ if(!lab.warned){ lab.warned = true; console.warn('lab frame:', e); } } orig(); }; })(sg3PostRender);
 
