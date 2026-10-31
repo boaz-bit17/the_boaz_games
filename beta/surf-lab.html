@@ -14999,6 +14999,7 @@
     var bq = R.body.getWorldQuaternion(new T.Quaternion()), bqi = bq.clone().invert();
     var up = new T.Vector3(0, 1, 0).applyQuaternion(bq);
     var fwd = wp(B.LeftToeBase).sub(wp(B.LeftFoot)); fwd.addScaledVector(up, -fwd.dot(up)).normalize();
+    labCurlFingers(T, bones, up);
     var K = {};
     function rest(name, child, side){
       var b = B[name], qw = b.getWorldQuaternion(new T.Quaternion());
@@ -15015,7 +15016,8 @@
     var L = {
       thigh: wp(B.LeftUpLeg).distanceTo(wp(B.LeftLeg)), shin: wp(B.LeftLeg).distanceTo(wp(B.LeftFoot)),
       uarm: wp(B.LeftArm).distanceTo(wp(B.LeftForeArm)), farm: wp(B.LeftForeArm).distanceTo(wp(B.LeftHand)),
-      ankle: wp(B.LeftFoot).sub(wp(B.LeftToeBase)).dot(up)
+      // the ankle's height over the sole (the model stands on its origin)
+      ankle: wp(B.LeftFoot).sub(root.getWorldPosition(new T.Vector3())).dot(up)
     };
     // the doll moves to layer 5: still posed every frame, never drawn
     var P = R.parts, X = R.extra;
@@ -15039,6 +15041,68 @@
     if(n.lengthSq() < 1e-8) n.set(0, 0, 1).addScaledVector(d, -d.z);
     n.normalize();
     return a.clone().addScaledVector(d, l1 * ca).addScaledVector(n, l1 * sa);
+  }
+  // what the doll doesn't do: the body reacting to the ride. From how the board moves
+  // (smoothed speed, acceleration, how fast it turns): knees soak up bumps and landings
+  // and give in the turns, arms rise and reach to the inside of a turn for balance,
+  // the chest leans with the pull, and never quite still (chop, breathing, the
+  // hands feeling the air). All on springs, so it overshoots a little and settles.
+  function labLife(T, body, J, face, right, up){
+    var now = performance.now() / 1000, dt = Math.min(0.05, now - (body.lt || now)); body.lt = now;
+    var V = function(){ return new T.Vector3(); };
+    var S = body.life = body.life || { v: V(), a: V(), p: null, nose: null, w: 0, drop: 0, dropV: 0, hF: V(), hFv: V(), hB: V(), hBv: V(), sh: V(), shV: V(), t: Math.random() * 10 };
+    S.t += dt;
+    var p = body.R.body.getWorldPosition(V());
+    // (turning = the nose swinging any way: along the beach, or up and down the face)
+    var nose = new T.Vector3(1, 0, 0).applyQuaternion(body.R.body.getWorldQuaternion(new T.Quaternion()));
+    if(dt > 0 && S.p){
+      var v = p.clone().sub(S.p).divideScalar(dt);
+      if(v.length() > 60) v.copy(S.v);                                   // a jump to a new place, not speed
+      var av = v.clone().sub(S.v).divideScalar(dt);
+      S.v.lerp(v, 1 - Math.exp(-dt * 10)); S.a.lerp(av, 1 - Math.exp(-dt * 6));
+      S.w += (nose.angleTo(S.nose) / dt - S.w) * (1 - Math.exp(-dt * 6));
+    }
+    S.p = p; S.nose = nose;
+    if(!(S.a.length() < 200)) S.a.set(0, 0, 0);
+    if(!(Math.abs(S.w) < 20)) S.w = 0;
+    var riding = body.R === sg3.rider && /^(ride|air|tow|done)$/.test(sg.phase), on = riding ? 1 : 0.3, spd = S.v.length();
+    var aH = S.a.clone().addScaledVector(up, -S.a.dot(up)), aV = S.a.dot(up);
+    var turn = Math.min(1, Math.abs(S.w) * 0.6) * on;
+    var tDrop = on * (Math.min(0.09, aH.length() * 0.005) + Math.max(-0.05, Math.min(0.1, -aV * 0.01)) + 0.012 * Math.sin(S.t * 2.3) * Math.min(1, spd / 6));
+    var reach = aH.clone().multiplyScalar(0.03 * on); if(reach.length() > 0.22) reach.setLength(0.22);
+    var tHF = reach.clone().addScaledVector(up, 0.18 * turn + 0.035 * Math.sin(S.t * 1.3)).addScaledVector(right, 0.12 * turn).addScaledVector(face, 0.03 * Math.sin(S.t * 0.9 + 1));
+    var tHB = reach.clone().addScaledVector(up, 0.14 * turn + 0.035 * Math.sin(S.t * 1.1 + 2)).addScaledVector(right, -0.12 * turn).addScaledVector(face, 0.03 * Math.sin(S.t * 0.8 + 3));
+    var tSh = aH.clone().multiplyScalar(0.012 * on); if(tSh.length() > 0.1) tSh.setLength(0.1); tSh.addScaledVector(up, 0.006 * Math.sin(S.t * 1.6));
+    function spring(x, xv, tgt, k, c){ xv.addScaledVector(tgt.clone().sub(x).multiplyScalar(k).addScaledVector(xv, -c), dt); x.addScaledVector(xv, dt); }
+    S.dropV += (90 * (tDrop - S.drop) - 11 * S.dropV) * dt; S.drop += S.dropV * dt;
+    spring(S.hF, S.hFv, tHF, 70, 9); spring(S.hB, S.hBv, tHB, 60, 8); spring(S.sh, S.shV, tSh, 80, 12);
+    var down = up.clone().multiplyScalar(-S.drop), upper = down.clone().multiplyScalar(0.85).add(S.sh);
+    J.hip.add(down); J.sh.add(upper); J.head.add(upper);
+    J.handF.add(upper).add(S.hF); J.handB.add(upper).add(S.hB);
+    J.elF.add(upper).addScaledVector(S.hF, 0.5); J.elB.add(upper).addScaledVector(S.hB, 0.5);
+  }
+  // relaxed hands: every finger joint bent a little toward the palm (which axis
+  // bends it that way is found by trying each one)
+  function labCurlFingers(T, bones, up){
+    var wp = function(b){ return b.getWorldPosition(new T.Vector3()); };
+    ['l', 'r'].forEach(function(s){
+      var hand = bones['hand_' + s]; if(!hand || !bones['index_01_' + s] || !bones['pinky_01_' + s] || !bones['middle_01_' + s]) return;
+      var n = new T.Vector3().crossVectors(wp(bones['index_01_' + s]).sub(wp(bones['pinky_01_' + s])), wp(bones['middle_01_' + s]).sub(wp(hand))).normalize();
+      if(n.dot(up) > 0) n.negate();                                    // the palms face down in the rest pose
+      ['index', 'middle', 'ring', 'pinky', 'thumb'].forEach(function(f){
+        for(var j = 1; j <= 3; j++){
+          var b = bones[f + '_0' + j + '_' + s]; if(!b || !b.children.length) continue;
+          var tip = b.children[0], t0 = wp(tip), q0 = b.quaternion.clone(), best = null, bestD = -1;
+          [[1, 0, 0], [0, 1, 0], [0, 0, 1]].forEach(function(ax){ [1, -1].forEach(function(sn){
+            var axis = new T.Vector3(ax[0], ax[1], ax[2]);
+            b.quaternion.copy(q0).multiply(new T.Quaternion().setFromAxisAngle(axis, sn * 0.4)); b.updateMatrixWorld(true);
+            var d = wp(tip).sub(t0).dot(n); if(d > bestD){ bestD = d; best = [axis, sn]; }
+          }); });
+          var ang = f === 'thumb' ? [0.12, 0.22, 0.18][j - 1] : [0.42, 0.6, 0.42][j - 1] * (f === 'pinky' ? 1.2 : f === 'index' ? 0.8 : 1);
+          b.quaternion.copy(q0).multiply(new T.Quaternion().setFromAxisAngle(best[0], best[1] * ang)); b.updateMatrixWorld(true);
+        }
+      });
+    });
   }
   function labPose(T, body){
     var R = body.R, B = body.B, K = body.K, L = body.L, P = R.parts, X = R.extra;
@@ -15068,6 +15132,7 @@
     if(sgn < 0){ face.negate(); right.negate(); var t1 = J.kneeF; J.kneeF = J.kneeB; J.kneeB = t1; t1 = J.footF; J.footF = J.footB; J.footB = t1;
       t1 = J.shF; J.shF = J.shB; J.shB = t1; t1 = J.elF; J.elF = J.elB; J.elB = t1; t1 = J.handF; J.handF = J.handB; J.handB = t1; }
     var wUp = new T.Vector3(0, 1, 0).applyQuaternion(bq);
+    labLife(T, body, J, face, right, wUp);
     // turn a bone so its (along, side) axes point along these world directions
     function setW(name, along, side){
       var b = B[name];
@@ -15075,11 +15140,21 @@
       var pq = b.parent.getWorldQuaternion(new T.Quaternion());
       b.quaternion.copy(pq.invert().multiply(qw)); b.updateMatrixWorld(true);
     }
-    // hips: a little under the doll's hip (the knees bend like its), leaning half as much as the spine
+    // where the ankles go: the soles on the doll's soles (its feet are flattened balls 0.042 deep)
+    var ankleF = J.footF.clone().addScaledVector(wUp, L.ankle - 0.042), ankleB = J.footB.clone().addScaledVector(wUp, L.ankle - 0.042);
+    // hips: on the doll's hip, leaning half as much as the spine -- then lowered until
+    // the legs are as bent as the doll's (hip to foot over the leg's length)
     var hipUp = upS.clone().lerp(wUp, 0.5).normalize();
     B.Hips.parent.updateMatrixWorld(true);
-    B.Hips.position.copy(B.Hips.parent.worldToLocal(J.hip.clone().addScaledVector(hipUp, -0.03)));
+    B.Hips.position.copy(B.Hips.parent.worldToLocal(J.hip.clone()));
     setW('Hips', hipUp, face);
+    var bentness = function(h, k, f){ return h.distanceTo(f) / (h.distanceTo(k) + k.distanceTo(f)); };
+    var want = (bentness(J.hip, J.kneeF, J.footF) + bentness(J.hip, J.kneeB, J.footB)) / 2 * (L.thigh + L.shin);
+    var have = (wp(B.RightUpLeg).distanceTo(ankleF) + wp(B.LeftUpLeg).distanceTo(ankleB)) / 2;
+    if(have > want){
+      B.Hips.position.copy(B.Hips.parent.worldToLocal(J.hip.clone().addScaledVector(wUp, -(have - want))));
+      B.Hips.updateMatrixWorld(true);
+    }
     // the spine bends a third at a time up to the chest on the doll's shoulders
     setW('Spine', hipUp.clone().lerp(upS, 0.33), face);
     setW('Spine1', hipUp.clone().lerp(upS, 0.67), face);
@@ -15090,8 +15165,8 @@
     var hq = R.head.getWorldQuaternion(new T.Quaternion());
     setW('Head', new T.Vector3(0, -1, 0).applyQuaternion(hq), new T.Vector3(1, 0, 0).applyQuaternion(hq));
     // legs (front = right) and arms
-    [['Right', J.kneeF, J.footF], ['Left', J.kneeB, J.footB]].forEach(function(s){
-      var a = wp(B[s[0] + 'UpLeg']), foot = s[2].clone().addScaledVector(wUp, L.ankle + 0.02);
+    [['Right', J.kneeF, ankleF], ['Left', J.kneeB, ankleB]].forEach(function(s){
+      var a = wp(B[s[0] + 'UpLeg']), foot = s[2];
       var knee = labIK(T, a, foot, L.thigh, L.shin, s[1].clone().addScaledVector(face, 0.3));
       var bend = knee.clone().sub(a.clone().lerp(foot, 0.5)); if(bend.lengthSq() < 1e-6) bend = face.clone();
       setW(s[0] + 'UpLeg', knee.clone().sub(a), bend);
