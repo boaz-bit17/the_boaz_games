@@ -14959,6 +14959,7 @@
       o.geometry.setAttribute('aAcc', new T.BufferAttribute(a2, 1));
       var m = o.material.clone(); m.name = 'lab-suit';
       m.onBeforeCompile = function(sh){
+        labBendInject(sh);
         sh.uniforms.uSuit = suitU; sh.uniforms.uAcc = accU;
         sh.vertexShader = 'attribute float aSuit;\nattribute float aAcc;\nvarying float vSuit;\nvarying float vAcc;\n' +
           sh.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\n  vSuit = aSuit; vAcc = aAcc;');
@@ -15232,17 +15233,72 @@
       }
     }
   }
+  // ---------- surf lab: the wave line bends ----------
+  // A real peak isn't a straight wall: it stands furthest out where it breaks and
+  // both sides wrap in toward the beach. Everything in the surf zone bends with it
+  // on the graphics card (the wave, the sea, foam, spray, the other surfers, the
+  // buoy): z += B(x) - B(surfer's x), so right at the surfer nothing moves (the
+  // game, the camera and the controls are untouched) and the beach (z > 110)
+  // stays where it is.
+  var LAB_BEND_U = { uLabBendOn: { value: 1 }, uLabBendCx: { value: 0 }, uLabBendH: { value: 3 }, uLabBendRef: { value: 0 } };
+  var LAB_BEND_K = 0.13, LAB_BEND_A = 5.0, LAB_BEND_MAXA = 1.25;          // how fast it turns (per wave height), how far (wave heights)
+  var LAB_BEND_GLSL = 'uniform float uLabBendOn; uniform float uLabBendCx; uniform float uLabBendH; uniform float uLabBendRef;\n' +
+    'float labBendRaw(float x){ float a = clamp((x - uLabBendCx) / uLabBendH * ' + LAB_BEND_K.toFixed(3) + ', -' + LAB_BEND_MAXA.toFixed(2) + ', ' + LAB_BEND_MAXA.toFixed(2) + '); return uLabBendH * ' + LAB_BEND_A.toFixed(2) + ' * (1.0 - cos(a)); }\n' +
+    'float labBendW(float z){ return uLabBendOn * (1.0 - smoothstep(70.0, 110.0, z)); }\n' +
+    'float labBendZ(vec2 xz){ return (labBendRaw(xz.x) - uLabBendRef) * labBendW(xz.y); }\n' +
+    'float labBendD(vec2 xz){ float a = (xz.x - uLabBendCx) / uLabBendH * ' + LAB_BEND_K.toFixed(3) + '; return abs(a) < ' + LAB_BEND_MAXA.toFixed(2) + ' ? ' + LAB_BEND_A.toFixed(2) + ' * ' + LAB_BEND_K.toFixed(3) + ' * sin(a) * labBendW(xz.y) : 0.0; }\n';
+  function labBendRaw(x, cx, H){ var a = Math.max(-LAB_BEND_MAXA, Math.min(LAB_BEND_MAXA, (x - cx) / H * LAB_BEND_K)); return H * LAB_BEND_A * (1 - Math.cos(a)); }
+  // every shader that places things in the world gets the bend
+  function labBendInject(sh){
+    var vs = sh.vertexShader, fs = sh.fragmentShader, hit = false;
+    if(vs.indexOf('#include <project_vertex>') >= 0){
+      vs = vs.replace('#include <project_vertex>', 'vec4 mvPosition = vec4(transformed, 1.0);\n#ifdef USE_INSTANCING\n mvPosition = instanceMatrix * mvPosition;\n#endif\n' +
+        ' vec4 labWP = modelMatrix * mvPosition; labWP.z += labBendZ(labWP.xz); mvPosition = viewMatrix * labWP; gl_Position = projectionMatrix * mvPosition;');
+      hit = true;
+    }
+    if(vs.indexOf('vec4 w = modelMatrix * vec4(position, 1.0);') >= 0){                    // the wave, the sea, the wake
+      vs = vs.replace('vec4 w = modelMatrix * vec4(position, 1.0);', 'vec4 w = modelMatrix * vec4(position, 1.0); w.z += labBendZ(w.xz);')
+             .replace('vN = normalize(mat3(modelMatrix) * normal);', 'vN = normalize(mat3(modelMatrix) * normal); vN.x -= labBendD(w.xz) * vN.z; vN = normalize(vN);');
+      hit = true;
+    }
+    if(vs.indexOf('vec4 mv = modelViewMatrix * vec4(position, 1.0);') >= 0){              // spray and foam particles
+      vs = vs.replace('vec4 mv = modelViewMatrix * vec4(position, 1.0);', 'vec4 labWP = modelMatrix * vec4(position, 1.0); labWP.z += labBendZ(labWP.xz); vec4 mv = viewMatrix * labWP;');
+      hit = true;
+    }
+    if(!hit) return;
+    Object.keys(LAB_BEND_U).forEach(function(k){ sh.uniforms[k] = LAB_BEND_U[k]; });
+    sh.vertexShader = LAB_BEND_GLSL + vs;
+    // the foam trail on the sea is measured from the wave: measure it before the bend
+    if(fs.indexOf(' float trail = sea') >= 0){
+      fs = fs.replace(' float trail = sea', ' float lzU = vW.z - labBendZ(vW.xz);\n float trail = sea');
+      var i0 = fs.indexOf(' float trail = sea'), i1 = fs.indexOf('\n', i0);
+      fs = fs.slice(0, i0) + fs.slice(i0, i1).replace(/vW\.z/g, 'lzU') + fs.slice(i1);
+      sh.fragmentShader = LAB_BEND_GLSL + fs;
+    }
+  }
+  function labBendFrame(T){
+    if(!lab.bendHooked){
+      lab.bendHooked = true;
+      var prev = T.Material.prototype.onBeforeCompile;
+      T.Material.prototype.onBeforeCompile = function(sh, r){ if(prev) prev.call(this, sh, r); labBendInject(sh); };
+    }
+    var Hm = (sg.spot && SG3_H[sg.spot.id]) || 3, cx = sg.curl * SG3_M;
+    LAB_BEND_U.uLabBendOn.value = labWave.bend === false ? 0 : 1;
+    LAB_BEND_U.uLabBendCx.value = cx; LAB_BEND_U.uLabBendH.value = Hm;
+    LAB_BEND_U.uLabBendRef.value = labBendRaw(sg.x * SG3_M, cx, Hm);
+  }
   function labFrame(){
     if(!sg3.T || !sg3.rider) return;
+    labBendFrame(sg3.T);                     // (before anything is drawn, so every shader gets it)
     if(lab.state === 'none') labLoad();
     if(lab.state !== 'ready') return;
     var T = sg3.T;
     if(!sg3.rider.lab){ try { labAttach(T, sg3.rider); } catch(e){ lab.state = 'failed'; console.warn('lab attach:', e); return; } }
     lab.bodies.forEach(function(b){
-      // shown when the doll would be -- or when the camera isn't at the eyes: the game hides the
-      // body while paddling (seen from the eyes), but the beach camera looks from far away
+      // shown when the doll would be -- or when the camera is far from the eyes: the game hides the
+      // body seen from the eyes, but after a jump to the peak the camera glides in from metres away
       var R = b.R, eye = R.head.getWorldPosition(new T.Vector3());
-      b.root.visible = R.parts.torso.visible || sg3.cam.position.distanceTo(eye) > 0.6;
+      b.root.visible = R.parts.torso.visible || sg3.cam.position.distanceTo(eye) > 2.0;
       if(R.g.visible && R.g.parent && b.root.visible) labPose(T, b);
     });
   }
