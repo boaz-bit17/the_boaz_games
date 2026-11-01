@@ -1296,7 +1296,7 @@
   <div class="overlay" id="sgMenu" hidden>
     <div class="tablet">
       <h1>🌊 משחק הגלישה</h1>
-      <p class="tagline">🧭 אתם במכונית — לאן נוסעים? בחרו חוף, נהגו לשם, ותפסו גלים</p>
+      <p class="tagline">🌊 בחרו חוף ותפסו גלים</p>
       <button class="tourney-banner surf-banner" id="surfBanner" type="button" hidden></button>
       <div class="sg-shells" id="sgShells"></div>
       <div class="sg-spots" id="sgSpots"></div>
@@ -1316,10 +1316,10 @@
       <div class="sg-grid" id="sgShopRiders"></div>
       <div class="mission-title">🏄 עיצוב הגלשן</div>
       <div class="sg-design" id="sgShopDesign"></div>
-      <div class="mission-title">🚗 כלי רכב</div>
-      <div class="sg-grid" id="sgShopCars"></div>
-      <div class="mission-title">🎨 צבע המכונית</div>
-      <div class="sg-colors" id="sgShopColors"></div>
+      <div class="mission-title" style="display:none">🚗 כלי רכב</div>
+      <div class="sg-grid" id="sgShopCars" style="display:none"></div>
+      <div class="mission-title" style="display:none">🎨 צבע המכונית</div>
+      <div class="sg-colors" id="sgShopColors" style="display:none"></div>
       <div class="mission-title">⬆️ שדרוגים</div>
       <div class="sg-grid" id="sgShopUps"></div>
       <button class="back-btn" id="sgShopBack" type="button">חזרה</button>
@@ -1504,7 +1504,7 @@
   var I18N_HTML = {
    "🌊 מעבר למשחק גלישה": "🌊 Go to the surf game",
    "🌊 משחק הגלישה": "🌊 The Surf Game",
-   "🧭 אתם במכונית — לאן נוסעים? בחרו חוף, נהגו לשם, ותפסו גלים": "🧭 You're in the car — where to? Pick a beach, drive there, catch waves",
+   "🌊 בחרו חוף ותפסו גלים": "🌊 Pick a beach and catch waves",
    "🛒 חנות הגלישה": "🛒 Surf shop",
    "⬅ חזרה למשחק הריצה": "⬅ Back to the running game",
    "🏄 גלשנים": "🏄 Boards",
@@ -5113,7 +5113,7 @@
   // (x from the lot; z: the porch rail 197.6, the front wall 200.5, the back 208.5; stairs down at x -4.6..-3.2)
   var SG_HOUSE = { x: 62, rail: 197.6, front: 200.5, back: 208.5, hw: 6, floor: 1.4, st0: -4.6, st1: -3.2, foot: 195.8 };
   function sgHome(){ return sgSave.home || 'olga'; }
-  function sgHomeHere(){ return !!sgLot && !!sg.spot && !sg.spot.tow && sgHome() === sg.spot.id; }
+  function sgHomeHere(){ return false; }   // (the house was taken out)
   function sgHX(){ return sgLot.parkX + SG_HOUSE.x; }
   // where you are: 2 inside, 1 on the porch, 0 not in the house
   function sgInHouse(){ if(!sgHomeHere() || !sg.walk) return 0; var rx = sg.walk.x - sgHX(), z = sg.walk.z; if(Math.abs(rx) > SG_HOUSE.hw + 0.05) return 0; return z > SG_HOUSE.front ? 2 : z >= SG_HOUSE.rail ? 1 : 0; }
@@ -8172,7 +8172,7 @@
     document.getElementById('sgFcBtn').textContent = L('📅 תחזית גלים ורוח לשבוע', '📅 Wave & wind forecast for the week');
     if(!document.getElementById('sgHomeMBtn')){ var hmb = document.createElement('button'); hmb.type = 'button'; hmb.className = 'shop-btn'; hmb.id = 'sgHomeMBtn';
       hmb.addEventListener('click', sgOpenHome); var fcb0 = document.getElementById('sgFcBtn'); fcb0.parentNode.insertBefore(hmb, fcb0); }
-    document.getElementById('sgHomeMBtn').textContent = L('🏠 הבית שלי — ', '🏠 My house — ') + sgItem(SG_SPOTS, sgHome()).name;
+    document.getElementById('sgHomeMBtn').hidden = true; document.getElementById('sgHomeMBtn').textContent = L('🏠 הבית שלי — ', '🏠 My house — ') + sgItem(SG_SPOTS, sgHome()).name;
     if(!document.getElementById('sgSpBtn')){ var spb = document.createElement('button'); spb.type = 'button'; spb.className = 'shop-btn'; spb.id = 'sgSpBtn';
       spb.addEventListener('click', sgOpenSponsors); var fcb = document.getElementById('sgFcBtn'); fcb.parentNode.insertBefore(spb, fcb); }
     var spO = sgSpOffer(), spC = sgSp().cur && sgItem(SG_SPONSORS, sgSp().cur);
@@ -8186,7 +8186,7 @@
       b.style.background = 'linear-gradient(135deg,' + spot.face[0] + ',' + spot.sea[1] + ')';
       var nm = document.createElement('div'); nm.className = 'sg-spot-name'; nm.textContent = spot.emoji + ' ' + spot.name;
       var ds = document.createElement('div'); ds.className = 'sg-spot-desc';
-      if(!spot.tow){ var dmN = sgDriveM(spot), vv = sgSave.car === 'bike' ? 7 : 18, tm = Math.round(dmN / vv);
+      if(false){ var dmN = sgDriveM(spot), vv = sgSave.car === 'bike' ? 7 : 18, tm = Math.round(dmN / vv);
         var nv = document.createElement('div'); nv.className = 'sg-spot-desc'; nv.textContent = L('🧭 ' + dmN + ' מ\' · כ-' + tm + ' שניות נסיעה', '🧭 ' + dmN + ' m · about ' + tm + ' s drive'); b.appendChild(nv); }
       ds.textContent = spot.desc;
       var fcT = sgForecast(spot), fcd = document.createElement('div'); fcd.className = 'sg-spot-desc sg-fc-line';
@@ -8203,7 +8203,8 @@
           sg.peak = { peakX: shared ? 0 : sg.curl, rides: [], best: 0, shared: shared };
           if(shared){ sg.pad.n = -1; sg.curl = sgPeakJitter(sg.spot.id, Math.floor(Date.now() / PEAK_PERIOD)); sg.x = sg.curl + 300 + 260; sgNetJoin(sg.spot); }
         }
-        if(!sg.spot.tow && sg3.state === 'ready') sgBeginDrive(); });
+        if(!sg.spot.tow) sgLot = { parkX: (sg.curl + 300) * SG3_M, car: null };   // straight into the water (no drive); the beach stays to come back to
+      });
       list.appendChild(b);
     });
   }
@@ -8330,7 +8331,7 @@
     rk.textContent = sgSave.rack ? L('🏄 מנשא גלשן על הרכב: מותקן ✔', '🏄 Board rack on the vehicle: on ✔') : L('🏄 מנשא גלשן על הרכב: לא מותקן', '🏄 Board rack on the vehicle: off');
     rk.addEventListener('click', function(){ sgSave.rack = !sgSave.rack; sgStore(); sgRenderShop(); });
     var rkOld = document.getElementById('sgRackRow'); if(rkOld) rkOld.remove();
-    var rkRow = document.createElement('div'); rkRow.id = 'sgRackRow'; rkRow.className = 'sg-opts'; rkRow.style.margin = '6px 0'; rkRow.appendChild(rk); col.parentNode.insertBefore(rkRow, col);
+    var rkRow = document.createElement('div'); rkRow.id = 'sgRackRow'; rkRow.style.display = 'none'; rkRow.className = 'sg-opts'; rkRow.style.margin = '6px 0'; rkRow.appendChild(rk); col.parentNode.insertBefore(rkRow, col);
     SG_CAR_COLORS.forEach(function(c){
       var b = document.createElement('button'); b.type = 'button'; b.className = 'sg-color' + (sgSave.carColor === c ? ' is-on' : ''); b.style.background = c;
       b.addEventListener('click', function(){ sgSave.carColor = c; sgStore(); sgRenderShop(); });
@@ -8343,7 +8344,7 @@
         function(){ sgSave.shells -= cost; sgSave.up[u.id]++; sgStore(); sgRenderShop(); }));
     });
   }
-  document.getElementById('sgEnterBtn').addEventListener('click', function(){ sgOpenMenu(); sgStartAtHome(0); });
+  document.getElementById('sgEnterBtn').addEventListener('click', function(){ sgOpenMenu(); });
   // into the surf game: the day starts in your house (once the 3D is ready; the menu until then)
   function sgStartAtHome(n){
     if(sg.phase !== 'menu' || sgMenu.hidden || sg3.state === 'failed') return;
@@ -14550,7 +14551,7 @@
   // never while the name field is being typed in. Everything worth keeping
   // (coins, skins, name, league) is in localStorage, so a reload loses nothing.
   // 'dev' = a local or preview copy: the updater stays off entirely.
-  var BUILD_VERSION = '20261101-075207';
+  var BUILD_VERSION = '20261101-075832';
   var UPDATE_CHECK_MS = 60000;
   var UPDATE_TRIED_KEY = 'canyonChaseTriedUpdate';
   var pendingSubmits = 0;
