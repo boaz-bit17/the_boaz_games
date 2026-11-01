@@ -7794,11 +7794,11 @@
     }
     var U2 = sg3.wm.uniforms; U2.uT.value = now % 1000; U2.uCurlX.value = sg.curl * SG3_M; sg3.skyMat.uniforms.uT.value = now % 1000;
     var sx = sg.x * SG3_M, rows = sg3.rows, pos = sg3.pos, foam = sg3.foam, thin = sg3.thin, curt = sg3.curt, cave = sg3.cave;
-    var x0 = sx - Hm * 9 - 30, span = Hm * 22 + 110, dx = span / (SG3_COLS - 1);
+    var span = Hm * 22 + 110, dx = span / (SG3_COLS - 1), x0r = sx - Hm * 9 - 30, x0 = Math.floor(x0r / dx) * dx;
     var zOff = sg.phase === 'paddle' || sg.phase === 'drive' || sg.phase === 'walk' ? sgSetOff(Math.min(1, sg.pad.k), Hm) : 0;    // the set, rolling in from the horizon (and on past, if you missed it)
     for(var c = 0; c < SG3_COLS; c++){
       var xm = x0 + c * dx, br = sg3Break(xm, Hm);
-      var endF = Math.min(1, c / (SG3_COLS * 0.12), (SG3_COLS - 1 - c) / (SG3_COLS * 0.2));   // flattens away at both ends
+      var cf = (xm - x0r) / dx, endF = Math.max(0, Math.min(1, cf / (SG3_COLS * 0.12), (SG3_COLS - 1 - cf) / (SG3_COLS * 0.2)));   // flattens away at both ends
       rows = sg3ProfileQ(br[0], br[1], Hm, Math.max(0.05, (br[2] || 1) * endF * endF * (3 - 2 * endF)));
       for(var r = 0; r < SG3_ROWS; r++){
         var i = c * SG3_ROWS + r;
@@ -14550,7 +14550,7 @@
   // never while the name field is being typed in. Everything worth keeping
   // (coins, skins, name, league) is in localStorage, so a reload loses nothing.
   // 'dev' = a local or preview copy: the updater stays off entirely.
-  var BUILD_VERSION = '20261030-130035';
+  var BUILD_VERSION = '20261101-075207';
   var UPDATE_CHECK_MS = 60000;
   var UPDATE_TRIED_KEY = 'canyonChaseTriedUpdate';
   var pendingSubmits = 0;
@@ -14702,6 +14702,542 @@
     if(b && USAGE_TAPS.indexOf(b.id) !== -1) usageSend('tap', b.id, 0, 0);
   }, true);
 
+  // >>> surf lab parts (lab/lab-block.js via lab/make-main.js)
+  // ---------- surf lab: a real body for the surfer ----------
+  // A skinned human (Quaternius Universal Base Characters, CC0) rides in place
+  // of the doll, in a wetsuit: the suit colour is painted over every part of
+  // the body that isn't head, hands or feet (by which bones move it), over the
+  // body's own normal map, so the muscles show through the neoprene. Hair is a
+  // separate model rigged to the same head bone.
+  // The doll still runs every pose (riding, paddling, walking, the bike, ball
+  // games); each frame its joints are read back and the real skeleton is bent
+  // to them: hips and chest from the doll's hips/shoulders, two-bone IK for
+  // the legs and arms (feet and hands land where the doll's are, knees and
+  // elbows bend toward the doll's), the head turned like the doll's. The doll
+  // itself moves to a layer the camera doesn't draw.
+  var LAB_MODEL = 'models/surfer.glb', LAB_HAIR = 'models/hair-simpleparted.glb';
+  var LAB_GLTF = 'https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/loaders/GLTFLoader.js';
+  var lab = { state: 'none', bodies: [] };
+  function labLoad(){
+    if(lab.state !== 'none') return;
+    lab.state = 'loading';
+    var s = document.createElement('script'); s.src = LAB_GLTF;
+    s.onload = function(){
+      var ld = new THREE.GLTFLoader(), left = 2, fail = function(e){ lab.state = 'failed'; console.warn('lab model:', e); };
+      var done = function(){ if(--left === 0 && lab.state === 'loading') lab.state = 'ready'; };
+      ld.load(LAB_MODEL, function(g){ lab.gltf = g; done(); }, undefined, fail);
+      ld.load(LAB_HAIR, function(g){ lab.hair = g; done(); }, undefined, fail);
+    };
+    s.onerror = function(){ lab.state = 'failed'; };
+    document.head.appendChild(s);
+  }
+  // our names for the bones -> the model's (Unreal-style names, or Mixamo)
+  var LAB_BONES = {
+    Hips: 'pelvis', Spine: 'spine_01', Spine1: 'spine_02', Spine2: 'spine_03', Neck: 'neck_01', Head: 'Head',
+    LeftUpLeg: 'thigh_l', LeftLeg: 'calf_l', LeftFoot: 'foot_l', LeftToeBase: 'ball_l',
+    RightUpLeg: 'thigh_r', RightLeg: 'calf_r', RightFoot: 'foot_r', RightToeBase: 'ball_r',
+    LeftShoulder: 'clavicle_l', LeftArm: 'upperarm_l', LeftForeArm: 'lowerarm_l', LeftHand: 'hand_l',
+    RightShoulder: 'clavicle_r', RightArm: 'upperarm_r', RightForeArm: 'lowerarm_r', RightHand: 'hand_r'
+  };
+  // bones whose skin stays bare; everything else is wetsuit
+  var LAB_BARE = /^(Head|hand_|index_|middle_|pinky_|ring_|thumb_|foot_|ball_)/;
+  // a skinned mesh, rebound to the bones of this copy (by name)
+  function labRebind(T, mesh, bones){
+    var sk = mesh.skeleton;
+    mesh.bind(new T.Skeleton(sk.bones.map(function(b){ return bones[b.name]; }), sk.boneInverses.map(function(m){ return m.clone(); })), mesh.bindMatrix.clone());
+  }
+  function labDress(T, root, R, boneNames){
+    var suitU = { value: R.suitM.color.clone() }, accU = { value: new T.Color(0x16181d) };
+    root.traverse(function(o){
+      if(!o.isMesh) return;
+      o.frustumCulled = false; o.castShadow = true;
+      if(!o.isSkinnedMesh || !/Superhero/.test(o.material.name)) return;
+      // per vertex: how much of it is moved by suit bones
+      var si = o.geometry.attributes.skinIndex, sw = o.geometry.attributes.skinWeight, n = si.count, a = new Float32Array(n);
+      var bare = o.skeleton.bones.map(function(b){ return LAB_BARE.test(b.name); });
+      // and how much by the shoulders: a second colour across the shoulders, like most wetsuits
+      var acc = o.skeleton.bones.map(function(b){ return /^clavicle_/.test(b.name); }), a2 = new Float32Array(n);
+      var get = ['getX', 'getY', 'getZ', 'getW'];
+      for(var i = 0; i < n; i++){
+        var s = 0, s2 = 0;
+        for(var c = 0; c < 4; c++){ var w = sw[get[c]](i), bi = si[get[c]](i); if(w > 0 && !bare[bi]) s += w; if(w > 0 && acc[bi]) s2 += w; }
+        a[i] = s; a2[i] = s2;
+      }
+      o.geometry.setAttribute('aSuit', new T.BufferAttribute(a, 1));
+      o.geometry.setAttribute('aAcc', new T.BufferAttribute(a2, 1));
+      var m = o.material.clone(); m.name = 'lab-suit';
+      m.onBeforeCompile = function(sh){
+        labBendInject(sh);
+        sh.uniforms.uSuit = suitU; sh.uniforms.uAcc = accU;
+        sh.vertexShader = 'attribute float aSuit;\nattribute float aAcc;\nvarying float vSuit;\nvarying float vAcc;\n' +
+          sh.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\n  vSuit = aSuit; vAcc = aAcc;');
+        sh.fragmentShader = 'uniform vec3 uSuit;\nuniform vec3 uAcc;\nvarying float vSuit;\nvarying float vAcc;\n' + sh.fragmentShader
+          .replace('#include <map_fragment>', '#include <map_fragment>\n  float suitK = smoothstep(0.42, 0.58, vSuit);\n' +
+            '  diffuseColor.rgb = mix(diffuseColor.rgb, mix(uSuit, uAcc, smoothstep(0.3, 0.42, vAcc)), suitK);')
+          .replace('#include <roughnessmap_fragment>', '#include <roughnessmap_fragment>\n  roughnessFactor = mix(roughnessFactor, 0.36, suitK);')
+          // neoprene smooths the body under it: most of the muscle detail goes
+          .replace('#include <normal_fragment_maps>', '  vec3 labGeoN = normal;\n#include <normal_fragment_maps>\n  normal = normalize(mix(normal, labGeoN, suitK * 0.65));');
+      };
+      o.material = m;
+    });
+    return suitU;
+  }
+  // a rotation that takes the frame (along = y, side = z) to (a, s)
+  function labBasis(T, a, s){
+    var y = a.clone().normalize(), z = s.clone().addScaledVector(y, -s.dot(y));
+    if(z.lengthSq() < 1e-8) z = new T.Vector3(0, 0, 1).addScaledVector(y, -y.z);
+    z.normalize(); var x = new T.Vector3().crossVectors(y, z);
+    return new T.Quaternion().setFromRotationMatrix(new T.Matrix4().makeBasis(x, y, z));
+  }
+  function labAttach(T, R){
+    var root = lab.gltf.scene.clone(true), bones = {};
+    root.traverse(function(o){ if(o.isBone) bones[o.name] = o; });
+    root.traverse(function(o){ if(o.isSkinnedMesh) labRebind(T, o, bones); });
+    // the hair: its own copy, skinned to this body's head
+    var hair = lab.hair.scene.clone(true), hairMeshes = [];
+    hair.traverse(function(o){ if(o.isSkinnedMesh) hairMeshes.push(o); });
+    hairMeshes.forEach(function(o){ labRebind(T, o, bones); o.material = o.material.clone(); o.userData.hair = true; o.frustumCulled = false; o.castShadow = true; root.add(o); });
+    var suitU = labDress(T, root, R);
+    // (on the rider group, not the body: the game turns everything on the body for the prone
+    // and superman poses each frame, which would pile up on a body that isn't re-posed from scratch)
+    R.g.add(root);
+    var B = {}; Object.keys(LAB_BONES).forEach(function(n){ B[n] = bones[LAB_BONES[n]]; if(!B[n]) throw new Error('no bone ' + LAB_BONES[n]); });
+    // scale so the legs are as long as the doll's (hip to sole ~0.86 m)
+    R.g.updateMatrixWorld(true);
+    var wp = function(b){ return b.getWorldPosition(new T.Vector3()); };
+    var leg = wp(B.LeftUpLeg).distanceTo(wp(B.LeftLeg)) + wp(B.LeftLeg).distanceTo(wp(B.LeftFoot));
+    root.scale.multiplyScalar(0.82 / leg); R.g.updateMatrixWorld(true);
+    // rest frames, in the doll's body space: each bone's rotation and its (along, side) axes;
+    // which way the model faces comes from its toes
+    var bq = R.body.getWorldQuaternion(new T.Quaternion()), bqi = bq.clone().invert();
+    var up = new T.Vector3(0, 1, 0).applyQuaternion(bq);
+    var fwd = wp(B.LeftToeBase).sub(wp(B.LeftFoot)); fwd.addScaledVector(up, -fwd.dot(up)).normalize();
+    labCurlFingers(T, bones, up);
+    var K = {};
+    function rest(name, child, side){
+      var b = B[name], qw = b.getWorldQuaternion(new T.Quaternion());
+      var a = wp(B[child]).sub(wp(b)), s = side.clone();
+      var Rb = bqi.clone().multiply(qw), A0 = labBasis(T, a.applyQuaternion(bqi), s.applyQuaternion(bqi));
+      K[name] = A0.invert().multiply(Rb);
+    }
+    rest('Hips', 'Spine', fwd); rest('Spine', 'Spine1', fwd); rest('Spine1', 'Spine2', fwd); rest('Spine2', 'Neck', fwd); rest('Neck', 'Head', fwd);
+    rest('Head', 'Neck', fwd);   // the head: along = down to the neck, side = where the face looks
+    ['Left', 'Right'].forEach(function(s){
+      rest(s + 'UpLeg', s + 'Leg', fwd); rest(s + 'Leg', s + 'Foot', fwd); rest(s + 'Foot', s + 'ToeBase', up);
+      rest(s + 'Arm', s + 'ForeArm', fwd.clone().negate()); rest(s + 'ForeArm', s + 'Hand', fwd.clone().negate());
+    });
+    var L = {
+      thigh: wp(B.LeftUpLeg).distanceTo(wp(B.LeftLeg)), shin: wp(B.LeftLeg).distanceTo(wp(B.LeftFoot)),
+      uarm: wp(B.LeftArm).distanceTo(wp(B.LeftForeArm)), farm: wp(B.LeftForeArm).distanceTo(wp(B.LeftHand)),
+      // the ankle's height over the sole (the model stands on its origin)
+      ankle: wp(B.LeftFoot).sub(root.getWorldPosition(new T.Vector3())).dot(up)
+    };
+    // the doll moves to layer 5: still posed every frame, never drawn
+    var P = R.parts, X = R.extra;
+    Object.keys(P).forEach(function(k){ P[k].layers.set(5); });
+    Object.keys(X).forEach(function(k){ X[k].traverse(function(o){ o.layers.set(5); }); });
+    R.head.traverse(function(o){ o.layers.set(5); }); R.hair.layers.set(5);
+    var body = { R: R, root: root, B: B, K: K, L: L, suitU: suitU, hair: hairMeshes };
+    lab.bodies.push(body); R.lab = body;
+    return body;
+  }
+  // the two ends of a doll limb (sg3Limb put it between them)
+  function labEnds(T, m){
+    var d = new T.Vector3(0, 1, 0).applyQuaternion(m.quaternion), len = m.userData.full ? m.scale.y : m.scale.y + 0.1;
+    return [m.position.clone().addScaledVector(d, -len / 2), m.position.clone().addScaledVector(d, len / 2)];
+  }
+  // two-bone IK: from root a toward target c with lengths l1, l2, the middle joint bent toward pole p
+  function labIK(T, a, c, l1, l2, p){
+    var d = c.clone().sub(a), dist = Math.max(Math.abs(l1 - l2) + 1e-3, Math.min(l1 + l2 - 1e-3, d.length())); d.normalize();
+    var ca = (l1 * l1 + dist * dist - l2 * l2) / (2 * l1 * dist), sa = Math.sqrt(Math.max(0, 1 - ca * ca));
+    var n = p.clone().sub(a); n.addScaledVector(d, -n.dot(d));
+    if(n.lengthSq() < 1e-8) n.set(0, 0, 1).addScaledVector(d, -d.z);
+    n.normalize();
+    return a.clone().addScaledVector(d, l1 * ca).addScaledVector(n, l1 * sa);
+  }
+  // what the doll doesn't do: the body reacting to the ride. From how the board moves
+  // (smoothed speed, acceleration, how fast it turns): knees soak up bumps and landings
+  // and give in the turns, arms rise and reach to the inside of a turn for balance,
+  // the chest leans with the pull, and never quite still (chop, breathing, the
+  // hands feeling the air). All on springs, so it overshoots a little and settles.
+  function labLife(T, body, J, face, right, up){
+    var now = performance.now() / 1000, dt = Math.min(0.05, now - (body.lt || now)); body.lt = now;
+    var V = function(){ return new T.Vector3(); };
+    var S = body.life = body.life || { v: V(), a: V(), p: null, nose: null, w: 0, drop: 0, dropV: 0, hF: V(), hFv: V(), hB: V(), hBv: V(), sh: V(), shV: V(), t: Math.random() * 10 };
+    S.t += dt;
+    var p = body.R.body.getWorldPosition(V());
+    // (turning = the nose swinging any way: along the beach, or up and down the face)
+    var nose = new T.Vector3(1, 0, 0).applyQuaternion(body.R.body.getWorldQuaternion(new T.Quaternion()));
+    if(dt > 0 && S.p){
+      var v = p.clone().sub(S.p).divideScalar(dt);
+      if(v.length() > 60) v.copy(S.v);                                   // a jump to a new place, not speed
+      var av = v.clone().sub(S.v).divideScalar(dt);
+      S.v.lerp(v, 1 - Math.exp(-dt * 10)); S.a.lerp(av, 1 - Math.exp(-dt * 6));
+      S.w += (nose.angleTo(S.nose) / dt - S.w) * (1 - Math.exp(-dt * 6));
+    }
+    S.p = p; S.nose = nose;
+    if(!(S.a.length() < 200)) S.a.set(0, 0, 0);
+    if(!(Math.abs(S.w) < 20)) S.w = 0;
+    var riding = body.R === sg3.rider && /^(ride|air|tow|done)$/.test(sg.phase), on = riding ? 1 : 0.3, spd = S.v.length();
+    var aH = S.a.clone().addScaledVector(up, -S.a.dot(up)), aV = S.a.dot(up);
+    var turn = Math.min(1, Math.abs(S.w) * 0.6) * on;
+    var tDrop = on * (Math.min(0.09, aH.length() * 0.005) + Math.max(-0.05, Math.min(0.1, -aV * 0.01)) + 0.012 * Math.sin(S.t * 2.3) * Math.min(1, spd / 6));
+    var reach = aH.clone().multiplyScalar(0.03 * on); if(reach.length() > 0.22) reach.setLength(0.22);
+    var tHF = reach.clone().addScaledVector(up, 0.18 * turn + 0.035 * Math.sin(S.t * 1.3)).addScaledVector(right, 0.12 * turn).addScaledVector(face, 0.03 * Math.sin(S.t * 0.9 + 1));
+    var tHB = reach.clone().addScaledVector(up, 0.14 * turn + 0.035 * Math.sin(S.t * 1.1 + 2)).addScaledVector(right, -0.12 * turn).addScaledVector(face, 0.03 * Math.sin(S.t * 0.8 + 3));
+    var tSh = aH.clone().multiplyScalar(0.012 * on); if(tSh.length() > 0.1) tSh.setLength(0.1); tSh.addScaledVector(up, 0.006 * Math.sin(S.t * 1.6));
+    function spring(x, xv, tgt, k, c){ xv.addScaledVector(tgt.clone().sub(x).multiplyScalar(k).addScaledVector(xv, -c), dt); x.addScaledVector(xv, dt); }
+    S.dropV += (90 * (tDrop - S.drop) - 11 * S.dropV) * dt; S.drop += S.dropV * dt;
+    spring(S.hF, S.hFv, tHF, 70, 9); spring(S.hB, S.hBv, tHB, 60, 8); spring(S.sh, S.shV, tSh, 80, 12);
+    var down = up.clone().multiplyScalar(-S.drop), upper = down.clone().multiplyScalar(0.85).add(S.sh);
+    J.hip.add(down); J.sh.add(upper); J.head.add(upper);
+    J.handF.add(upper).add(S.hF); J.handB.add(upper).add(S.hB);
+    J.elF.add(upper).addScaledVector(S.hF, 0.5); J.elB.add(upper).addScaledVector(S.hB, 0.5);
+  }
+  // relaxed hands: every finger joint bent a little toward the palm (which axis
+  // bends it that way is found by trying each one)
+  function labCurlFingers(T, bones, up){
+    var wp = function(b){ return b.getWorldPosition(new T.Vector3()); };
+    ['l', 'r'].forEach(function(s){
+      var hand = bones['hand_' + s]; if(!hand || !bones['index_01_' + s] || !bones['pinky_01_' + s] || !bones['middle_01_' + s]) return;
+      var n = new T.Vector3().crossVectors(wp(bones['index_01_' + s]).sub(wp(bones['pinky_01_' + s])), wp(bones['middle_01_' + s]).sub(wp(hand))).normalize();
+      if(n.dot(up) > 0) n.negate();                                    // the palms face down in the rest pose
+      ['index', 'middle', 'ring', 'pinky', 'thumb'].forEach(function(f){
+        for(var j = 1; j <= 3; j++){
+          var b = bones[f + '_0' + j + '_' + s]; if(!b || !b.children.length) continue;
+          var tip = b.children[0], t0 = wp(tip), q0 = b.quaternion.clone(), best = null, bestD = -1;
+          [[1, 0, 0], [0, 1, 0], [0, 0, 1]].forEach(function(ax){ [1, -1].forEach(function(sn){
+            var axis = new T.Vector3(ax[0], ax[1], ax[2]);
+            b.quaternion.copy(q0).multiply(new T.Quaternion().setFromAxisAngle(axis, sn * 0.4)); b.updateMatrixWorld(true);
+            var d = wp(tip).sub(t0).dot(n); if(d > bestD){ bestD = d; best = [axis, sn]; }
+          }); });
+          var ang = f === 'thumb' ? [0.12, 0.22, 0.18][j - 1] : [0.42, 0.6, 0.42][j - 1] * (f === 'pinky' ? 1.2 : f === 'index' ? 0.8 : 1);
+          b.quaternion.copy(q0).multiply(new T.Quaternion().setFromAxisAngle(best[0], best[1] * ang)); b.updateMatrixWorld(true);
+        }
+      });
+    });
+  }
+  function labPose(T, body){
+    var R = body.R, B = body.B, K = body.K, L = body.L, P = R.parts, X = R.extra;
+    body.suitU.value.copy(R.suitM.color);
+    body.hair.forEach(function(h){ h.material.color.copy(R.hairM.color).multiplyScalar(1.6); });
+    R.g.updateMatrixWorld(true);
+    var bq = R.body.getWorldQuaternion(new T.Quaternion()), bqi = bq.clone().invert();
+    var W = function(v){ return R.body.localToWorld(v.clone()); };
+    var wp = function(b){ return b.getWorldPosition(new T.Vector3()); };
+    // the doll's joints (world space)
+    var th = labEnds(T, P.thighB), thF = labEnds(T, P.thighF);
+    var to = labEnds(T, P.torso), ua = labEnds(T, P.uArmB), uaF = labEnds(T, P.uArmF);
+    var J = {
+      hip: W(to[0]), sh: W(to[1]), kneeB: W(th[1]), footB: W(X.footB.position), kneeF: W(thF[1]), footF: W(X.footF.position),
+      shB: W(ua[0]), elB: W(ua[1]), handB: W(X.handB.position), shF: W(uaF[0]), elF: W(uaF[1]), handF: W(X.handF.position), head: W(R.head.position)
+    };
+    // the body's frame: up along the spine, right = the front shoulder side, facing = up x right
+    var upS = J.sh.clone().sub(J.hip).normalize(), right = J.shF.clone().sub(J.shB);
+    right.addScaledVector(upS, -right.dot(upS)).normalize();
+    var face = new T.Vector3().crossVectors(upS, right).normalize();
+    // which of the two sides is the front: the knees bend toward it (else the way the head
+    // looks, else last frame's); the doll's "front"/"back" limbs swap sides between poses
+    var kd = J.kneeF.clone().sub(J.hip.clone().lerp(J.footF, 0.5)).add(J.kneeB.clone().sub(J.hip.clone().lerp(J.footB, 0.5)));
+    var hl = new T.Vector3(1, 0, 0).applyQuaternion(R.head.getWorldQuaternion(new T.Quaternion()));
+    var sgn = Math.abs(kd.dot(face)) > 0.04 ? Math.sign(kd.dot(face)) : Math.abs(hl.dot(face)) > 0.3 ? Math.sign(hl.dot(face)) : (body.sgn || 1);
+    body.sgn = sgn;
+    if(sgn < 0){ face.negate(); right.negate(); var t1 = J.kneeF; J.kneeF = J.kneeB; J.kneeB = t1; t1 = J.footF; J.footF = J.footB; J.footB = t1;
+      t1 = J.shF; J.shF = J.shB; J.shB = t1; t1 = J.elF; J.elF = J.elB; J.elB = t1; t1 = J.handF; J.handF = J.handB; J.handB = t1; }
+    var wUp = new T.Vector3(0, 1, 0).applyQuaternion(bq);
+    labLife(T, body, J, face, right, wUp);
+    // turn a bone so its (along, side) axes point along these world directions
+    function setW(name, along, side){
+      var b = B[name];
+      var qw = bq.clone().multiply(labBasis(T, along.clone().applyQuaternion(bqi), side.clone().applyQuaternion(bqi)).multiply(K[name]));
+      var pq = b.parent.getWorldQuaternion(new T.Quaternion());
+      b.quaternion.copy(pq.invert().multiply(qw)); b.updateMatrixWorld(true);
+    }
+    // where the ankles go: the soles on the doll's soles (its feet are flattened balls 0.042 deep)
+    var ankleF = J.footF.clone().addScaledVector(wUp, L.ankle - 0.042), ankleB = J.footB.clone().addScaledVector(wUp, L.ankle - 0.042);
+    // hips: on the doll's hip, leaning half as much as the spine -- then lowered until
+    // the legs are as bent as the doll's (hip to foot over the leg's length)
+    var hipUp = upS.clone().lerp(wUp, 0.5).normalize();
+    B.Hips.parent.updateMatrixWorld(true);
+    B.Hips.position.copy(B.Hips.parent.worldToLocal(J.hip.clone()));
+    setW('Hips', hipUp, face);
+    var bentness = function(h, k, f){ return h.distanceTo(f) / (h.distanceTo(k) + k.distanceTo(f)); };
+    var want = (bentness(J.hip, J.kneeF, J.footF) + bentness(J.hip, J.kneeB, J.footB)) / 2 * (L.thigh + L.shin);
+    var have = (wp(B.RightUpLeg).distanceTo(ankleF) + wp(B.LeftUpLeg).distanceTo(ankleB)) / 2;
+    if(have > want){
+      B.Hips.position.copy(B.Hips.parent.worldToLocal(J.hip.clone().addScaledVector(wUp, -(have - want))));
+      B.Hips.updateMatrixWorld(true);
+    }
+    // the spine bends a third at a time up to the chest on the doll's shoulders
+    setW('Spine', hipUp.clone().lerp(upS, 0.33), face);
+    setW('Spine1', hipUp.clone().lerp(upS, 0.67), face);
+    setW('Spine2', upS, face);
+    var nk = J.head.clone().sub(wp(B.Neck));
+    setW('Neck', nk.lengthSq() > 1e-6 ? nk : upS, face);
+    // head: down = the head's -y, looking along the doll head's +x
+    var hq = R.head.getWorldQuaternion(new T.Quaternion());
+    setW('Head', new T.Vector3(0, -1, 0).applyQuaternion(hq), new T.Vector3(1, 0, 0).applyQuaternion(hq));
+    // legs (front = right) and arms
+    [['Right', J.kneeF, ankleF], ['Left', J.kneeB, ankleB]].forEach(function(s){
+      var a = wp(B[s[0] + 'UpLeg']), foot = s[2];
+      var knee = labIK(T, a, foot, L.thigh, L.shin, s[1].clone().addScaledVector(face, 0.3));
+      var bend = knee.clone().sub(a.clone().lerp(foot, 0.5)); if(bend.lengthSq() < 1e-6) bend = face.clone();
+      setW(s[0] + 'UpLeg', knee.clone().sub(a), bend);
+      setW(s[0] + 'Leg', foot.clone().sub(wp(B[s[0] + 'Leg'])), bend);
+      // the foot flat on the board, toes the way the body faces
+      var toe = face.clone().addScaledVector(wUp, -face.dot(wUp)); if(toe.lengthSq() < 1e-6) toe = face.clone();
+      setW(s[0] + 'Foot', toe.normalize(), wUp);
+    });
+    [['Right', J.elF, J.handF], ['Left', J.elB, J.handB]].forEach(function(s){
+      var a = wp(B[s[0] + 'Arm']), hand = s[2];
+      var el = labIK(T, a, hand, L.uarm, L.farm, s[1].clone().addScaledVector(face, -0.25));
+      var back = el.clone().sub(a.clone().lerp(hand, 0.5)); if(back.lengthSq() < 1e-6) back = face.clone().negate();
+      setW(s[0] + 'Arm', el.clone().sub(a), back);
+      setW(s[0] + 'ForeArm', hand.clone().sub(wp(B[s[0] + 'ForeArm'])), back);
+    });
+  }
+  // ---------- surf lab: smooth wave motion ----------
+  // The game keeps ready-made wave profiles in steps (how far it's breaking in 20
+  // steps, its size in 40) and each slice takes the nearest one -- so as the wave
+  // breaks, every slice hops from one shape to the next (measured: the crest at a
+  // fixed point jumped up to 4-5 cm between frames for no reason). Here each slice
+  // blends the neighbouring profiles by how far between the steps it is, so the
+  // shape changes continuously. (Results go round a ring of buffers: the game keeps
+  // a few profiles in hand at once -- the surfer's, the ghosts'.)
+  var labOrigQ = sg3ProfileQ, labQRing = [], labQi = 0;
+  sg3ProfileQ = function(b, c, Hm, s){
+    s = s || 1; b = Math.max(0, Math.min(1, b)); c = Math.max(0, Math.min(1, c));
+    var fb = b * 20, b0 = Math.min(19, Math.floor(fb)), wb = fb - b0;
+    var fc = c * 20, c0 = Math.min(19, Math.floor(fc)), wc = fc - c0;
+    var fs = s * 40, s0 = Math.floor(fs), ws = fs - s0;
+    if(wb < 1e-4 && wc < 1e-4 && ws < 1e-4) return labOrigQ(b0 / 20, c0 / 20, Hm, s0 / 40);
+    var out = labQRing[labQi]; if(!out){ out = []; for(var i = 0; i < SG3_ROWS; i++) out.push([0, 0]); labQRing[labQi] = out; }
+    labQi = (labQi + 1) % 24;
+    for(var r = 0; r < SG3_ROWS; r++){ out[r][0] = 0; out[r][1] = 0; }
+    for(var k = 0; k < 8; k++){
+      var db = k & 1, dc = (k >> 1) & 1, ds = (k >> 2) & 1;
+      var w = (db ? wb : 1 - wb) * (dc ? wc : 1 - wc) * (ds ? ws : 1 - ws);
+      if(w < 1e-5) continue;
+      var P = labOrigQ((b0 + db) / 20, (c0 + dc) / 20, Hm, (s0 + ds) / 40);
+      for(var r2 = 0; r2 < SG3_ROWS; r2++){ out[r2][0] += P[r2][0] * w; out[r2][1] += P[r2][1] * w; }
+    }
+    return out;
+  };
+  // ---------- surf lab: a wave with real shape ----------
+  // The game builds the wave as slices along the beach, every slice the same
+  // smooth profile -- the detail was only painted on. Here the mesh itself gets
+  // it, after each frame's slices are laid and before the game works out the
+  // normals (so the light follows): sections (the wave a little higher here,
+  // lower there, drifting down the line), swells running up the face, and a
+  // lip whose edge wobbles instead of being one straight line.
+  var labWave = { on: false, bend: false, opt: !/[?&]noopt/.test(location.search) };     // (?noopt: without the beach/city merge, to compare)
+  // (integer hash: thousands of these a frame, so no Math.sin)
+  function labHash(i, j){ var h = Math.imul(i, 374761393) + Math.imul(j, 668265263) | 0; h = Math.imul(h ^ (h >>> 13), 1274126177); return ((h ^ (h >>> 16)) >>> 0) / 4294967296; }
+  function labNoise(x, y){
+    var i = Math.floor(x), j = Math.floor(y), fx = x - i, fy = y - j;
+    fx = fx * fx * (3 - 2 * fx); fy = fy * fy * (3 - 2 * fy);
+    var a = labHash(i, j), b = labHash(i + 1, j), c = labHash(i, j + 1), d = labHash(i + 1, j + 1);
+    return a + (b - a) * fx + (c - a) * fy + (a - b - c + d) * fx * fy;
+  }
+  function labWaveDetail(pos, Hm, t){
+    if(!labWave.on) return;
+    var R = SG3_ROWS, C = SG3_COLS, A = sg.phase === 'paddle' || sg.phase === 'drive' || sg.phase === 'walk' ? 0.6 : 1;
+    for(var c = 0; c < C; c++){
+      var b0 = c * R * 3, x = pos[b0];
+      // sections: this part of the wave a little taller or lower
+      var sec = 1 + A * 0.08 * (labNoise(x * 0.045 - t * 0.04, 3.7) * 2 - 1);
+      var y0 = pos[b0 + (R - 1) * 3 + 1], lipN = (labNoise(x * 0.22 - t * 0.25, 9.1) - 0.5) * 2;
+      var alen = 0, pz = pos[b0 + 2], py = pos[b0 + 1];
+      for(var r = 0; r < R; r++){
+        var i = b0 + r * 3, z = pos[i + 2], y = pos[i + 1];
+        alen += Math.sqrt((z - pz) * (z - pz) + (y - py) * (y - py)); pz = z; py = y;
+        // the profile's own normal here (in the y-z plane)
+        var ia = b0 + Math.max(0, r - 1) * 3, ib = b0 + Math.min(R - 1, r + 1) * 3;
+        var tz = pos[ib + 2] - pos[ia + 2], ty = pos[ib + 1] - pos[ia + 1], tl = Math.sqrt(tz * tz + ty * ty) || 1;
+        var nz = -ty / tl, ny = tz / tl;
+        // swells running up the face (rows ~24..58), little on the back and the flat sea
+        // (none on the back: raised, it would show its dark side over the crest)
+        var fw = Math.max(0, Math.min(1, (r - 22) / 8)) * Math.max(0, Math.min(1, (59 - r) / 5));
+        var bump = (labNoise(x * 0.16 + t * 0.04, alen * 0.3 - t * 0.7) - 0.5) * 0.65 + (labNoise(x * 0.45 - t * 0.1, alen * 0.8 - t * 1.4) - 0.5) * 0.35;
+        var d = A * Hm * 0.09 * fw * bump;
+        // the lip's edge: in and out along the line
+        if(r >= 14 && r <= 28){ var lw = Math.sin((r - 14) / 14 * Math.PI); d += A * Hm * 0.035 * lw * lipN; }
+        // none where the wave curls over itself (a barrel's curtain and the cave under it): it would fold
+        var vi = c * R + r; d *= Math.max(0, 1 - 3 * sg3.curt[vi]) * Math.max(0, 1 - 3 * sg3.cave[vi]);
+        pos[i + 1] = y0 + (y - y0) * sec + ny * d; pos[i + 2] = z + nz * d;
+      }
+    }
+  }
+  // ---------- surf lab: the wave line bends ----------
+  // A real peak isn't a straight wall: it stands furthest out where it breaks and
+  // both sides wrap in toward the beach. Everything in the surf zone bends with it
+  // on the graphics card (the wave, the sea, foam, spray, the other surfers, the
+  // buoy): z += B(x) - B(surfer's x), so right at the surfer nothing moves (the
+  // game, the camera and the controls are untouched) and the beach (z > 110)
+  // stays where it is.
+  var LAB_BEND_U = { uLabBendOn: { value: 0 }, uLabBendCx: { value: 0 }, uLabBendH: { value: 3 }, uLabBendRef: { value: 0 } };
+  var LAB_BEND_K = 0.13, LAB_BEND_A = 5.0, LAB_BEND_MAXA = 1.25;          // how fast it turns (per wave height), how far (wave heights)
+  var LAB_BEND_GLSL = 'uniform float uLabBendOn; uniform float uLabBendCx; uniform float uLabBendH; uniform float uLabBendRef;\n' +
+    'float labBendRaw(float x){ float a = clamp((x - uLabBendCx) / uLabBendH * ' + LAB_BEND_K.toFixed(3) + ', -' + LAB_BEND_MAXA.toFixed(2) + ', ' + LAB_BEND_MAXA.toFixed(2) + '); return uLabBendH * ' + LAB_BEND_A.toFixed(2) + ' * (1.0 - cos(a)); }\n' +
+    'float labBendW(float z){ return uLabBendOn * (1.0 - smoothstep(70.0, 110.0, z)); }\n' +
+    'float labBendZ(vec2 xz){ return (labBendRaw(xz.x) - uLabBendRef) * labBendW(xz.y); }\n' +
+    'float labBendD(vec2 xz){ float a = (xz.x - uLabBendCx) / uLabBendH * ' + LAB_BEND_K.toFixed(3) + '; return abs(a) < ' + LAB_BEND_MAXA.toFixed(2) + ' ? ' + LAB_BEND_A.toFixed(2) + ' * ' + LAB_BEND_K.toFixed(3) + ' * sin(a) * labBendW(xz.y) : 0.0; }\n';
+  function labBendRaw(x, cx, H){ var a = Math.max(-LAB_BEND_MAXA, Math.min(LAB_BEND_MAXA, (x - cx) / H * LAB_BEND_K)); return H * LAB_BEND_A * (1 - Math.cos(a)); }
+  // every shader that places things in the world gets the bend
+  function labBendInject(sh){
+    var vs = sh.vertexShader, fs = sh.fragmentShader, hit = false;
+    if(vs.indexOf('#include <project_vertex>') >= 0){
+      vs = vs.replace('#include <project_vertex>', 'vec4 mvPosition = vec4(transformed, 1.0);\n#ifdef USE_INSTANCING\n mvPosition = instanceMatrix * mvPosition;\n#endif\n' +
+        ' vec4 labWP = modelMatrix * mvPosition; labWP.z += labBendZ(labWP.xz); mvPosition = viewMatrix * labWP; gl_Position = projectionMatrix * mvPosition;');
+      hit = true;
+    }
+    if(vs.indexOf('vec4 w = modelMatrix * vec4(position, 1.0);') >= 0){                    // the wave, the sea, the wake
+      vs = vs.replace('vec4 w = modelMatrix * vec4(position, 1.0);', 'vec4 w = modelMatrix * vec4(position, 1.0); w.z += labBendZ(w.xz);')
+             .replace('vN = normalize(mat3(modelMatrix) * normal);', 'vN = normalize(mat3(modelMatrix) * normal); vN.x -= labBendD(w.xz) * vN.z; vN = normalize(vN);');
+      hit = true;
+    }
+    if(vs.indexOf('vec4 mv = modelViewMatrix * vec4(position, 1.0);') >= 0){              // spray and foam particles
+      vs = vs.replace('vec4 mv = modelViewMatrix * vec4(position, 1.0);', 'vec4 labWP = modelMatrix * vec4(position, 1.0); labWP.z += labBendZ(labWP.xz); vec4 mv = viewMatrix * labWP;');
+      hit = true;
+    }
+    if(!hit) return;
+    Object.keys(LAB_BEND_U).forEach(function(k){ sh.uniforms[k] = LAB_BEND_U[k]; });
+    sh.vertexShader = LAB_BEND_GLSL + vs;
+    // the foam trail on the sea is measured from the wave: measure it before the bend
+    if(fs.indexOf(' float trail = sea') >= 0){
+      fs = fs.replace(' float trail = sea', ' float lzU = vW.z - labBendZ(vW.xz);\n float trail = sea');
+      var i0 = fs.indexOf(' float trail = sea'), i1 = fs.indexOf('\n', i0);
+      fs = fs.slice(0, i0) + fs.slice(i0, i1).replace(/vW\.z/g, 'lzU') + fs.slice(i1);
+      sh.fragmentShader = LAB_BEND_GLSL + fs;
+    }
+  }
+  function labBendFrame(T){
+    if(labWave.bend === false){ LAB_BEND_U.uLabBendOn.value = 0; return; }   // (the main game: no bend, shaders untouched)
+    if(!lab.bendHooked){
+      lab.bendHooked = true;
+      var prev = T.Material.prototype.onBeforeCompile;
+      T.Material.prototype.onBeforeCompile = function(sh, r){ if(prev) prev.call(this, sh, r); labBendInject(sh); };
+    }
+    var Hm = (sg.spot && SG3_H[sg.spot.id]) || 3, cx = sg.curl * SG3_M;
+    LAB_BEND_U.uLabBendOn.value = labWave.bend === false ? 0 : 1;
+    LAB_BEND_U.uLabBendCx.value = cx; LAB_BEND_U.uLabBendH.value = Hm;
+    LAB_BEND_U.uLabBendRef.value = labBendRaw(sg.x * SG3_M, cx, Hm);
+  }
+  // ---------- surf lab: lighter beach and city ----------
+  // The beach and the city are ~2000 separate little meshes (huts, umbrellas,
+  // towels, blocks, lamps...), and every one of them costs the computer work every
+  // frame even though most never move. Once built, everything that doesn't move is
+  // baked into one mesh per look (same colour, texture and finish); what the game
+  // moves -- whatever it keeps in the group's userData: people, the flag, the
+  // floating signs, the matkot ball, the traffic -- stays as it is.
+  var LAB_BGU = 'https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/utils/BufferGeometryUtils.js';
+  function labLoadBGU(){
+    if(lab.bgu) return; lab.bgu = 'loading';
+    var s = document.createElement('script'); s.src = LAB_BGU;
+    s.onload = function(){ lab.bgu = THREE.BufferGeometryUtils ? 'ready' : 'failed'; };
+    s.onerror = function(){ lab.bgu = 'failed'; };
+    document.head.appendChild(s);
+  }
+  function labDynamic(v, out, depth){
+    if(!v || depth > 4) return;
+    if(v.isObject3D){ out.add(v); return; }
+    if(Array.isArray(v)){ v.forEach(function(x){ labDynamic(x, out, depth + 1); }); return; }
+    if(typeof v === 'object' && !(v instanceof sg3.T.Vector3)) Object.keys(v).forEach(function(k){ labDynamic(v[k], out, depth + 1); });
+  }
+  function labMatKey(m){
+    var c = function(x){ return x && x.getHexString ? x.getHexString() : ''; }, u = function(t){ return t ? t.uuid : ''; };
+    return [m.type, c(m.color), c(m.emissive), u(m.map), u(m.bumpMap), m.bumpScale, u(m.normalMap), u(m.envMap), u(m.alphaMap), m.roughness, m.metalness, m.envMapIntensity,
+      m.transparent, m.opacity, m.side, m.vertexColors, m.flatShading, m.toneMapped, m.depthWrite, m.depthTest, m.alphaTest, m.polygonOffset, m.polygonOffsetFactor, m.polygonOffsetUnits,
+      m.clearcoat, m.clearcoatRoughness, m.emissiveIntensity, m.fog].join('|');
+  }
+  function labOptimize(g){
+    var T = sg3.T, BGU = THREE.BufferGeometryUtils, dyn = new Set();
+    labDynamic(g.userData, dyn, 0);
+    g.updateMatrixWorld(true);
+    var inv = new T.Matrix4().copy(g.matrixWorld).invert(), groups = {}, before = 0, moved = 0;
+    g.traverse(function(o){ if(o.isMesh) before++; });
+    (function walk(o, isDyn){
+      o.children.slice().forEach(function(ch){
+        var d = isDyn || dyn.has(ch);
+        if(!d && ch.isMesh && !ch.isSkinnedMesh && !ch.isInstancedMesh && !Array.isArray(ch.material) && ch.visible && ch.geometry && !ch.geometry.morphAttributes.position){
+          var geo = ch.geometry, attrs = Object.keys(geo.attributes).sort().join(','), key = labMatKey(ch.material) + '#' + attrs + '#' + (geo.index ? 'i' : 'n');
+          (groups[key] = groups[key] || { mat: ch.material, list: [] }).list.push(ch);
+        }
+        walk(ch, d);
+      });
+    })(g, false);
+    var made = 0;
+    Object.keys(groups).forEach(function(k){
+      var G = groups[k]; if(G.list.length < 2) return;
+      var geos = G.list.map(function(m){ var gc = m.geometry.clone(); gc.applyMatrix4(new T.Matrix4().multiplyMatrices(inv, m.matrixWorld)); return gc; });
+      var merged = null; try { merged = BGU.mergeBufferGeometries(geos, false); } catch(e){}
+      geos.forEach(function(gc){ gc.dispose(); });
+      if(!merged) return;
+      var mesh = new T.Mesh(merged, G.mat); mesh.castShadow = G.list[0].castShadow; mesh.receiveShadow = G.list[0].receiveShadow;
+      mesh.matrixAutoUpdate = false; mesh.updateMatrix(); g.add(mesh); made++;
+      G.list.forEach(function(m){ m.parent.remove(m); moved++; });
+    });
+    // what's left that never moves: its matrices are worked out once, not every frame
+    (function freeze(o, isDyn){
+      o.children.forEach(function(ch){ var d = isDyn || dyn.has(ch); if(!d){ ch.updateMatrix(); ch.matrixAutoUpdate = false; } freeze(ch, d); });
+    })(g, false);
+    var after = 0; g.traverse(function(o){ if(o.isMesh) after++; });
+    g.userData.labOpt = { before: before, after: after, merged: moved, into: made };
+    return g.userData.labOpt;
+  }
+  function labOptFrame(){
+    if(labWave.opt === false) return;
+    labLoadBGU();
+    if(lab.bgu !== 'ready') return;
+    [sg3.beach, sg3.city].forEach(function(g){ if(g && !g.userData.labOpt){ try { labOptimize(g); } catch(e){ g.userData.labOpt = { error: String(e) }; console.warn('lab optimize:', e); } } });
+  }
+  // ---------- surf lab: automatic resolution ----------
+  // Most of a frame is the graphics card painting water on every pixel (shown by
+  // measuring: a quarter of the resolution took the frame from 23 ms to 10).
+  // So: never more than ~1.3 million pixels however big the screen, and the frame
+  // time is watched -- slower than ~40 a second and the picture gets a little
+  // softer (down to 55%), quick again and it sharpens back. The game's own
+  // post-processing follows the new size by itself.
+  var LAB_RES = { budget: 1.3e6, slow: 1 / 40, fast: 1 / 55, min: 0.55 };
+  function labResFrame(){
+    if(labWave.res === false || !sg3.r) return;
+    var R = lab.res = lab.res || { s: 1, ema: 1 / 60, n: 0, last: 0, pr: 0, slowN: 0, fastN: 0 };
+    if(document.hidden){ R.last = 0; return; }
+    var now = performance.now() / 1000, dt = now - (R.last || now); R.last = now;
+    if(dt > 0 && dt < 0.25){ R.ema += (dt - R.ema) * 0.08; R.n++; }
+    if(R.n >= 40){
+      R.n = 0;
+      // (calmly: each change resizes the picture, a small hitch of its own -- down after two
+      // slow stretches in a row, back up only after five quick ones)
+      R.slowN = R.ema > LAB_RES.slow ? R.slowN + 1 : 0; R.fastN = R.ema < LAB_RES.fast ? R.fastN + 1 : 0;
+      if(R.slowN >= 2 && R.s > LAB_RES.min){ R.s = Math.max(LAB_RES.min, R.s * 0.85); R.slowN = 0; }
+      else if(R.fastN >= 5 && R.s < 1){ R.s = Math.min(1, R.s * 1.1); R.fastN = 0; }
+    }
+    var W = sg3.cv.clientWidth || 800, H = sg3.cv.clientHeight || 600;
+    var cap = Math.min(sg3.lowQ ? 1 : Math.min(1.35, window.devicePixelRatio || 1), Math.sqrt(LAB_RES.budget / (W * H)));
+    var pr = Math.max(0.3, cap * R.s);
+    if(Math.abs(pr - sg3.r.getPixelRatio()) > 0.02){ R.pr = pr; sg3.r.setPixelRatio(pr); sg3.w = 0; }
+  }
+  function labFrame(){
+    if(!sg3.T || !sg3.rider) return;
+    labBendFrame(sg3.T);                     // (before anything is drawn, so every shader gets it)
+    labOptFrame();
+    labResFrame();
+    if(lab.state === 'none') labLoad();
+    if(lab.state !== 'ready') return;
+    var T = sg3.T;
+    if(!sg3.rider.lab){ try { labAttach(T, sg3.rider); } catch(e){ lab.state = 'failed'; console.warn('lab attach:', e); return; } }
+    lab.bodies.forEach(function(b){
+      // shown when the doll would be -- or when the camera is far from the eyes: the game hides the
+      // body seen from the eyes, but after a jump to the peak the camera glides in from metres away
+      var R = b.R, eye = R.head.getWorldPosition(new T.Vector3());
+      b.root.visible = R.parts.torso.visible || sg3.cam.position.distanceTo(eye) > 2.0;
+      if(R.g.visible && R.g.parent && b.root.visible) labPose(T, b);
+    });
+  }
+  sg3PostRender = (function(orig){ return function(){ try { labFrame(); } catch(e){ if(!lab.warned){ lab.warned = true; console.warn('lab frame:', e); } } orig(); }; })(sg3PostRender);
+
+  // <<< surf lab parts
   // idle player pose before first game
   resetGame();
   requestAnimationFrame(frame);
