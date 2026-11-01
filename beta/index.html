@@ -14578,7 +14578,7 @@
   // never while the name field is being typed in. Everything worth keeping
   // (coins, skins, name, league) is in localStorage, so a reload loses nothing.
   // 'dev' = a local or preview copy: the updater stays off entirely.
-  var BUILD_VERSION = '20261101-215506';
+  var BUILD_VERSION = '20261101-220108';
   var UPDATE_CHECK_MS = 60000;
   var UPDATE_TRIED_KEY = 'canyonChaseTriedUpdate';
   var pendingSubmits = 0;
@@ -15716,6 +15716,9 @@
       sg3.skShadow = new T.Mesh(new T.PlaneGeometry(1, 1), new T.MeshBasicMaterial({ map: new T.CanvasTexture(scv), transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4 })); sg3.scene.add(sg3.skShadow); }
     var on = sg.phase === 'skate' && sg.skate;
     sg3.skBoard.visible = !!on; sg3.skShadow.visible = !!on;
+    // the hill behind the beach is a backdrop for the sea; from the park, 10 m in front of it, it
+    // filled the whole sky -- hidden while skating
+    if(sg3.shore){ sg3.shore.hills.visible = !on; sg3.shore.props.visible = !on; }
     var LB = typeof lab !== 'undefined' && lab.bodies && lab.bodies[0];
     if(LB && LB.shoeU) LB.shoeU.value = on ? 1 : 0;                          // skate shoes on the board, barefoot on the sand
     R.labStance = on ? { yawF: 0.3 } : null;
@@ -15761,7 +15764,10 @@
     if(sg3.skBoard.userData.front){ sg3.skBoard.userData.front.rotation.y = st * 0.55; sg3.skBoard.userData.arm.rotation.y = st * 0.4; sg3.skBoard.userData.back.rotation.y = -st * 0.1; }   // the front truck swings wide
     // the camera: behind and above, following smoothly
     var P = R.g.position, back = new T.Vector3(Math.cos(S.hd), 0, Math.sin(S.hd));
-    var cw = P.clone().addScaledVector(back, -4.6).add(new T.Vector3(0, 2.4, 0)), lk = P.clone().addScaledVector(back, 2).add(new T.Vector3(0, 0.6, 0));
+    // behind and off to the toe side, low: the whole board shows under the feet (straight
+    // behind, the body hid it and the board showed only its end)
+    var toeSide = new T.Vector3(-Math.sin(S.hd), 0, Math.cos(S.hd));        // (the side the chest faces)
+    var cw = P.clone().addScaledVector(back, -2.5).addScaledVector(toeSide, 1.5).add(new T.Vector3(0, 1.15, 0)), lk = P.clone().addScaledVector(back, 0.7).add(new T.Vector3(0, 0.35, 0));
     // (never inside the concrete: at least a metre over the park where the camera is)
     var cu = Math.max(0.05, Math.min(SK.W - 0.05, cw.x - X0)), cv = Math.max(0.05, Math.min(SK.D - 0.05, cw.z - SK_Z0)); cw.y = Math.max(cw.y, Y0 + skH(cu, cv) + 1.0);
     sg3.skCam = sg3.skCam || { p: cw.clone(), l: lk.clone() }; sg3.skCam.p.lerp(cw, 0.08); sg3.skCam.l.lerp(lk, 0.15);
