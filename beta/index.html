@@ -14578,7 +14578,7 @@
   // never while the name field is being typed in. Everything worth keeping
   // (coins, skins, name, league) is in localStorage, so a reload loses nothing.
   // 'dev' = a local or preview copy: the updater stays off entirely.
-  var BUILD_VERSION = '20261101-211650';
+  var BUILD_VERSION = '20261101-212904';
   var UPDATE_CHECK_MS = 60000;
   var UPDATE_TRIED_KEY = 'canyonChaseTriedUpdate';
   var pendingSubmits = 0;
@@ -15470,11 +15470,12 @@
     for(var s = 0; s < 8; s++){ var st = new T.Mesh(new T.BoxGeometry(4, 0.3, 0.45), side); st.position.set(X0 + 30, SG_SAND_Y + 0.15 + s * 0.29, SK_Z0 - 3.4 + s * 0.42); g.add(st); }
     var sc = document.createElement('canvas'); sc.width = 256; sc.height = 64; var c = sc.getContext('2d');
     c.fillStyle = '#1b1b1f'; c.fillRect(0, 0, 256, 64); c.fillStyle = '#ffd447'; c.font = 'bold 34px Rubik, sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText('🛹 SKATEPARK', 128, 34);
-    // (two faces back to back, so it reads from the beach and from inside the park)
+    // (two faces back to back, so it reads from the beach and from inside the park; high, so the
+    // camera behind you at the start looks under it, not into it)
     var stx = new T.CanvasTexture(sc);
-    var sgn = new T.Mesh(new T.PlaneGeometry(6, 1.5), new T.MeshBasicMaterial({ map: stx })); sgn.position.set(X0 + 30, Y0 + 2.6, SK_Z0 - 0.21); sgn.rotation.y = Math.PI; g.add(sgn);
-    var sgn2 = new T.Mesh(new T.PlaneGeometry(6, 1.5), new T.MeshBasicMaterial({ map: stx })); sgn2.position.set(X0 + 30, Y0 + 2.6, SK_Z0 - 0.19); g.add(sgn2);
-    [-2.6, 2.6].forEach(function(o){ var po = new T.Mesh(new T.CylinderGeometry(0.07, 0.07, 3, 6), steel); po.position.set(X0 + 30 + o, Y0 + 1.4, SK_Z0 - 0.15); g.add(po); });
+    var sgn = new T.Mesh(new T.PlaneGeometry(6, 1.5), new T.MeshBasicMaterial({ map: stx })); sgn.position.set(X0 + 30, Y0 + 4.8, SK_Z0 - 0.21); sgn.rotation.y = Math.PI; g.add(sgn);
+    var sgn2 = new T.Mesh(new T.PlaneGeometry(6, 1.5), new T.MeshBasicMaterial({ map: stx })); sgn2.position.set(X0 + 30, Y0 + 4.8, SK_Z0 - 0.19); g.add(sgn2);
+    [-2.6, 2.6].forEach(function(o){ var po = new T.Mesh(new T.CylinderGeometry(0.07, 0.07, 5.2, 6), steel); po.position.set(X0 + 30 + o, Y0 + 2.5, SK_Z0 - 0.15); g.add(po); });
     g.userData.key = Math.round(X0);
     return g;
   }
@@ -15726,6 +15727,8 @@
         if(Math.hypot(dx, dz) < 5) show = L('🛹 לסקייטפארק', '🛹 Into the skatepark');
       }
       b.hidden = !show; if(show && b.textContent !== show) b.textContent = show;
+      // (while riding: small, down in the corner -- in the middle it hid the board)
+      var riding = sg.phase === 'skate'; b.classList.toggle('is-leave', riding); b.style.bottom = riding ? '' : '204px';
     }, 200);
   })();
   // <<< skatepark
