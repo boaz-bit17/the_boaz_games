@@ -14578,7 +14578,7 @@
   // never while the name field is being typed in. Everything worth keeping
   // (coins, skins, name, league) is in localStorage, so a reload loses nothing.
   // 'dev' = a local or preview copy: the updater stays off entirely.
-  var BUILD_VERSION = '20261101-212904';
+  var BUILD_VERSION = '20261101-213320';
   var UPDATE_CHECK_MS = 60000;
   var UPDATE_TRIED_KEY = 'canyonChaseTriedUpdate';
   var pendingSubmits = 0;
@@ -15492,49 +15492,67 @@
     }
     p.needsUpdate = true; top.geometry.computeVertexNormals();
   }
-  // the surfskate, made like the real ones: a deck shaped like a little surfboard (pointed
-  // nose, kicktail, a sunset graphic underneath, black grip on top), a tall front truck
-  // on a swinging arm -- the part that makes it carve and pump -- and big soft wheels
+  // the surfskate, made like the real ones: a deck shaped like a little surfboard -- pointed
+  // nose, kicktail, a dished concave, maple plies showing at the rails, a sunset graphic
+  // underneath, black grip on top -- a front truck with a second axis (a swinging arm on a
+  // compression spring that springs back to centre: it frees the nose, so you pump like
+  // on a wave), a plain back truck on orange bushings, and big soft translucent wheels
   function skBoard(T){
     var b = new T.Group();
-    var sh = new T.Shape(), half = [[-0.40, 0.085], [-0.31, 0.115], [-0.12, 0.126], [0.08, 0.126], [0.24, 0.112], [0.33, 0.078], [0.40, 0.0]];
+    var sh = new T.Shape(), half = [[-0.40, 0.088], [-0.32, 0.117], [-0.14, 0.127], [0.06, 0.127], [0.22, 0.114], [0.32, 0.084], [0.385, 0.03], [0.40, 0.0]];
     sh.moveTo(half[0][0], -half[0][1]);
     for(var i = 1; i < half.length; i++) sh.lineTo(half[i][0], -half[i][1]);
     for(var j = half.length - 2; j >= 0; j--) sh.lineTo(half[j][0], half[j][1]);
-    sh.quadraticCurveTo(-0.42, 0, half[0][0], -half[0][1]);
-    var dg = new T.ExtrudeGeometry(sh, { depth: 0.014, bevelEnabled: true, bevelThickness: 0.003, bevelSize: 0.004, bevelSegments: 2, curveSegments: 10 });
+    sh.quadraticCurveTo(-0.425, 0, half[0][0], -half[0][1]);
+    var dg = new T.ExtrudeGeometry(sh, { depth: 0.013, bevelEnabled: true, bevelThickness: 0.002, bevelSize: 0.003, bevelSegments: 2, curveSegments: 10, steps: 1 });
     dg.rotateX(Math.PI / 2); dg.translate(0, 0.125, 0);
-    // the kicktail and a little lift at the nose
-    var dp = dg.attributes.position;
-    for(var k = 0; k < dp.count; k++){ var x = dp.getX(k); if(x < -0.29) dp.setY(k, dp.getY(k) + (-0.29 - x) * 0.55); if(x > 0.32) dp.setY(k, dp.getY(k) + (x - 0.32) * 0.25); }
-    dg.computeVertexNormals();
-    var cv = document.createElement('canvas'); cv.width = 256; cv.height = 96; var c = cv.getContext('2d');
-    var gr = c.createLinearGradient(0, 0, 256, 0); gr.addColorStop(0, '#2a1b5e'); gr.addColorStop(0.45, '#e8476a'); gr.addColorStop(0.75, '#ff9a3c'); gr.addColorStop(1, '#ffd166');
-    c.fillStyle = gr; c.fillRect(0, 0, 256, 96);
-    c.strokeStyle = 'rgba(255,255,255,0.9)'; c.lineWidth = 6; c.beginPath(); c.moveTo(20, 70); c.bezierCurveTo(70, 10, 120, 10, 150, 40); c.bezierCurveTo(165, 55, 150, 70, 135, 58); c.stroke();
-    c.fillStyle = '#ffffff'; c.beginPath(); c.arc(205, 30, 14, 0, Math.PI * 2); c.fill();
+    // kicktail up, a little lift at the nose, and dished across (the rails higher than the middle)
+    function bend(geo){ var p = geo.attributes.position;
+      for(var k = 0; k < p.count; k++){ var x = p.getX(k), z = p.getZ(k), y = p.getY(k);
+        if(x < -0.345) y += (-0.345 - x) * 0.75; if(x > 0.345) y += (x - 0.345) * 0.35;      // (the kick starts behind the back foot)
+        y += z * z * 0.55; p.setY(k, y); }
+      geo.computeVertexNormals(); }
+    bend(dg);
+    var cv = document.createElement('canvas'); cv.width = 512; cv.height = 160; var c = cv.getContext('2d');
+    var gr = c.createLinearGradient(0, 0, 0, 160); gr.addColorStop(0, '#ffcf6b'); gr.addColorStop(0.45, '#ff7a59'); gr.addColorStop(0.75, '#c53f7a'); gr.addColorStop(1, '#3b2a6e');
+    c.fillStyle = gr; c.fillRect(0, 0, 512, 160);
+    c.fillStyle = '#fff3c4'; c.beginPath(); c.arc(330, 70, 34, 0, Math.PI * 2); c.fill();                          // the sun
+    c.fillStyle = '#1d1640';                                                                                     // a palm against it
+    c.fillRect(160, 50, 7, 110); [[-60, -22], [-40, -40], [10, -46], [48, -30], [62, -6]].forEach(function(l){ c.beginPath(); c.moveTo(163, 52); c.quadraticCurveTo(163 + l[0] * 0.5, 52 + l[1] - 12, 163 + l[0], 52 + l[1] + 14); c.lineTo(163 + l[0] * 0.9, 52 + l[1] + 18); c.closePath(); c.fill(); });
+    c.strokeStyle = 'rgba(255,255,255,0.85)'; c.lineWidth = 7;                                                    // a wave line
+    c.beginPath(); c.moveTo(0, 130); c.bezierCurveTo(90, 100, 160, 150, 260, 120); c.bezierCurveTo(330, 100, 400, 140, 512, 118); c.stroke();
     var tx = new T.CanvasTexture(cv); tx.encoding = T.sRGBEncoding; tx.repeat.set(1 / 0.84, 1 / 0.27); tx.offset.set(0.5, 0.5);
-    var deck = new T.Mesh(dg, new T.MeshStandardMaterial({ map: tx, roughness: 0.45 })); b.add(deck);
-    var gg = new T.ShapeGeometry(sh, 10); gg.rotateX(Math.PI / 2); gg.scale(0.97, 1, 0.93); gg.translate(0, 0.1265, 0);
-    var gp = gg.attributes.position; for(var q = 0; q < gp.count; q++){ var gx = gp.getX(q); if(gx < -0.29) gp.setY(q, gp.getY(q) + (-0.29 - gx) * 0.55); if(gx > 0.32) gp.setY(q, gp.getY(q) + (gx - 0.32) * 0.25); }
-    var grip = new T.Mesh(gg, new T.MeshStandardMaterial({ color: 0x141414, roughness: 0.98, side: T.DoubleSide })); b.add(grip);
-    var metal = new T.MeshStandardMaterial({ color: 0xc8ccd2, metalness: 0.75, roughness: 0.32 }), dark = new T.MeshStandardMaterial({ color: 0x2a2d33, metalness: 0.4, roughness: 0.5 });
-    var wh = new T.MeshStandardMaterial({ color: 0x1e88e5, roughness: 0.42 }), hub = new T.MeshStandardMaterial({ color: 0xf2f2f2, roughness: 0.4 });
-    function truck(x, front){
-      var tr = new T.Group(); tr.position.set(x, 0, 0); b.add(tr);
-      var base = new T.Mesh(new T.BoxGeometry(front ? 0.13 : 0.09, 0.022, front ? 0.085 : 0.07), front ? dark : metal); base.position.y = 0.097; tr.add(base);
-      var sw = new T.Group(); sw.position.y = 0.035; tr.add(sw);          // the part that swings
-      if(front){
-        // the swinging arm: a tall riser down to the hanger, a spring in it
-        var arm = new T.Mesh(new T.BoxGeometry(0.03, 0.06, 0.05), metal); arm.position.set(0.02, 0.03, 0); arm.rotation.z = -0.35; sw.add(arm);
-        var spring = new T.Mesh(new T.TorusGeometry(0.014, 0.004, 6, 12), metal); spring.position.set(-0.03, 0.04, 0); sw.add(spring);
-      } else { var kp = new T.Mesh(new T.CylinderGeometry(0.008, 0.008, 0.06, 6), metal); kp.position.y = 0.03; kp.rotation.z = 0.5; sw.add(kp); }
-      var hanger = new T.Mesh(new T.BoxGeometry(0.045, 0.028, 0.24), metal); sw.add(hanger);
-      [-0.135, 0.135].forEach(function(z){ var wl = new T.Mesh(new T.CylinderGeometry(0.035, 0.035, 0.05, 20), wh); wl.rotation.x = Math.PI / 2; wl.position.z = z; sw.add(wl);
-        var hb = new T.Mesh(new T.CylinderGeometry(0.012, 0.012, 0.052, 10), hub); hb.rotation.x = Math.PI / 2; hb.position.z = z; sw.add(hb); });
-      return sw;
-    }
-    b.userData.front = truck(0.24, true); b.userData.back = truck(-0.23, false);
+    var maple = new T.MeshStandardMaterial({ color: 0xe2c79a, roughness: 0.7 });
+    var deck = new T.Mesh(dg, [new T.MeshStandardMaterial({ map: tx, roughness: 0.42 }), maple]); b.add(deck);
+    var gg = new T.ShapeGeometry(sh, 10); gg.rotateX(Math.PI / 2); gg.scale(0.975, 1, 0.94); gg.translate(0, 0.1262, 0); bend(gg);
+    var grip = new T.Mesh(gg, new T.MeshStandardMaterial({ color: 0x151515, roughness: 0.98, side: T.DoubleSide })); b.add(grip);
+    var raw = new T.MeshStandardMaterial({ color: 0xc8ccd2, metalness: 0.8, roughness: 0.3 }), coal = new T.MeshStandardMaterial({ color: 0x2b2e34, metalness: 0.5, roughness: 0.45 });
+    var bush = new T.MeshStandardMaterial({ color: 0xff8a1e, roughness: 0.6 });
+    var wh = new T.MeshStandardMaterial({ color: 0x46d1c2, roughness: 0.3, transparent: true, opacity: 0.88 }), core = new T.MeshStandardMaterial({ color: 0xf4f4f4, roughness: 0.4 });
+    function wheels(g){ [-0.135, 0.135].forEach(function(z){
+      var wl = new T.Mesh(new T.CylinderGeometry(0.034, 0.034, 0.05, 24), wh); wl.rotation.x = Math.PI / 2; wl.position.z = z; g.add(wl);
+      var cr = new T.Mesh(new T.CylinderGeometry(0.016, 0.016, 0.052, 12), core); cr.rotation.x = Math.PI / 2; cr.position.z = z; g.add(cr); }); }
+    // the front truck: a wide plate, the swinging arm on its pivot, the spring, then the hanger
+    var ft = new T.Group(); ft.position.set(0.245, 0, 0); b.add(ft);
+    var plate = new T.Mesh(new T.BoxGeometry(0.14, 0.018, 0.095), coal); plate.position.y = 0.1; ft.add(plate);
+    var pivot = new T.Mesh(new T.CylinderGeometry(0.018, 0.018, 0.07, 12), raw); pivot.rotation.x = Math.PI / 2; pivot.position.set(-0.04, 0.083, 0); ft.add(pivot);
+    var arm = new T.Group(); arm.position.set(-0.04, 0.083, 0); ft.add(arm);         // swings round the pivot
+    var bar = new T.Mesh(new T.BoxGeometry(0.11, 0.022, 0.05), coal); bar.position.set(0.055, -0.018, 0); bar.rotation.z = -0.32; arm.add(bar);
+    var coil = []; for(var t = 0; t <= 60; t++){ var a = t / 60 * Math.PI * 9; coil.push(new T.Vector3(0.012 * Math.cos(a), -t / 60 * 0.03, 0.012 * Math.sin(a))); }
+    var spring = new T.Mesh(new T.TubeGeometry(new T.CatmullRomCurve3(coil), 80, 0.0024, 5, false), raw); spring.position.set(0.085, 0.091, 0); ft.add(spring);
+    var fsw = new T.Group(); fsw.position.set(0.0, 0.034, 0); ft.add(fsw);             // the hanger and wheels: steered by the arm
+    var fh = new T.Mesh(new T.BoxGeometry(0.05, 0.03, 0.26), raw); fsw.add(fh);
+    var fk = new T.Mesh(new T.CylinderGeometry(0.009, 0.009, 0.05, 8), raw); fk.position.set(0.02, 0.03, 0); fk.rotation.z = -0.4; fsw.add(fk);
+    wheels(fsw);
+    // the back truck: plate, kingpin, two orange bushings, hanger
+    var bt = new T.Group(); bt.position.set(-0.235, 0, 0); b.add(bt);
+    var bp = new T.Mesh(new T.BoxGeometry(0.1, 0.016, 0.075), raw); bp.position.y = 0.102; bt.add(bp);
+    var bsw = new T.Group(); bsw.position.y = 0.034; bt.add(bsw);
+    var bk = new T.Mesh(new T.CylinderGeometry(0.009, 0.009, 0.075, 8), raw); bk.position.set(0.012, 0.035, 0); bk.rotation.z = 0.5; bsw.add(bk);
+    [0.02, 0.048].forEach(function(y){ var bu = new T.Mesh(new T.CylinderGeometry(0.017, 0.017, 0.016, 12), bush); bu.position.set(0.006 + y * 0.25, y, 0); bu.rotation.z = 0.5; bsw.add(bu); });
+    var bh = new T.Mesh(new T.BoxGeometry(0.045, 0.028, 0.25), raw); bsw.add(bh);
+    wheels(bsw);
+    b.userData.front = fsw; b.userData.arm = arm; b.userData.back = bsw;
     return b;
   }
 
@@ -15598,7 +15616,8 @@
     // holding ⬆️ (and not steering yourself): the board snakes left-right on its own, the surfskate pump
     if(pump){ S.pp = (S.pp || 0) + dt * (3.0 + 0.12 * sp); if(Math.abs(steer) < 0.25) steer = 0.85 * Math.sin(S.pp); }
     S.steer = (S.steer || 0) + (steer - (S.steer || 0)) * Math.min(1, dt * 12);
-    var om = -steer * Math.min(3.2, 1.6 + sp * 0.25);                     // (a positive turn round +y goes left)
+    var om = -steer * Math.min(3.2, 1.6 + sp * 0.25);
+    if(slope > 1 && Math.abs(J.x) > 0.8 && sp > 2){ om *= 1.7; if(S.t - (S.snapT || -9) > 1.5){ S.snapT = S.t; sgScore(L('סנאפ בקיר', 'Wall snap'), 300); } }                     // (a positive turn round +y goes left)
     if(sp > 0.2 && Math.abs(om) > 0.01){ var c = Math.cos(om * dt), s = Math.sin(om * dt), k = n;
       var cx = k[1] * v[2] - k[2] * v[1], cy = k[2] * v[0] - k[0] * v[2], cz = k[0] * v[1] - k[1] * v[0], kd = k[0] * v[0] + k[1] * v[1] + k[2] * v[2];
       v[0] = v[0] * c + cx * s + k[0] * kd * (1 - c); v[1] = v[1] * c + cy * s + k[1] * kd * (1 - c); v[2] = v[2] * c + cz * s + k[2] * kd * (1 - c); }
@@ -15668,7 +15687,9 @@
     R.g.visible = true; R.body.children.forEach(function(ch){ if(ch !== R.board && ch !== R.stripe && ch !== R.fin && ch !== R.vest) ch.visible = true; });
     // where and how: on the surface's normal, facing the way it rolls; in the air turned by the spin
     var g = skGrad(S.u, S.w), up = new T.Vector3(-g[0], 1, -g[1]).normalize();
-    var hd = S.air ? S.air.hd0 + Math.PI * Math.min(1, S.air.t * 2.2) + S.air.spin : S.hd;
+    // the front truck frees the nose: it swings into the turn ahead of the tail
+    var yawOff = S.air ? 0 : -(S.steer || 0) * 0.3;
+    var hd = S.air ? S.air.hd0 + Math.PI * Math.min(1, S.air.t * 2.2) + S.air.spin : S.hd + yawOff;
     var fwd = new T.Vector3(Math.cos(hd), 0, Math.sin(hd)); if(!S.air){ fwd.addScaledVector(up, -fwd.dot(up)).normalize(); } else up.set(0, 1, 0);
     var side = new T.Vector3().crossVectors(fwd, up).normalize(); up.crossVectors(side, fwd).normalize();
     R.g.position.set(X0 + S.u, Y0 + S.y, SK_Z0 + S.w).addScaledVector(up, S.air ? 0.12 : 0);
@@ -15677,12 +15698,14 @@
     if(S.bail > 0){ R.body.rotation.set((1.3 - S.bail) * 2.5, 0, (1.3 - S.bail) * 3); R.body.position.y = -0.4 * Math.min(1, 1.3 - S.bail); }
     // crouch: low when pumping, landing or flying; the shoulders turn with the carve
     var J = sgJoyVec(), st = S.steer || 0, pumping = J.y < -0.3 && !S.air;
-    var crouch = S.air ? 0.85 : pumping ? 0.52 + 0.24 * Math.sin(2 * (S.pp || 0)) : 0.42;     // down-up twice through each S
+    var crouch = S.air ? 0.85 : pumping ? 0.4 + 0.36 * Math.abs(Math.sin(S.pp || 0)) : 0.42 + 0.3 * Math.abs(st);   // down in the turn, up through the switch
     S.k = (S.k || 0.4) + (crouch - (S.k || 0.4)) * 0.3;
-    var sh = S.skSh = (S.skSh || 0) + ((-st * 0.6) - (S.skSh || 0)) * 0.2;                         // the shoulders lead the turn
+    var lead = pumping ? Math.sin((S.pp || 0) + 0.7) : st;                                          // the shoulders a beat ahead
+    var sh = S.skSh = (S.skSh || 0) + ((-lead * 0.7) - (S.skSh || 0)) * 0.25;
     if(!S.air && !(S.bail > 0)) R.body.rotation.x = S.lean || 0;
-    sg3Pose(S.k, null, null, { tw: sh, look: -st * 0.3, hF: new T.Vector3(0.42 + 0.12 * st, -0.05 + 0.18 * Math.abs(st), -0.3 - 0.2 * st), hB: new T.Vector3(-0.42 + 0.1 * st, -0.2 + 0.12 * Math.abs(st), 0.12 + 0.18 * st) });
-    if(sg3.skBoard.userData.front){ sg3.skBoard.userData.front.rotation.y = st * 0.5; sg3.skBoard.userData.back.rotation.y = -st * 0.12; }   // the front truck swings wide
+    // the front arm reaches into the turn, the back arm swings the other way
+    sg3Pose(S.k, null, null, { tw: sh, look: -lead * 0.35, hF: new T.Vector3(0.36 + 0.16 * lead, -0.16 + 0.22 * Math.abs(lead), -0.28 - 0.28 * lead), hB: new T.Vector3(-0.4 - 0.12 * lead, -0.22 + 0.16 * Math.abs(lead), 0.1 + 0.28 * lead) });
+    if(sg3.skBoard.userData.front){ sg3.skBoard.userData.front.rotation.y = st * 0.55; sg3.skBoard.userData.arm.rotation.y = st * 0.4; sg3.skBoard.userData.back.rotation.y = -st * 0.1; }   // the front truck swings wide
     // the camera: behind and above, following smoothly
     var P = R.g.position, back = new T.Vector3(Math.cos(S.hd), 0, Math.sin(S.hd));
     var cw = P.clone().addScaledVector(back, -4.6).add(new T.Vector3(0, 2.4, 0)), lk = P.clone().addScaledVector(back, 2).add(new T.Vector3(0, 0.6, 0));
