@@ -14578,7 +14578,7 @@
   // never while the name field is being typed in. Everything worth keeping
   // (coins, skins, name, league) is in localStorage, so a reload loses nothing.
   // 'dev' = a local or preview copy: the updater stays off entirely.
-  var BUILD_VERSION = '20261101-220108';
+  var BUILD_VERSION = '20261102-080134';
   var UPDATE_CHECK_MS = 60000;
   var UPDATE_TRIED_KEY = 'canyonChaseTriedUpdate';
   var pendingSubmits = 0;
@@ -15569,7 +15569,7 @@
   function skEnter(){
     var S = sg.skate = { u: 30, w: 2.2, y: 0, v: [0, 0, 0], hd: Math.PI / 2, air: null, bail: 0, carve: 0, lastCarve: -9, wallT: 0, speedT: -9, score0: sg.score, t: 0, ok: false };
     S.y = skH(S.u, S.w); sg.phase = 'skate'; sg.score = 0; sg.chain = 0; sg.chainT = 0; sg.counts = {}; sg.lastMove = '';
-    sgAddText(L('🛹 ⬆️ לדחוף ולפמפם · ⬅️➡️ לקרוב · באוויר ⬅️➡️ לסובב', '🛹 ⬆️ push & pump · ⬅️➡️ carve · in the air ⬅️➡️ to spin'), '#bfe9ff');
+    sgAddText(L('🛹 ⬆️ לדחוף ולפמפם · ⬅️➡️ לקרוב · לחיצה על ⬆️ בקופינג = אייר', '🛹 ⬆️ push & pump · ⬅️➡️ carve · tap ⬆️ at the coping to air'), '#bfe9ff');
   }
   function skLeave(){
     var S = sg.skate; if(!S) return;
@@ -15588,7 +15588,10 @@
   function skUpdate(dt){
     var S = sg.skate, J = sgJoyVec(); S.t += dt;
     if(S.bail > 0){ S.bail -= dt; if(S.bail <= 0){ S.u = 30; S.w = 3; S.y = skH(S.u, S.w); S.v = [0, 0, 0]; S.hd = Math.PI / 2; } return; }
-    var steer = J.x, pump = J.y < -0.3, brake = J.y > 0.5;
+    var steer = J.x, pump = J.y < -0.3, brake = J.y > 0.5, own = Math.abs(J.x) > 0.45;   // (own: your turn, not the pump's snake)
+    var upNow = J.y < -0.5; if(upNow && !S.upWas) S.popAt = S.t; S.upWas = upNow;
+    S.kickT = Math.max(0, (S.kickT || 0) - dt);
+    if(S.grind){ skGrind(dt, J); return; }
     if(S.air){
       var A = S.air;
       A.t += dt; S.v[1] -= SK.G * dt; S.u += S.v[0] * dt; S.y += S.v[1] * dt; S.w += S.v[2] * dt;
@@ -15596,16 +15599,20 @@
       var gy = skH(Math.max(0.05, Math.min(SK.W - 0.05, S.u)), Math.max(0.05, Math.min(SK.D - 0.05, S.w)));
       S.u = Math.max(0.05, Math.min(SK.W - 0.05, S.u)); S.w = Math.max(0.05, Math.min(SK.D - 0.05, S.w));
       if(S.y <= gy && S.v[1] < 0){
+        if(A.out){ S.y = gy; S.hd = A.hd0 + A.spin; S.v = [Math.cos(S.hd) * 1.6, 0, Math.sin(S.hd) * 1.6]; S.air = null; return; }
         // landing: the board's facing (turned 180 for the way back down, plus any spin) against the way it's going
         S.y = gy; var g2 = skGrad(S.u, S.w), down = Math.atan2(-g2[1], -g2[0]), face = A.hd0 + Math.PI + A.spin;
         var dif = Math.cos(face - down), turns = Math.round(Math.abs(A.spin) / Math.PI);
         if(Math.abs(dif) < 0.55){ S.air = null; skBail(L('נחיתה עקומה!', 'Landed sideways!')); return; }
-        S.hd = dif > 0 ? face : face + Math.PI;
+        S.hd = down;                                                        // (whichever way the board faces, it rolls on down the wall)
         // named like the surf game's airs: an air, an air reverse (landing backwards), a 360 (an alley-oop the other way round), a 720
         var flips = Math.floor(turns / 2), airT = A.t, oop = A.spin > 0;
         var name = flips >= 2 ? '720' : flips ? (oop ? L('אלי-אופ ', 'Alley-oop ') : L('אייר ', 'Air ')) + '360' : turns === 1 ? L('אייר ריברס', 'Air reverse') : L('אייר', 'Air');
         sgScore(name + '!', 300 + Math.round(250 * airT) + 700 * flips + (oop ? 150 * flips : 0) + (turns % 2 ? 250 : 0));
-        var sp = Math.hypot(S.v[0], S.v[1], S.v[2]) * 0.85; S.v = [Math.cos(S.hd) * sp * 0.6, 0, Math.sin(S.hd) * sp * 0.6];
+        // landed on the transition, the speed carries on down the wall (the way the board faces, laid on the surface)
+        var sp = Math.hypot(S.v[0], S.v[1], S.v[2]) * 0.85, ln = [-g2[0], 1, -g2[1]], ll = Math.hypot(ln[0], 1, ln[2]); ln = [ln[0] / ll, ln[1] / ll, ln[2] / ll];
+        var fh = [Math.cos(S.hd), 0, Math.sin(S.hd)], fd = fh[0] * ln[0] + fh[2] * ln[2], tv = [fh[0] - fd * ln[0], -fd * ln[1], fh[2] - fd * ln[2]], tvl = Math.hypot(tv[0], tv[1], tv[2]) || 1;
+        S.v = [tv[0] / tvl * sp, tv[1] / tvl * sp, tv[2] / tvl * sp];
         S.air = null;
       }
       return;
@@ -15638,8 +15645,9 @@
     // (what real riders do: push with the back foot to get going, then pump -- heel to toe,
     // down into each turn and up out of it; in a bowl, weight on the way down)
     if(pump){ if(sp < 2.5 && slope < 0.15) acc += 2.2 * (1 - sp / 2.5) + 0.6;          // a foot push or two to get rolling
-      if(dir[1] < -0.05) acc += 3.2;                                        // pumping down a transition
-      if(Math.abs(om) > 0.4 && sp > 0.4) acc += 2.8 * Math.max(0, 1 - sp / 7.5); }   // every carve feeds speed (good riders pump to ~20 km/h)
+      var base = skBowlD(S.u, S.w) < SK_BOWL ? -SK.DEPTH : 0;
+      if(slope > 0.05 && slope < 3 && dir[1] > 0.03 && S.y - base < 0.9) acc += 1.3;   // up out of the bottom of a transition
+      if(Math.abs(om) > 0.4 && sp > 0.4) acc += 1.9 * Math.max(0, 1 - sp / 5.6); }   // every carve feeds speed (on the flat, up to ~17 km/h)
     // leaning into the turn, as far as the speed and the turn ask for
     S.lean = (S.lean || 0) + (Math.max(-0.75, Math.min(0.75, -om * Math.max(sp, 1.2) / SK.G * 1.3)) - (S.lean || 0)) * Math.min(1, dt * 10);
     if(brake) acc -= 3.5;
@@ -15651,7 +15659,7 @@
     // the height gained or lost is paid for in speed (climbing past what you had: you roll back)
     var y1 = skH(Math.max(0.01, Math.min(SK.W - 0.01, S.u)), Math.max(0.01, Math.min(SK.D - 0.01, S.w)));
     var s2 = sp * sp - 2 * SK.G * (y1 - y0);
-    if(s2 < 0){ sp = 0.1; dir = [-dir[0], -dir[1], -dir[2]]; } else sp = Math.min(SK.MAXV, Math.sqrt(s2));
+    if(s2 < 0){ sp = 0.1; dir = [-dir[0], -dir[1], -dir[2]]; S.kickT = 0.35; S.kickDir = (S.steer || 0) > 0 ? -1 : 1; } else sp = Math.min(SK.MAXV, Math.sqrt(s2));
     // the way you go, laid along the surface where you are now
     var g1 = skGrad(Math.max(0.01, Math.min(SK.W - 0.01, S.u)), Math.max(0.01, Math.min(SK.D - 0.01, S.w)));
     var n1 = [-g1[0], 1, -g1[1]], n1l = Math.hypot(n1[0], n1[1], n1[2]); n1 = [n1[0] / n1l, n1[1] / n1l, n1[2] / n1l];
@@ -15661,13 +15669,36 @@
     // over the coping of a quarter pipe or the bowl, going up: into the air
     var dB = skBowlD(S.u, S.w), atBack = S.u > 18 && S.w > SK.D - 0.07, atEnd = S.u > SK.W - 0.07;      // (before the edge clamp below stops you short of it)
     var prevD = skBowlD(S.u - v[0] * dt, S.w - v[2] * dt), outBowl = prevD < SK_BOWL && dB >= SK_BOWL;
-    if((atBack || atEnd || (outBowl && v[1] > 1.4)) && v[1] > 0.6){
-      // straight up: the part going out over the edge is gone, the part along the coping stays
+    if((atBack || atEnd || outBowl) && v[1] > 0.3){
       var on = atEnd ? [1, 0] : atBack ? [0, 1] : (function(){ var gB = skGrad(S.u - v[0] * dt, S.w - v[2] * dt), l = Math.hypot(gB[0], gB[1]) || 1; return [gB[0] / l, gB[1] / l]; })();
       var out = v[0] * on[0] + v[2] * on[1]; if(out > 0){ v[0] -= on[0] * out; v[2] -= on[1] * out; }
+      var alongSp = Math.hypot(v[0], v[2]), popped = S.t - (S.popAt || -9) < 0.35;
       S.u = Math.max(0.05, Math.min(SK.W - 0.05, S.u - (atEnd ? 0.03 : 0))); S.w = Math.max(0.05, Math.min(SK.D - 0.05, S.w - (atBack ? 0.03 : 0)));
       if(outBowl){ S.u -= on[0] * 0.05; S.w -= on[1] * 0.05; }
-      S.y = skH(S.u, S.w); S.air = { t: 0, y0: S.y, maxY: S.y, spin: 0, hd0: S.hd };
+      S.y = skH(S.u, S.w);
+      // 1. coming up along the coping, more along it than up: the trucks lock on it and you ride
+      //    along the top of the wall -- the floater (on concrete: a grind along the coping)
+      if(alongSp > 1.6 && alongSp > v[1] * 0.9 && !popped){
+        S.grind = { t: 0, n: on, y: atBack || atEnd ? SK.DEPTH : 0, kind: atBack ? 'back' : atEnd ? 'end' : 'bowl', sp: Math.min(sp, 6) * 0.85, dir: [v[0] / alongSp, v[2] / alongSp] };
+        S.v = [0, 0, 0]; return;
+      }
+      // 2. popped right at the lip, going up the wall and fast enough to clear the coping: an air
+      //    (no pop, and the front wheels just hit the coping)
+      if(popped && v[1] > 2.0 && v[1] > sp * 0.7){
+        v[0] -= on[0] * 0.6; v[2] -= on[1] * 0.6;                           // (the rider brings the board back in over the wall, to land lower on it)
+        S.air = { t: 0, y0: S.y, maxY: S.y, spin: 0, hd0: S.hd };
+        return;
+      }
+      // (the way out of the bowl: a smaller pop at its edge hops you out onto the deck)
+      if(popped && outBowl && v[1] > 1.1){
+        S.air = { t: 0, y0: S.y, maxY: S.y, spin: 0, hd0: Math.atan2(on[1], on[0]), out: true };
+        S.v = [on[0] * 1.6, v[1], on[1] * 1.6]; return;
+      }
+      // 3. otherwise the wheels touch the coping and you come back down: a kickturn at the top
+      v[0] = -v[0] * 0.6; v[1] = -Math.abs(v[1]) * 0.45; v[2] = -v[2] * 0.6;
+      S.u -= on[0] * 0.08; S.w -= on[1] * 0.08; S.y = skH(Math.max(0.05, Math.min(SK.W - 0.05, S.u)), Math.max(0.05, Math.min(SK.D - 0.05, S.w)));
+      S.kickT = 0.35; S.kickDir = (S.steer || 0) > 0 ? -1 : 1; S.hd = Math.atan2(v[2], v[0]);
+      if(!S.popHint && v[1] < -0.5){ S.popHint = 1; sgAddText(L('⬆️ ממש בקופינג (עם מהירות) = אייר', '⬆️ right at the coping (with speed) = air'), '#bfe9ff'); }
       return;
     }
     // the low edges at the front and the start: bump back
@@ -15684,20 +15715,42 @@
     // floater -- riding along the coping; deep take-off -- dropping into the bowl with speed
     var inBowl = dB < SK_BOWL, low = inBowl ? S.y < -SK.DEPTH + 0.4 : S.y < 0.3, high = inBowl ? S.y > -1.0 : S.y > 1.0, lip = inBowl ? S.y > -0.2 : S.y > 1.78;
     S.btT = Math.max(0, (S.btT || 0) - dt); S.ttT = Math.max(0, (S.ttT || 0) - dt); S.slideT = Math.max(0, (S.slideT || 0) - dt);
-    if(low && slope > 0.06 && v[1] > 0.2 && Math.abs(om) > 0.9 && sp > 2.5 && S.t - (S.btAt || -9) > 2){ S.btAt = S.t; S.btT = 0.6; sgScore(L('פנייה תחתונה', 'Bottom turn'), 80 + Math.round(sp * 30)); }
+    if(low && own && slope > 0.06 && v[1] > 0.2 && Math.abs(om) > 0.9 && sp > 2.5 && S.t - (S.btAt || -9) > 2){ S.btAt = S.t; S.btT = 0.6; sgScore(L('פנייה תחתונה', 'Bottom turn'), 80 + Math.round(sp * 30)); }
     var goingDown = v[1] < -0.1;
-    if(high && slope > 0.8 && S.wasUp && goingDown && Math.abs(om) > 1.0 && S.t - (S.ttAt || -9) > 1.2){
+    if(high && own && slope > 0.8 && S.wasUp && goingDown && Math.abs(om) > 1.0 && S.t - (S.ttAt || -9) > 1.2){
       S.ttAt = S.t; S.ttT = 0.5; S.slideT = 0.4; S.slideDir = om > 0 ? 1 : -1; v[0] *= 0.95; v[1] *= 0.95; v[2] *= 0.95;
       if(S.t - (S.cutAt || -9) < 2.5) sgScore(L('ריבאונד!', 'Rebound!'), 260 + Math.round(sp * 30));
       else if(lip) sgScore(L('אוף דה ליפ!', 'Off the lip!'), 280 + Math.round(sp * 30));
       else sgScore(L('סנאפ', 'Snap'), 120 + Math.round(sp * 25));
     }
     S.wasUp = v[1] > 0.3 ? true : v[1] < -0.3 ? false : S.wasUp;
-    if(slope < 0.5 && Math.abs(om) > 0.7 && sp > 2){ S.cutAcc = (S.cutAcc || 0) + om * dt; S.cutQuiet = 0; } else { S.cutQuiet = (S.cutQuiet || 0) + dt; if(S.cutQuiet > 0.35) S.cutAcc = 0; }
+    if(slope < 0.5 && own && Math.abs(om) > 0.7 && sp > 2){ S.cutAcc = (S.cutAcc || 0) + om * dt; S.cutQuiet = 0; } else { S.cutQuiet = (S.cutQuiet || 0) + dt; if(S.cutQuiet > 0.35) S.cutAcc = 0; }
     if(Math.abs(S.cutAcc || 0) > 2.7){ S.cutAcc = 0; S.cutAt = S.t; sgScore(L('קאטבק', 'Cutback'), 220 + Math.round(sp * 30)); }
-    if(lip && slope > 1.5){ var gn = [g[0] / slope, g[1] / slope], along = Math.abs(v[0] * gn[1] - v[2] * gn[0]);
-      if(along > 1.8 && Math.abs(v[1]) < 1.5){ S.flT = (S.flT || 0) + dt; if(S.flT > 0.35 && S.t - (S.flAt || -9) > 2){ S.flAt = S.t; sgScore(L('פלוטר!', 'Floater!'), 300); } } else S.flT = 0; } else S.flT = 0;
     if(prevD >= SK_BOWL && dB < SK_BOWL && v[1] < -0.3 && sp > 2 && S.t - (S.toAt || -9) > 4){ S.toAt = S.t; sgScore(L('טייק-אוף עמוק', 'Deep take-off'), 500); }
+  }
+
+  function skGrind(dt, J){
+    var S = sg.skate, G = S.grind; G.t += dt;
+    S.lean = (S.lean || 0) * Math.max(0, 1 - dt * 10); S.steer = (S.steer || 0) * Math.max(0, 1 - dt * 10);   // (standing tall over the coping, the board straight)
+    G.sp -= (1.6 + 0.08 * G.sp * G.sp) * dt;                                // (the trucks grinding: much more drag than the wheels)
+    S.u += G.dir[0] * G.sp * dt; S.w += G.dir[1] * G.sp * dt;
+    if(G.kind === 'bowl'){
+      // round the bowl's edge: back onto the coping line, the way along it turned with it
+      var e = 0.03, gx = (skBowlD(S.u + e, S.w) - skBowlD(S.u - e, S.w)) / (2 * e), gz = (skBowlD(S.u, S.w + e) - skBowlD(S.u, S.w - e)) / (2 * e), gl = Math.hypot(gx, gz) || 1;
+      gx /= gl; gz /= gl; var d = skBowlD(S.u, S.w) - (SK_BOWL + 0.02); S.u -= gx * d; S.w -= gz * d; G.n = [gx, gz];
+      var t0 = [-gz, gx], sg1 = t0[0] * G.dir[0] + t0[1] * G.dir[1] > 0 ? 1 : -1; G.dir = [t0[0] * sg1, t0[1] * sg1];
+    } else if(G.kind === 'back') S.w = SK.D - 0.05; else S.u = SK.W - 0.05;
+    S.y = G.y; S.hd = Math.atan2(G.dir[1], G.dir[0]);
+    if(G.t > 0.35 && !G.scored){ G.scored = 1; sgScore(L('פלוטר!', 'Floater!'), 300); }
+    // off the end of the coping, out of speed, a while along it or turned in: back down the wall
+    var end = G.kind === 'back' ? S.u < 18.2 || S.u > SK.W - 0.3 : G.kind === 'end' ? S.w < 0.4 || S.w > SK.D - 0.3 : false;
+    if(G.t > 1.2 || G.sp < 1.2 || end || (G.t > 0.25 && Math.abs(J.x) > 0.5)){
+      var sp = Math.max(1.2, G.sp);
+      S.u -= G.n[0] * 0.12; S.w -= G.n[1] * 0.12; S.u = Math.max(0.3, Math.min(SK.W - 0.1, S.u)); S.w = Math.max(0.3, Math.min(SK.D - 0.1, S.w));
+      S.y = skH(S.u, S.w);
+      S.v = [G.dir[0] * sp * 0.85 - G.n[0] * 0.6, -0.6, G.dir[1] * sp * 0.85 - G.n[1] * 0.6];
+      S.grind = null;
+    }
   }
 
   // ---- drawing: the park, the board under the feet, the rider, the camera ----
@@ -15727,15 +15780,16 @@
     [R.board, R.stripe, R.fin].forEach(function(o){ o.visible = false; });
     R.g.visible = true; R.body.children.forEach(function(ch){ if(ch !== R.board && ch !== R.stripe && ch !== R.fin && ch !== R.vest) ch.visible = true; });
     // where and how: on the surface's normal, facing the way it rolls; in the air turned by the spin
-    var g = skGrad(S.u, S.w), up = new T.Vector3(-g[0], 1, -g[1]).normalize();
+    var g = S.grind ? [0, 0] : skGrad(S.u, S.w), up = new T.Vector3(-g[0], 1, -g[1]).normalize();
     // the front truck frees the nose: it swings into the turn ahead of the tail
     var yawOff = S.air ? 0 : -(S.steer || 0) * 0.3;
     // a snap: the back wheels slide out, then grip again
     if(S.slideT > 0) yawOff += (S.slideDir || 1) * 0.6 * Math.sin(Math.PI * (1 - S.slideT / 0.4));
-    var hd = S.air ? S.air.hd0 + Math.PI * Math.min(1, S.air.t * 2.2) + S.air.spin : S.hd + yawOff;
+    if(S.kickT > 0) yawOff += (S.kickDir || 1) * Math.PI * (S.kickT / 0.35);   // (the turn round at the top, shown as it happens)
+    var hd = S.air ? S.air.hd0 + (S.air.out ? 0 : Math.PI * Math.min(1, S.air.t * 2.2)) + S.air.spin : S.hd + yawOff;
     var fwd = new T.Vector3(Math.cos(hd), 0, Math.sin(hd)); if(!S.air){ fwd.addScaledVector(up, -fwd.dot(up)).normalize(); } else up.set(0, 1, 0);
     var side = new T.Vector3().crossVectors(fwd, up).normalize(); up.crossVectors(side, fwd).normalize();
-    R.g.position.set(X0 + S.u, Y0 + S.y, SK_Z0 + S.w).addScaledVector(up, S.air ? 0.12 : 0);
+    R.g.position.set(X0 + S.u, Y0 + S.y, SK_Z0 + S.w).addScaledVector(up, S.air ? 0.12 : S.grind ? 0.035 : 0);
     R.g.quaternion.setFromRotationMatrix(new T.Matrix4().makeBasis(fwd, up, side));
     // the shadow: on the concrete under you (in the air: below, wider and fainter the higher you are)
     var gy0 = skH(Math.max(0.05, Math.min(SK.W - 0.05, S.u)), Math.max(0.05, Math.min(SK.D - 0.05, S.w))), gN = skGrad(Math.max(0.05, Math.min(SK.W - 0.05, S.u)), Math.max(0.05, Math.min(SK.D - 0.05, S.w)));
@@ -15750,6 +15804,7 @@
     var crouch = S.air ? 0.85 : pumping ? 0.4 + 0.36 * Math.abs(Math.sin(S.pp || 0)) : 0.42 + 0.3 * Math.abs(st);   // down in the turn, up through the switch
     if(S.btT > 0) crouch = 0.95;                                            // bottom turn: compressed, the back knee almost on the deck
     if(S.ttT > 0) crouch = 0.35;                                            // top turn: up and open
+    if(S.grind) crouch = 0.6;                                               // the floater: low, weight centred over the coping
     S.k = (S.k || 0.4) + (crouch - (S.k || 0.4)) * 0.3;
     var lead = pumping ? Math.sin((S.pp || 0) + 0.7) : st;                                          // the shoulders a beat ahead
     var sh = S.skSh = (S.skSh || 0) + ((-lead * 0.7) - (S.skSh || 0)) * 0.25;
