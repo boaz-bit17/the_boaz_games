@@ -14578,7 +14578,7 @@
   // never while the name field is being typed in. Everything worth keeping
   // (coins, skins, name, league) is in localStorage, so a reload loses nothing.
   // 'dev' = a local or preview copy: the updater stays off entirely.
-  var BUILD_VERSION = '20261102-081101';
+  var BUILD_VERSION = '20261103-082705';
   var UPDATE_CHECK_MS = 60000;
   var UPDATE_TRIED_KEY = 'canyonChaseTriedUpdate';
   var pendingSubmits = 0;
@@ -15419,21 +15419,42 @@
   // chains, variety); shells for your score when you step off.
   var SK = { W: 44, D: 26, DECK: 2.3, R: 2.4, DEPTH: 2.0, G: 9.8, MAXV: 10.5 };
   SK.TW = Math.sqrt(SK.R * SK.R - Math.pow(SK.R - SK.DEPTH, 2));          // the transition's width (the wall gets near-vertical at the top)
-  var SK_A = [9, 15], SK_B = [17, 12], SK_BOWL = 7;                        // the bowl: around a short line, 7 m to its coping
+  var SK_A = [10, 13.5], SK_B = [17, 12], SK_BOWL = 6;                     // the bowl: around a short line, 6 m to its coping
+  var SK_RC = 5;                                                           // the corners of the park's outline: rounded, carved like berms (pump tracks: ~3 m and up)
   function skX0(){ return sgLot.parkX + 40; }                              // the park's corner (x), z from 199
   var SK_Z0 = 199;
   function skBowlD(u, w){ var ax = SK_B[0] - SK_A[0], az = SK_B[1] - SK_A[1], t = Math.max(0, Math.min(1, ((u - SK_A[0]) * ax + (w - SK_A[1]) * az) / (ax * ax + az * az)));
     return Math.hypot(u - SK_A[0] - ax * t, w - SK_A[1] - az * t); }
+  // where along the bowl (0 at the deep end, 1 at the shallow end) and how deep it is there: a pool's
+  // floor slopes up from its deep end, 2 m, to a shallow end, 1 m, low enough to roll out over
+  function skBowlT(u, w){ var ax = SK_B[0] - SK_A[0], az = SK_B[1] - SK_A[1]; return Math.max(0, Math.min(1, ((u - SK_A[0]) * ax + (w - SK_A[1]) * az) / (ax * ax + az * az))); }
+  function skBowlH(u, w){ var t = skBowlT(u, w); t = t * t * (3 - 2 * t); return SK.DEPTH - 1.0 * t; }
   function skArc(s){ s = Math.max(0, Math.min(SK.TW, s)); return SK.R - Math.sqrt(SK.R * SK.R - s * s); }   // 0 at the flat .. DEPTH at the coping
+  // the height of the park at (u, w) metres from its corner, relative to the deck
+  // how far in from the park's rounded outline (m; below 0: outside it)
+  function skRim(u, w){
+    var qx = Math.abs(u - SK.W / 2) - (SK.W / 2 - SK_RC), qz = Math.abs(w - SK.D / 2) - (SK.D / 2 - SK_RC);
+    return SK_RC - Math.hypot(Math.max(qx, 0), Math.max(qz, 0)) - Math.min(Math.max(qx, qz), 0);
+  }
+  // the wall's height there: 2 m at the back and the far end (quarter pipes), 1.4 m by the bowl,
+  // a 1 m bank along the front, blended round the corners
+  function skRimH(u, w){
+    var a = Math.pow(u + 1, -4), b = Math.pow(SK.W - u + 1, -4), c = Math.pow(w + 1, -4), e = Math.pow(SK.D - w + 1, -4);
+    return (a * 1.4 + b * 2.0 + c * 1.0 + e * 2.0) / (a + b + c + e);
+  }
+  function skWallTW(H){ return Math.sqrt(SK.R * SK.R - (SK.R - H) * (SK.R - H)); }
   // the height of the park at (u, w) metres from its corner, relative to the deck
   function skH(u, w){
     var d = skBowlD(u, w);
-    if(d < SK_BOWL) return -SK.DEPTH + skArc(SK.TW - (SK_BOWL - d));
-    var h = 0;
-    h = Math.max(h, Math.max(0, Math.min(1, (u - 17) / 4)) * skArc(w - (SK.D - SK.TW)));   // the back quarter pipe (rising in from its start)
-    h = Math.max(h, skArc(u - (SK.W - SK.TW)));                            // the end quarter pipe
-    var fb = Math.max(Math.abs(u - 31) - 2, Math.abs(w - 9) - 1.5);         // the funbox: a 4 x 3 top, 1.2 m slopes
-    if(fb < 1.2) h = Math.max(h, 0.6 * Math.min(1, 1 - fb / 1.2));
+    if(d < SK_BOWL){ var bH = skBowlH(u, w), btw = skWallTW(bH), bs = Math.max(0, btw - (SK_BOWL - d)); return -bH + SK.R - Math.sqrt(Math.max(0, SK.R * SK.R - bs * bs)); }
+    var h = 0, r = Math.max(0, skRim(u, w)), H = skRimH(u, w), tw = skWallTW(H);
+    if(r < tw) h = SK.R - Math.sqrt(Math.max(0, SK.R * SK.R - (tw - r) * (tw - r)));   // the wall all round: the same 2.4 m curve, up to its height
+    // three rollers, like a pump track's: 0.5 m high, 4.5 m apart (builders' rule: ~10x the height),
+    // tapered at their ends so you can ride round them as well as over them
+    if(u > 25.5 && u < 39 && w > 7 && w < 19){
+      var ta = Math.min(1, (w - 7) / 1.8, (19 - w) / 1.8); ta = ta * ta * (3 - 2 * ta);
+      h = Math.max(h, 0.25 * (1 - Math.cos(2 * Math.PI * (u - 25.5) / 4.5)) * ta);
+    }
     return h;
   }
   function skGrad(u, w){ var e = 0.04; return [(skH(u + e, w) - skH(u - e, w)) / (2 * e), (skH(u, w + e) - skH(u, w - e)) / (2 * e)]; }
@@ -15450,12 +15471,10 @@
       // blue pool tiles just under the bowl's coping, like the old backyard pools
       var gr = skGrad(u, w), sl = Math.min(1, Math.hypot(gr[0], gr[1]) / 3);
       var k = 0.6 + 0.07 * Math.sin(u * 3.1 + w * 1.7) * Math.sin(u * 0.7 - w * 2.3) + 0.05 * Math.sin(u * 0.31 + w * 0.47) - (h < -0.2 ? 0.05 : 0) - 0.08 * sl;
-      var tile = skBowlD(u, w) < SK_BOWL && h > -0.9 && h < -0.02;          // (the wall is near-vertical up there: the top ring of the mesh)
-      if(tile){ var tk = (Math.floor(u * 6.5) + Math.floor((h + 2) * 6.5)) % 2 ? 0.9 : 0.8; cols[i * 3] = 0.16 * tk; cols[i * 3 + 1] = 0.42 * tk; cols[i * 3 + 2] = 0.72 * tk; }
-      else { cols[i * 3] = k * 0.98; cols[i * 3 + 1] = k * 0.97; cols[i * 3 + 2] = k * 0.93; }
+      cols[i * 3] = k * 0.98; cols[i * 3 + 1] = k * 0.97; cols[i * 3 + 2] = k * 0.93;
     }
     geo.setAttribute('color', new T.BufferAttribute(cols, 3)); geo.computeVertexNormals();
-    var cm = new T.MeshStandardMaterial({ vertexColors: true, roughness: 0.92, color: 0xc4c0b6 });
+    var cm = new T.MeshStandardMaterial({ vertexColors: true, roughness: 0.92, color: 0xd8d4ca, map: skConcrete(T) });
     var top = new T.Mesh(geo, cm); top.position.set(X0 + SK.W / 2, Y0, SK_Z0 + SK.D / 2); g.add(top);
     // the sides, down to the sand
     var side = new T.MeshStandardMaterial({ color: 0xa9a59c, roughness: 0.95 });
@@ -15473,10 +15492,33 @@
       var nx = Math.cos(th), nz = Math.sin(th), along = (nx * ax + nz * az) / al, c0 = along >= 0 ? SK_B : SK_A;
       rim.push(new T.Vector3(X0 + c0[0] + nx * SK_BOWL, Y0 + 0.02, SK_Z0 + c0[1] + nz * SK_BOWL)); }
     g.add(new T.Mesh(new T.TubeGeometry(new T.CatmullRomCurve3(rim, true), 192, 0.045, 6, true), steel));
-    var cp1 = new T.Mesh(new T.CylinderGeometry(0.045, 0.045, SK.W - 20, 8), steel); cp1.rotation.z = Math.PI / 2; cp1.position.set(X0 + 20 + (SK.W - 20) / 2, Y0 + SK.DEPTH + 0.02, SK_Z0 + SK.D - 0.03); g.add(cp1);
-    var cp2 = new T.Mesh(new T.CylinderGeometry(0.045, 0.045, SK.D, 8), steel); cp2.rotation.x = Math.PI / 2; cp2.position.set(X0 + SK.W - 0.03, Y0 + SK.DEPTH + 0.02, SK_Z0 + SK.D / 2); g.add(cp2);
+    // a band of blue pool tiles just under the coping, like the old backyard pools: a strip that
+    // follows the wall, 5 to 30 cm down, a hair off the concrete
+    var tcv = document.createElement('canvas'); tcv.width = 64; tcv.height = 64; var tc = tcv.getContext('2d');
+    tc.fillStyle = '#e8edf0'; tc.fillRect(0, 0, 64, 64);
+    [[0, 0, '#2a6fb5'], [32, 0, '#3a82c8'], [0, 32, '#3a82c8'], [32, 32, '#2a6fb5']].forEach(function(q){ tc.fillStyle = q[2]; tc.fillRect(q[0] + 1.5, q[1] + 1.5, 29, 29); });
+    var ttx = new T.CanvasTexture(tcv); ttx.wrapS = ttx.wrapT = T.RepeatWrapping;
+    var tpos = [], tuv = [], tix = [], NT = 240, ax2 = SK_B[0] - SK_A[0], az2 = SK_B[1] - SK_A[1], al2 = Math.hypot(ax2, az2), run = 0, last = null;
+    for(var ti = 0; ti <= NT; ti++){ var th = ti / NT * Math.PI * 2, nx = Math.cos(th), nz = Math.sin(th), c0 = (nx * ax2 + nz * az2) / al2 >= 0 ? SK_B : SK_A;
+      [-0.05, -0.30].forEach(function(hh, k){
+        var cu = c0[0] + nx * SK_BOWL, cw = c0[1] + nz * SK_BOWL, bH = skBowlH(cu, cw), btw = skWallTW(bH), bs = Math.sqrt(Math.max(0, SK.R * SK.R - Math.pow(SK.R - (hh + bH), 2))), dd = SK_BOWL - btw + bs - 0.012;
+        tpos.push(X0 + c0[0] + nx * dd, Y0 + hh, SK_Z0 + c0[1] + nz * dd); });
+      var here = [c0[0] + nx * SK_BOWL, c0[1] + nz * SK_BOWL]; if(last) run += Math.hypot(here[0] - last[0], here[1] - last[1]); last = here;
+      tuv.push(run / 0.125, 0, run / 0.125, 2);                               // (12.5 cm tiles)
+      if(ti < NT){ var b0 = ti * 2; tix.push(b0, b0 + 1, b0 + 2, b0 + 1, b0 + 3, b0 + 2); } }
+    var tg = new T.BufferGeometry(); tg.setAttribute('position', new T.Float32BufferAttribute(tpos, 3)); tg.setAttribute('uv', new T.Float32BufferAttribute(tuv, 2)); tg.setIndex(tix); tg.computeVertexNormals();
+    g.add(new T.Mesh(tg, new T.MeshStandardMaterial({ map: ttx, roughness: 0.35, side: T.DoubleSide })));
+    // and round the park's outline, along the top of every wall
+    var ol = [], cc = [[SK.W - SK_RC, SK.D - SK_RC], [SK_RC, SK.D - SK_RC], [SK_RC, SK_RC], [SK.W - SK_RC, SK_RC]];
+    for(var q = 0; q < 4; q++){ var ou, ow;
+      for(var a2 = 0; a2 <= 12; a2++){ var th2 = (q + a2 / 12) * Math.PI / 2; ou = cc[q][0] + Math.cos(th2) * (SK_RC - 0.04); ow = cc[q][1] + Math.sin(th2) * (SK_RC - 0.04);
+        ol.push(new T.Vector3(X0 + ou, Y0 + skRimH(ou, ow) + 0.02, SK_Z0 + ow)); }
+      // (the straight to the next corner, a point a metre: the wall's height changes along it)
+      var nq = cc[(q + 1) % 4], th3 = (q + 1) * Math.PI / 2, eu = nq[0] + Math.cos(th3) * (SK_RC - 0.04), ew = nq[1] + Math.sin(th3) * (SK_RC - 0.04), ns = Math.floor(Math.hypot(eu - ou, ew - ow));
+      for(var b2 = 1; b2 < ns; b2++){ var pu = ou + (eu - ou) * b2 / ns, pw = ow + (ew - ow) * b2 / ns; ol.push(new T.Vector3(X0 + pu, Y0 + skRimH(pu, pw) + 0.02, SK_Z0 + pw)); } }
+    g.add(new T.Mesh(new T.TubeGeometry(new T.CatmullRomCurve3(ol, true), 320, 0.045, 6, true), steel));
     // steps up from the boardwalk, and a sign
-    for(var s = 0; s < 8; s++){ var st = new T.Mesh(new T.BoxGeometry(4, 0.3, 0.45), side); st.position.set(X0 + 30, SG_SAND_Y + 0.15 + s * 0.29, SK_Z0 - 3.4 + s * 0.42); g.add(st); }
+    for(var s = 0; s < 12; s++){ var st = new T.Mesh(new T.BoxGeometry(4, 0.3, 0.45), side); st.position.set(X0 + 30, SG_SAND_Y + 0.15 + s * 0.29, SK_Z0 - 0.46 - (11 - s) * 0.42); g.add(st); }   // (up to the top of the front bank)
     var sc = document.createElement('canvas'); sc.width = 256; sc.height = 64; var c = sc.getContext('2d');
     c.fillStyle = '#1b1b1f'; c.fillRect(0, 0, 256, 64); c.fillStyle = '#ffd447'; c.font = 'bold 34px Rubik, sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText('🛹 SKATEPARK', 128, 34);
     // (two faces back to back, so it reads from the beach and from inside the park; high, so the
@@ -15487,6 +15529,23 @@
     [-2.6, 2.6].forEach(function(o){ var po = new T.Mesh(new T.CylinderGeometry(0.07, 0.07, 5.2, 6), steel); po.position.set(X0 + 30 + o, Y0 + 2.5, SK_Z0 - 0.15); g.add(po); });
     g.userData.key = Math.round(X0);
     return g;
+  }
+  // poured concrete, 3 m slabs: grey speckled aggregate, cloudy patches, the cut joints between
+  // slabs, a few hairline cracks and dark wheel marks -- a surface you can see sliding by under the
+  // board (a smooth colour gives the eye nothing to measure speed against)
+  function skConcrete(T){
+    var N = 512, cv = document.createElement('canvas'); cv.width = cv.height = N; var c = cv.getContext('2d'), rnd = (function(){ var x = 7; return function(){ x = (x * 16807) % 2147483647; return x / 2147483647; }; })();
+    c.fillStyle = '#bdbab3'; c.fillRect(0, 0, N, N);
+    for(var i = 0; i < 26; i++){ var x = rnd() * N, y = rnd() * N, r = 40 + rnd() * 120, gr = c.createRadialGradient(x, y, 0, x, y, r), k = rnd() < 0.5;
+      gr.addColorStop(0, k ? 'rgba(255,255,255,0.10)' : 'rgba(60,55,50,0.10)'); gr.addColorStop(1, 'rgba(0,0,0,0)'); c.fillStyle = gr; c.fillRect(0, 0, N, N); }
+    for(var j = 0; j < 9000; j++){ var v2 = rnd(); c.fillStyle = v2 < 0.5 ? 'rgba(70,66,60,' + (0.12 + rnd() * 0.25) + ')' : 'rgba(250,248,240,' + (0.1 + rnd() * 0.25) + ')'; c.fillRect(rnd() * N, rnd() * N, 1 + rnd() * 2, 1 + rnd() * 2); }
+    c.strokeStyle = 'rgba(40,36,32,0.22)'; c.lineWidth = 2.2;
+    for(var m = 0; m < 3; m++){ c.beginPath(); var mx = rnd() * N, my = rnd() * N, ma = rnd() * 6.28; c.arc(mx, my, 90 + rnd() * 160, ma, ma + 0.6 + rnd() * 0.8); c.stroke(); }   // (wheel marks)
+    c.strokeStyle = 'rgba(55,50,45,0.45)'; c.lineWidth = 1;
+    for(var k2 = 0; k2 < 2; k2++){ c.beginPath(); var cx = rnd() * N, cy = rnd() * N; c.moveTo(cx, cy); for(var t = 0; t < 9; t++){ cx += (rnd() - 0.5) * 40; cy += rnd() * 22; c.lineTo(cx, cy); } c.stroke(); }   // (cracks)
+    c.fillStyle = 'rgba(60,56,50,0.55)'; c.fillRect(0, 0, N, 3); c.fillRect(0, 0, 3, N);                                  // (the joint round each slab)
+    var tx = new T.CanvasTexture(cv); tx.wrapS = tx.wrapT = T.RepeatWrapping; tx.repeat.set(SK.W / 3, SK.D / 3); tx.anisotropy = 8;
+    return tx;
   }
   // the dunes are flattened under the park (they'd poke up through the bowl), put back when it moves
   function skFlatten(x0, on){
@@ -15569,7 +15628,7 @@
   // the speed for the score line (on the coping: the grind's)
   function skKmh(){ var S = sg.skate; if(!S) return 0; return Math.round((S.grind ? S.grind.sp : Math.hypot(S.v[0], S.v[1], S.v[2])) * 3.6); }
   function skEnter(){
-    var S = sg.skate = { u: 30, w: 2.2, y: 0, v: [0, 0, 0], hd: Math.PI / 2, air: null, bail: 0, carve: 0, lastCarve: -9, wallT: 0, speedT: -9, score0: sg.score, t: 0, ok: false };
+    var S = sg.skate = { u: 24.2, w: 13, y: 0, v: [0, 0, 0], hd: 0, air: null, bail: 0, carve: 0, lastCarve: -9, wallT: 0, speedT: -9, score0: sg.score, t: 0, ok: false };
     S.y = skH(S.u, S.w); sg.phase = 'skate'; sg.score = 0; sg.chain = 0; sg.chainT = 0; sg.counts = {}; sg.lastMove = '';
     sgAddText(L('🛹 ⬆️ לדחוף ולפמפם · ⬅️➡️ לקרוב · לחיצה על ⬆️ בקופינג = אייר', '🛹 ⬆️ push & pump · ⬅️➡️ carve · tap ⬆️ at the coping to air'), '#bfe9ff');
   }
@@ -15579,7 +15638,7 @@
     if(sg.score > (sgSave.skateBest || 0)){ sgSave.skateBest = Math.round(sg.score); }
     if(shells > 0){ sgSave.shells += shells; sgAddText(L('🐚 +' + shells + ' צדפים מהסקייטפארק', '🐚 +' + shells + ' shells from the skatepark'), '#ffd447'); }
     sgStore();
-    sg.walk = { x: skX0() + 30, z: SK_Z0 - 3.8, t: 1, ph: 0, hd: -Math.PI / 2 };
+    sg.walk = { x: skX0() + 30, z: SK_Z0 - 5.8, t: 1, ph: 0, hd: -Math.PI / 2 };
     sg.phase = 'walk'; sg.skate = null; sg.score = S.score0 || 0; sg3.wkE = null;
     if(sg3.rider){ sg3.rider.body.position.set(0, 0, 0); sg3.rider.body.rotation.set(0, 0, 0); }
   }
@@ -15589,7 +15648,7 @@
   }
   function skUpdate(dt){
     var S = sg.skate, J = sgJoyVec(); S.t += dt;
-    if(S.bail > 0){ S.bail -= dt; if(S.bail <= 0){ S.u = 30; S.w = 3; S.y = skH(S.u, S.w); S.v = [0, 0, 0]; S.hd = Math.PI / 2; } return; }
+    if(S.bail > 0){ S.bail -= dt; if(S.bail <= 0){ S.u = 24.2; S.w = 13; S.y = skH(S.u, S.w); S.v = [0, 0, 0]; S.hd = 0; } return; }
     var steer = J.x, pump = J.y < -0.3, brake = J.y > 0.5, own = Math.abs(J.x) > 0.45;   // (own: your turn, not the pump's snake)
     var upNow = J.y < -0.5; if(upNow && !S.upWas) S.popAt = S.t; S.upWas = upNow;
     S.kickT = Math.max(0, (S.kickT || 0) - dt);
@@ -15647,8 +15706,15 @@
     // (what real riders do: push with the back foot to get going, then pump -- heel to toe,
     // down into each turn and up out of it; in a bowl, weight on the way down)
     if(pump){ if(sp < 2.5 && slope < 0.15) acc += 2.2 * (1 - sp / 2.5) + 0.6;          // a foot push or two to get rolling
-      var base = skBowlD(S.u, S.w) < SK_BOWL ? -SK.DEPTH : 0;
-      if(slope > 0.05 && slope < 3 && dir[1] > 0.03 && S.y - base < 0.9) acc += 1.3;   // up out of the bottom of a transition
+      // over curved concrete -- crouched over the crests, standing up through the dips, where the
+      // curve presses you into the board -- each pump adds energy in proportion to the curve and
+      // the speed squared (Kuroda et al. 2023, arXiv:2312.17671; some 17% a pump on a ramp): rollers
+      // and transitions are where the speed comes from, as on a pump track
+      var hx = dir[0], hz = dir[2], hl = Math.hypot(hx, hz);
+      if(hl > 0.05 && sp > 0.5){ hx /= hl; hz /= hl; var e = 0.35, uu = Math.max(0.4, Math.min(SK.W - 0.4, S.u)), ww = Math.max(0.4, Math.min(SK.D - 0.4, S.w));
+        var hA = skH(uu + hx * e, ww + hz * e), h0 = skH(uu, ww), hB = skH(uu - hx * e, ww - hz * e), sl = (hA - hB) / (2 * e);
+        var kap = Math.min(0.6, Math.abs(hA - 2 * h0 + hB) / (e * e) * hl * hl / Math.pow(1 + sl * sl, 1.5));
+        acc += 0.25 * sp * kap; }
       if(Math.abs(om) > 0.4 && sp > 0.4) acc += 2.0 * Math.max(0, 1 - sp / 7.0); }   // every carve feeds speed (on the flat, up to ~21 km/h: riders report 19-24 pumping)
     // leaning into the turn, as far as the speed and the turn ask for
     S.lean = (S.lean || 0) + (Math.max(-0.75, Math.min(0.75, -om * Math.max(sp, 1.2) / SK.G * 1.3)) - (S.lean || 0)) * Math.min(1, dt * 10);
@@ -15669,24 +15735,27 @@
     v[0] = tdir[0] / tl * sp; v[1] = tdir[1] / tl * sp; v[2] = tdir[2] / tl * sp; if(sp === 0) v[1] = 0;
     var hs = Math.hypot(v[0], v[2]); if(hs > 0.3) S.hd = Math.atan2(v[2], v[0]);
     // over the coping of a quarter pipe or the bowl, going up: into the air
-    var dB = skBowlD(S.u, S.w), atBack = S.u > 18 && S.w > SK.D - 0.07, atEnd = S.u > SK.W - 0.07;      // (before the edge clamp below stops you short of it)
+    var dB = skBowlD(S.u, S.w), rimD = skRim(S.u, S.w), atRim = rimD < 0.07, rimH = skRimH(S.u, S.w);   // (before the edge clamp below stops you short of it)
     var prevD = skBowlD(S.u - v[0] * dt, S.w - v[2] * dt), outBowl = prevD < SK_BOWL && dB >= SK_BOWL;
-    if((atBack || atEnd || outBowl) && v[1] > 0.3){
-      var on = atEnd ? [1, 0] : atBack ? [0, 1] : (function(){ var gB = skGrad(S.u - v[0] * dt, S.w - v[2] * dt), l = Math.hypot(gB[0], gB[1]) || 1; return [gB[0] / l, gB[1] / l]; })();
+    if(outBowl && skBowlH(S.u - v[0] * dt, S.w - v[2] * dt) < 1.35 && !(S.t - (S.popAt || -9) < 0.35)){
+      // (the shallow end: low and laid back enough to roll up over the coping and out)
+      var lo = Math.hypot(v[0], v[1], v[2]) * 0.92; S.y = skH(S.u, S.w); var lh = Math.hypot(v[0], v[2]) || 1; v[0] = v[0] / lh * lo; v[1] = 0; v[2] = v[2] / lh * lo;
+    } else if((atRim || outBowl) && v[1] > 0.3){
+      var on = atRim ? skRimOut(S.u, S.w) : (function(){ var gB = skGrad(S.u - v[0] * dt, S.w - v[2] * dt), l = Math.hypot(gB[0], gB[1]) || 1; return [gB[0] / l, gB[1] / l]; })();
       var out = v[0] * on[0] + v[2] * on[1]; if(out > 0){ v[0] -= on[0] * out; v[2] -= on[1] * out; }
       var alongSp = Math.hypot(v[0], v[2]), popped = S.t - (S.popAt || -9) < 0.35;
-      S.u = Math.max(0.05, Math.min(SK.W - 0.05, S.u - (atEnd ? 0.03 : 0))); S.w = Math.max(0.05, Math.min(SK.D - 0.05, S.w - (atBack ? 0.03 : 0)));
+      if(atRim){ S.u -= on[0] * (0.08 - rimD); S.w -= on[1] * (0.08 - rimD); }
       if(outBowl){ S.u -= on[0] * 0.05; S.w -= on[1] * 0.05; }
       S.y = skH(S.u, S.w);
       // 1. coming up along the coping, more along it than up: the trucks lock on it and you ride
       //    along the top of the wall -- the floater (on concrete: a grind along the coping)
       if(alongSp > 1.6 && alongSp > v[1] * 0.9 && !popped){
-        S.grind = { t: 0, n: on, y: atBack || atEnd ? SK.DEPTH : 0, kind: atBack ? 'back' : atEnd ? 'end' : 'bowl', sp: Math.min(sp, 6) * 0.85, dir: [v[0] / alongSp, v[2] / alongSp] };
+        S.grind = { t: 0, n: on, kind: atRim ? 'rim' : 'bowl', sp: Math.min(sp, 6) * 0.85, dir: [v[0] / alongSp, v[2] / alongSp] };
         S.v = [0, 0, 0]; return;
       }
       // 2. popped right at the lip, going up the wall and fast enough to clear the coping: an air
       //    (no pop, and the front wheels just hit the coping)
-      if(popped && v[1] > 2.0 && v[1] > sp * 0.7){
+      if(popped && v[1] > 2.0 && v[1] > sp * 0.7 && (atRim ? rimH > 1.6 : skBowlH(S.u - v[0] * dt, S.w - v[2] * dt) > 1.6)){   // (off a quarter pipe or the bowl; the low banks are too laid back to air out of)
         v[0] -= on[0] * 0.6; v[2] -= on[1] * 0.6;                           // (the rider brings the board back in over the wall, to land lower on it)
         S.air = { t: 0, y0: S.y, maxY: S.y, spin: 0, hd0: S.hd };
         return;
@@ -15703,11 +15772,9 @@
       if(!S.popHint && v[1] < -0.5){ S.popHint = 1; sgAddText(L('⬆️ ממש בקופינג (עם מהירות) = אייר', '⬆️ right at the coping (with speed) = air'), '#bfe9ff'); }
       return;
     }
-    // the low edges at the front and the start: bump back
-    if(S.u < 0.3 || S.w < 0.3 || S.u > SK.W - 0.05 || S.w > SK.D - 0.05){
-      if(S.u < 0.3){ S.u = 0.3; v[0] = Math.abs(v[0]) * 0.4; } if(S.w < 0.3){ S.w = 0.3; v[2] = Math.abs(v[2]) * 0.4; }
-      S.u = Math.min(SK.W - 0.05, S.u); S.w = Math.min(SK.D - 0.05, S.w);
-    }
+    // (rolling slowly along the very top: kept inside the coping)
+    if(skRim(S.u, S.w) < 0.05){ var oN = skRimOut(S.u, S.w), ov = v[0] * oN[0] + v[2] * oN[1], rr = skRim(S.u, S.w);
+      S.u -= oN[0] * (0.05 - rr); S.w -= oN[1] * (0.05 - rr); if(ov > 0){ v[0] -= oN[0] * ov; v[2] -= oN[1] * ov; } }
     S.y = skH(S.u, S.w);
     // the surf moves, done on concrete the way surfskaters practise them:
     // bottom turn -- a hard, compressed carve at the bottom, turning up the wall;
@@ -15715,7 +15782,8 @@
     // back wheels sliding out -- off the lip at the coping, a rebound right after a cutback;
     // cutback -- holding a carve round ~180 degrees on the flat, back the way you came;
     // floater -- riding along the coping; deep take-off -- dropping into the bowl with speed
-    var inBowl = dB < SK_BOWL, low = inBowl ? S.y < -SK.DEPTH + 0.4 : S.y < 0.3, high = inBowl ? S.y > -1.0 : S.y > 1.0, lip = inBowl ? S.y > -0.2 : S.y > 1.78;
+    var inBowl = dB < SK_BOWL, onWall = inBowl || rimD < skWallTW(rimH) + 0.6;
+    var bowlH = skBowlH(S.u, S.w), low = onWall && (inBowl ? S.y < -bowlH + 0.4 : S.y < 0.3), high = inBowl ? S.y > -bowlH * 0.5 : onWall && S.y > rimH * 0.5, lip = inBowl ? S.y > -0.2 : onWall && rimD < 0.4;
     S.btT = Math.max(0, (S.btT || 0) - dt); S.ttT = Math.max(0, (S.ttT || 0) - dt); S.slideT = Math.max(0, (S.slideT || 0) - dt);
     if(low && own && slope > 0.06 && v[1] > 0.2 && Math.abs(om) > 0.9 && sp > 2.5 && S.t - (S.btAt || -9) > 2){ S.btAt = S.t; S.btT = 0.6; sgScore(L('פנייה תחתונה', 'Bottom turn'), 80 + Math.round(sp * 30)); }
     var goingDown = v[1] < -0.1;
@@ -15731,21 +15799,22 @@
     if(prevD >= SK_BOWL && dB < SK_BOWL && v[1] < -0.3 && sp > 2 && S.t - (S.toAt || -9) > 4){ S.toAt = S.t; sgScore(L('טייק-אוף עמוק', 'Deep take-off'), 500); }
   }
 
+  // the way out, across the outline (for the coping, a kick back, a grind)
+  function skRimOut(u, w){ var e = 0.03, gx = skRim(u - e, w) - skRim(u + e, w), gz = skRim(u, w - e) - skRim(u, w + e), l = Math.hypot(gx, gz) || 1; return [gx / l, gz / l]; }
   function skGrind(dt, J){
     var S = sg.skate, G = S.grind; G.t += dt;
     S.lean = (S.lean || 0) * Math.max(0, 1 - dt * 10); S.steer = (S.steer || 0) * Math.max(0, 1 - dt * 10);   // (standing tall over the coping, the board straight)
     G.sp -= (1.6 + 0.08 * G.sp * G.sp) * dt;                                // (the trucks grinding: much more drag than the wheels)
     S.u += G.dir[0] * G.sp * dt; S.w += G.dir[1] * G.sp * dt;
-    if(G.kind === 'bowl'){
-      // round the bowl's edge: back onto the coping line, the way along it turned with it
-      var e = 0.03, gx = (skBowlD(S.u + e, S.w) - skBowlD(S.u - e, S.w)) / (2 * e), gz = (skBowlD(S.u, S.w + e) - skBowlD(S.u, S.w - e)) / (2 * e), gl = Math.hypot(gx, gz) || 1;
-      gx /= gl; gz /= gl; var d = skBowlD(S.u, S.w) - (SK_BOWL + 0.02); S.u -= gx * d; S.w -= gz * d; G.n = [gx, gz];
-      var t0 = [-gz, gx], sg1 = t0[0] * G.dir[0] + t0[1] * G.dir[1] > 0 ? 1 : -1; G.dir = [t0[0] * sg1, t0[1] * sg1];
-    } else if(G.kind === 'back') S.w = SK.D - 0.05; else S.u = SK.W - 0.05;
-    S.y = G.y; S.hd = Math.atan2(G.dir[1], G.dir[0]);
+    // round the edge: back onto the coping line, the way along it turned with it
+    var F = G.kind === 'bowl' ? skBowlD : skRim, tgt = G.kind === 'bowl' ? SK_BOWL + 0.02 : 0.05, e = 0.03;
+    var gx = (F(S.u + e, S.w) - F(S.u - e, S.w)) / (2 * e), gz = (F(S.u, S.w + e) - F(S.u, S.w - e)) / (2 * e), gl = Math.hypot(gx, gz) || 1;
+    gx /= gl; gz /= gl; var d = F(S.u, S.w) - tgt; S.u -= gx * d; S.w -= gz * d; G.n = G.kind === 'bowl' ? [gx, gz] : [-gx, -gz];
+    var t0 = [-gz, gx], sg1 = t0[0] * G.dir[0] + t0[1] * G.dir[1] > 0 ? 1 : -1; G.dir = [t0[0] * sg1, t0[1] * sg1];
+    S.y = skH(S.u, S.w); S.hd = Math.atan2(G.dir[1], G.dir[0]);
     if(G.t > 0.35 && !G.scored){ G.scored = 1; sgScore(L('פלוטר!', 'Floater!'), 300); }
     // off the end of the coping, out of speed, a while along it or turned in: back down the wall
-    var end = G.kind === 'back' ? S.u < 18.2 || S.u > SK.W - 0.3 : G.kind === 'end' ? S.w < 0.4 || S.w > SK.D - 0.3 : false;
+    var end = false;
     if(G.t > 1.2 || G.sp < 1.2 || end || (G.t > 0.25 && Math.abs(J.x) > 0.5)){
       var sp = Math.max(1.2, G.sp);
       S.u -= G.n[0] * 0.12; S.w -= G.n[1] * 0.12; S.u = Math.max(0.3, Math.min(SK.W - 0.1, S.u)); S.w = Math.max(0.3, Math.min(SK.D - 0.1, S.w));
@@ -15753,6 +15822,51 @@
       S.v = [G.dir[0] * sp * 0.85 - G.n[0] * 0.6, -0.6, G.dir[1] * sp * 0.85 - G.n[1] * 0.6];
       S.grind = null;
     }
+  }
+
+  // ---- the locals: two skaters riding the park too, on the same physics as you (pumping,
+  // carving, popping airs at the coping) -- a park with people moving in it ----
+  var SK_LOCALS = [{ seed: 3, u: 36, w: 20, hd: Math.PI }, { seed: 6, u: 8, w: 4.5, hd: 0.3 }];
+  function skLocalsStep(dt){
+    if(!sg3.skLocals) return;
+    var me = sg.skate, mj = sgJoyVec, ms = sgScore, mt = sgAddText, ch = sg.chain, ct = sg.chainT;
+    sgScore = function(){}; sgAddText = function(){};
+    try {
+      sg3.skLocals.forEach(function(N){
+        var S = N.S, B = N.B;
+        // (how they ride: long carves one way then the other, harder turns high on a wall, a pop at the top)
+        if(S.t > B.next){ B.dir = -B.dir; B.seed = (B.seed * 16807) % 2147483647; B.next = S.t + 0.8 + (B.seed / 2147483647) * 1.6; }
+        var jx = B.dir * 0.8, jy = -1; B.k = (B.k || 0) + 1;
+        if(S.v[1] > 1.5 && S.y > 0.9) jy = B.k % 2 ? -1 : 0;
+        if(S.v[1] < -0.2 && S.y > 0.5) jx = B.dir;
+        N.J = { x: jx, y: jy, on: true }; sg.skate = S; sgJoyVec = function(){ return N.J; };
+        skUpdate(dt);
+      });
+    } finally { sg.skate = me; sgJoyVec = mj; sgScore = ms; sgAddText = mt; sg.chain = ch; sg.chainT = ct; }
+  }
+  function skLocalsFrame(T, on, X0, Y0){
+    if(!sg3.skLocals){
+      sg3.skLocals = SK_LOCALS.map(function(o){
+        var r = sg3NpcPerson(T, o.seed), bd = skBoard(T); r.body.add(bd); bd.position.y = -0.05; sg3.scene.add(r.g);
+        var S = { u: o.u, w: o.w, y: skH(o.u, o.w), v: [Math.cos(o.hd) * 3, 0, Math.sin(o.hd) * 3], hd: o.hd, air: null, bail: 0, t: 0 };
+        return { r: r, bd: bd, S: S, B: { dir: 1, next: 0, seed: o.seed * 977 } };
+      });
+    }
+    sg3.skLocals.forEach(function(N){
+      N.r.g.visible = !!on; if(!on) return;
+      var S = N.S, cu = Math.max(0.05, Math.min(SK.W - 0.05, S.u)), cw = Math.max(0.05, Math.min(SK.D - 0.05, S.w));
+      var g = S.grind ? [0, 0] : skGrad(cu, cw), up = new T.Vector3(-g[0], 1, -g[1]).normalize();
+      var hd = S.air ? S.air.hd0 + (S.air.out ? 0 : Math.PI * Math.min(1, S.air.t * 2.2)) + S.air.spin : S.hd - (S.steer || 0) * 0.3 + (S.kickT > 0 ? (S.kickDir || 1) * Math.PI * (S.kickT / 0.35) : 0);
+      var fwd = new T.Vector3(Math.cos(hd), 0, Math.sin(hd)); if(!S.air) fwd.addScaledVector(up, -fwd.dot(up)).normalize(); else up.set(0, 1, 0);
+      var side = new T.Vector3().crossVectors(fwd, up).normalize(); up.crossVectors(side, fwd).normalize();
+      N.r.g.position.set(X0 + S.u, Y0 + S.y, SK_Z0 + S.w).addScaledVector(up, S.air ? 0.12 : S.grind ? 0.035 : 0);
+      N.r.g.quaternion.setFromRotationMatrix(new T.Matrix4().makeBasis(fwd, up, side));
+      N.r.body.position.set(0, 0.05, 0);
+      if(S.bail > 0) N.r.body.rotation.set((1.3 - S.bail) * 2.5, 0, (1.3 - S.bail) * 3); else N.r.body.rotation.set(S.air ? 0 : (S.lean || 0), 0, 0);
+      var k = S.air ? 0.85 : S.btT > 0 ? 0.95 : S.grind ? 0.6 : 0.45 + 0.3 * Math.abs(S.steer || 0);
+      N.k = (N.k || 0.45) + (k - (N.k || 0.45)) * 0.3; sg3Pose(N.k, null, N.r);
+      if(N.bd.userData.front){ N.bd.userData.front.rotation.y = (S.steer || 0) * 0.55; N.bd.userData.arm.rotation.y = (S.steer || 0) * 0.4; }
+    });
   }
 
   // ---- drawing: the park, the board under the feet, the rider, the camera ----
@@ -15777,6 +15891,7 @@
     var LB = typeof lab !== 'undefined' && lab.bodies && lab.bodies[0];
     if(LB && LB.shoeU) LB.shoeU.value = on ? 1 : 0;                          // skate shoes on the board, barefoot on the sand
     R.labStance = on ? { yawF: 0.3 } : null;
+    if(on || sg3.skLocals) skLocalsFrame(T, on, on ? skX0() : 0, SG_SAND_Y + SK.DECK);   // (no park off the beach: sgLot is null there)
     if(!on) return;
     var S = sg.skate, X0 = skX0(), Y0 = SG_SAND_Y + SK.DECK;
     [R.board, R.stripe, R.fin].forEach(function(o){ o.visible = false; });
@@ -15826,9 +15941,11 @@
     var toeSide = new T.Vector3(-Math.sin(S.hd), 0, Math.cos(S.hd));        // (the side the chest faces)
     var cw = P.clone().addScaledVector(back, -2.5).addScaledVector(toeSide, 1.5).add(new T.Vector3(0, 1.15, 0)), lk = P.clone().addScaledVector(back, 0.7).add(new T.Vector3(0, 0.35, 0));
     // (never inside the concrete: at least a metre over the park where the camera is)
+    // (and over the park, not out over the sand looking at its outside wall)
+    var cr = skRim(cw.x - X0, cw.z - SK_Z0); if(cr < 1.2){ var co = skRimOut(cw.x - X0, cw.z - SK_Z0); cw.x -= co[0] * (1.2 - cr); cw.z -= co[1] * (1.2 - cr); }
     var cu = Math.max(0.05, Math.min(SK.W - 0.05, cw.x - X0)), cv = Math.max(0.05, Math.min(SK.D - 0.05, cw.z - SK_Z0)); cw.y = Math.max(cw.y, Y0 + skH(cu, cv) + 1.0);
     sg3.skCam = sg3.skCam || { p: cw.clone(), l: lk.clone() }; sg3.skCam.p.lerp(cw, 0.08); sg3.skCam.l.lerp(lk, 0.15);
-    sg3.cam.position.copy(sg3.skCam.p); sg3.cam.lookAt(sg3.skCam.l); if(sg3.cam.fov !== 62){ sg3.cam.fov = 62; sg3.cam.updateProjectionMatrix(); } sg3.cam.updateMatrixWorld();
+    sg3.cam.position.copy(sg3.skCam.p); sg3.cam.lookAt(sg3.skCam.l); var fv = 60 + Math.min(14, Math.hypot(S.v[0], S.v[1], S.v[2]) * 1.6); S.fov = (S.fov || 60) + (fv - (S.fov || 60)) * 0.05; if(Math.abs(sg3.cam.fov - S.fov) > 0.05){ sg3.cam.fov = S.fov; sg3.cam.updateProjectionMatrix(); } sg3.cam.updateMatrixWorld();
   }
   sg3PostRender = (function(orig){ return function(){ try { skFrame(); } catch(e){ if(!sg3.skWarn){ sg3.skWarn = 1; console.warn('skate:', e); } } orig(); }; })(sg3PostRender);
   // the floating texts over the skater, not over the wave
@@ -15840,7 +15957,7 @@
       sg.t += dt; sg.chainT = Math.max(0, sg.chainT - dt);
       sg.texts.forEach(function(tx){ tx.life -= dt; tx.y += dt * 40; }); sg.texts = sg.texts.filter(function(tx){ return tx.life > 0; });
       if(sg.peak && sg.peak.shared) sgNetTick();
-      skUpdate(Math.min(dt, 0.05));
+      skUpdate(Math.min(dt, 0.05)); skLocalsStep(Math.min(dt, 0.05));
       var S = sg.skate; sg.walk = sg.walk || { t: 1, ph: 0 }; sg.walk.x = skX0() + S.u; sg.walk.z = SK_Z0 + S.w; sg.walk.hd = S.hd;   // (where the others see you)
       return;
     }
