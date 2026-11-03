@@ -14578,7 +14578,7 @@
   // never while the name field is being typed in. Everything worth keeping
   // (coins, skins, name, league) is in localStorage, so a reload loses nothing.
   // 'dev' = a local or preview copy: the updater stays off entirely.
-  var BUILD_VERSION = '20261103-134517';
+  var BUILD_VERSION = '20261103-135314';
   var UPDATE_CHECK_MS = 60000;
   var UPDATE_TRIED_KEY = 'canyonChaseTriedUpdate';
   var pendingSubmits = 0;
@@ -15466,17 +15466,10 @@
   // the park, built where the beach is (and again when the beach moves)
   function skBuild(T){
     var g = new T.Group(), X0 = skX0(), Y0 = SG_SAND_Y + SK.DECK, NU = 177, NW = 105;
-    // the concrete: the bowl and the deck round it, one mesh; the grid's points beyond the deck's
-    // outer edge are pulled in onto it, so the edge follows the curve exactly
-    var geo = new T.PlaneGeometry(SK.W, SK.D, NU - 1, NW - 1); geo.rotateX(-Math.PI / 2);
-    var p = geo.attributes.position, uv = geo.attributes.uv, cols = new Float32Array(p.count * 3);
-    for(var i = 0; i < p.count; i++){
-      var u = p.getX(i) + SK.W / 2, w = p.getZ(i) + SK.D / 2;
-      for(var it = 0; it < 4; it++){ var f = skOut(u, w) - SK.LIP; if(f <= 0) break; var e = 0.03, gx = (skOut(u + e, w) - skOut(u - e, w)) / (2 * e), gz = (skOut(u, w + e) - skOut(u, w - e)) / (2 * e), gl = Math.hypot(gx, gz) || 1; u -= gx / gl * f; w -= gz / gl * f; }
-      var h = skH(u, w); p.setXYZ(i, u - SK.W / 2, h, w - SK.D / 2); uv.setXY(i, u / SK.W, w / SK.D);
-      // grey concrete, shaded the way the picture is (the sky light here is strong, and the bowl came
-      // out white): the deck lighter than the bowl, darker down in the curve where the walls meet the
-      // floor (ambient occlusion), and the shadow the sea-side walls throw across the floor
+    // grey concrete, shaded the way the picture is (the sky light here is strong, and the bowl came
+    // out white): the deck lighter than the bowl, darker down in the curve where the walls meet the
+    // floor (ambient occlusion), and the shadow the sea-side walls throw across the floor
+    function shade(u, w, h, cols, i){
       var gr = skGrad(u, w), sl = Math.min(1, Math.hypot(gr[0], gr[1]) / 3);
       var k = (h > -0.05 ? 0.74 : 0.6) + 0.025 * Math.sin(u * 0.31 + w * 0.47) - 0.05 * sl;
       var occ = 0; for(var oa = 0; oa < 8; oa++){ var ox = Math.cos(oa * 0.785) * 0.9, oz = Math.sin(oa * 0.785) * 0.9; occ += Math.max(0, skH(Math.max(0.01, Math.min(SK.W - 0.01, u + ox)), Math.max(0.01, Math.min(SK.D - 0.01, w + oz))) - h); }
@@ -15485,9 +15478,44 @@
       k *= 1 - 0.3 * shd;
       cols[i * 3] = k; cols[i * 3 + 1] = k * 0.99; cols[i * 3 + 2] = k * 0.96;
     }
-    geo.setAttribute('color', new T.BufferAttribute(cols, 3)); geo.computeVertexNormals();
-    var cm = new T.MeshStandardMaterial({ vertexColors: true, roughness: 0.9, color: 0x807d78, map: skTex(T, 'skate/concrete.jpg', function(){ return skConcrete(T); }, [SK.W / 4, SK.D / 4]) });
+    var concTex = skTex(T, 'skate/concrete.jpg', function(){ return skConcrete(T); }, [1, 1]);
+    var cm = new T.MeshStandardMaterial({ vertexColors: true, roughness: 0.9, color: 0x807d78, map: concTex });
+    // the floor: a grid, kept only where it's floor (in from the foot of the walls)
+    var geo = new T.PlaneGeometry(SK.W, SK.D, NU - 1, NW - 1); geo.rotateX(-Math.PI / 2);
+    var p = geo.attributes.position, uv = geo.attributes.uv, cols = new Float32Array(p.count * 3), keep = new Uint8Array(p.count);
+    for(var i = 0; i < p.count; i++){
+      var u = p.getX(i) + SK.W / 2, w = p.getZ(i) + SK.D / 2, rr = skRim(u, w), h = skH(u, w);
+      keep[i] = rr > skWallTW(skDepth(u, w)) + 0.35 ? 1 : 0;
+      p.setY(i, h - 0.005); uv.setXY(i, u / 4, w / 4); shade(u, w, h, cols, i);
+    }
+    var ix = geo.index.array, nix = [];
+    for(var t = 0; t < ix.length; t += 3) if(keep[ix[t]] && keep[ix[t + 1]] && keep[ix[t + 2]]) nix.push(ix[t], ix[t + 1], ix[t + 2]);
+    geo.setIndex(nix); geo.setAttribute('color', new T.BufferAttribute(cols, 3)); geo.computeVertexNormals();
     var top = new T.Mesh(geo, cm); top.position.set(X0 + SK.W / 2, Y0, SK_Z0 + SK.D / 2); g.add(top);
+    // the deck, the coping's edge and the wall down to the floor: rings round the bowl, along rays
+    // from its waist, close together near the top where the wall stands nearly upright
+    var NR = 300, C0 = [21.5, 13], wpos = [], wuv = [], wcol = [], wix = [], rings = 0;
+    function onRay(i, off){ var th = i / NR * Math.PI * 2, dx = Math.cos(th), dz = Math.sin(th), lo = 0, hi = 30;
+      for(var it = 0; it < 32; it++){ var m = (lo + hi) / 2; if(skOut(C0[0] + dx * m, C0[1] + dz * m) < off) lo = m; else hi = m; }
+      return [C0[0] + dx * lo, C0[1] + dz * lo]; }
+    var cop0 = []; for(var ci = 0; ci < NR; ci++) cop0.push(onRay(ci, 0));
+    var offsDeck = [SK.LIP, 1.6, 1.0, 0.55, 0.25, 0.08, 0], NW2 = 18;
+    var tmpC = new Float32Array(3), run2 = 0;
+    for(var ri = 0; ri <= NR; ri++){
+      var i2 = ri % NR, q = cop0[i2], qp = cop0[(i2 + NR - 1) % NR]; if(ri) run2 += Math.hypot(q[0] - qp[0], q[1] - qp[1]);
+      var H = skDepth(q[0], q[1]), tw = skWallTW(H), phM = Math.asin(Math.min(1, tw / SK.R)), list = [];
+      offsDeck.forEach(function(o){ list.push([o, -o]); });                       // [offset out from the coping, distance along the surface]
+      for(var j = 1; j <= NW2; j++){ var ph = phM * (1 - j / NW2), r = tw - SK.R * Math.sin(ph); list.push([-r, SK.R * (phM - ph)]); }
+      list.push([-(tw + 0.3), SK.R * phM + 0.3], [-(tw + 0.6), SK.R * phM + 0.6]);
+      rings = list.length;
+      list.forEach(function(L){ var pt = L[0] === 0 ? q : onRay(i2, L[0]), hh = L[0] >= 0 ? 0 : skH(pt[0], pt[1]);
+        wpos.push(pt[0] - SK.W / 2, hh, pt[1] - SK.D / 2); wuv.push(run2 / 4, L[1] / 4); shade(pt[0], pt[1], hh, tmpC, 0); wcol.push(tmpC[0], tmpC[1], tmpC[2]); });
+    }
+    for(var a = 0; a < NR; a++) for(var b = 0; b < rings - 1; b++){ var p0 = a * rings + b, p1 = (a + 1) * rings + b; wix.push(p0, p0 + 1, p1, p1, p0 + 1, p1 + 1); }
+    var wg = new T.BufferGeometry(); wg.setAttribute('position', new T.Float32BufferAttribute(wpos, 3)); wg.setAttribute('uv', new T.Float32BufferAttribute(wuv, 2)); wg.setAttribute('color', new T.Float32BufferAttribute(wcol, 3)); wg.setIndex(wix); wg.computeVertexNormals();
+    // (which way the triangles wind depends on the rays' turn: make the normals face up/into the bowl)
+    var wn = wg.attributes.normal; if(wn.getY(0) < 0){ for(var t2 = 0; t2 < wix.length; t2 += 3){ var sw = wix[t2 + 1]; wix[t2 + 1] = wix[t2 + 2]; wix[t2 + 2] = sw; } wg.setIndex(wix); wg.computeVertexNormals(); }
+    var wm = new T.Mesh(wg, cm); wm.position.copy(top.position); g.add(wm);
     // the outer wall, down to the paving, painted with the surf mural (2.3 m high, the picture's
     // 21:9 makes it 5.4 m to a repeat)
     var NO = 360, outer = skContour(SK.LIP, NO), opos = [], ouv = [], oix = [], run = 0;
@@ -15664,16 +15692,34 @@
     sg.phase = 'walk'; sg.skate = null; sg.score = S.score0 || 0; sg3.wkE = null;
     if(sg3.rider){ sg3.rider.body.position.set(0, 0, 0); sg3.rider.body.rotation.set(0, 0, 0); }
   }
+  // a bail: you drop to your knees and slide on down the wall, the board shoots off on its own
   function skBail(why){
-    var S = sg.skate; S.bail = 1.3; S.air = null; sg.chain = 0; sg.chainT = 0;
+    var S = sg.skate, v = S.v || [0, 0, 0];
+    S.loose = { u: S.u, y: S.y + 0.1, w: S.w, v: [v[0] * 1.2, 2.2, v[2] * 1.2], r: 0, rz: 0 };
+    S.slide = [v[0] * 0.7, v[2] * 0.7];
+    S.bail = 1.6; S.air = null; sg.chain = 0; sg.chainT = 0;
     sgAddText('💥 ' + why, '#ff9a8a');
   }
   function skUpdate(dt){
     var S = sg.skate, J = sgJoyVec(); S.t += dt;
-    if(S.bail > 0){ S.bail -= dt; if(S.bail <= 0){ S.u = 31; S.w = 1.3; S.y = 0; S.v = [0, 0, 1.2]; S.hd = Math.PI / 2; } return; }
+    if(S.bail > 0){
+      S.bail -= dt;
+      // on the knees: down the slope, slowed by the pads on the concrete
+      var gb = skGrad(S.u, S.w), sd = S.slide || [0, 0], den = 1 + gb[0] * gb[0] + gb[1] * gb[1];
+      sd[0] -= SK.G * gb[0] / den * dt; sd[1] -= SK.G * gb[1] / den * dt;
+      var sl = Math.hypot(sd[0], sd[1]), fr = Math.min(sl, 3.5 * dt); if(sl > 1e-6){ sd[0] -= sd[0] / sl * fr; sd[1] -= sd[1] / sl * fr; }
+      S.u = Math.max(0.3, Math.min(SK.W - 0.3, S.u + sd[0] * dt)); S.w = Math.max(0.3, Math.min(SK.D - 0.3, S.w + sd[1] * dt)); S.y = skH(S.u, S.w); S.slide = sd;
+      if(sl > 0.3) S.hd = Math.atan2(sd[1], sd[0]);
+      // the board: flying, bouncing and spinning off on its own
+      var Lb = S.loose; if(Lb){ Lb.v[1] -= SK.G * dt; Lb.u += Lb.v[0] * dt; Lb.y += Lb.v[1] * dt; Lb.w += Lb.v[2] * dt; Lb.u = Math.max(0.3, Math.min(SK.W - 0.3, Lb.u)); Lb.w = Math.max(0.3, Math.min(SK.D - 0.3, Lb.w));
+        var gl2 = skH(Lb.u, Lb.w); if(Lb.y < gl2){ Lb.y = gl2; Lb.v[1] = Math.abs(Lb.v[1]) * 0.3; Lb.v[0] *= 0.8; Lb.v[2] *= 0.8; } Lb.r += dt * 6 * Math.hypot(Lb.v[0], Lb.v[2]) * 0.4; Lb.rz += dt * 7; }
+      // up again where you stopped, the board back under your feet
+      if(S.bail <= 0){ S.v = [0, 0, 0]; S.loose = null; S.slide = null; S.y = skH(S.u, S.w); }
+      return;
+    }
     var steer = J.x, pump = J.y < -0.3, brake = J.y > 0.5, own = Math.abs(J.x) > 0.45;   // (own: your turn, not the pump's snake)
     var upNow = J.y < -0.5; if(upNow && !S.upWas) S.popAt = S.t; S.upWas = upNow;
-    S.kickT = Math.max(0, (S.kickT || 0) - dt);
+    S.kickT = Math.max(0, (S.kickT || 0) - dt); S.landT = Math.max(0, (S.landT || 0) - dt);
     if(S.grind){ skGrind(dt, J); return; }
     if(S.air){
       var A = S.air;
@@ -15687,7 +15733,7 @@
         S.y = gy; var g2 = skGrad(S.u, S.w), down = Math.atan2(-g2[1], -g2[0]), face = A.hd0 + Math.PI + A.spin;
         var dif = Math.cos(face - down), turns = Math.round(Math.abs(A.spin) / Math.PI);
         if(Math.abs(dif) < 0.55){ S.air = null; skBail(L('נחיתה עקומה!', 'Landed sideways!')); return; }
-        S.hd = down;                                                        // (whichever way the board faces, it rolls on down the wall)
+        S.hd = down; S.landT = 0.35;                                          // (whichever way the board faces, it rolls on down the wall)
         // named like the surf game's airs: an air, an air reverse (landing backwards), a 360 (an alley-oop the other way round), a 720
         var flips = Math.floor(turns / 2), airT = A.t, oop = A.spin > 0;
         var name = flips >= 2 ? '720' : flips ? (oop ? L('אלי-אופ ', 'Alley-oop ') : L('אייר ', 'Air ')) + '360' : turns === 1 ? L('אייר ריברס', 'Air reverse') : L('אייר', 'Air');
@@ -15883,11 +15929,50 @@
       N.r.g.position.set(X0 + S.u, Y0 + S.y, SK_Z0 + S.w).addScaledVector(up, S.air ? 0.12 : S.grind ? 0.035 : 0);
       N.r.g.quaternion.setFromRotationMatrix(new T.Matrix4().makeBasis(fwd, up, side));
       N.r.body.position.set(0, 0.05, 0);
-      if(S.bail > 0) N.r.body.rotation.set((1.3 - S.bail) * 2.5, 0, (1.3 - S.bail) * 3); else N.r.body.rotation.set(S.air ? 0 : (S.lean || 0), 0, 0);
+      N.r.body.rotation.set(S.air || S.bail > 0 ? 0 : (S.lean || 0), 0, 0);
       var k = S.air ? 0.85 : S.btT > 0 ? 0.95 : S.grind ? 0.6 : 0.45 + 0.3 * Math.abs(S.steer || 0);
-      N.k = (N.k || 0.45) + (k - (N.k || 0.45)) * 0.3; sg3Pose(N.k, null, N.r);
+      N.k = (N.k || 0.45) + (k - (N.k || 0.45)) * 0.3;
+      var st2 = S.steer || 0, lo = { k: N.k, tw: -st2 * 0.35, aF: [0.42, -0.1, -0.3 - 0.35 * st2], aB: [0.2, -0.3, 0.12 - 0.2 * st2] };
+      if(S.air && S.air.t > 0.12 && S.v[1] > -1.5){ lo.k = 0.95; lo.lift = 0.24; lo.hB = new T.Vector3(-0.03, 0.37, -0.15); lo.aF = [0.3, -0.08, -0.55]; }   // (the same grab as yours)
+      if(S.grind){ lo.aF = [0.15, -0.05, -0.62]; lo.aB = [-0.1, -0.05, 0.62]; }
+      if(S.bail > 0){ lo.kneel = 1; lo.k = 0.5; lo.tw = 0; }
+      skPose(N.r, lo); N.bd.position.y = -0.05 + (lo.lift || 0); N.bd.rotation.x = S.air || S.bail > 0 ? 0 : -(S.lean || 0) * 0.65; N.bd.visible = !S.loose;
       if(N.bd.userData.front){ N.bd.userData.front.rotation.y = (S.steer || 0) * 0.55; N.bd.userData.arm.rotation.y = (S.steer || 0) * 0.4; }
     });
+  }
+
+  // the skater's pose, on the doll the real body follows: o.k crouch (0..1), o.tw the shoulders turned
+  // round the spine, o.lat the upper body leant sideways, o.fx bent forward, o.lift the board pulled
+  // up under you (a tuck in the air), o.kneel down on the knees; the hands either where the arms
+  // swing (o.aF / o.aB: [forward, down, sideways] from the shoulders, turned with them) or held at a
+  // point (o.hF / o.hB, the board's frame: a grab)
+  function skPose(R, o){
+    var T = sg3.T, P = R.parts, X = R.extra, V = function(x, y, z){ return new T.Vector3(x, y, z); };
+    var k = o.k, lift = o.lift || 0, kn = o.kneel || 0;
+    var footB = V(-0.21, 0.08 + lift, 0.01), footF = V(0.15, 0.08 + lift, -0.01);
+    if(kn){ footB.lerp(V(-0.5, 0.1, 0.13), kn); footF.lerp(V(-0.45, 0.1, -0.13), kn); }      // (kneeling: the shins flat behind)
+    var hip = V(-0.03, 0.86 - 0.26 * k - 0.2 * kn + lift * 0.35, 0);
+    // (the knees bend forward, toward the way the body faces: the real body reads its facing from them,
+    // and a twisted upper body with knees bent sideways turned it round backwards)
+    var kneeB = V((hip.x + footB.x) / 2 + 0.1 + 0.08 * k + 0.25 * kn, 0.46 - 0.1 * k - 0.36 * kn + lift * 0.55, 0.06 + 0.04 * kn), kneeF = V((hip.x + footF.x) / 2 + 0.1 + 0.08 * k + 0.1 * kn, 0.48 - 0.1 * k - 0.38 * kn + lift * 0.6, -0.06 - 0.05 * kn);
+    var sh = V(hip.x + 0.1 * k + (o.fx || 0), hip.y + 0.55 - 0.05 * k, hip.z + (o.lat || 0));
+    var c = Math.cos(o.tw || 0), sn = Math.sin(o.tw || 0);
+    function at(x, dy, z){ return V(sh.x + x * c - z * sn, sh.y + dy, sh.z + x * sn + z * c); }   // (from the shoulders' middle, turned with them)
+    var shB = at(-0.03, -0.02, 0.17), shF = at(0.03, -0.02, -0.17);
+    var aB = o.aB || [-0.5, -0.33, 0.36], aF = o.aF || [0.5, -0.12, -0.36];
+    var haB = o.hB ? o.hB.clone() : at(aB[0], aB[1], aB[2]), haF = o.hF ? o.hF.clone() : at(aF[0], aF[1], aF[2]);
+    var elB = shB.clone().lerp(haB, 0.5).add(V(0, -0.07, 0.05)), elF = shF.clone().lerp(haF, 0.5).add(V(0, -0.07, -0.05));
+    var nk = V(sh.x + 0.05, sh.y + 0.1, sh.z), hd = V(sh.x + 0.1, sh.y + 0.25, sh.z);
+    sg3Limb(T, P.thighB, hip, kneeB); sg3Limb(T, P.shinB, kneeB, footB);
+    sg3Limb(T, P.thighF, hip, kneeF); sg3Limb(T, P.shinF, kneeF, footF);
+    sg3Limb(T, P.torso, hip, sh); sg3Limb(T, P.stripe, V(hip.x + 0.03, hip.y + 0.05, hip.z - 0.15), V(sh.x + 0.02, sh.y - 0.05, sh.z - 0.16));
+    sg3Limb(T, P.neck, sh, nk);
+    sg3Limb(T, P.uArmB, shB, elB); sg3Limb(T, P.fArmB, elB, haB); sg3Limb(T, P.uArmF, shF, elF); sg3Limb(T, P.fArmF, elF, haF);
+    X.chest.position.copy(hip).lerp(sh, 0.72); X.chest.quaternion.setFromUnitVectors(V(0, 1, 0), sh.clone().sub(hip).normalize());
+    X.hips.position.copy(hip); X.handB.position.copy(haB); X.handF.position.copy(haF); X.footB.position.copy(footB); X.footF.position.copy(footF);
+    R.head.position.copy(hd); R.head.rotation.z = -0.25;
+    R.hair.position.copy(hd).add(V(-0.02, 0.025, 0)); R.hair.rotation.z = 0.45;
+    R.vest.position.copy(hip).lerp(sh, 0.6);
   }
 
   // ---- drawing: the park, the board under the feet, the rider, the camera ----
@@ -15906,7 +15991,10 @@
       rg.addColorStop(0, 'rgba(0,0,0,0.8)'); rg.addColorStop(0.55, 'rgba(0,0,0,0.42)'); rg.addColorStop(1, 'rgba(0,0,0,0)'); sc2.fillStyle = rg; sc2.fillRect(0, 0, 64, 64);
       sg3.skShadow = new T.Mesh(new T.PlaneGeometry(1, 1), new T.MeshBasicMaterial({ map: new T.CanvasTexture(scv), transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4 })); sg3.scene.add(sg3.skShadow); }
     var on = sg.phase === 'skate' && sg.skate;
-    sg3.skBoard.visible = !!on; sg3.skShadow.visible = !!on;
+    sg3.skBoard.visible = !!on && !sg.skate.loose; sg3.skShadow.visible = !!on;
+    if(!sg3.skLoose){ sg3.skLoose = skBoard(T); sg3.scene.add(sg3.skLoose); }
+    var Lz = on && sg.skate.loose; sg3.skLoose.visible = !!Lz;
+    if(Lz){ sg3.skLoose.position.set(skX0() + Lz.u, SG_SAND_Y + SK.DECK + Lz.y + 0.04, SK_Z0 + Lz.w); sg3.skLoose.rotation.set(0, Lz.r, Math.sin(Lz.rz) * 0.3); }
     // the hill behind the beach is a backdrop for the sea; from the park, 10 m in front of it, it
     // filled the whole sky -- hidden while skating
     if(sg3.shore){ sg3.shore.hills.visible = !on; sg3.shore.props.visible = !on; }
@@ -15936,25 +16024,35 @@
     sg3.skShadow.position.set(X0 + S.u, Y0 + gy0, SK_Z0 + S.w).addScaledVector(shN, 0.01);
     sg3.skShadow.quaternion.setFromUnitVectors(new T.Vector3(0, 0, 1), shN); sg3.skShadow.rotateZ(-hd);
     sg3.skShadow.scale.set(0.95 + hAbove * 0.5, 0.42 + hAbove * 0.3, 1); sg3.skShadow.material.opacity = Math.max(0.15, 1 - hAbove * 0.5);
-    R.body.rotation.set(0, 0, 0); R.body.position.set(0, 0.05, 0); sg3.skBoard.position.y = -0.05;   // (wheels on the concrete, feet on the deck)
-    if(S.bail > 0){ R.body.rotation.set((1.3 - S.bail) * 2.5, 0, (1.3 - S.bail) * 3); R.body.position.y = -0.4 * Math.min(1, 1.3 - S.bail); }
-    // crouch: low when pumping, landing or flying; the shoulders turn with the carve
-    var J = sgJoyVec(), st = S.steer || 0, pumping = J.y < -0.3 && !S.air;
-    var crouch = S.air ? 0.85 : pumping ? 0.4 + 0.36 * Math.abs(Math.sin(S.pp || 0)) : 0.42 + 0.3 * Math.abs(st);   // down in the turn, up through the switch
-    if(S.btT > 0) crouch = 0.95;                                            // bottom turn: compressed, the back knee almost on the deck
-    if(S.ttT > 0) crouch = 0.35;                                            // top turn: up and open
-    if(S.grind) crouch = 0.6;                                               // the floater: low, weight centred over the coping
-    S.k = (S.k || 0.4) + (crouch - (S.k || 0.4)) * 0.3;
-    var lead = pumping ? Math.sin((S.pp || 0) + 0.7) : st;                                          // the shoulders a beat ahead
-    var sh = S.skSh = (S.skSh || 0) + ((-lead * 0.7) - (S.skSh || 0)) * 0.25;
-    if(!S.air && !(S.bail > 0)) R.body.rotation.x = S.lean || 0;
-    // the front arm reaches into the turn, the back arm swings the other way
-    var hFo = S.ttT > 0 ? new T.Vector3(0.55, 0.15, -0.45 * (S.slideDir || 1)) : null, hBo = S.ttT > 0 ? new T.Vector3(-0.55, 0.05, 0.35 * (S.slideDir || 1)) : S.btT > 0 ? new T.Vector3(-0.2, -0.75, -0.4) : null;
-    // the feet as they stand on a surfskate: the front one just behind the front truck's bolts, the back one over the back truck
-    var Xd = R.extra;
-    sg3Pose(S.k, null, null, { tw: sh, look: -lead * 0.35, hF: new T.Vector3(0.36 + 0.16 * lead, -0.16 + 0.22 * Math.abs(lead), -0.28 - 0.28 * lead), hB: new T.Vector3(-0.4 - 0.12 * lead, -0.22 + 0.16 * Math.abs(lead), 0.1 + 0.28 * lead) });
-    if(hFo || hBo){ sg3Pose(S.k, null, null, { tw: sh, look: -lead * 0.35, hF: hFo || new T.Vector3(0.36, -0.16, -0.28), hB: hBo || new T.Vector3(-0.4, -0.22, 0.1) }); }   // (open arms in a top turn, the hand down in a bottom turn)
-    Xd.footF.position.set(0.15, 0.08, -0.01); Xd.footB.position.set(-0.21, 0.08, 0.01);
+    R.body.rotation.set(0, 0, 0); R.body.position.set(0, 0.05, 0); sg3.skBoard.position.set(0, -0.05, 0); sg3.skBoard.rotation.set(0, 0, 0);   // (wheels on the concrete, feet on the deck)
+    // how a surfskater moves (surfskate.love, SkatePro, Sector 9 guides): feet just behind the front
+    // truck's bolts and over the back truck, knees bent, the body turned to face forward, both
+    // arms in front; pumping is one knee bend per rail -- down on the heels, up on the toes -- the
+    // hips twisting with it; in a turn the shoulders go first, the hips follow, then the board
+    var J = sgJoyVec(), st = S.steer || 0, pumping = J.y < -0.3 && !S.air && !S.grind, pp = S.pp || 0, sp3 = Math.hypot(S.v[0], S.v[1], S.v[2]);
+    var o = { k: 0.45, tw: 0, lat: 0, aF: [0.5, -0.2, -0.3], aB: [0.22, -0.32, 0.12] };      // (rolling: relaxed, the back arm in front of the chest)
+    if(pumping){ var ps = Math.sin(pp); o.k = 0.55 + 0.3 * ps; o.tw = 0.28 * Math.sin(pp + 0.6); o.aF = [0.45, -0.2, -0.3 + 0.22 * ps]; o.aB = [0.25, -0.3, 0.1 + 0.22 * ps]; }
+    var tIn = Math.abs(J.x) > 0.2 ? J.x : st;                                  // (the shoulders turn with your input, ahead of the board)
+    if(!pumping || Math.abs(J.x) > 0.45){ o.tw = -tIn * 0.35; o.k = Math.max(o.k, 0.45 + 0.35 * Math.abs(st)); o.aF = [0.42, -0.1, -0.3 - 0.35 * tIn]; o.aB = [0.2, -0.3, 0.12 - 0.2 * tIn]; }
+    if(S.btT > 0){ o.k = 0.95; o.fx = 0.06; o.hB = new T.Vector3(-0.05, 0.3, 0.42 * Math.sign(S.lean || 1)); }   // bottom turn: deep, the back hand down to the wall
+    if(S.ttT > 0){ var d1 = S.slideDir || 1, ph = 1 - S.ttT / 0.5;                    // top turn / snap: up and open, then the shoulders whip round and the back arm swings through
+      o.k = 0.35 + 0.4 * ph; o.tw = d1 * 0.45 * Math.sin(Math.PI * Math.min(1, ph * 1.4)); o.aB = [0.45, -0.05, -0.4 * d1]; o.aF = [0.25, 0.12, 0.5 * d1]; }
+    if(S.grind){ o.k = 0.62; o.tw = 0; o.aF = [0.15, -0.05, -0.62]; o.aB = [-0.1, -0.05, 0.62]; }   // the floater: low, arms out wide for balance
+    if(S.landT > 0){ o.k = 1.0 - 0.4 * (1 - S.landT / 0.35); o.aF = [0.45, -0.25, -0.45]; o.aB = [0.1, -0.25, 0.45]; }   // landing: soaked up in the knees
+    if(S.air){ var A = S.air, gyA = skH(Math.max(0.05, Math.min(SK.W - 0.05, S.u)), Math.max(0.05, Math.min(SK.D - 0.05, S.w))), hA = S.y - gyA;
+      if(A.t < 0.12){ o.k = 0.3; o.aF = [0.35, 0.05, -0.35]; o.aB = [0.1, 0.0, 0.35]; }           // the pop: up tall off the coping
+      else if(S.v[1] > -1.5 || hA > 0.7){ o.k = 0.95; o.lift = 0.24; o.fx = 0.05; o.hB = new T.Vector3(-0.03, 0.08 + 0.24 + 0.05, -0.15); o.aF = [0.3, -0.08, -0.55]; }   // knees up, the back hand grabbing the toe edge between the feet, the front arm out
+      else { o.k = 0.6; o.aF = [0.45, -0.1, -0.45]; o.aB = [0.1, -0.1, 0.45]; } }               // (letting go, legs down for the landing)
+    if(S.bail > 0){ o.k = 0.5; o.kneel = 1; o.tw = 0; o.fx = -0.08; o.aF = [0.35, -0.35, -0.3]; o.aB = [0.3, -0.35, 0.3]; }   // the bail: a knee slide down the wall, the way pads are for
+    S.k = (S.k || 0.45) + (o.k - (S.k || 0.45)) * 0.3; o.k = S.k;
+    S.tw = (S.tw || 0) + ((o.tw || 0) - (S.tw || 0)) * 0.3; o.tw = S.tw;
+    skPose(R, o);
+    sg3.skBoard.position.y += o.lift || 0;
+    // the body leans into the turn from the ankles; the deck rolls with it, much less (the wheels stay down)
+    if(!S.air && !(S.bail > 0)){ R.body.rotation.x = S.lean || 0; sg3.skBoard.rotation.x = -(S.lean || 0) * 0.65; }
+    // a kickturn: weight on the tail, the nose lifts as the board pivots on its back wheels
+    if(S.kickT > 0) R.body.rotation.z = 0.2 * Math.sin(Math.PI * S.kickT / 0.35);
+    if(S.bail > 0) R.body.position.y = 0;
     if(sg3.skBoard.userData.front){ sg3.skBoard.userData.front.rotation.y = st * 0.55; sg3.skBoard.userData.arm.rotation.y = st * 0.4; sg3.skBoard.userData.back.rotation.y = -st * 0.1; }   // the front truck swings wide
     // the camera: behind and above, following smoothly
     var P = R.g.position, back = new T.Vector3(Math.cos(S.hd), 0, Math.sin(S.hd));
@@ -15992,19 +16090,18 @@
       }
     }
   }; })(sgUpdate);
-  // the button: from anywhere on the beach or out in the water, straight to the park (it was only
+  // the button: from anywhere on the beach (not out in the water), straight to the park (it was only
   // shown near the steps, and nobody found the park); off the board any time
   (function(){
     var b = document.createElement('button'); b.className = 'sg-peak-btn sg-ball-btn'; b.id = 'sgSkateBtn'; b.type = 'button'; b.hidden = true; b.style.bottom = '204px';
     var ref = document.getElementById('sgBallBtn'); ref.parentNode.insertBefore(b, ref.nextSibling);
     b.addEventListener('click', function(e){ e.stopPropagation(); if(sg.phase === 'skate'){ skLeave(); return; }
-      if(!sgLot || (sg.phase !== 'walk' && sg.phase !== 'paddle')) return;
-      if(sg.phase === 'paddle'){ sg.walk = { x: skX0() + 31, z: SK_Z0 - 3.6, t: 1, ph: 0, hd: Math.PI / 2 }; sg.phase = 'walk'; sg3.wkE = null; }
+      if(!sgLot || sg.phase !== 'walk') return;
       skEnter(); });
     setInterval(function(){
       var show = '', on = state === 'surfgame' && sgLot && sg.spot;
       if(on && sg.phase === 'skate') show = L('🚶 לרדת מהסקייט', '🚶 Step off the board');
-      else if(on && ((sg.phase === 'walk' && sg.walk && !sgBG.in && sgHutOpen === null) || (sg.phase === 'paddle' && !sg.tour))) show = L('🛹 לסקייטפארק', '🛹 To the skatepark');
+      else if(on && sg.phase === 'walk' && sg.walk && !sgBG.in && sgHutOpen === null) show = L('🛹 לסקייטפארק', '🛹 To the skatepark');
       b.hidden = !show; if(show && b.textContent !== show) b.textContent = show;
       // (while riding: small, down in the corner -- in the middle it hid the board)
       var riding = sg.phase === 'skate'; b.classList.toggle('is-leave', riding); b.style.bottom = riding ? '' : '204px';
