@@ -14578,7 +14578,7 @@
   // never while the name field is being typed in. Everything worth keeping
   // (coins, skins, name, league) is in localStorage, so a reload loses nothing.
   // 'dev' = a local or preview copy: the updater stays off entirely.
-  var BUILD_VERSION = '20261103-135314';
+  var BUILD_VERSION = '20261103-150201';
   var UPDATE_CHECK_MS = 60000;
   var UPDATE_TRIED_KEY = 'canyonChaseTriedUpdate';
   var pendingSubmits = 0;
@@ -14909,7 +14909,7 @@
     mesh.bind(new T.Skeleton(sk.bones.map(function(b){ return bones[b.name]; }), sk.boneInverses.map(function(m){ return m.clone(); })), mesh.bindMatrix.clone());
   }
   function labDress(T, root, R, boneNames){
-    var suitU = { value: R.suitM.color.clone() }, accU = { value: new T.Color(0x16181d) }, shoeU = { value: 0 };
+    var suitU = { value: R.suitM.color.clone() }, accU = { value: new T.Color(0x16181d) }, shoeU = { value: 0 }, skateU = { value: 0 }, shortsU = { value: new T.Color(0x2a2e36) };
     root.traverse(function(o){
       if(!o.isMesh) return;
       o.frustumCulled = false; o.castShadow = true;
@@ -14933,24 +14933,31 @@
         if(fw > 0.5){ vv.fromBufferAttribute(ps, i3).applyMatrix4(o.matrixWorld); lo = Math.min(lo, vv.y); hi = Math.max(hi, vv.y); } }
       for(var i4 = 0; i4 < n; i4++){ if(a3[i4] > 0.3){ vv.fromBufferAttribute(ps, i4).applyMatrix4(o.matrixWorld); a4[i4] = vv.y < lo + (hi - lo) * 0.16 ? 1 : 0; } }
       o.geometry.setAttribute('aShoe', new T.BufferAttribute(a3, 1)); o.geometry.setAttribute('aSole', new T.BufferAttribute(a4, 1));
+      // skate clothes: a tee over the spine, shoulders and upper arms; shorts over the pelvis and thighs
+      var teeB = o.skeleton.bones.map(function(b){ return /^(spine_0|clavicle_|upperarm_)/.test(b.name); }), shB = o.skeleton.bones.map(function(b){ return /^(pelvis|thigh_)/.test(b.name); });
+      var a5 = new Float32Array(n), a6 = new Float32Array(n);
+      for(var i5 = 0; i5 < n; i5++){ var t5 = 0, s5 = 0; for(var c5 = 0; c5 < 4; c5++){ var w5 = sw[get[c5]](i5), b5 = si[get[c5]](i5); if(w5 > 0 && teeB[b5]) t5 += w5; if(w5 > 0 && shB[b5]) s5 += w5; } a5[i5] = t5; a6[i5] = s5; }
+      o.geometry.setAttribute('aTee', new T.BufferAttribute(a5, 1)); o.geometry.setAttribute('aShorts', new T.BufferAttribute(a6, 1));
       var m = o.material.clone(); m.name = 'lab-suit';
       m.onBeforeCompile = function(sh){
         labBendInject(sh);
-        sh.uniforms.uSuit = suitU; sh.uniforms.uAcc = accU; sh.uniforms.uShoe = shoeU;
-        sh.vertexShader = 'attribute float aSuit;\nattribute float aAcc;\nattribute float aShoe;\nattribute float aSole;\nvarying float vSuit;\nvarying float vAcc;\nvarying float vShoe;\nvarying float vSole;\n' +
-          sh.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\n  vSuit = aSuit; vAcc = aAcc; vShoe = aShoe; vSole = aSole;');
-        sh.fragmentShader = 'uniform vec3 uSuit;\nuniform vec3 uAcc;\nuniform float uShoe;\nvarying float vSuit;\nvarying float vAcc;\nvarying float vShoe;\nvarying float vSole;\n' + sh.fragmentShader
-          .replace('#include <map_fragment>', '#include <map_fragment>\n  float suitK = smoothstep(0.42, 0.58, vSuit);\n' +
+        sh.uniforms.uSuit = suitU; sh.uniforms.uAcc = accU; sh.uniforms.uShoe = shoeU; sh.uniforms.uSkate = skateU; sh.uniforms.uShorts = shortsU;
+        sh.vertexShader = 'attribute float aSuit;\nattribute float aAcc;\nattribute float aShoe;\nattribute float aSole;\nvarying float vSuit;\nvarying float vAcc;\nvarying float vShoe;\nvarying float vSole;\nattribute float aTee;\nattribute float aShorts;\nvarying float vTee;\nvarying float vShorts;\n' +
+          sh.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\n  vSuit = aSuit; vAcc = aAcc; vShoe = aShoe; vSole = aSole; vTee = aTee; vShorts = aShorts;');
+        sh.fragmentShader = 'uniform vec3 uSuit;\nuniform vec3 uAcc;\nuniform float uShoe;\nvarying float vSuit;\nvarying float vAcc;\nvarying float vShoe;\nvarying float vSole;\nuniform float uSkate;\nuniform vec3 uShorts;\nvarying float vTee;\nvarying float vShorts;\n' + sh.fragmentShader
+          .replace('#include <map_fragment>', '#include <map_fragment>\n  float suitK = smoothstep(0.42, 0.58, vSuit) * (1.0 - uSkate);\n  float teeK = smoothstep(0.4, 0.6, vTee) * uSkate, shortK = smoothstep(0.4, 0.6, vShorts) * uSkate, clothK = max(teeK, shortK);\n' +
             '  diffuseColor.rgb = mix(diffuseColor.rgb, mix(uSuit, uAcc, smoothstep(0.3, 0.42, vAcc)), suitK);\n' +
             // skate shoes: navy canvas uppers, white rubber soles
-            '  float shoeK = smoothstep(0.35, 0.6, vShoe) * uShoe;\n  diffuseColor.rgb = mix(diffuseColor.rgb, mix(vec3(0.07, 0.1, 0.18), vec3(0.93), smoothstep(0.3, 0.7, vSole)), shoeK);')
-          .replace('#include <roughnessmap_fragment>', '#include <roughnessmap_fragment>\n  roughnessFactor = mix(roughnessFactor, 0.36, suitK);')
+            '  float shoeK = smoothstep(0.35, 0.6, vShoe) * uShoe;\n  diffuseColor.rgb = mix(diffuseColor.rgb, mix(vec3(0.07, 0.1, 0.18), vec3(0.93), smoothstep(0.3, 0.7, vSole)), shoeK);\n' +
+            // skating: a cotton tee in the rider's colour and dark board shorts, bare arms and legs
+            '  diffuseColor.rgb = mix(diffuseColor.rgb, uSuit * 0.92, teeK);\n  diffuseColor.rgb = mix(diffuseColor.rgb, uShorts, shortK);')
+          .replace('#include <roughnessmap_fragment>', '#include <roughnessmap_fragment>\n  roughnessFactor = mix(mix(roughnessFactor, 0.36, suitK), 0.92, clothK);')
           // neoprene smooths the body under it: most of the muscle detail goes
-          .replace('#include <normal_fragment_maps>', '  vec3 labGeoN = normal;\n#include <normal_fragment_maps>\n  normal = normalize(mix(normal, labGeoN, suitK * 0.65));');
+          .replace('#include <normal_fragment_maps>', '  vec3 labGeoN = normal;\n#include <normal_fragment_maps>\n  normal = normalize(mix(normal, labGeoN, max(suitK * 0.65, clothK * 0.85)));');
       };
       o.material = m;
     });
-    return { suit: suitU, shoe: shoeU };
+    return { suit: suitU, shoe: shoeU, skate: skateU, shorts: shortsU };
   }
   // a rotation that takes the frame (along = y, side = z) to (a, s)
   function labBasis(T, a, s){
@@ -15007,7 +15014,7 @@
     Object.keys(P).forEach(function(k){ P[k].layers.set(5); });
     Object.keys(X).forEach(function(k){ X[k].traverse(function(o){ o.layers.set(5); }); });
     R.head.traverse(function(o){ o.layers.set(5); }); R.hair.layers.set(5);
-    var body = { R: R, root: root, B: B, K: K, L: L, suitU: suitU, shoeU: dressU.shoe, hair: hairMeshes };
+    var body = { R: R, root: root, B: B, K: K, L: L, suitU: suitU, shoeU: dressU.shoe, skateU: dressU.skate, shortsU: dressU.shorts, hair: hairMeshes };
     lab.bodies.push(body); R.lab = body;
     return body;
   }
@@ -15473,13 +15480,13 @@
       var gr = skGrad(u, w), sl = Math.min(1, Math.hypot(gr[0], gr[1]) / 3);
       var k = (h > -0.05 ? 0.74 : 0.6) + 0.025 * Math.sin(u * 0.31 + w * 0.47) - 0.05 * sl;
       var occ = 0; for(var oa = 0; oa < 8; oa++){ var ox = Math.cos(oa * 0.785) * 0.9, oz = Math.sin(oa * 0.785) * 0.9; occ += Math.max(0, skH(Math.max(0.01, Math.min(SK.W - 0.01, u + ox)), Math.max(0.01, Math.min(SK.D - 0.01, w + oz))) - h); }
-      k *= 1 - 0.32 * Math.min(1, occ / 8 / 0.5);
+      k *= 1 - 0.18 * Math.min(1, occ / 8 / 0.5);
       var shd = 0; if(h < -0.05){ for(var st2 = 0.3; st2 < 9; st2 += 0.3){ var su = u + SK_SUN[0] * st2, sw = w + SK_SUN[1] * st2; if(su < 0 || sw < 0 || su > SK.W || sw > SK.D) break; if(skH(su, sw) > h + st2 * 0.42 + 0.02){ shd = 1; break; } } }
-      k *= 1 - 0.3 * shd;
+      k *= 1 - 0.22 * shd; k = Math.max(k, 0.44) * (1 + 0.55 * sl);   // (in the shade, grey -- not black; the steep walls get little of the sky light here, so lighter to start with)
       cols[i * 3] = k; cols[i * 3 + 1] = k * 0.99; cols[i * 3 + 2] = k * 0.96;
     }
     var concTex = skTex(T, 'skate/concrete.jpg', function(){ return skConcrete(T); }, [1, 1]);
-    var cm = new T.MeshStandardMaterial({ vertexColors: true, roughness: 0.9, color: 0x807d78, map: concTex });
+    var cm = new T.MeshStandardMaterial({ vertexColors: true, roughness: 0.9, color: 0x807d78, map: concTex, emissive: 0x1e1d1b });   // (a little light of its own: concrete in shade is grey, not navy)
     // the floor: a grid, kept only where it's floor (in from the foot of the walls)
     var geo = new T.PlaneGeometry(SK.W, SK.D, NU - 1, NW - 1); geo.rotateX(-Math.PI / 2);
     var p = geo.attributes.position, uv = geo.attributes.uv, cols = new Float32Array(p.count * 3), keep = new Uint8Array(p.count);
@@ -15622,15 +15629,20 @@
     for(var i = 1; i < half.length; i++) sh.lineTo(half[i][0], -half[i][1]);
     for(var j = half.length - 2; j >= 0; j--) sh.lineTo(half[j][0], half[j][1]);
     sh.quadraticCurveTo(-0.425, 0, half[0][0], -half[0][1]);
-    var dg = new T.ExtrudeGeometry(sh, { depth: 0.013, bevelEnabled: true, bevelThickness: 0.002, bevelSize: 0.003, bevelSegments: 2, curveSegments: 10, steps: 1 });
-    dg.rotateX(Math.PI / 2); dg.translate(0, 0.125, 0);
-    // kicktail up, a little lift at the nose, and dished across (the rails higher than the middle)
-    function bend(geo){ var p = geo.attributes.position;
-      for(var k = 0; k < p.count; k++){ var x = p.getX(k), z = p.getZ(k), y = p.getY(k);
-        if(x < -0.345) y += (-0.345 - x) * 0.75; if(x > 0.345) y += (x - 0.345) * 0.35;      // (the kick starts behind the back foot)
-        y += z * z * 0.55; p.setY(k, y); }
-      geo.computeVertexNormals(); }
-    bend(dg); dg.scale(0.984, 1, 0.98);                                    // (to 78.7 x 24.9 cm)
+    // the deck as a fine grid -- top (grip), bottom (the graphic) and the plies round the edge -- so
+    // the concave and the kicks bend it all through (an extruded outline has no points inside it: its
+    // flat top cut through the grip from the kicks, and the graphic showed on top)
+    function halfW(x){ if(x <= -0.40){ var t = (x + 0.425) / 0.025; return 0.088 * Math.sqrt(Math.max(0, t)); }
+      for(var i = 1; i < half.length; i++) if(x <= half[i][0]){ var f = (x - half[i - 1][0]) / (half[i][0] - half[i - 1][0]); return half[i - 1][1] + (half[i][1] - half[i - 1][1]) * f; }
+      return 0; }
+    function lift(x, z){ var y = 0; if(x < -0.345) y += (-0.345 - x) * 0.75; if(x > 0.345) y += (x - 0.345) * 0.35; return y + z * z * 0.55; }   // (kicktail, nose lift, concave)
+    var NX = 56, NZ = 12, X0d = -0.425, X1d = 0.40;
+    function sheet(y0, inset, flip){ var pos = [], uvs = [], idx = [];
+      for(var i = 0; i <= NX; i++){ var x = X0d + (X1d - X0d) * i / NX, hw = Math.max(0, halfW(x) - inset);
+        for(var j = 0; j <= NZ; j++){ var v = j / NZ, z = (v - 0.5) * 2 * hw; pos.push(x * 0.984, y0 + lift(x, z), z * 0.98); uvs.push(i / NX, v); } }
+      for(var i2 = 0; i2 < NX; i2++) for(var j2 = 0; j2 < NZ; j2++){ var a = i2 * (NZ + 1) + j2, b2 = a + NZ + 1;
+        if(flip) idx.push(a, a + 1, b2, b2, a + 1, b2 + 1); else idx.push(a, b2, a + 1, b2, b2 + 1, a + 1); }
+      var g = new T.BufferGeometry(); g.setAttribute('position', new T.Float32BufferAttribute(pos, 3)); g.setAttribute('uv', new T.Float32BufferAttribute(uvs, 2)); g.setIndex(idx); g.computeVertexNormals(); return g; }
     var cv = document.createElement('canvas'); cv.width = 512; cv.height = 160; var c = cv.getContext('2d');
     var gr = c.createLinearGradient(0, 0, 0, 160); gr.addColorStop(0, '#ffcf6b'); gr.addColorStop(0.45, '#ff7a59'); gr.addColorStop(0.75, '#c53f7a'); gr.addColorStop(1, '#3b2a6e');
     c.fillStyle = gr; c.fillRect(0, 0, 512, 160);
@@ -15639,11 +15651,23 @@
     c.fillRect(160, 50, 7, 110); [[-60, -22], [-40, -40], [10, -46], [48, -30], [62, -6]].forEach(function(l){ c.beginPath(); c.moveTo(163, 52); c.quadraticCurveTo(163 + l[0] * 0.5, 52 + l[1] - 12, 163 + l[0], 52 + l[1] + 14); c.lineTo(163 + l[0] * 0.9, 52 + l[1] + 18); c.closePath(); c.fill(); });
     c.strokeStyle = 'rgba(255,255,255,0.85)'; c.lineWidth = 7;                                                    // a wave line
     c.beginPath(); c.moveTo(0, 130); c.bezierCurveTo(90, 100, 160, 150, 260, 120); c.bezierCurveTo(330, 100, 400, 140, 512, 118); c.stroke();
-    var tx = new T.CanvasTexture(cv); tx.encoding = T.sRGBEncoding; tx.repeat.set(1 / 0.84, 1 / 0.27); tx.offset.set(0.5, 0.5);
+    var tx = new T.CanvasTexture(cv); tx.encoding = T.sRGBEncoding;
+    // grip tape: black sandpaper, a little grey where the shoes wear it
+    var gcv = document.createElement('canvas'); gcv.width = 256; gcv.height = 64; var gc = gcv.getContext('2d'); gc.fillStyle = '#121214'; gc.fillRect(0, 0, 256, 64);
+    for(var q = 0; q < 2600; q++){ var sv = 20 + Math.random() * 40; gc.fillStyle = 'rgb(' + sv + ',' + sv + ',' + (sv + 3) + ')'; gc.fillRect(Math.random() * 256, Math.random() * 64, 1, 1); }
+    [[70, 32], [175, 32]].forEach(function(f){ var wg = gc.createRadialGradient(f[0], f[1], 2, f[0], f[1], 30); wg.addColorStop(0, 'rgba(90,90,95,0.35)'); wg.addColorStop(1, 'rgba(0,0,0,0)'); gc.fillStyle = wg; gc.fillRect(0, 0, 256, 64); });
+    var gtx = new T.CanvasTexture(gcv); gtx.encoding = T.sRGBEncoding;
     var maple = new T.MeshStandardMaterial({ color: 0xe2c79a, roughness: 0.7 });
-    var deck = new T.Mesh(dg, [new T.MeshStandardMaterial({ map: tx, roughness: 0.42 }), maple]); b.add(deck);
-    var gg = new T.ShapeGeometry(sh, 10); gg.rotateX(Math.PI / 2); gg.scale(0.975, 1, 0.94); gg.translate(0, 0.1262, 0); bend(gg); gg.scale(0.984, 1, 0.98);
-    var grip = new T.Mesh(gg, new T.MeshStandardMaterial({ color: 0x151515, roughness: 0.98, side: T.DoubleSide })); b.add(grip);
+    var grip = new T.Mesh(sheet(0.127, 0.002, true), new T.MeshStandardMaterial({ map: gtx, roughness: 0.98 })); b.add(grip);
+    var under = new T.Mesh(sheet(0.112, 0, false), new T.MeshStandardMaterial({ map: tx, roughness: 0.42 })); b.add(under);
+    // the plies round the edge: a band from the bottom sheet's rim up to the top's
+    var epos = [], eix = [], ring = [];
+    for(var e1 = 0; e1 <= NX; e1++) ring.push([X0d + (X1d - X0d) * e1 / NX, 1]);
+    for(var e2 = NX; e2 >= 0; e2--) ring.push([X0d + (X1d - X0d) * e2 / NX, -1]);
+    ring.forEach(function(r){ var hw = halfW(r[0]), z = r[1] * hw; epos.push(r[0] * 0.984, 0.112 + lift(r[0], z), z * 0.98, r[0] * 0.984, 0.127 + lift(r[0], z), z * 0.98); });
+    for(var e3 = 0; e3 < ring.length - 1; e3++){ var a3 = e3 * 2; eix.push(a3, a3 + 2, a3 + 1, a3 + 1, a3 + 2, a3 + 3); }
+    var eg = new T.BufferGeometry(); eg.setAttribute('position', new T.Float32BufferAttribute(epos, 3)); eg.setIndex(eix); eg.computeVertexNormals();
+    b.add(new T.Mesh(eg, new T.MeshStandardMaterial({ color: 0xe2c79a, roughness: 0.7, side: T.DoubleSide })));
     var raw = new T.MeshStandardMaterial({ color: 0xc8ccd2, metalness: 0.8, roughness: 0.3 }), coal = new T.MeshStandardMaterial({ color: 0x2b2e34, metalness: 0.5, roughness: 0.45 });
     var bush = new T.MeshStandardMaterial({ color: 0xff8a1e, roughness: 0.6 });
     var wh = new T.MeshStandardMaterial({ color: 0x7d848c, roughness: 0.3, transparent: true, opacity: 0.86 })   /* 'smoke' */, core = new T.MeshStandardMaterial({ color: 0xf4f4f4, roughness: 0.4 });
@@ -15785,7 +15809,7 @@
         acc += 0.25 * sp * kap; }
       if(Math.abs(om) > 0.4 && sp > 0.4) acc += 2.0 * Math.max(0, 1 - sp / 7.0); }   // every carve feeds speed (on the flat, up to ~21 km/h: riders report 19-24 pumping)
     // leaning into the turn, as far as the speed and the turn ask for
-    S.lean = (S.lean || 0) + (Math.max(-0.75, Math.min(0.75, -om * Math.max(sp, 1.2) / SK.G * 1.3)) - (S.lean || 0)) * Math.min(1, dt * 10);
+    S.lean = (S.lean || 0) + (Math.max(-0.6, Math.min(0.6, -om * Math.max(sp, 1.2) / SK.G)) - (S.lean || 0)) * Math.min(1, dt * 10);
     if(brake) acc -= 3.5;
     acc -= 0.13 + 0.005 * sp * sp;                                          // rolling (soft wheels on concrete, ~0.2 m/s lost a second as measured on a half-pipe) and air (a standing rider, CdA ~0.6 m2)
     sp = Math.max(0, Math.min(SK.MAXV, sp + acc * dt));
@@ -15906,6 +15930,8 @@
         var jx = B.dir * 0.8, jy = -1; B.k = (B.k || 0) + 1;
         if(S.v[1] > 1.5 && S.y > -0.7) jy = B.k % 2 ? -1 : 0;
         if(S.v[1] < -0.2 && S.y > -1.0) jx = B.dir;
+        // (and out of your way: a carve away from you when you come close, ahead of them)
+        if(me){ var dx = me.u - S.u, dz = me.w - S.w, dd = Math.hypot(dx, dz), fx = Math.cos(S.hd), fz = Math.sin(S.hd); if(dd < 4 && dx * fx + dz * fz > 0){ jx = (fx * dz - fz * dx) > 0 ? 1 : -1; } }
         N.J = { x: jx, y: jy, on: true }; sg.skate = S; sgJoyVec = function(){ return N.J; };
         skUpdate(dt);
       });
@@ -15919,8 +15945,10 @@
         return { r: r, bd: bd, S: S, B: { dir: 1, next: 0, seed: o.seed * 977 } };
       });
     }
-    sg3.skLocals.forEach(function(N){
+    sg3.skLocals.forEach(function(N, ni){
       N.r.g.visible = !!on; if(!on) return;
+      // the same real body as yours, in skate clothes (once it has loaded)
+      if(!N.r.lab && typeof lab !== 'undefined' && lab.state === 'ready'){ try { var nb = labAttach(T, N.r); nb.shoeU.value = 1; if(nb.skateU) nb.skateU.value = 1; if(nb.shortsU) nb.shortsU.value.set(ni ? 0x6b5a3e : 0x1f3a5f); } catch(e){ N.r.lab = { failed: true }; } }
       var S = N.S, cu = Math.max(0.05, Math.min(SK.W - 0.05, S.u)), cw = Math.max(0.05, Math.min(SK.D - 0.05, S.w));
       var g = S.grind ? [0, 0] : skGrad(cu, cw), up = new T.Vector3(-g[0], 1, -g[1]).normalize();
       var hd = S.air ? S.air.hd0 + (S.air.out ? 0 : Math.PI * Math.min(1, S.air.t * 2.2)) + S.air.spin : S.hd - (S.steer || 0) * 0.3 + (S.kickT > 0 ? (S.kickDir || 1) * Math.PI * (S.kickT / 0.35) : 0);
@@ -15949,7 +15977,7 @@
   function skPose(R, o){
     var T = sg3.T, P = R.parts, X = R.extra, V = function(x, y, z){ return new T.Vector3(x, y, z); };
     var k = o.k, lift = o.lift || 0, kn = o.kneel || 0;
-    var footB = V(-0.21, 0.08 + lift, 0.01), footF = V(0.15, 0.08 + lift, -0.01);
+    var footB = V(-0.235, 0.08 + lift, 0.01), footF = V(0.19, 0.08 + lift, -0.01);   // (over the back truck, on the front bolts: ~43 cm, shoulder width)
     if(kn){ footB.lerp(V(-0.5, 0.1, 0.13), kn); footF.lerp(V(-0.45, 0.1, -0.13), kn); }      // (kneeling: the shins flat behind)
     var hip = V(-0.03, 0.86 - 0.26 * k - 0.2 * kn + lift * 0.35, 0);
     // (the knees bend forward, toward the way the body faces: the real body reads its facing from them,
@@ -16000,6 +16028,7 @@
     if(sg3.shore){ sg3.shore.hills.visible = !on; sg3.shore.props.visible = !on; }
     var LB = typeof lab !== 'undefined' && lab.bodies && lab.bodies[0];
     if(LB && LB.shoeU) LB.shoeU.value = on ? 1 : 0;                          // skate shoes on the board, barefoot on the sand
+    if(LB && LB.skateU) LB.skateU.value = on ? 1 : 0;                        // and a tee and shorts, not the wetsuit
     R.labStance = on ? { yawF: 0.3 } : null;
     if(on || sg3.skLocals) skLocalsFrame(T, on, on ? skX0() : 0, SG_SAND_Y + SK.DECK);   // (no park off the beach: sgLot is null there)
     if(!on) return;
@@ -16030,10 +16059,10 @@
     // arms in front; pumping is one knee bend per rail -- down on the heels, up on the toes -- the
     // hips twisting with it; in a turn the shoulders go first, the hips follow, then the board
     var J = sgJoyVec(), st = S.steer || 0, pumping = J.y < -0.3 && !S.air && !S.grind, pp = S.pp || 0, sp3 = Math.hypot(S.v[0], S.v[1], S.v[2]);
-    var o = { k: 0.45, tw: 0, lat: 0, aF: [0.5, -0.2, -0.3], aB: [0.22, -0.32, 0.12] };      // (rolling: relaxed, the back arm in front of the chest)
+    var o = { k: 0.55, tw: 0, lat: 0, aF: [0.5, -0.2, -0.3], aB: [0.22, -0.32, 0.12] };      // (rolling: relaxed, the back arm in front of the chest)
     if(pumping){ var ps = Math.sin(pp); o.k = 0.55 + 0.3 * ps; o.tw = 0.28 * Math.sin(pp + 0.6); o.aF = [0.45, -0.2, -0.3 + 0.22 * ps]; o.aB = [0.25, -0.3, 0.1 + 0.22 * ps]; }
     var tIn = Math.abs(J.x) > 0.2 ? J.x : st;                                  // (the shoulders turn with your input, ahead of the board)
-    if(!pumping || Math.abs(J.x) > 0.45){ o.tw = -tIn * 0.35; o.k = Math.max(o.k, 0.45 + 0.35 * Math.abs(st)); o.aF = [0.42, -0.1, -0.3 - 0.35 * tIn]; o.aB = [0.2, -0.3, 0.12 - 0.2 * tIn]; }
+    if(!pumping || Math.abs(J.x) > 0.45){ o.tw = -tIn * 0.35; o.k = Math.max(o.k, 0.55 + 0.3 * Math.abs(st)); o.aF = [0.42, -0.1, -0.3 - 0.35 * tIn]; o.aB = [0.2, -0.3, 0.12 - 0.2 * tIn]; }
     if(S.btT > 0){ o.k = 0.95; o.fx = 0.06; o.hB = new T.Vector3(-0.05, 0.3, 0.42 * Math.sign(S.lean || 1)); }   // bottom turn: deep, the back hand down to the wall
     if(S.ttT > 0){ var d1 = S.slideDir || 1, ph = 1 - S.ttT / 0.5;                    // top turn / snap: up and open, then the shoulders whip round and the back arm swings through
       o.k = 0.35 + 0.4 * ph; o.tw = d1 * 0.45 * Math.sin(Math.PI * Math.min(1, ph * 1.4)); o.aB = [0.45, -0.05, -0.4 * d1]; o.aF = [0.25, 0.12, 0.5 * d1]; }
