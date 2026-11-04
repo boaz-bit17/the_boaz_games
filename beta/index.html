@@ -7825,7 +7825,7 @@
     var U2 = sg3.wm.uniforms; U2.uT.value = now % 1000; U2.uCurlX.value = sg.curl * SG3_M; sg3.skyMat.uniforms.uT.value = now % 1000;
     var sx = sg.x * SG3_M, rows = sg3.rows, pos = sg3.pos, foam = sg3.foam, thin = sg3.thin, curt = sg3.curt, cave = sg3.cave;
     var span = Hm * 22 + 110, dx = span / (SG3_COLS - 1), x0r = sx - Hm * 9 - 30, x0 = Math.floor(x0r / dx) * dx;
-    var zOff = sg.phase === 'paddle' || sg.phase === 'drive' || sg.phase === 'walk' || sg.phase === 'wind' ? sgSetOff(Math.min(1, sg.pad.k), Hm) : 0;    // the set, rolling in from the horizon (and on past, if you missed it)
+    var zOff = sg.phase === 'wind' ? sgSetOff(sg.pad.k, Hm) : sg.phase === 'paddle' || sg.phase === 'drive' || sg.phase === 'walk' ? sgSetOff(Math.min(1, sg.pad.k), Hm) : 0;    // the set, rolling in from the horizon (and on past, if you missed it)
     for(var c = 0; c < SG3_COLS; c++){
       var xm = x0 + c * dx, br = sg3Break(xm, Hm);
       var cf = (xm - x0r) / dx, endF = Math.max(0, Math.min(1, cf / (SG3_COLS * 0.12), (SG3_COLS - 1 - cf) / (SG3_COLS * 0.2)));   // flattens away at both ends
@@ -14581,7 +14581,7 @@
   // never while the name field is being typed in. Everything worth keeping
   // (coins, skins, name, league) is in localStorage, so a reload loses nothing.
   // 'dev' = a local or preview copy: the updater stays off entirely.
-  var BUILD_VERSION = '20261104-155137';
+  var BUILD_VERSION = '20261104-165455';
   var UPDATE_CHECK_MS = 60000;
   var UPDATE_TRIED_KEY = 'canyonChaseTriedUpdate';
   var pendingSubmits = 0;
@@ -16224,7 +16224,7 @@
   // the water's height at (x, z): the same swell the beach watches roll in
   function wsWaterY(x, z){
     var Hm = SG3_H[sg.spot.id] || 3, br = sg3Break(x, Hm), rows = sg3ProfileQ(br[0], br[1], Hm, br[2]);
-    return sg3WaterY(rows, z + sgSetOff(Math.min(1, sg.pad.k), Hm));
+    return sg3WaterY(rows, z + sgSetOff(sg.pad.k, Hm));                          // (not stopped at the line: with a sail you ride it on in)
   }
   // how hard the sail pulls with the wind at this angle off the bow (0: head to wind .. PI: dead
   // downwind): nothing in the no-go zone, best a little past the beam
@@ -16288,7 +16288,15 @@
     var tgt = W.v > 4.2 && planeOK ? Wd.v * 1.05 * f : Math.min(4.8, (0.35 * Wd.v + Math.max(0, Wd.v - 6.5) * 0.6) * f);
     var pumping = J.y < -0.3;
     if(pumping && f > 0.4 && W.v < 6) W.v += 1.1 * dt;                        // pumping the sail gets you over the hump, onto the plane
-    W.v += (tgt - W.v) * Math.min(1, dt * (W.v > 4.2 ? 0.45 : 0.3));
+    // on a wave's face the wave drives you, as a surfboard: gravity down the slope along the board
+    // (wave sailors match the wave's speed, drop in, and bear away down the line -- the sail then
+    // has little wind in it, so it pulls less and the wave does the work)
+    var e2 = 0.8, gX = (wsWaterY(W.x + e2, W.z) - wsWaterY(W.x - e2, W.z)) / (2 * e2), gZ = (wsWaterY(W.x, W.z + e2) - wsWaterY(W.x, W.z - e2)) / (2 * e2);
+    var gAlong = -WS.G * (gX * fx + gZ * fz) / (1 + gX * gX + gZ * gZ), steep = Math.hypot(gX, gZ);
+    W.onFace = steep > 0.12 && gAlong > 0.6;                                  // (going down a face)
+    W.v += gAlong * dt;
+    W.v += (tgt - W.v) * Math.min(1, dt * (W.v > 4.2 ? 0.45 : 0.3) * (W.onFace ? 0.25 : 1));
+    W.v = Math.min(W.v, Math.max(Wd.v * 1.3, 13));
     if(f === 0) W.v *= Math.exp(-0.9 * dt);                                  // in irons: the sail flaps, the board stops
     // stopped head to wind, the rider swings the rig to bring the nose away from it (and says how)
     if(f < 0.35 && W.v < 1.5 && Math.abs(J.x) < 0.2){ W.ironT = (W.ironT || 0) + dt; if(W.ironT > 1.2){ var cr = fx * -Wd.to[1] - fz * -Wd.to[0]; W.hd += (cr > 0 ? -1 : 1) * 0.7 * dt;
@@ -16297,7 +16305,8 @@
     // steering: carving on the rail when planing, slower when not
     var rate = W.v > 4.2 ? 1.15 : 0.75, steer = J.x;
     W.steer = (W.steer || 0) + (steer - (W.steer || 0)) * Math.min(1, dt * 8);
-    var dh = W.steer * rate * dt; W.hd += dh;                                 // (➡️ turns right, as on the screen: the heading angle grows toward +z) if(W.v > 4.2) W.turnAcc += dh; if(Math.abs(W.steer) < 0.2) W.turnAcc *= Math.exp(-1.2 * dt);
+    // (➡️ turns right, as on the screen: the heading angle grows toward +z)
+    var dh = W.steer * rate * dt; W.hd += dh; if(W.v > 4.2) W.turnAcc += dh; if(Math.abs(W.steer) < 0.2) W.turnAcc *= Math.exp(-1.2 * dt);
     W.x += fx * W.v * dt; W.z += fz * W.v * dt;
     // the water under you, and its slope ahead (a wave face)
     var wyA = wsWaterY(W.x + fx * 1.2, W.z + fz * 1.2), slope = (wyA - wy0) / 1.2; W.y = wy0; W.slope = slope;
@@ -16318,10 +16327,17 @@
       W.air = { t: 0, rot: 0, loop: 0, flip: false, wave: ramp, hd0: W.hd, a0: a, lee0: lee, y0: W.y };
       W.popAt = -9; return;
     }
-    // riding a wave in: turns at the bottom and the top of the face, like on a surfboard
-    if(slope < -0.18 && fz > 0 && Math.abs(W.steer) > 0.7 && W.v > 4){
-      if(W.t - (W.btAt || -9) > 1.5){ var lo = wy0 < wsWaterY(W.x, W.z + 3) - 0.3; W.btAt = W.t; if(lo) sgScore(L('פנייה תחתונה', 'Bottom turn'), 120); else sgScore(L('אוף דה ליפ!', 'Off the lip!'), 250); }
-    }
+    // riding a wave: caught once you've been carried down its face a second; then the turns, by
+    // where on the wave you are -- low (the trough: a bottom turn, up the face) or high (the lip: a
+    // top turn or cutback, back down it)
+    var Hm = SG3_H[sg.spot.id] || 3, flat = wsWaterY(W.x, W.z + 18), hRel = Math.max(0, Math.min(1.5, (wy0 - flat) / Math.max(0.3, Hm)));
+    if(W.onFace){ W.faceT = (W.faceT || 0) + dt; if(W.faceT > 1 && !W.caught){ W.caught = true; W.rideT = 0; sgScore(L('🌊 תפסת גל!', '🌊 Caught a wave!'), 200 + Math.round(Hm * 60)); } }
+    else if(steep < 0.06){ W.faceT = 0; W.caught = false; }
+    if(W.caught){ W.rideT = (W.rideT || 0) + dt;
+      var turning = Math.abs(W.steer) > 0.6 && W.v > 4, upFace = gX * fx + gZ * fz > 0.05, downFace = gX * fx + gZ * fz < -0.05;
+      if(turning && hRel < 0.35 && upFace && W.t - (W.btAt || -9) > 1.4){ W.btAt = W.t; sgScore(L('פנייה תחתונה', 'Bottom turn'), 120 + Math.round(W.v * 12)); }
+      if(turning && hRel > 0.55 && downFace && W.t - (W.ttAt || -9) > 1.4){ W.ttAt = W.t; if(hRel > 0.8) sgScore(L('אוף דה ליפ!', 'Off the lip!'), 280 + Math.round(W.v * 15)); else sgScore(L('קאטבק', 'Cutback'), 220 + Math.round(W.v * 12)); }
+      if(Math.abs(W.turnAcc) > Math.PI * 1.9){ W.turnAcc = 0; sgScore(L('360 על הגל!', 'Wave 360!'), 600); } }
     // the edges of the sailing water: the beach (the shallows stop you) and out past the line
     // (the shallows: the sand slopes up out of the water at SG_WADE_Z -- on past it the board was up on the beach)
     var x0 = sgLot ? sgLot.parkX : 0, zMax = SG_WADE_Z - 0.5, zMin = SG_EDGE_Z - 220;
@@ -16472,7 +16488,8 @@
       sg.t += dt; sg.chainT = Math.max(0, sg.chainT - dt);
       sg.texts.forEach(function(tx){ tx.life -= dt; tx.y += dt * 40; }); sg.texts = sg.texts.filter(function(tx){ return tx.life > 0; });
       // the sets keep rolling in
-      if(!(sg.peak && sg.peak.shared)){ sg.pad.t += dt; if(sg.pad.t > sg.pad.T + 4) sg.pad = sgNewSet(false); sg.pad.k = sg.pad.t / sg.pad.T; }
+      // (each wave rolls on in past the take-off line, all the way to the beach -- as fast as a real one in that depth, ~8 m/s for a 4-5 m wave -- then the next comes)
+      if(!(sg.peak && sg.peak.shared)){ sg.pad.t += dt; sg.pad.k = sg.pad.t / sg.pad.T; var HmS = SG3_H[sg.spot.id] || 3; if(sgSetOff(sg.pad.k, HmS) < -(SG_WADE_Z - sg3ZLine(sg.ws ? sg.ws.x : 0) + 5)) sg.pad = sgNewSet(false); }
       if(sg.peak && sg.peak.shared) sgNetTick();
       var d = Math.min(dt, 0.05); wsUpdate(d); wsSpock(d);
       var Wn = sg.ws; if(Wn){ sg.x = Wn.x / SG3_M; sg.walk = sg.walk || { t: 1, ph: 0 }; sg.walk.x = Wn.x; sg.walk.z = Wn.z; sg.walk.hd = Wn.hd; }
