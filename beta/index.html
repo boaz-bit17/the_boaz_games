@@ -14581,7 +14581,7 @@
   // never while the name field is being typed in. Everything worth keeping
   // (coins, skins, name, league) is in localStorage, so a reload loses nothing.
   // 'dev' = a local or preview copy: the updater stays off entirely.
-  var BUILD_VERSION = '20261104-211748';
+  var BUILD_VERSION = '20261104-212431';
   var UPDATE_CHECK_MS = 60000;
   var UPDATE_TRIED_KEY = 'canyonChaseTriedUpdate';
   var pendingSubmits = 0;
@@ -15494,7 +15494,7 @@
     }
     var sg_ = new T.BufferGeometry(); sg_.setAttribute('position', new T.Float32BufferAttribute(pos, 3)); sg_.setAttribute('uv', new T.Float32BufferAttribute(uv, 2)); sg_.setAttribute('color', new T.Float32BufferAttribute(col, 3)); sg_.setIndex(idx); sg_.computeVertexNormals();
     if(sg_.attributes.normal.getY(0) < 0){ for(var t = 0; t < idx.length; t += 3){ var sw = idx[t + 1]; idx[t + 1] = idx[t + 2]; idx[t + 2] = sw; } sg_.setIndex(idx); sg_.computeVertexNormals(); }
-    var cm = new T.MeshStandardMaterial({ vertexColors: true, roughness: 0.88, color: 0x8a8781, emissive: 0x1e1d1b, map: skTex(T, 'skate/concrete.jpg', function(){ return skConcrete(T); }, [1, 1]) });
+    var cm = new T.MeshStandardMaterial({ vertexColors: true, roughness: 0.88, color: 0x8a8781, emissive: 0x100f0e, map: skTex(T, 'skate/concrete.jpg', function(){ return skConcrete(T); }, [1, 1]) });
     var surf = new T.Mesh(sg_, cm); surf.position.set(X0, Y0, SK_Z0); g.add(surf);
     // the front face, cut to the profile (seen from the side, the ramps' shapes), painted with the surf mural
     var fpos = [], fuv = [], fidx = [], NF = 600;
@@ -15549,8 +15549,47 @@
     mx.font = '74px sans-serif'; mx.textAlign = 'center'; mx.textBaseline = 'middle'; mx.fillText('🛹', 64, 70);
     var mk = new T.Sprite(new T.SpriteMaterial({ map: new T.CanvasTexture(mc), depthTest: false, transparent: true })); mk.scale.set(3.2, 3.2, 1); mk.renderOrder = 10;
     mk.position.set(X0 + 20, SG_SAND_Y + 13, SK_Z0 + D / 2); g.add(mk); g.userData.marker = mk;
+    g.traverse(function(o){ if(!o.isMesh) return; o.receiveShadow = true; o.castShadow = o !== pv; });
+    g.userData.conc = cm; g.userData.steel = steel; g.userData.pave = pv.material;
     g.userData.key = Math.round(X0);
     return g;
+  }
+  // ---- the light (stage 2): the game's sun -- low over the sea, golden -- throws real shadows while
+  // you skate (soft-edged, one map over the line: the ramps, the coping, the rails, the palms and
+  // you, long across the concrete and up the wall); and the park photographed once from inside it,
+  // as an environment, so the steel shines with the sky and the troweled concrete has a faint sheen ----
+  function skLight(T, on){
+    var r = sg3.r, sc = sg3.scene;
+    if(!sg3.skSunL){ sc.traverse(function(o){ if(o.isDirectionalLight && (!sg3.skSunL || o.intensity > sg3.skSunL.intensity)) sg3.skSunL = o; }); if(!sg3.skSunL) return; }
+    var Ls = sg3.skSunL;
+    // (golden hour: a strong sun and a weaker, bluer sky light -- the game's bright sky light washed the shadows out)
+    if(!sg3.skHemi){ sc.traverse(function(o){ if(o.isHemisphereLight) sg3.skHemi = o; }); if(sg3.skHemi) sg3.skHemi.userData.i0 = sg3.skHemi.intensity; Ls.userData.i0 = Ls.intensity; }
+    if(sg3.skHemi) sg3.skHemi.intensity = on ? sg3.skHemi.userData.i0 * 0.6 : sg3.skHemi.userData.i0; Ls.intensity = on ? Ls.userData.i0 * 1.35 : Ls.userData.i0;
+    if(!on){ if(Ls.castShadow) Ls.castShadow = false; return; }
+    if(!r.shadowMap.enabled){ r.shadowMap.enabled = true; r.shadowMap.type = T.PCFSoftShadowMap; }
+    var P = sg3.skPark; if(!P) return;
+    if(!P.userData.lit){
+      P.userData.lit = true;
+      P.traverse(function(o){ if(o.material){ (Array.isArray(o.material) ? o.material : [o.material]).forEach(function(m){ m.needsUpdate = true; }); } });
+      // the shadow camera over the line, the sun still coming from where it was (its target moved to the park, its position with it)
+      var X0 = skX0(), c = new T.Vector3(X0 + SK.W / 2, SG_SAND_Y + SK.DECK, SK_Z0 + SK.D / 2), dir = Ls.position.clone().sub(Ls.target.position).normalize();
+      Ls.target.position.copy(c); if(!Ls.target.parent) sc.add(Ls.target); Ls.position.copy(c).addScaledVector(dir, 90);
+      var ms = typeof sgWeak !== 'undefined' && sgWeak ? 1024 : 2048; Ls.shadow.mapSize.set(ms, ms);   // (smaller on weaker phones) var cam = Ls.shadow.camera; cam.left = -75; cam.right = 75; cam.top = 45; cam.bottom = -45; cam.near = 5; cam.far = 220; cam.updateProjectionMatrix();
+      Ls.shadow.bias = -0.0004; Ls.shadow.normalBias = 0.05; Ls.shadow.radius = 3;
+      if(Ls.shadow.map){ Ls.shadow.map.dispose(); Ls.shadow.map = null; }
+      // the reflections: the scene round the middle of the park, once, blurred for rough surfaces
+      try {
+        var crt = new T.WebGLCubeRenderTarget(128), cc = new T.CubeCamera(0.5, 600, crt); cc.position.set(X0 + SK.W / 2, SG_SAND_Y + SK.DECK + 2.5, SK_Z0 + SK.D / 2);
+        var vis = sg3.rider.g.visible; sg3.rider.g.visible = false; cc.update(r, sc); sg3.rider.g.visible = vis;
+        var pm = new T.PMREMGenerator(r), env = pm.fromCubemap(crt.texture).texture; pm.dispose(); crt.dispose();
+        var U = P.userData;
+        U.conc.envMap = env; U.conc.envMapIntensity = 0.35; U.conc.roughness = 0.72; U.conc.needsUpdate = true;   // (troweled concrete: a faint sheen)
+        U.steel.envMap = env; U.steel.envMapIntensity = 1.3; U.steel.roughness = 0.22; U.steel.needsUpdate = true;
+        U.pave.envMap = env; U.pave.envMapIntensity = 0.2; U.pave.needsUpdate = true;
+        sg3.skEnv = env;
+      } catch(e){}
+    }
+    if(!Ls.castShadow) Ls.castShadow = true;
   }
   // poured concrete, 3 m slabs: grey speckled aggregate, cloudy patches, the cut joints between
   // slabs, a few hairline cracks and dark wheel marks -- a surface you can see sliding by under the
@@ -15588,7 +15627,7 @@
   // compression spring that springs back to centre: it frees the nose, so you pump like
   // on a wave), a plain back truck on orange bushings, and big soft translucent wheels
   function skBoard(T){
-    var b = new T.Group();
+    var b = new T.Group(); b.userData.shadowed = false;
     var sh = new T.Shape(), half = [[-0.40, 0.088], [-0.32, 0.117], [-0.14, 0.127], [0.06, 0.127], [0.22, 0.114], [0.32, 0.084], [0.385, 0.03], [0.40, 0.0]];
     sh.moveTo(half[0][0], -half[0][1]);
     for(var i = 1; i < half.length; i++) sh.lineTo(half[i][0], -half[i][1]);
@@ -15991,6 +16030,9 @@
     if(LB && LB.skateU) LB.skateU.value = on ? 1 : 0;                        // and a tee and shorts, not the wetsuit
     R.labStance = on ? { yawF: 0.3 } : null;
     if(on || sg3.skLocals) skLocalsFrame(T, on, on ? skX0() : 0, SG_SAND_Y + SK.DECK);   // (no park off the beach: sgLot is null there)
+    try { skLight(T, !!on); } catch(e){}
+    [sg3.skBoard, sg3.skLoose].forEach(function(bd){ if(bd && !bd.userData.shadowed){ bd.userData.shadowed = true; bd.traverse(function(o){ if(o.isMesh) o.castShadow = true; }); } });
+    if(sg3.skLocals) sg3.skLocals.forEach(function(N){ if(!N.bd.userData.shadowed){ N.bd.userData.shadowed = true; N.bd.traverse(function(o){ if(o.isMesh) o.castShadow = true; }); } });
     if(!on) return;
     var S = sg.skate, X0 = skX0(), Y0 = SG_SAND_Y + SK.DECK;
     [R.board, R.stripe, R.fin].forEach(function(o){ o.visible = false; });
@@ -16012,7 +16054,7 @@
     var hAbove = Math.max(0, S.y - gy0), shN = new T.Vector3(-gN[0], 1, -gN[1]).normalize();
     sg3.skShadow.position.set(X0 + S.u, Y0 + gy0, SK_Z0 + S.w).addScaledVector(shN, 0.01);
     sg3.skShadow.quaternion.setFromUnitVectors(new T.Vector3(0, 0, 1), shN); sg3.skShadow.rotateZ(-hd);
-    sg3.skShadow.scale.set(0.95 + hAbove * 0.5, 0.42 + hAbove * 0.3, 1); sg3.skShadow.material.opacity = Math.max(0.15, 1 - hAbove * 0.5);
+    sg3.skShadow.scale.set(0.95 + hAbove * 0.5, 0.42 + hAbove * 0.3, 1); sg3.skShadow.material.opacity = Math.max(0.08, 0.45 - hAbove * 0.3);   // (just the contact darkening: the sun casts the real shadow)
     R.body.rotation.set(0, 0, 0); R.body.position.set(0, 0.05, 0); sg3.skBoard.position.set(0, -0.05, 0); sg3.skBoard.rotation.set(0, 0, 0);   // (wheels on the concrete, feet on the deck)
     // how a surfskater moves (surfskate.love, SkatePro, Sector 9 guides): feet just behind the front
     // truck's bolts and over the back truck, knees bent, the body turned to face forward, both
