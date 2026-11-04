@@ -14581,7 +14581,7 @@
   // never while the name field is being typed in. Everything worth keeping
   // (coins, skins, name, league) is in localStorage, so a reload loses nothing.
   // 'dev' = a local or preview copy: the updater stays off entirely.
-  var BUILD_VERSION = '20261104-204118';
+  var BUILD_VERSION = '20261104-211748';
   var UPDATE_CHECK_MS = 60000;
   var UPDATE_TRIED_KEY = 'canyonChaseTriedUpdate';
   var pendingSubmits = 0;
@@ -15419,174 +15419,136 @@
   sg3PostRender = (function(orig){ return function(){ try { labFrame(); } catch(e){ if(!lab.warned){ lab.warned = true; console.warn('lab frame:', e); } } orig(); }; })(sg3PostRender);
 
   // <<< surf lab parts
+  // >>> finish button (2026-11-04)
+  // (finishing from the skatepark: your shells first, then the menu)
+  sgOpenMenu = (function(orig){ return function(){ try { if(sg.phase === 'skate' && sg.skate) skLeave(); } catch(e){} return orig.apply(this, arguments); }; })(sgOpenMenu);
+  // <<< finish button
   // >>> skatepark (lab/skate-block.js via lab/skate.js)
-  // ---------- the skatepark (2026-11-01; reshaped 2026-11-03 after a design drawn with ChatGPT) ----------
-  // A concrete surf park by the beach, the way ChatGPT drew it: one big kidney-shaped pool bowl --
-  // a small lobe with a shallow end, a waist, a big deep lobe with three pump-track rollers across
-  // its floor -- blue waterline tiles and steel coping all the way round, a deck round the top,
-  // and an outer wall painted with a surf mural; palms, benches, lamps and a tall sign outside.
-  // You ride a surfskate (the front truck swings, so you pump and carve like on a wave):
-  // ⬆️ push / pump, ⬅️➡️ carve, ⬇️ brake; a tap of ⬆️ at the coping pops an air, ⬅️➡️ in the
-  // air to spin, land facing down the wall. Scored like a wave; shells for your score.
-  var SK = { W: 44, D: 26, DECK: 2.3, R: 2.4, G: 9.8, MAXV: 10.5, LIP: 2.2 };   // (LIP: the deck's width round the bowl)
-  var SK_A = [12.5, 13.5], SK_RA = 8.8, SK_B = [30.5, 12.5], SK_RB = 10.2, SK_K = 10;   // the two lobes, run together into a waist
-  function skX0(){ return sgLot.parkX + 40; }                              // the park's corner (x), z from 199
+  // ---------- the skatepark (2026-11-01; the line, 2026-11-04) ----------
+  // A skate plaza laid out as one long line, left to right, for riding seen from the side (2.5D,
+  // step by step): a drop-in deck, a funbox, a flat bar, a mini bowl, a ledge, a stair set with
+  // a handrail, a spine, a big bowl, a pyramid and a tall quarter pipe with a deck at the end;
+  // steel coping on every lip, poured concrete, and a long graffiti wall behind it all (painted
+  // by ChatGPT's image model). The ground of each feature is a profile along the line, the same
+  // across its width.
+  // You ride a surfskate: ⬆️ push / pump, ⬅️➡️ carve, ⬇️ brake; a tap of ⬆️ at the coping pops an
+  // air, before a ledge an ollie up onto it; ⬅️➡️ in the air to spin. Scored like a wave.
+  var SK = { W: 120, D: 12, DECK: 2.3, R: 2.4, G: 9.8, MAXV: 10.5 };
+  function skX0(){ return sgLot.parkX + 32; }                              // the line's start (x), z from 199 (clear of the huts)
   var SK_Z0 = 199;
-  // how far outside the bowl's coping (m; negative: inside) -- the two round lobes joined smoothly
-  function skOut(u, w){
-    var a = Math.hypot(u - SK_A[0], w - SK_A[1]) - SK_RA, b = Math.hypot(u - SK_B[0], w - SK_B[1]) - SK_RB;
-    var h = Math.max(0, Math.min(1, 0.5 + 0.5 * (b - a) / SK_K));
-    return b * (1 - h) + a * h - SK_K * h * (1 - h);
+  function skTW(R, H){ return Math.sqrt(R * R - (R - H) * (R - H)); }       // a transition's width: a curve of radius R up to height H
+  function skQ(x, R, H){ var tw = skTW(R, H); x = Math.max(0, Math.min(tw, x)); return R - Math.sqrt(R * R - x * x); }
+  // the line's profile, in metres above the deck (bowls below it)
+  function skProfRaw(u){
+    if(u < 4) return 1.8;                                                   // the drop-in deck
+    var t1 = skTW(2.4, 1.8); if(u < 4 + t1) return skQ(4 + t1 - u, 2.4, 1.8);   // and its quarter pipe down
+    if(u >= 12 && u < 13.5) return 0.6 * (u - 12) / 1.5;                    // a funbox
+    if(u >= 13.5 && u < 16.5) return 0.6;
+    if(u >= 16.5 && u < 18) return 0.6 * (18 - u) / 1.5;
+    if(u >= 28 && u <= 40){ var tm = skTW(2.0, 1.6);                          // the mini bowl, 1.6 m
+      if(u < 28 + tm) return -1.6 + skQ(28 + tm - u, 2.0, 1.6); if(u > 40 - tm) return -1.6 + skQ(u - (40 - tm), 2.0, 1.6); return -1.6; }
+    if(u >= 44 && u < 48) return 0.45;                                      // a ledge (a manual pad)
+    if(u >= 50 && u < 52) return 0.9 * (u - 50) / 2;                        // a bank up to the stair set
+    if(u >= 52 && u < 54) return 0.9;
+    if(u >= 54 && u < 55) return 0.6; if(u >= 55 && u < 56) return 0.3;      // three stairs down
+    var ts = skTW(2.2, 1.6);                                                // the spine, 1.6 m
+    if(u >= 66 - ts && u < 66) return skQ(u - (66 - ts), 2.2, 1.6); if(u >= 66 && u < 66 + ts) return skQ(66 + ts - u, 2.2, 1.6);
+    if(u >= 76 && u <= 96){ var tb = skTW(2.6, 2.2);                          // the big bowl, 2.2 m
+      if(u < 76 + tb) return -2.2 + skQ(76 + tb - u, 2.6, 2.2); if(u > 96 - tb) return -2.2 + skQ(u - (96 - tb), 2.6, 2.2); return -2.2; }
+    if(u >= 100 && u < 101.5) return 0.8 * (u - 100) / 1.5;                 // a pyramid
+    if(u >= 101.5 && u < 104.5) return 0.8;
+    if(u >= 104.5 && u < 106) return 0.8 * (106 - u) / 1.5;
+    var te = skTW(2.7, 2.5); if(u >= 112 && u < 112 + te) return skQ(u - 112, 2.7, 2.5);   // the tall quarter pipe
+    if(u >= 112 + te) return 2.5;                                           // and its deck
+    return 0;
   }
-  function skRim(u, w){ return -skOut(u, w); }                             // how far in from the coping
-  // how deep: a pool's floor slopes from the shallow end in the small lobe (1.3 m) to the deep end (2 m)
-  function skDepth(u, w){ var t = Math.max(0, Math.min(1, (u - 14) / 14)); t = t * t * (3 - 2 * t); return 1.3 + 0.7 * t; }
-  function skWallTW(H){ return Math.sqrt(SK.R * SK.R - (SK.R - H) * (SK.R - H)); }   // the transition's width (a 2.4 m curve, near-vertical at the top of a deep wall)
-  // the height of the park at (u, w) metres from its corner, relative to the deck
-  function skH(u, w){
-    var r = skRim(u, w); if(r <= 0) return 0;
-    var H = skDepth(u, w), tw = skWallTW(H), h = -H;
-    if(r < tw) h = -H + SK.R - Math.sqrt(Math.max(0, SK.R * SK.R - (tw - r) * (tw - r)));
-    // three rollers across the big lobe's floor, like a pump track's: 0.5 m high, 4.5 m apart
-    // (builders' rule: ~10x the height); at their ends they run up into the walls
-    if(u > 22.5 && u < 36) h = Math.max(h, -H + 0.25 * (1 - Math.cos(2 * Math.PI * (u - 22.5) / 4.5)));
-    return h;
-  }
-  var SK_SUN = (function(){ var x = -0.5, z = -0.84, l = Math.hypot(x, z); return [x / l, z / l]; })();   // (the way to the game's low sun, along the ground; its shadows here drawn as if from ~23 degrees up)
-  function skGrad(u, w){ var e = 0.04; return [(skH(u + e, w) - skH(u - e, w)) / (2 * e), (skH(u, w + e) - skH(u, w - e)) / (2 * e)]; }
-  // a line round the bowl at a given distance out from the coping (negative: in), as points
-  // (u, w) and the way out there -- found along rays from the waist, the shape is star-shaped from it
-  function skContour(off, n){
-    var C = [21.5, 13], pts = [];
-    for(var i = 0; i < n; i++){
-      var th = i / n * Math.PI * 2, dx = Math.cos(th), dz = Math.sin(th), lo = 0, hi = 30;
-      for(var it = 0; it < 30; it++){ var m = (lo + hi) / 2; if(skOut(C[0] + dx * m, C[1] + dz * m) < off) lo = m; else hi = m; }
-      var pu = C[0] + dx * lo, pw = C[1] + dz * lo, e = 0.03, gx = skOut(pu + e, pw) - skOut(pu - e, pw), gz = skOut(pu, pw + e) - skOut(pu, pw - e), gl = Math.hypot(gx, gz) || 1;
-      pts.push({ u: pu, w: pw, nu: gx / gl, nw: gz / gl });
-    }
-    return pts;
-  }
+  // (sampled every 5 cm: the profile is asked for many times a frame)
+  var SK_PN = 2400, SK_PROF = new Float32Array(SK_PN + 1); for(var ip = 0; ip <= SK_PN; ip++) SK_PROF[ip] = skProfRaw(ip * SK.W / SK_PN);
+  function skProf(u){ var f = Math.max(0, Math.min(SK_PN - 1e-6, u / SK.W * SK_PN)), i = Math.floor(f); return SK_PROF[i] + (SK_PROF[i + 1] - SK_PROF[i]) * (f - i); }
+  // the lips with coping: where a wall tops out (s: +1 the deck lies on toward +u, -1 toward -u)
+  var SK_LIPS = [{ u: 4, s: -1, h: 1.8, start: true }, { u: 28, s: -1, h: 0 }, { u: 40, s: 1, h: 0 }, { u: 76, s: -1, h: 0 }, { u: 96, s: 1, h: 0 }, { u: 112 + skTW(2.7, 2.5), s: 1, h: 2.5 }];
+  SK_LIPS.forEach(function(L){ L.depth = L.h - Math.min(skProfRaw(L.u - L.s * 3), skProfRaw(L.u - L.s * 6)); });
+  // sheer edges, up or down: a ledge and stairs -- an ollie up, a drop off
+  var SK_STEPS = [{ u: 44, d: 0.45 }, { u: 48, d: -0.45 }, { u: 54, d: -0.3 }, { u: 55, d: -0.3 }, { u: 56, d: -0.3 }];
+  var SK_SPINE = 66;
+  function skH(u, w){ return skProf(u); }
+  function skGrad(u, w){ var e = 0.04; return [(skProf(u + e) - skProf(u - e)) / (2 * e), 0]; }
   // a texture drawn by ChatGPT's image model (skate/*.jpg beside the game), on a canvas stand-in until it loads
   function skTex(T, url, fallback, rep){
     var tx = fallback ? fallback() : new T.Texture(); tx.wrapS = tx.wrapT = T.RepeatWrapping; if(rep) tx.repeat.set(rep[0], rep[1]); tx.anisotropy = 8;
     var im = new Image(); im.onload = function(){ tx.image = im; tx.needsUpdate = true; }; im.src = url;
     return tx;
   }
+  function skFlat(c){ return function(){ var cv = document.createElement('canvas'); cv.width = cv.height = 4; var x = cv.getContext('2d'); x.fillStyle = c; x.fillRect(0, 0, 4, 4); return new sg3.T.CanvasTexture(cv); }; }
 
   // the park, built where the beach is (and again when the beach moves)
   function skBuild(T){
-    var g = new T.Group(), X0 = skX0(), Y0 = SG_SAND_Y + SK.DECK, NU = 177, NW = 105;
-    // grey concrete, shaded the way the picture is (the sky light here is strong, and the bowl came
-    // out white): the deck lighter than the bowl, darker down in the curve where the walls meet the
-    // floor (ambient occlusion), and the shadow the sea-side walls throw across the floor
-    function shade(u, w, h, cols, i){
-      var gr = skGrad(u, w), sl = Math.min(1, Math.hypot(gr[0], gr[1]) / 3);
-      var k = (h > -0.05 ? 0.74 : 0.6) + 0.025 * Math.sin(u * 0.31 + w * 0.47) - 0.05 * sl;
-      var occ = 0; for(var oa = 0; oa < 8; oa++){ var ox = Math.cos(oa * 0.785) * 0.9, oz = Math.sin(oa * 0.785) * 0.9; occ += Math.max(0, skH(Math.max(0.01, Math.min(SK.W - 0.01, u + ox)), Math.max(0.01, Math.min(SK.D - 0.01, w + oz))) - h); }
-      k *= 1 - 0.18 * Math.min(1, occ / 8 / 0.5);
-      var shd = 0; if(h < -0.05){ for(var st2 = 0.3; st2 < 9; st2 += 0.3){ var su = u + SK_SUN[0] * st2, sw = w + SK_SUN[1] * st2; if(su < 0 || sw < 0 || su > SK.W || sw > SK.D) break; if(skH(su, sw) > h + st2 * 0.42 + 0.02){ shd = 1; break; } } }
-      k *= 1 - 0.22 * shd; k = Math.max(k, 0.44) * (1 + 0.55 * sl);   // (in the shade, grey -- not black; the steep walls get little of the sky light here, so lighter to start with)
-      cols[i * 3] = k; cols[i * 3 + 1] = k * 0.99; cols[i * 3 + 2] = k * 0.96;
+    var g = new T.Group(), X0 = skX0(), Y0 = SG_SAND_Y + SK.DECK, W = SK.W, D = SK.D;
+    // the concrete: along the line, a strip that follows the profile (its texture laid by distance along the surface, so the walls aren't smeared)
+    var N = SK_PN, pos = [], uv = [], col = [], idx = [], run = 0, pu = 0, ph = skProf(0);
+    for(var i = 0; i <= N; i++){
+      var u = i * W / N, h = SK_PROF[i]; if(i) run += Math.hypot(u - pu, h - ph); pu = u; ph = h;
+      var sl = Math.min(1, Math.abs(skGrad(u, 0)[0]) / 3), k = (h < -0.3 ? 0.62 : 0.7) - 0.08 * sl;
+      pos.push(u, h, 0, u, h, D); uv.push(run / 4, 0, run / 4, D / 4); col.push(k, k * 0.99, k * 0.96, k, k * 0.99, k * 0.96);
+      if(i < N){ var a = i * 2; idx.push(a, a + 1, a + 2, a + 1, a + 3, a + 2); }
     }
-    var concTex = skTex(T, 'skate/concrete.jpg', function(){ return skConcrete(T); }, [1, 1]);
-    var cm = new T.MeshStandardMaterial({ vertexColors: true, roughness: 0.9, color: 0x807d78, map: concTex, emissive: 0x1e1d1b });   // (a little light of its own: concrete in shade is grey, not navy)
-    // the floor: a grid, kept only where it's floor (in from the foot of the walls)
-    var geo = new T.PlaneGeometry(SK.W, SK.D, NU - 1, NW - 1); geo.rotateX(-Math.PI / 2);
-    var p = geo.attributes.position, uv = geo.attributes.uv, cols = new Float32Array(p.count * 3), keep = new Uint8Array(p.count);
-    for(var i = 0; i < p.count; i++){
-      var u = p.getX(i) + SK.W / 2, w = p.getZ(i) + SK.D / 2, rr = skRim(u, w), h = skH(u, w);
-      keep[i] = rr > skWallTW(skDepth(u, w)) + 0.35 ? 1 : 0;
-      p.setY(i, h - 0.005); uv.setXY(i, u / 4, w / 4); shade(u, w, h, cols, i);
-    }
-    var ix = geo.index.array, nix = [];
-    for(var t = 0; t < ix.length; t += 3) if(keep[ix[t]] && keep[ix[t + 1]] && keep[ix[t + 2]]) nix.push(ix[t], ix[t + 1], ix[t + 2]);
-    geo.setIndex(nix); geo.setAttribute('color', new T.BufferAttribute(cols, 3)); geo.computeVertexNormals();
-    var top = new T.Mesh(geo, cm); top.position.set(X0 + SK.W / 2, Y0, SK_Z0 + SK.D / 2); g.add(top);
-    // the deck, the coping's edge and the wall down to the floor: rings round the bowl, along rays
-    // from its waist, close together near the top where the wall stands nearly upright
-    var NR = 300, C0 = [21.5, 13], wpos = [], wuv = [], wcol = [], wix = [], rings = 0;
-    function onRay(i, off){ var th = i / NR * Math.PI * 2, dx = Math.cos(th), dz = Math.sin(th), lo = 0, hi = 30;
-      for(var it = 0; it < 32; it++){ var m = (lo + hi) / 2; if(skOut(C0[0] + dx * m, C0[1] + dz * m) < off) lo = m; else hi = m; }
-      return [C0[0] + dx * lo, C0[1] + dz * lo]; }
-    var cop0 = []; for(var ci = 0; ci < NR; ci++) cop0.push(onRay(ci, 0));
-    var offsDeck = [SK.LIP, 1.6, 1.0, 0.55, 0.25, 0.08, 0], NW2 = 18;
-    var tmpC = new Float32Array(3), run2 = 0;
-    for(var ri = 0; ri <= NR; ri++){
-      var i2 = ri % NR, q = cop0[i2], qp = cop0[(i2 + NR - 1) % NR]; if(ri) run2 += Math.hypot(q[0] - qp[0], q[1] - qp[1]);
-      var H = skDepth(q[0], q[1]), tw = skWallTW(H), phM = Math.asin(Math.min(1, tw / SK.R)), list = [];
-      offsDeck.forEach(function(o){ list.push([o, -o]); });                       // [offset out from the coping, distance along the surface]
-      for(var j = 1; j <= NW2; j++){ var ph = phM * (1 - j / NW2), r = tw - SK.R * Math.sin(ph); list.push([-r, SK.R * (phM - ph)]); }
-      list.push([-(tw + 0.3), SK.R * phM + 0.3], [-(tw + 0.6), SK.R * phM + 0.6]);
-      rings = list.length;
-      list.forEach(function(L){ var pt = L[0] === 0 ? q : onRay(i2, L[0]), hh = L[0] >= 0 ? 0 : skH(pt[0], pt[1]);
-        wpos.push(pt[0] - SK.W / 2, hh, pt[1] - SK.D / 2); wuv.push(run2 / 4, L[1] / 4); shade(pt[0], pt[1], hh, tmpC, 0); wcol.push(tmpC[0], tmpC[1], tmpC[2]); });
-    }
-    for(var a = 0; a < NR; a++) for(var b = 0; b < rings - 1; b++){ var p0 = a * rings + b, p1 = (a + 1) * rings + b; wix.push(p0, p0 + 1, p1, p1, p0 + 1, p1 + 1); }
-    var wg = new T.BufferGeometry(); wg.setAttribute('position', new T.Float32BufferAttribute(wpos, 3)); wg.setAttribute('uv', new T.Float32BufferAttribute(wuv, 2)); wg.setAttribute('color', new T.Float32BufferAttribute(wcol, 3)); wg.setIndex(wix); wg.computeVertexNormals();
-    // (which way the triangles wind depends on the rays' turn: make the normals face up/into the bowl)
-    var wn = wg.attributes.normal; if(wn.getY(0) < 0){ for(var t2 = 0; t2 < wix.length; t2 += 3){ var sw = wix[t2 + 1]; wix[t2 + 1] = wix[t2 + 2]; wix[t2 + 2] = sw; } wg.setIndex(wix); wg.computeVertexNormals(); }
-    var wm = new T.Mesh(wg, cm); wm.position.copy(top.position); g.add(wm);
-    // the outer wall, down to the paving, painted with the surf mural (2.3 m high, the picture's
-    // 21:9 makes it 5.4 m to a repeat)
-    var NO = 360, outer = skContour(SK.LIP, NO), opos = [], ouv = [], oix = [], run = 0;
-    for(var j = 0; j <= NO; j++){ var q = outer[j % NO], q0 = outer[(j + NO - 1) % NO]; if(j) run += Math.hypot(q.u - q0.u, q.w - q0.w);
-      opos.push(X0 + q.u, Y0, SK_Z0 + q.w, X0 + q.u, SG_SAND_Y, SK_Z0 + q.w); ouv.push(run / 5.4, 1, run / 5.4, 0);
-      if(j < NO){ var b0 = j * 2; oix.push(b0, b0 + 2, b0 + 1, b0 + 1, b0 + 2, b0 + 3); } }
-    var og = new T.BufferGeometry(); og.setAttribute('position', new T.Float32BufferAttribute(opos, 3)); og.setAttribute('uv', new T.Float32BufferAttribute(ouv, 2)); og.setIndex(oix); og.computeVertexNormals();
-    g.add(new T.Mesh(og, new T.MeshStandardMaterial({ color: 0x9e9e9e, roughness: 0.85, side: T.DoubleSide, map: skTex(T, 'skate/mural.jpg', function(){ var c = document.createElement('canvas'); c.width = c.height = 4; var x = c.getContext('2d'); x.fillStyle = '#7a6a8a'; x.fillRect(0, 0, 4, 4); return new T.CanvasTexture(c); }) })));
-    // steel coping round the bowl's edge
-    var steel = new T.MeshStandardMaterial({ color: 0xc9ced4, metalness: 0.8, roughness: 0.3 });
-    var NC = 300, cop = skContour(0.0, NC);
-    g.add(new T.Mesh(new T.TubeGeometry(new T.CatmullRomCurve3(cop.map(function(q){ return new T.Vector3(X0 + q.u + q.nu * 0.02, Y0 - 0.01, SK_Z0 + q.w + q.nw * 0.02); }), true), 600, 0.045, 6, true), steel));
-    // the band of pool tiles just under it, 5 to 30 cm down the wall, a hair off the concrete
-    var tpos = [], tuv = [], tix = []; run = 0;
-    for(var ti = 0; ti <= NC; ti++){ var c0 = cop[ti % NC], cp = cop[(ti + NC - 1) % NC]; if(ti) run += Math.hypot(c0.u - cp.u, c0.w - cp.w);
-      var H = skDepth(c0.u, c0.w), tw = skWallTW(H);
-      [-0.05, -0.30].forEach(function(hh){ var r = tw - Math.sqrt(Math.max(0, SK.R * SK.R - Math.pow(SK.R - H - hh, 2))) + 0.012;
-        tpos.push(X0 + c0.u - c0.nu * r, Y0 + hh, SK_Z0 + c0.w - c0.nw * r); });
-      tuv.push(run / 1.2, 0, run / 1.2, 0.25);                                // (the picture's tiles at ~10 cm)
-      if(ti < NC){ var t0 = ti * 2; tix.push(t0, t0 + 1, t0 + 2, t0 + 1, t0 + 3, t0 + 2); } }
-    var tg = new T.BufferGeometry(); tg.setAttribute('position', new T.Float32BufferAttribute(tpos, 3)); tg.setAttribute('uv', new T.Float32BufferAttribute(tuv, 2)); tg.setIndex(tix); tg.computeVertexNormals();
-    g.add(new T.Mesh(tg, new T.MeshStandardMaterial({ roughness: 0.3, side: T.DoubleSide, map: skTex(T, 'skate/tiles.jpg', function(){ var c = document.createElement('canvas'); c.width = c.height = 4; var x = c.getContext('2d'); x.fillStyle = '#2a6fb5'; x.fillRect(0, 0, 4, 4); return new T.CanvasTexture(c); }) })));
-    // paving round the park, the same concrete
-    var pv = new T.Mesh(new T.PlaneGeometry(SK.W + 10, SK.D + 8), new T.MeshStandardMaterial({ color: 0x8a867e, roughness: 0.95, map: skTex(T, 'skate/concrete.jpg', function(){ return skConcrete(T); }, [(SK.W + 10) / 4, (SK.D + 8) / 4]) }));
-    pv.rotation.x = -Math.PI / 2; pv.position.set(X0 + SK.W / 2, SG_SAND_Y + 0.03, SK_Z0 + SK.D / 2); g.add(pv);
-    var side = new T.MeshStandardMaterial({ color: 0xa9a59c, roughness: 0.95 });
-    // steps up to the deck at the front
-    for(var s = 0; s < 8; s++){ var st = new T.Mesh(new T.BoxGeometry(3, 0.3, 0.45), side); st.position.set(X0 + 31, SG_SAND_Y + 0.15 + s * 0.29, SK_Z0 + 0.15 - (7 - s) * 0.42); g.add(st); }
-    // palms, benches and lamps round it
-    var trunkM = new T.MeshStandardMaterial({ color: 0x8a6a4a, roughness: 0.95 }), leafM = new T.MeshStandardMaterial({ color: 0x3f7f3a, roughness: 0.8, side: T.DoubleSide }), woodM = new T.MeshStandardMaterial({ color: 0x9a6a3a, roughness: 0.8 }), darkM = new T.MeshStandardMaterial({ color: 0x3a3d42, metalness: 0.5, roughness: 0.5 });
-    function palm(u, w, hgt, lean){
-      // the trunk: one curved tube, bending away as it rises
-      var pg = new T.Group(), path = [];
-      for(var k = 0; k <= 6; k++){ var tt = k / 6; path.push(new T.Vector3(lean * tt * tt * hgt * 0.3, tt * hgt, 0)); }
-      pg.add(new T.Mesh(new T.TubeGeometry(new T.CatmullRomCurve3(path), 16, 0.17, 8, false), trunkM));
-      var topX = lean * hgt * 0.3;
-      for(var f = 0; f < 9; f++){ var a = f / 9 * Math.PI * 2, fr = new T.Mesh(new T.PlaneGeometry(2.6, 0.5, 6, 1), leafM), fp = fr.geometry.attributes.position;
-        for(var v = 0; v < fp.count; v++){ var fx = fp.getX(v) + 1.3; fp.setXYZ(v, fx, -0.18 * fx * fx, fp.getY(v) * (1 - fx / 2.8)); }   // (drooping, narrowing to a tip)
-        fr.geometry.computeVertexNormals(); fr.position.set(topX, hgt, 0); fr.rotation.y = a; pg.add(fr); }
-      pg.position.set(X0 + u, SG_SAND_Y, SK_Z0 + w); g.add(pg);
-    }
-    palm(-3, -2, 7.5, 1); palm(48, -1.5, 8.2, -1); palm(-2.5, 24, 6.8, 0.6); palm(47, 27, 7.8, -0.8); palm(20, -3.5, 6.5, 0.4); palm(21, 29, 7.2, -0.5);
-    function bench(u, w, rot){ var bg = new T.Group(); var seat = new T.Mesh(new T.BoxGeometry(1.8, 0.07, 0.45), woodM); seat.position.y = 0.45; bg.add(seat); var back = new T.Mesh(new T.BoxGeometry(1.8, 0.4, 0.05), woodM); back.position.set(0, 0.72, -0.2); bg.add(back);
-      [-0.8, 0.8].forEach(function(x){ var lg = new T.Mesh(new T.BoxGeometry(0.06, 0.45, 0.42), darkM); lg.position.set(x, 0.22, 0); bg.add(lg); }); bg.position.set(X0 + u, SG_SAND_Y, SK_Z0 + w); bg.rotation.y = rot; g.add(bg); }
-    bench(8, -1.6, 0); bench(40, -1.4, 0); bench(-2, 12, Math.PI / 2); bench(46, 13, -Math.PI / 2);
-    function lamp(u, w){ var po = new T.Mesh(new T.CylinderGeometry(0.06, 0.08, 4.2, 8), darkM); po.position.set(X0 + u, SG_SAND_Y + 2.1, SK_Z0 + w); g.add(po);
-      var hd = new T.Mesh(new T.CylinderGeometry(0.28, 0.12, 0.3, 10), darkM); hd.position.set(X0 + u, SG_SAND_Y + 4.25, SK_Z0 + w); g.add(hd); }
-    lamp(14, -1.8); lamp(26, -1.8); lamp(38, -1.8); lamp(14, 27.8); lamp(30, 27.8);
-    // a tall sign on two posts by the steps, high enough to be seen from along the beach
+    var sg_ = new T.BufferGeometry(); sg_.setAttribute('position', new T.Float32BufferAttribute(pos, 3)); sg_.setAttribute('uv', new T.Float32BufferAttribute(uv, 2)); sg_.setAttribute('color', new T.Float32BufferAttribute(col, 3)); sg_.setIndex(idx); sg_.computeVertexNormals();
+    if(sg_.attributes.normal.getY(0) < 0){ for(var t = 0; t < idx.length; t += 3){ var sw = idx[t + 1]; idx[t + 1] = idx[t + 2]; idx[t + 2] = sw; } sg_.setIndex(idx); sg_.computeVertexNormals(); }
+    var cm = new T.MeshStandardMaterial({ vertexColors: true, roughness: 0.88, color: 0x8a8781, emissive: 0x1e1d1b, map: skTex(T, 'skate/concrete.jpg', function(){ return skConcrete(T); }, [1, 1]) });
+    var surf = new T.Mesh(sg_, cm); surf.position.set(X0, Y0, SK_Z0); g.add(surf);
+    // the front face, cut to the profile (seen from the side, the ramps' shapes), painted with the surf mural
+    var fpos = [], fuv = [], fidx = [], NF = 600;
+    for(var j = 0; j <= NF; j++){ var uf = j * W / NF, hf = skProf(uf); fpos.push(uf, hf, 0, uf, SG_SAND_Y - Y0, 0); fuv.push(uf / 5.4, (hf + SK.DECK) / 4.8, uf / 5.4, 0); if(j < NF){ var b0 = j * 2; fidx.push(b0, b0 + 1, b0 + 2, b0 + 1, b0 + 3, b0 + 2); } }
+    var fg = new T.BufferGeometry(); fg.setAttribute('position', new T.Float32BufferAttribute(fpos, 3)); fg.setAttribute('uv', new T.Float32BufferAttribute(fuv, 2)); fg.setIndex(fidx); fg.computeVertexNormals();
+    var front = new T.Mesh(fg, new T.MeshStandardMaterial({ color: 0x9e9e9e, roughness: 0.85, side: T.DoubleSide, map: skTex(T, 'skate/mural.jpg', skFlat('#7a6a8a')) })); front.position.set(X0, Y0, SK_Z0); g.add(front);
+    var back = new T.Mesh(fg, new T.MeshStandardMaterial({ color: 0x8a867e, roughness: 0.95, side: T.DoubleSide })); back.position.set(X0, Y0, SK_Z0 + D); g.add(back);
+    var sideM = new T.MeshStandardMaterial({ color: 0x8a867e, roughness: 0.95 });
+    [[0, skProf(0)], [W, skProf(W)]].forEach(function(e){ var hh = e[1] + SK.DECK, sd = new T.Mesh(new T.BoxGeometry(0.2, hh, D), sideM); sd.position.set(X0 + e[0], SG_SAND_Y + hh / 2, SK_Z0 + D / 2); g.add(sd); });
+    // steel: coping on every lip and the spine's top, a flat bar, a handrail down the stairs, angle iron on the ledge
+    var steel = new T.MeshStandardMaterial({ color: 0xc9ced4, metalness: 0.85, roughness: 0.28 });
+    function bar(x0, y0, x1, y1, z, r){ var a = new T.Vector3(X0 + x0, Y0 + y0, SK_Z0 + z), b = new T.Vector3(X0 + x1, Y0 + y1, SK_Z0 + z), m = new T.Mesh(new T.CylinderGeometry(r, r, a.distanceTo(b), 8), steel);
+      m.position.copy(a).add(b).multiplyScalar(0.5); m.quaternion.setFromUnitVectors(new T.Vector3(0, 1, 0), b.clone().sub(a).normalize()); g.add(m); return m; }
+    function across(u, h, r){ var m = new T.Mesh(new T.CylinderGeometry(r, r, D, 8), steel); m.rotation.x = Math.PI / 2; m.position.set(X0 + u, Y0 + h + 0.02, SK_Z0 + D / 2); g.add(m); }
+    SK_LIPS.forEach(function(L){ across(L.u, L.h, 0.045); }); across(SK_SPINE, skProf(SK_SPINE), 0.045);
+    bar(20, 0.38, 26, 0.38, 6, 0.03); [20.3, 23, 25.7].forEach(function(px){ bar(px, 0, px, 0.38, 6, 0.025); });                 // the flat bar
+    bar(53.6, 0.9 + 0.8, 56.4, 0 + 0.8, 2.6, 0.025); [[53.6, 0.9], [55, 0.45], [56.4, 0]].forEach(function(p){ bar(p[0], p[1], p[0], p[1] + 0.8, 2.6, 0.022); });   // the handrail
+    across(44, 0.45, 0.025); across(48, 0.45, 0.025);                                                                              // the ledge's edges
+    // the graffiti wall behind the line, panel after panel (ChatGPT's two walls by turns)
+    var gw1 = skTex(T, 'skate/graffiti1.jpg', skFlat('#8a6a9a')), gw2 = skTex(T, 'skate/graffiti2.jpg', skFlat('#6a8a9a'));
+    var wallH = SK.DECK + 4.6, panelW = wallH * 21 / 9;
+    for(var px2 = -6; px2 < W + 6; px2 += panelW){ var pnl = new T.Mesh(new T.PlaneGeometry(panelW, wallH), new T.MeshStandardMaterial({ map: (Math.round(px2 / panelW) % 2 ? gw2 : gw1), roughness: 0.9, color: 0xa8a8a8 }));
+      pnl.position.set(X0 + px2 + panelW / 2, SG_SAND_Y + wallH / 2, SK_Z0 + D + 0.45); pnl.rotation.y = Math.PI; g.add(pnl);
+      var pb = new T.Mesh(new T.PlaneGeometry(panelW, wallH), sideM); pb.position.set(X0 + px2 + panelW / 2, SG_SAND_Y + wallH / 2, SK_Z0 + D + 0.47); g.add(pb); }
+    var cap = new T.Mesh(new T.BoxGeometry(W + 12, 0.25, 0.4), sideM); cap.position.set(X0 + W / 2, SG_SAND_Y + wallH + 0.12, SK_Z0 + D + 0.46); g.add(cap);
+    // and the paving round it
+    var pv = new T.Mesh(new T.PlaneGeometry(W + 14, D + 14), new T.MeshStandardMaterial({ color: 0x8a867e, roughness: 0.95, map: skTex(T, 'skate/concrete.jpg', function(){ return skConcrete(T); }, [(W + 14) / 4, (D + 14) / 4]) }));
+    pv.rotation.x = -Math.PI / 2; pv.position.set(X0 + W / 2, SG_SAND_Y + 0.03, SK_Z0 + D / 2); g.add(pv);
+    // steps up from the boardwalk to the deck, by the start
+    for(var s = 0; s < 8; s++){ var st = new T.Mesh(new T.BoxGeometry(3, 0.3, 0.45), sideM); st.position.set(X0 + 9, SG_SAND_Y + 0.15 + s * 0.29, SK_Z0 + 0.15 - (7 - s) * 0.42); g.add(st); }
+    // lamps and palms behind the wall, showing over it
+    var darkM = new T.MeshStandardMaterial({ color: 0x3a3d42, metalness: 0.5, roughness: 0.5 }), trunkM = new T.MeshStandardMaterial({ color: 0x8a6a4a, roughness: 0.95 }), leafM = new T.MeshStandardMaterial({ color: 0x3f7f3a, roughness: 0.8, side: T.DoubleSide });
+    for(var lx = 6; lx < W; lx += 18){ var po = new T.Mesh(new T.CylinderGeometry(0.07, 0.09, 9, 8), darkM); po.position.set(X0 + lx, SG_SAND_Y + 4.5, SK_Z0 + D + 1.4); g.add(po);
+      var hd = new T.Mesh(new T.BoxGeometry(0.9, 0.18, 0.4), darkM); hd.position.set(X0 + lx, SG_SAND_Y + 9, SK_Z0 + D + 1.1); g.add(hd); }
+    function palm(x, hgt, lean){ var pg = new T.Group(), path = []; for(var k = 0; k <= 6; k++){ var tt = k / 6; path.push(new T.Vector3(lean * tt * tt * hgt * 0.3, tt * hgt, 0)); }
+      pg.add(new T.Mesh(new T.TubeGeometry(new T.CatmullRomCurve3(path), 16, 0.2, 8, false), trunkM));
+      for(var f = 0; f < 9; f++){ var fr = new T.Mesh(new T.PlaneGeometry(3, 0.55, 6, 1), leafM), fp = fr.geometry.attributes.position;
+        for(var v = 0; v < fp.count; v++){ var fx = fp.getX(v) + 1.5; fp.setXYZ(v, fx, -0.16 * fx * fx, fp.getY(v) * (1 - fx / 3.2)); }
+        fr.geometry.computeVertexNormals(); fr.position.set(lean * hgt * 0.3, hgt, 0); fr.rotation.y = f / 9 * Math.PI * 2; pg.add(fr); }
+      pg.position.set(X0 + x, SG_SAND_Y, SK_Z0 + D + 3); g.add(pg); }
+    [[-3, 11, 1], [15, 12.5, -0.6], [38, 11.5, 0.7], [61, 13, -0.8], [88, 12, 0.5], [109, 12.5, -0.6], [124, 11, 0.8]].forEach(function(p){ palm(p[0], p[1], p[2]); });
+    // a tall sign at the start
     var sc = document.createElement('canvas'); sc.width = 512; sc.height = 128; var c = sc.getContext('2d');
     c.fillStyle = '#1b1b1f'; c.fillRect(0, 0, 512, 128); c.strokeStyle = '#ffd447'; c.lineWidth = 6; c.strokeRect(6, 6, 500, 116);
     c.fillStyle = '#ffd447'; c.font = 'bold 66px Rubik, sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText('🛹 SKATEPARK', 256, 68);
     var stx = new T.CanvasTexture(sc);
-    [Math.PI, 0].forEach(function(ry, k){ var sgn = new T.Mesh(new T.PlaneGeometry(8, 2), new T.MeshBasicMaterial({ map: stx })); sgn.position.set(X0 + 31, SG_SAND_Y + 7.5, SK_Z0 - 4.2 + (k ? 0.02 : 0)); sgn.rotation.y = ry; g.add(sgn); });
-    [-3.6, 3.6].forEach(function(o){ var po = new T.Mesh(new T.CylinderGeometry(0.1, 0.1, 8.5, 8), steel); po.position.set(X0 + 31 + o, SG_SAND_Y + 4.25, SK_Z0 - 4.18); g.add(po); });
+    [Math.PI, 0].forEach(function(ry, k2){ var sgn = new T.Mesh(new T.PlaneGeometry(8, 2), new T.MeshBasicMaterial({ map: stx })); sgn.position.set(X0 + 9, SG_SAND_Y + 7.5, SK_Z0 - 4.2 + (k2 ? 0.02 : 0)); sgn.rotation.y = ry; g.add(sgn); });
+    [-3.6, 3.6].forEach(function(o){ var pp = new T.Mesh(new T.CylinderGeometry(0.1, 0.1, 8.5, 8), steel); pp.position.set(X0 + 9 + o, SG_SAND_Y + 4.25, SK_Z0 - 4.18); g.add(pp); });
     // a 🛹 marker floating high over the park, seen from anywhere on the beach (through things too)
     var mc = document.createElement('canvas'); mc.width = mc.height = 128; var mx = mc.getContext('2d');
     mx.fillStyle = '#ffd447'; mx.beginPath(); mx.arc(64, 64, 58, 0, 6.283); mx.fill(); mx.strokeStyle = '#1b1b1f'; mx.lineWidth = 6; mx.stroke();
     mx.font = '74px sans-serif'; mx.textAlign = 'center'; mx.textBaseline = 'middle'; mx.fillText('🛹', 64, 70);
     var mk = new T.Sprite(new T.SpriteMaterial({ map: new T.CanvasTexture(mc), depthTest: false, transparent: true })); mk.scale.set(3.2, 3.2, 1); mk.renderOrder = 10;
-    mk.position.set(X0 + 22, SG_SAND_Y + 13, SK_Z0 + 13); g.add(mk); g.userData.marker = mk;
+    mk.position.set(X0 + 20, SG_SAND_Y + 13, SK_Z0 + D / 2); g.add(mk); g.userData.marker = mk;
     g.userData.key = Math.round(X0);
     return g;
   }
@@ -15705,9 +15667,9 @@
   // the speed for the score line (on the coping: the grind's)
   function skKmh(){ var S = sg.skate; if(!S) return 0; return Math.round((S.grind ? S.grind.sp : Math.hypot(S.v[0], S.v[1], S.v[2])) * 3.6); }
   function skEnter(){
-    var S = sg.skate = { u: 31, w: 1.3, y: 0, v: [0, 0, 1.2], hd: Math.PI / 2, air: null, bail: 0, carve: 0, lastCarve: -9, wallT: 0, speedT: -9, score0: sg.score, t: 0, ok: false };
+    var S = sg.skate = { u: 2, w: SK.D / 2, y: 1.8, v: [1.4, 0, 0], hd: 0, air: null, bail: 0, carve: 0, lastCarve: -9, wallT: 0, speedT: -9, score0: sg.score, t: 0, ok: false };
     S.y = skH(S.u, S.w); sg.phase = 'skate'; sg.score = 0; sg.chain = 0; sg.chainT = 0; sg.counts = {}; sg.lastMove = '';
-    sgAddText(L('🛹 ⬆️ לדחוף ולפמפם · ⬅️➡️ לקרוב · לחיצה על ⬆️ בקופינג = אייר', '🛹 ⬆️ push & pump · ⬅️➡️ carve · tap ⬆️ at the coping to air'), '#bfe9ff');
+    sgAddText(L('🛹 ⬆️ לדחוף ולפמפם · ⬅️➡️ לקרוב · לחיצה על ⬆️ בקופינג = אייר, לפני לדג׳ = אולי', '🛹 ⬆️ push & pump · ⬅️➡️ carve · tap ⬆️ at the coping to air, before a ledge to ollie'), '#bfe9ff');
   }
   function skLeave(){
     var S = sg.skate; if(!S) return;
@@ -15715,7 +15677,7 @@
     if(sg.score > (sgSave.skateBest || 0)){ sgSave.skateBest = Math.round(sg.score); }
     if(shells > 0){ sgSave.shells += shells; sgAddText(L('🐚 +' + shells + ' צדפים מהסקייטפארק', '🐚 +' + shells + ' shells from the skatepark'), '#ffd447'); }
     sgStore();
-    sg.walk = { x: skX0() + 31, z: SK_Z0 - 3.6, t: 1, ph: 0, hd: -Math.PI / 2 };
+    sg.walk = { x: skX0() + 9, z: SK_Z0 - 3.6, t: 1, ph: 0, hd: -Math.PI / 2 };
     sg.phase = 'walk'; sg.skate = null; sg.score = S.score0 || 0; sg3.wkE = null;
     if(sg3.rider){ sg3.rider.body.position.set(0, 0, 0); sg3.rider.body.rotation.set(0, 0, 0); }
   }
@@ -15755,7 +15717,8 @@
       var gy = skH(Math.max(0.05, Math.min(SK.W - 0.05, S.u)), Math.max(0.05, Math.min(SK.D - 0.05, S.w)));
       S.u = Math.max(0.05, Math.min(SK.W - 0.05, S.u)); S.w = Math.max(0.05, Math.min(SK.D - 0.05, S.w));
       if(S.y <= gy && S.v[1] < 0){
-        if(A.out){ S.y = gy; S.hd = A.hd0 + A.spin; S.v = [Math.cos(S.hd) * 1.6, 0, Math.sin(S.hd) * 1.6]; S.air = null; return; }
+        if(A.out){ S.y = gy; var spO = Math.hypot(S.v[0], S.v[2]); S.hd = A.hd0 + A.spin; S.v = [Math.cos(S.hd) * Math.max(1.6, spO), 0, Math.sin(S.hd) * Math.max(1.6, spO)]; S.air = null; S.landT = 0.35;
+          if(A.ollie) sgScore(L('אולי!', 'Ollie!'), 150); else if(A.drop && A.t > 0.25) sgScore(L('דרופ!', 'Drop!'), 120 + Math.round(A.t * 200)); return; }
         // landing: the board's facing (turned 180 for the way back down, plus any spin) against the way it's going
         S.y = gy; var g2 = skGrad(S.u, S.w), down = Math.atan2(-g2[1], -g2[0]), face = A.hd0 + Math.PI + A.spin;
         var dif = Math.cos(face - down), turns = Math.round(Math.abs(A.spin) / Math.PI);
@@ -15829,46 +15792,40 @@
     var dd = dir[0] * n1[0] + dir[1] * n1[1] + dir[2] * n1[2], tdir = [dir[0] - dd * n1[0], dir[1] - dd * n1[1], dir[2] - dd * n1[2]], tl = Math.hypot(tdir[0], tdir[1], tdir[2]) || 1;
     v[0] = tdir[0] / tl * sp; v[1] = tdir[1] / tl * sp; v[2] = tdir[2] / tl * sp; if(sp === 0) v[1] = 0;
     var hs = Math.hypot(v[0], v[2]); if(hs > 0.3) S.hd = Math.atan2(v[2], v[0]);
-    // over the coping of a quarter pipe or the bowl, going up: into the air
-    var rimD = skRim(S.u, S.w), prevR = skRim(S.u - v[0] * dt, S.w - v[2] * dt), rimH = skDepth(S.u, S.w);
-    var outBowl = prevR > 0 && rimD <= 0.07;
-    if(outBowl && rimH < 1.45 && !(S.t - (S.popAt || -9) < 0.35)){
-      // (the shallow end: low and laid back enough to roll up over the coping and out)
-      var lo = Math.hypot(v[0], v[1], v[2]) * 0.92; S.y = skH(S.u, S.w); var lh = Math.hypot(v[0], v[2]) || 1; v[0] = v[0] / lh * lo; v[1] = 0; v[2] = v[2] / lh * lo;
-    } else if(outBowl && v[1] > 0.3){
-      var on = skRimOut(S.u, S.w);
-      var out = v[0] * on[0] + v[2] * on[1]; if(out > 0){ v[0] -= on[0] * out; v[2] -= on[1] * out; }
-      var alongSp = Math.hypot(v[0], v[2]), popped = S.t - (S.popAt || -9) < 0.35;
-      S.u -= on[0] * (0.08 - rimD); S.w -= on[1] * (0.08 - rimD);
-      S.y = skH(S.u, S.w);
-      // 1. coming up along the coping, more along it than up: the trucks lock on it and you ride
-      //    along the top of the wall -- the floater (on concrete: a grind along the coping)
-      if(alongSp > 1.6 && alongSp > v[1] * 0.9 && !popped){
-        S.grind = { t: 0, n: on, kind: 'rim', sp: Math.min(sp, 6) * 0.85, dir: [v[0] / alongSp, v[2] / alongSp] };
-        S.v = [0, 0, 0]; return;
-      }
-      // 2. popped right at the lip, going up the wall and fast enough to clear the coping: an air
-      //    (no pop, and the front wheels just hit the coping)
-      if(popped && v[1] > 2.0 && v[1] > sp * 0.7 && rimH > 1.6){   // (off the deep walls; the shallow end is too low and laid back to air out of)
-        v[0] -= on[0] * 0.6; v[2] -= on[1] * 0.6;                           // (the rider brings the board back in over the wall, to land lower on it)
-        S.air = { t: 0, y0: S.y, maxY: S.y, spin: 0, hd0: S.hd };
+    var prevU = S.u - v[0] * dt, popped = S.t - (S.popAt || -9) < 0.35;
+    // a sheer edge: up (a ledge: an ollie gets you onto it, without one you stop against it) or down (off the end: you fly)
+    for(var si = 0; si < SK_STEPS.length; si++){ var St = SK_STEPS[si];
+      var crossF = prevU < St.u && S.u >= St.u, crossB = prevU > St.u && S.u <= St.u; if(!crossF && !crossB) continue;
+      var rise = crossF ? St.d : -St.d;
+      if(rise > 0){
+        if(popped && sp > 1.5){ S.u = prevU; S.y = y0; S.v = [v[0], 3.4, v[2]]; S.air = { t: 0, y0: S.y, maxY: S.y, spin: 0, hd0: S.hd, out: true, ollie: true }; S.popAt = -9; return; }
+        S.u = prevU; S.y = y0; v[0] = -v[0] * 0.25; v[2] *= 0.5; S.hd = Math.atan2(v[2], v[0]);
+        if(!S.ollieHint){ S.ollieHint = 1; sgAddText(L('⬆️ לחיצה קצרה לפני הלדג׳ = אולי למעלה', '⬆️ tap just before the ledge = ollie up'), '#bfe9ff'); }
         return;
       }
-      // (the way out of the bowl: a smaller pop at its edge hops you out onto the deck)
-      if(popped && v[1] > 1.1){
-        S.air = { t: 0, y0: S.y, maxY: S.y, spin: 0, hd0: Math.atan2(on[1], on[0]), out: true };
-        S.v = [on[0] * 1.6, v[1], on[1] * 1.6]; return;
-      }
-      // 3. otherwise the wheels touch the coping and you come back down: a kickturn at the top
-      v[0] = -v[0] * 0.6; v[1] = -Math.abs(v[1]) * 0.45; v[2] = -v[2] * 0.6;
-      S.u -= on[0] * 0.08; S.w -= on[1] * 0.08; S.y = skH(Math.max(0.05, Math.min(SK.W - 0.05, S.u)), Math.max(0.05, Math.min(SK.D - 0.05, S.w)));
-      S.kickT = 0.35; S.kickDir = (S.steer || 0) > 0 ? -1 : 1; S.hd = Math.atan2(v[2], v[0]);
+      if(sp > 1.2){ S.y = y0; S.v = [v[0], 0.4, v[2]]; S.air = { t: 0, y0: S.y, maxY: S.y, spin: 0, hd0: S.hd, out: true, drop: true }; return; }
+    }
+    // over a lip with coping, going up the wall: an air, a hop out onto the deck, or a kickturn back down
+    for(var li = 0; li < SK_LIPS.length; li++){ var Lp = SK_LIPS[li];
+      var outCross = (prevU - Lp.u) * Lp.s < 0 && (S.u - Lp.u) * Lp.s >= -0.02, inCross = (prevU - Lp.u) * Lp.s >= 0 && (S.u - Lp.u) * Lp.s < 0;
+      if(inCross && v[1] < -0.3 && sp > 1.5 && S.t - (S.toAt || -9) > 3){ S.toAt = S.t; if(Lp.start) sgScore(L('דרופ אין!', 'Drop in!'), 300); else sgScore(L('טייק-אוף עמוק', 'Deep take-off'), 500); }
+      if(!(outCross && v[0] * Lp.s > 0 && v[1] > 0.3)) continue;
+      var on = [Lp.s, 0], out = v[0] * Lp.s; v[0] -= Lp.s * out;
+      S.u = Lp.u - Lp.s * 0.08; S.y = skH(S.u, S.w);
+      if(popped && v[1] > 2.0 && v[1] > sp * 0.7 && Lp.depth > 1.5){       // (popped right at the lip, up a deep wall, fast enough to clear the coping)
+        v[0] -= on[0] * 0.6; S.air = { t: 0, y0: S.y, maxY: S.y, spin: 0, hd0: S.hd }; return; }
+      if(popped && v[1] > 1.1){                                             // (a smaller pop: out onto the deck)
+        S.air = { t: 0, y0: S.y, maxY: S.y, spin: 0, hd0: Math.atan2(0, Lp.s), out: true }; S.v = [Lp.s * 1.6, v[1], v[2] * 0.5]; return; }
+      v[0] = -v[0] * 0.6; v[1] = -Math.abs(v[1]) * 0.45; v[2] = -v[2] * 0.6;   // (the wheels touch the coping: a kickturn back down)
+      S.u -= Lp.s * 0.08; S.y = skH(S.u, S.w); S.kickT = 0.35; S.kickDir = (S.steer || 0) > 0 ? -1 : 1; S.hd = Math.atan2(v[2], v[0]);
       if(!S.popHint && v[1] < -0.5){ S.popHint = 1; sgAddText(L('⬆️ ממש בקופינג (עם מהירות) = אייר', '⬆️ right at the coping (with speed) = air'), '#bfe9ff'); }
       return;
     }
-    // (on the deck: kept off its outer edge)
-    var dO = skOut(S.u, S.w) - (SK.LIP - 0.3);
-    if(dO > 0){ var oN = skRimOut(S.u, S.w), ov = v[0] * oN[0] + v[2] * oN[1]; S.u -= oN[0] * dO; S.w -= oN[1] * dO; if(ov > 0){ v[0] -= oN[0] * ov * 1.4; v[2] -= oN[1] * ov * 1.4; } }
+    // over the spine, from one wall to the other
+    if((prevU - SK_SPINE) * (S.u - SK_SPINE) < 0 && sp > 1.5 && S.t - (S.spAt || -9) > 2){ S.spAt = S.t; sgScore(L('ספיין טרנספר!', 'Spine transfer!'), 350); }
+    // the edges of the line: its sides, and the decks at its two ends
+    if(S.w < 0.4){ S.w = 0.4; v[2] = Math.abs(v[2]) * 0.4; } if(S.w > SK.D - 0.4){ S.w = SK.D - 0.4; v[2] = -Math.abs(v[2]) * 0.4; }
+    if(S.u < 0.3){ S.u = 0.3; v[0] = Math.abs(v[0]) * 0.3; } if(S.u > SK.W - 0.3){ S.u = SK.W - 0.3; v[0] = -Math.abs(v[0]) * 0.3; }
     S.y = skH(S.u, S.w);
     // the surf moves, done on concrete the way surfskaters practise them:
     // bottom turn -- a hard, compressed carve at the bottom, turning up the wall;
@@ -15876,8 +15833,8 @@
     // back wheels sliding out -- off the lip at the coping, a rebound right after a cutback;
     // cutback -- holding a carve round ~180 degrees on the flat, back the way you came;
     // floater -- riding along the coping; deep take-off -- dropping into the bowl with speed
-    var inBowl = rimD > 0, onWall = inBowl && rimD < skWallTW(rimH) + 0.6;
-    var low = inBowl && S.y < -rimH + 0.4, high = onWall && S.y > -rimH * 0.5, lip = onWall && rimD < 0.4;
+    var hL = skProf(S.u - 3), hR = skProf(S.u + 3), nearLip = SK_LIPS.some(function(L){ return Math.abs(S.u - L.u) < 2.8; }) || Math.abs(S.u - SK_SPINE) < 2.3;
+    var low = S.y < Math.min(hL, hR) + 0.4 && Math.max(hL, hR) > S.y + 0.5, high = nearLip && slope > 0.8, lip = SK_LIPS.some(function(L){ return Math.abs(S.u - L.u) < 0.5; });
     S.btT = Math.max(0, (S.btT || 0) - dt); S.ttT = Math.max(0, (S.ttT || 0) - dt); S.slideT = Math.max(0, (S.slideT || 0) - dt);
     if(low && own && slope > 0.06 && v[1] > 0.2 && Math.abs(om) > 0.9 && sp > 2.5 && S.t - (S.btAt || -9) > 2){ S.btAt = S.t; S.btT = 0.6; sgScore(L('פנייה תחתונה', 'Bottom turn'), 80 + Math.round(sp * 30)); }
     var goingDown = v[1] < -0.1;
@@ -15890,10 +15847,10 @@
     S.wasUp = v[1] > 0.3 ? true : v[1] < -0.3 ? false : S.wasUp;
     if(slope < 0.5 && own && Math.abs(om) > 0.7 && sp > 2){ S.cutAcc = (S.cutAcc || 0) + om * dt; S.cutQuiet = 0; } else { S.cutQuiet = (S.cutQuiet || 0) + dt; if(S.cutQuiet > 0.35) S.cutAcc = 0; }
     if(Math.abs(S.cutAcc || 0) > 2.7){ S.cutAcc = 0; S.cutAt = S.t; sgScore(L('קאטבק', 'Cutback'), 220 + Math.round(sp * 30)); }
-    if(prevR <= 0 && rimD > 0 && v[1] < -0.3 && sp > 2 && S.t - (S.toAt || -9) > 4){ S.toAt = S.t; sgScore(L('טייק-אוף עמוק', 'Deep take-off'), 500); }
   }
 
   // the way out, across the outline (for the coping, a kick back, a grind)
+  function skRim(u, w){ return 1; }                                         // (the old bowl's rim: nothing grinds it now)
   function skRimOut(u, w){ var e = 0.03, gx = skRim(u - e, w) - skRim(u + e, w), gz = skRim(u, w - e) - skRim(u, w + e), l = Math.hypot(gx, gz) || 1; return [gx / l, gz / l]; }
   function skGrind(dt, J){
     var S = sg.skate, G = S.grind; G.t += dt;
@@ -15920,7 +15877,7 @@
 
   // ---- the locals: two skaters riding the park too, on the same physics as you (pumping,
   // carving, popping airs at the coping) -- a park with people moving in it ----
-  var SK_LOCALS = [{ seed: 3, u: 34, w: 7, hd: Math.PI }, { seed: 6, u: 12, w: 17, hd: 0.3 }];
+  var SK_LOCALS = [{ seed: 3, u: 34, w: 4, hd: Math.PI }, { seed: 6, u: 86, w: 8, hd: 0 }];
   function skLocalsStep(dt){
     if(!sg3.skLocals) return;
     var me = sg.skate, mj = sgJoyVec, ms = sgScore, mt = sgAddText, ch = sg.chain, ct = sg.chainT;
@@ -16094,7 +16051,7 @@
     var cw = P.clone().addScaledVector(back, -2.5).addScaledVector(toeSide, 1.5).add(new T.Vector3(0, 1.15, 0)), lk = P.clone().addScaledVector(back, 0.7).add(new T.Vector3(0, 0.35, 0));
     // (never inside the concrete: at least a metre over the park where the camera is)
     // (and over the park, not out over the sand looking at its outside wall)
-    var cr = SK.LIP - 1.0 - skOut(cw.x - X0, cw.z - SK_Z0); if(cr < 0){ var co = skRimOut(cw.x - X0, cw.z - SK_Z0); cw.x += co[0] * cr; cw.z += co[1] * cr; }
+    cw.z = Math.min(cw.z, SK_Z0 + SK.D - 0.6);
     var cu = Math.max(0.05, Math.min(SK.W - 0.05, cw.x - X0)), cv = Math.max(0.05, Math.min(SK.D - 0.05, cw.z - SK_Z0)); cw.y = Math.max(cw.y, Y0 + skH(cu, cv) + 1.0);
     sg3.skCam = sg3.skCam || { p: cw.clone(), l: lk.clone() }; sg3.skCam.p.lerp(cw, 0.08); sg3.skCam.l.lerp(lk, 0.15);
     sg3.cam.position.copy(sg3.skCam.p); sg3.cam.lookAt(sg3.skCam.l); var fv = 60 + Math.min(14, Math.hypot(S.v[0], S.v[1], S.v[2]) * 1.6); S.fov = (S.fov || 60) + (fv - (S.fov || 60)) * 0.05; if(Math.abs(sg3.cam.fov - S.fov) > 0.05){ sg3.cam.fov = S.fov; sg3.cam.updateProjectionMatrix(); } sg3.cam.updateMatrixWorld();
@@ -16140,10 +16097,6 @@
     }, 200);
   })();
   // <<< skatepark
-  // >>> finish button (2026-11-04)
-  // (finishing from the skatepark: your shells first, then the menu)
-  sgOpenMenu = (function(orig){ return function(){ try { if(sg.phase === 'skate' && sg.skate) skLeave(); } catch(e){} return orig.apply(this, arguments); }; })(sgOpenMenu);
-  // <<< finish button
   // >>> beach textures (lab/beachtex-block.js via lab/beachtex.js)
   // ---------- the beach in pictures by ChatGPT (2026-11-04) ----------
   // Everything on the beach that doesn't move, drawn with ChatGPT's image model (beach/*.jpg beside
