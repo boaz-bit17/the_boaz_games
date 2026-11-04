@@ -6177,7 +6177,7 @@
       var p3 = sg3Render(); sgHud(p3.sx, p3.sy, p3.sc);
       document.getElementById('sgCamBtn').hidden = !(sg.phase === 'ride' || sg.phase === 'air' || sg.phase === 'tow' || sg.phase === 'done');
       document.getElementById('sgPeakBtn').hidden = !(sg.phase === 'paddle' && !sg.tour && (Math.abs(sg.x - sg.curl - 300) > 500 || Math.abs(sg.dz) > 12));   // in the water, far from the peak
-      document.getElementById('sgExitBtn').hidden = !sg.peak || sg.phase === 'over';
+      document.getElementById('sgExitBtn').hidden = sg.phase === 'over' || sg.phase === 'menu';
       var bchB = document.getElementById('sgBeachBtn'); bchB.hidden = !(sg.phase === 'paddle' && sgLot && !sg.tour);
       if(!bchB.hidden && !bchB.textContent) bchB.textContent = L('🏖️ חזרה לחוף', '🏖️ Back to the beach');
       document.getElementById('sgSkipBtn').hidden = sg.phase !== 'drive' && sg.phase !== 'walk';
@@ -14578,7 +14578,7 @@
   // never while the name field is being typed in. Everything worth keeping
   // (coins, skins, name, league) is in localStorage, so a reload loses nothing.
   // 'dev' = a local or preview copy: the updater stays off entirely.
-  var BUILD_VERSION = '20261104-152644';
+  var BUILD_VERSION = '20261104-170011';
   var UPDATE_CHECK_MS = 60000;
   var UPDATE_TRIED_KEY = 'canyonChaseTriedUpdate';
   var pendingSubmits = 0;
@@ -16196,6 +16196,10 @@
   }
   sg3PostRender = (function(orig){ return function(){ try { bxFrame(); } catch(e){ if(!BX.warned){ BX.warned = 1; console.warn('beach textures:', e); } } orig(); }; })(sg3PostRender);
   // <<< beach textures
+  // >>> finish button (2026-11-04)
+  // (finishing from the skatepark: your shells first, then the menu)
+  sgOpenMenu = (function(orig){ return function(){ try { if(sg.phase === 'skate' && sg.skate) skLeave(); } catch(e){} return orig.apply(this, arguments); }; })(sgOpenMenu);
+  // <<< finish button
   // idle player pose before first game
   resetGame();
   requestAnimationFrame(frame);
