@@ -4703,7 +4703,10 @@
       sky: ['#3d93e2', '#e0eef4'], sea: ['#3fc3cf', '#0c5a7c'], face: ['#38b2c8', '#0a5280'] },
     { id: 'raglan', left: true, emoji: '🇳🇿', name: L('רגלן, ניו זילנד', 'Raglan, New Zealand'), dur: 40, man: 0.62, tubeLen: 150, need: 0, curl: 0.95, size: 0.5, barrel: 0.12, hazard: null,
       desc: L('שמאלי נקודה ארוך ורך, עם המון קירות לתרגל. חול שחור וגבעות ירוקות.', 'A long, mellow left point with endless walls to practise on. Black sand and green hills.'),
-      sky: ['#4a8fd0', '#dfe8ea'], sea: ['#3a9a9a', '#0f4a55'], face: ['#3a8f9a', '#0e4652'] }
+      sky: ['#4a8fd0', '#dfe8ea'], sea: ['#3a9a9a', '#0f4a55'], face: ['#3a8f9a', '#0e4652'] },
+    { id: 'lacbay', windsurf: true, emoji: '🇧🇶', name: L('לאק ביי, בונייר 🌬️', 'Lac Bay, Bonaire 🌬️'), dur: 20, man: 0.6, tubeLen: 80, need: 0, curl: 1.0, size: 0.25, barrel: 0.0, hazard: null,
+      desc: L('גלישת רוח: לגונה רדודה ושטוחה כמו שולחן ורוח טרייד קבועה — המכה של הפריסטייל.', 'Windsurfing: a shallow, table-flat lagoon and steady trade winds — the mecca of freestyle.'),
+      sky: ['#3f93e4', '#e2eef4'], sea: ['#5fe0d8', '#0c7a90'], face: ['#58d4d0', '#0c6e8a'] }
   ];
   var SG_BOARDS = [
     { id: 'foam',    name: L('קלקר', 'Foamie'),      price: 0,     deck: '#ff7a3d', stripe: '#ffffff' },
@@ -5078,7 +5081,7 @@
   function sgNetTick(){
     if(!sgNet.ch || !sg.peak) return;
     var now = Date.now(); if(now - sgNet.last < PEAK_SEND_MS) return; sgNet.last = now;
-    var ph = sg.phase === 'drive' || sg.phase === 'walk' || sg.phase === 'skate' ? 'd' : sg.phase === 'paddle' ? 'p' : sg.phase === 'ride' || sg.phase === 'done' || sg.phase === 'tow' ? 'r' : sg.phase === 'air' ? 'a' : 'w';
+    var ph = sg.phase === 'drive' || sg.phase === 'walk' || sg.phase === 'skate' || sg.phase === 'wind' ? 'd' : sg.phase === 'paddle' ? 'p' : sg.phase === 'ride' || sg.phase === 'done' || sg.phase === 'tow' ? 'r' : sg.phase === 'air' ? 'a' : 'w';
     try { sgNet.ch.send({ type: 'broadcast', event: 'pk', payload: { id: duelMyId, nm: playerNick() || L('גולש', 'Surfer'), rd: sgSave.rider, bd: sgSave.board, ph: ph,
       x: Math.round(sg.x - sg.peak.peakX), dz: Math.round((sg.dz || 0) * 10) / 10, hd: Math.round((sg.hd || 0) * 100) / 100, h: Math.round((sg.h || 0) * 100) / 100,
       sc: Math.round(sgTen(sg.score) * 100) / 100, best: sg.peak.best, ln: sgLen(), cr: sgSave.car, cc: sgSave.carColor, rk: sgSave.rack ? 1 : 0, lo: sgSave.look && sgSave.look.on ? sgSave.look : null, bz: sgSave.bd && sgSave.bd.on ? sgSave.bd : null,
@@ -6354,10 +6357,10 @@
     ctx.textAlign = 'center';
     ctx.font = 'bold 34px Suez One, Rubik, sans-serif';
     ctx.lineWidth = 6; ctx.strokeStyle = 'rgba(0,30,50,0.6)'; ctx.fillStyle = '#ffffff';
-    var live = sg.phase === 'skate' ? '🛹 ' + Math.round(sg.score) + ' · ' + skKmh() + L(' קמ"ש', ' km/h') : sgTen(sg.score).toFixed(2);
+    var live = sg.phase === 'wind' ? '🌬️ ' + Math.round(sg.score) + ' · ' + wsKmh() + L(' קמ"ש', ' km/h') : sg.phase === 'skate' ? '🛹 ' + Math.round(sg.score) + ' · ' + skKmh() + L(' קמ"ש', ' km/h') : sgTen(sg.score).toFixed(2);
     ctx.strokeText(live, W / 2, 50); ctx.fillText(live, W / 2, 50);
     ctx.font = 'bold 14px Rubik, sans-serif';
-    var bestTxt = L('הכי גבוה: ', 'Best: ') + (sg.phase === 'skate' ? Math.round(sgSave.skateBest || 0) : (sg.best || 0).toFixed(2));
+    var bestTxt = L('הכי גבוה: ', 'Best: ') + (sg.phase === 'wind' ? Math.round(sgSave.windBest || 0) : sg.phase === 'skate' ? Math.round(sgSave.skateBest || 0) : (sg.best || 0).toFixed(2));
     ctx.lineWidth = 4; ctx.strokeText(bestTxt, W / 2, 72); ctx.fillText(bestTxt, W / 2, 72);
     if(sg.chainT > 0 && sg.chain > 1){
       ctx.font = 'bold 20px Rubik, sans-serif'; ctx.fillStyle = '#ffd447';
@@ -6446,7 +6449,7 @@
   // If three.js can't load, the 2D drawing carries on.
   var SG3_LIB = 'https://cdn.jsdelivr.net/npm/three@0.149.0/build/three.min.js';
   var SG3_M = 1 / 40;                                   // game units -> metres
-  var SG3_H = { pool: 3.1, olga: 3.3, pipe: 4.4, naz: 10, air: 3.1, skeleton: 2.7, teahupoo: 4.8, cloudbreak: 5.2, hossegor: 3.0, jbay: 3.3, uluwatu: 3.4, snapper: 2.8, raglan: 2.7 };  // wave height (m)
+  var SG3_H = { pool: 3.1, olga: 3.3, pipe: 4.4, naz: 10, air: 3.1, skeleton: 2.7, teahupoo: 4.8, cloudbreak: 5.2, hossegor: 3.0, jbay: 3.3, uluwatu: 3.4, snapper: 2.8, raglan: 2.7, lacbay: 0.6 };  // wave height (m)
   var sg3 = { state: 'none', camMode: 'chase' };
   function sg3Load(){
     if(sg3.state !== 'none') return;
@@ -7304,7 +7307,7 @@
     return g;
   }
   function sg3Break(xm, Hm){
-    if(sg.phase === 'paddle' || sg.phase === 'drive' || sg.phase === 'walk'){
+    if(sg.phase === 'paddle' || sg.phase === 'drive' || sg.phase === 'walk' || sg.phase === 'wind'){
       // a peak: highest where it will break, falling away to the shoulders; growing as it
       // comes in, and standing up and feathering at the peak just before it reaches you
       var kp = sg.pad.k || 0, kq = Math.min(1, kp), dp = (xm - sg.curl * SG3_M) / Hm;
@@ -7822,7 +7825,7 @@
     var U2 = sg3.wm.uniforms; U2.uT.value = now % 1000; U2.uCurlX.value = sg.curl * SG3_M; sg3.skyMat.uniforms.uT.value = now % 1000;
     var sx = sg.x * SG3_M, rows = sg3.rows, pos = sg3.pos, foam = sg3.foam, thin = sg3.thin, curt = sg3.curt, cave = sg3.cave;
     var span = Hm * 22 + 110, dx = span / (SG3_COLS - 1), x0r = sx - Hm * 9 - 30, x0 = Math.floor(x0r / dx) * dx;
-    var zOff = sg.phase === 'paddle' || sg.phase === 'drive' || sg.phase === 'walk' ? sgSetOff(Math.min(1, sg.pad.k), Hm) : 0;    // the set, rolling in from the horizon (and on past, if you missed it)
+    var zOff = sg.phase === 'paddle' || sg.phase === 'drive' || sg.phase === 'walk' || sg.phase === 'wind' ? sgSetOff(Math.min(1, sg.pad.k), Hm) : 0;    // the set, rolling in from the horizon (and on past, if you missed it)
     for(var c = 0; c < SG3_COLS; c++){
       var xm = x0 + c * dx, br = sg3Break(xm, Hm);
       var cf = (xm - x0r) / dx, endF = Math.max(0, Math.min(1, cf / (SG3_COLS * 0.12), (SG3_COLS - 1 - cf) / (SG3_COLS * 0.2)));   // flattens away at both ends
@@ -14578,7 +14581,7 @@
   // never while the name field is being typed in. Everything worth keeping
   // (coins, skins, name, league) is in localStorage, so a reload loses nothing.
   // 'dev' = a local or preview copy: the updater stays off entirely.
-  var BUILD_VERSION = '20261104-152644';
+  var BUILD_VERSION = '20261104-155137';
   var UPDATE_CHECK_MS = 60000;
   var UPDATE_TRIED_KEY = 'canyonChaseTriedUpdate';
   var pendingSubmits = 0;
@@ -16196,6 +16199,330 @@
   }
   sg3PostRender = (function(orig){ return function(){ try { bxFrame(); } catch(e){ if(!BX.warned){ BX.warned = 1; console.warn('beach textures:', e); } } orig(); }; })(sg3PostRender);
   // <<< beach textures
+  // >>> windsurfing (lab/wind-block.js via lab/wind.js)
+  // ---------- windsurfing (2026-11-04) ----------
+  // A board and a sail, at any beach (from the sand: 🌬️) and at Lac Bay, Bonaire -- the flat,
+  // waist-deep lagoon with steady trade winds that freestyle windsurfing calls its mecca.
+  // How it sails (sailing physics and windsurf coaching): the sail can't pull within ~45 degrees
+  // of the wind (the no-go zone), pulls best with the wind a little behind the beam; in enough
+  // wind the board planes and runs near the wind's speed, below it it wallows. ⬅️➡️ steer,
+  // hold ⬆️ to pump the sail (onto the plane), tap ⬆️ to pop a jump, ⬇️ to flip the sail.
+  // Turning through the wind is a tack, through downwind a jibe. Freestyle on flat water:
+  // Vulcan (a jumped 180, downwind), Spock (a Vulcan that spins on round on the nose), Grubby
+  // (a jumped 360 downwind), Flaka (a jumped 360 upwind), Shaka (a 360 with the sail flipped).
+  // On waves: launch off a face for big air -- ⬆️ held a forward loop, ⬇️ a back loop -- and
+  // ride them in with bottom and top turns, like the surf game. Scored like a wave.
+  var WS = { G: 9.8 };
+  // the day's wind here: from the forecast (Lac Bay: the trades, 28-40 km/h); never quite dead
+  function wsWind(){
+    var f = sgForecast(sg.spot), kmh = Math.max(12, f.kmh || 12);
+    var on = sg.spot.windsurf || (f.wind && f.wind.id === 'onshore');
+    // side-onshore (from the sea, along the beach) or side-offshore (from the land)
+    var to = on ? [-0.85, 0.53] : [-0.85, -0.53], l = Math.hypot(to[0], to[1]);
+    return { kmh: kmh, v: kmh / 3.6, to: [to[0] / l, to[1] / l] };
+  }
+  // the water's height at (x, z): the same swell the beach watches roll in
+  function wsWaterY(x, z){
+    var Hm = SG3_H[sg.spot.id] || 3, br = sg3Break(x, Hm), rows = sg3ProfileQ(br[0], br[1], Hm, br[2]);
+    return sg3WaterY(rows, z + sgSetOff(Math.min(1, sg.pad.k), Hm));
+  }
+  // how hard the sail pulls with the wind at this angle off the bow (0: head to wind .. PI: dead
+  // downwind): nothing in the no-go zone, best a little past the beam
+  function wsPolar(a){
+    if(a < 0.75) return 0;
+    if(a < 1.25) return 0.85 * (a - 0.75) / 0.5;
+    if(a < 2.0) return 0.85 + 0.3 * (a - 1.25) / 0.75;
+    return 1.15 - 0.4 * (a - 2.0) / (Math.PI - 2.0);
+  }
+  function wsEnter(){
+    var Wd = wsWind(), x = sg.walk ? sg.walk.x : (sgLot ? sgLot.parkX : 0);
+    // a beam reach, heading out to sea
+    var fr = [-Wd.to[0], -Wd.to[1]], h1 = [-fr[1], fr[0]], h2 = [fr[1], -fr[0]], h = h1[1] < h2[1] ? h1 : h2;
+    var W = sg.ws = { x: x, z: SG_WADE_Z - 2.5, hd: Math.atan2(h[1], h[0]), v: 2.5, air: null, crash: 0, t: 0, lee: 1, leeS: 1, turnAcc: 0, score0: sg.score, wind: Wd, y: 0, pitch: 0, roll: 0 };
+    W.y = wsWaterY(W.x, W.z);
+    sg.phase = 'wind'; sg.score = 0; sg.chain = 0; sg.chainT = 0; sg.counts = {}; sg.lastMove = '';
+    sgAddText(L('🌬️ רוח ' + Wd.kmh + ' קמ"ש · ⬅️➡️ לנווט · להחזיק ⬆️ פאמפ · לחיצה ⬆️ קפיצה · ⬇️ להפוך מפרש', '🌬️ Wind ' + Wd.kmh + ' km/h · ⬅️➡️ steer · hold ⬆️ pump · tap ⬆️ jump · ⬇️ flip the sail'), '#bfe9ff');
+    if(Wd.kmh < 20) sgAddText(L('רוח חלשה היום: קשה לעלות להחלקה', 'Light wind today: hard to get planing'), '#ffd447');
+  }
+  function wsLeave(){
+    var W = sg.ws; if(!W) return;
+    var shells = Math.min(40, Math.floor(sg.score / 300));
+    if(sg.score > (sgSave.windBest || 0)) sgSave.windBest = Math.round(sg.score);
+    if(shells > 0){ sgSave.shells += shells; sgAddText(L('🐚 +' + shells + ' צדפים מגלישת הרוח', '🐚 +' + shells + ' shells from windsurfing'), '#ffd447'); }
+    sgStore();
+    sg.walk = { x: W.x, z: SG_EDGE_Z + 0.6, t: 0.9, ph: 0, hd: Math.PI / 2 };
+    sg.phase = 'walk'; sg.ws = null; sg.score = W.score0 || 0; sg3.wkE = null;
+    if(sg3.rider){ sg3.rider.body.position.set(0, 0, 0); sg3.rider.body.rotation.set(0, 0, 0); }
+  }
+  function wsCrash(why){ var W = sg.ws; W.crash = 2.4; W.air = null; W.v *= 0.2; sg.chain = 0; sg.chainT = 0; sgAddText('💦 ' + why, '#ff9a8a'); }
+  function wsUpdate(dt){
+    var W = sg.ws, J = sgJoyVec(), Wd = W.wind; W.t += dt;
+    var upNow = J.y < -0.5; if(upNow && !W.upWas) W.popAt = W.t; W.upWas = upNow;
+    var dnNow = J.y > 0.5; if(dnNow && !W.dnWas) W.flipAt = W.t; W.dnWas = dnNow;
+    W.landT = Math.max(0, (W.landT || 0) - dt); W.slideT = Math.max(0, (W.slideT || 0) - dt);
+    var fx = Math.cos(W.hd), fz = Math.sin(W.hd);
+    var wy0 = wsWaterY(W.x, W.z);
+    if(W.crash > 0){
+      // in the water: up again, uphauling the sail
+      W.crash -= dt; W.v *= Math.exp(-2 * dt); W.x += fx * W.v * dt; W.z += fz * W.v * dt; W.y = wy0;
+      if(W.crash <= 0){ W.v = 1; W.leeS = W.lee; }
+      return;
+    }
+    // the angle off the wind, and which side the sail is on (to leeward)
+    var a = Math.acos(Math.max(-1, Math.min(1, fx * -Wd.to[0] + fz * -Wd.to[1])));
+    var lat = [-fz, fx], lee = (Wd.to[0] * lat[0] + Wd.to[1] * lat[1]) >= 0 ? 1 : -1;   // (+1: the wind blows toward the board's left)
+    if(W.air){
+      var A = W.air; A.t += dt;
+      W.vy -= WS.G * dt; W.y += W.vy * dt; W.x += fx * W.v * dt; W.z += fz * W.v * dt;
+      A.rot += J.x * 10 * dt;                                                // ⬅️➡️: the board spins under you
+      // (let go, and it settles to the nearest half turn -- the way riders spot their landing)
+      if(Math.abs(J.x) < 0.3 && A.rot){ var tr = Math.round(A.rot / Math.PI) * Math.PI; A.rot += (tr - A.rot) * Math.min(1, dt * 7); }
+      if(A.wave){ if(J.y < -0.5) A.loop += 7 * dt; else if(J.y > 0.5) A.loop -= 6 * dt; else if(A.loop){ var tl = Math.round(A.loop / (Math.PI * 2)) * Math.PI * 2; A.loop += (tl - A.loop) * Math.min(1, dt * 6); } }   // off a wave: ⬆️ a forward loop, ⬇️ a back loop
+      if(W.t - (W.flipAt || -9) < 0.05) A.flip = true;
+      if(W.y <= wy0 && W.vy < 0){ W.y = wy0; wsLand(A, a); }
+      return;
+    }
+    // planing: the board up on its fin, near the wind's speed; below it, it wallows
+    var f = wsPolar(a), planeOK = Wd.v > 5.0;
+    // (off the plane: slow in light wind -- pump to get over the hump -- but in a strong wind (over ~25 km/h) it lifts onto the plane by itself)
+    var tgt = W.v > 4.2 && planeOK ? Wd.v * 1.05 * f : Math.min(4.8, (0.35 * Wd.v + Math.max(0, Wd.v - 6.5) * 0.6) * f);
+    var pumping = J.y < -0.3;
+    if(pumping && f > 0.4 && W.v < 6) W.v += 1.1 * dt;                        // pumping the sail gets you over the hump, onto the plane
+    W.v += (tgt - W.v) * Math.min(1, dt * (W.v > 4.2 ? 0.45 : 0.3));
+    if(f === 0) W.v *= Math.exp(-0.9 * dt);                                  // in irons: the sail flaps, the board stops
+    // stopped head to wind, the rider swings the rig to bring the nose away from it (and says how)
+    if(f < 0.35 && W.v < 1.5 && Math.abs(J.x) < 0.2){ W.ironT = (W.ironT || 0) + dt; if(W.ironT > 1.2){ var cr = fx * -Wd.to[1] - fz * -Wd.to[0]; W.hd += (cr > 0 ? -1 : 1) * 0.7 * dt;
+      if(!W.ironHint){ W.ironHint = 1; sgAddText(L("🌬️ מול הרוח אי אפשר להפליג — ⬅️➡️ לסובב הצידה", "🌬️ You can't sail into the wind — ⬅️➡️ to turn away"), "#bfe9ff"); } } } else W.ironT = 0;
+    if(W.slideT > 0) W.v *= Math.exp(-1.5 * dt);
+    // steering: carving on the rail when planing, slower when not
+    var rate = W.v > 4.2 ? 1.15 : 0.75, steer = J.x;
+    W.steer = (W.steer || 0) + (steer - (W.steer || 0)) * Math.min(1, dt * 8);
+    var dh = W.steer * rate * dt; W.hd += dh;                                 // (➡️ turns right, as on the screen: the heading angle grows toward +z) if(W.v > 4.2) W.turnAcc += dh; if(Math.abs(W.steer) < 0.2) W.turnAcc *= Math.exp(-1.2 * dt);
+    W.x += fx * W.v * dt; W.z += fz * W.v * dt;
+    // the water under you, and its slope ahead (a wave face)
+    var wyA = wsWaterY(W.x + fx * 1.2, W.z + fz * 1.2), slope = (wyA - wy0) / 1.2; W.y = wy0; W.slope = slope;
+    // the sail comes round: a tack (bow through the wind) or a jibe (stern through it)
+    if(W.lee === 0) W.lee = lee;
+    if(lee !== W.lee){
+      var planing = W.v > 4.2, held = W.t - (W.flipAt || -9) < 1.2;
+      if(a < Math.PI / 2){ if(held) sgScore(L('הלי-טאק!', 'Heli tack!'), 350); else sgScore(L('טאק', 'Tack'), 60); W.v *= 0.5; }
+      else if(planing){ if(held) sgScore(L('דאק ג\'ייב!', 'Duck jibe!'), 300); else sgScore(L('ג\'ייב קארב', 'Carve jibe'), 150 + Math.round(W.v * 10)); }
+      else sgScore(L('ג\'ייב', 'Jibe'), 40);
+      W.lee = lee;
+    }
+    if(Math.abs(W.turnAcc) > Math.PI * 2){ W.turnAcc = 0; sgScore(L('360 קארב!', 'Carving 360!'), 300); }
+    // a pop: off the flat, or launched off a wave face
+    var popped = W.t - (W.popAt || -9) < 0.12 && W.v > 4.5, ramp = slope > 0.22 && W.v > 4.5 && fz < 0;
+    if(popped || ramp){
+      W.vy = Math.min(6.5, 3.0 + 0.25 * (W.v - 4.5) + (ramp ? W.v * slope * 0.9 : 0));   // (a freestyle pop: ~1 m, ~0.9 s up)
+      W.air = { t: 0, rot: 0, loop: 0, flip: false, wave: ramp, hd0: W.hd, a0: a, lee0: lee, y0: W.y };
+      W.popAt = -9; return;
+    }
+    // riding a wave in: turns at the bottom and the top of the face, like on a surfboard
+    if(slope < -0.18 && fz > 0 && Math.abs(W.steer) > 0.7 && W.v > 4){
+      if(W.t - (W.btAt || -9) > 1.5){ var lo = wy0 < wsWaterY(W.x, W.z + 3) - 0.3; W.btAt = W.t; if(lo) sgScore(L('פנייה תחתונה', 'Bottom turn'), 120); else sgScore(L('אוף דה ליפ!', 'Off the lip!'), 250); }
+    }
+    // the edges of the sailing water: the beach (the shallows stop you) and out past the line
+    // (the shallows: the sand slopes up out of the water at SG_WADE_Z -- on past it the board was up on the beach)
+    var x0 = sgLot ? sgLot.parkX : 0, zMax = SG_WADE_Z - 0.5, zMin = SG_EDGE_Z - 220;
+    // (at an edge the board comes round onto a beam reach heading away from it -- reflecting the heading
+    // could leave it pointing into the wind, stopped dead)
+    function away(dx, dz){ var fr = [-Wd.to[0], -Wd.to[1]], h1 = [-fr[1], fr[0]], h2 = [fr[1], -fr[0]], h = (h1[0] * dx + h1[1] * dz) > (h2[0] * dx + h2[1] * dz) ? h1 : h2; W.hd = Math.atan2(h[1], h[0]); W.lee = 0; }
+    if(W.z > zMax){ W.z = zMax; away(0, -1); W.v *= 0.6; if(!W.shoreHint){ W.shoreHint = 1; sgAddText(L('🏖️ מים רדודים — מסתובבים', '🏖️ The shallows — turning round'), '#bfe9ff'); } }
+    if(W.z < zMin){ W.z = zMin; away(0, 1); }
+    if(W.x < x0 - 320){ W.x = x0 - 320; away(1, 0); } else if(W.x > x0 + 320){ W.x = x0 + 320; away(-1, 0); }
+  }
+  // down again: the trick is in how far the board turned, which way, and what the sail did
+  function wsLand(A, a){
+    var W = sg.ws, r = A.rot, ar = Math.abs(r), half = Math.round(ar / Math.PI), off = Math.abs(ar - half * Math.PI);
+    var loopN = Math.round(Math.abs(A.loop) / (Math.PI * 2)), loopOff = Math.abs(Math.abs(A.loop) - loopN * Math.PI * 2);
+    W.air = null; W.landT = 0.35;
+    if(off > 0.9 || loopOff > 1.0){ wsCrash(L('נפילה למים!', 'Wiped out!')); return; }
+    // which way it spun: downwind (to leeward: the nose falls off the wind) or upwind
+    var down = (r > 0) === (A.lee0 > 0),   /* (lee +1: the wind blows to the right, and a right turn bears away, downwind) */ airT = A.t, ht = Math.max(0, A.hmax || 0);
+    var name = null, pts = 0;
+    if(loopN >= 1){ name = A.loop > 0 ? L('פורוורד לופ!', 'Forward loop!') : L('בק לופ!', 'Back loop!'); pts = A.loop > 0 ? 1200 : 1100; }
+    else if(half === 0){ name = L('קפיצה', 'Jump'); pts = 100 + Math.round(airT * 250); }
+    else if(half === 1){ name = down ? L('וולקן!', 'Vulcan!') : L('180 לרוח', 'Upwind 180'); pts = down ? 400 : 250;
+      if(down){ W.spockDir = r > 0 ? 1 : -1; W.spockT = 0.7; W.spockAcc = 0; } }
+    else if(half === 2){ name = A.flip ? L('שאקה!', 'Shaka!') : down ? L('גרבי!', 'Grubby!') : L('פלאקה!', 'Flaka!'); pts = A.flip ? 1200 : 900; }
+    else { name = L('ספוק 540!', 'Spock 540!'); pts = 1000 + 250 * (half - 3); }
+    if(A.wave) pts += 200;
+    sgScore(name, pts + Math.round(airT * 100));
+    // the board ends up the way it spun: a 180 lands you sailing away the other way (an air jibe)
+    W.hd = A.hd0 + r; if(half % 2){ W.v *= 0.55; W.lee = -W.lee; } else W.v *= 0.8;
+  }
+  // after a Vulcan: keep turning the same way and the board spins round on its nose -- a Spock
+  function wsSpock(dt){
+    var W = sg.ws, J = sgJoyVec(); if(!(W.spockT > 0)) return;
+    W.spockT -= dt;
+    if(Math.abs(J.x) > 0.5 && (J.x > 0 ? 1 : -1) === W.spockDir){ var d = W.spockDir * 7 * dt; W.hd += d; W.spockAcc += Math.abs(d); W.slideT = 0.3;
+      if(W.spockAcc > Math.PI * 0.85){ W.spockT = 0; sgScore(L('ספוק!', 'Spock!'), 700); W.v *= 0.5; W.lee = -W.lee; } }
+  }
+
+  // ---- the board and the rig ----
+  function wsRig(T){
+    var g = new T.Group(), board = new T.Group(); g.add(board);
+    // the board: 2.35 m freestyle board, white with a deck pad and two footstraps
+    var bg = sg3BoardGeo(T); var bm = new T.Mesh(bg, new T.MeshStandardMaterial({ color: 0xf4f6f8, roughness: 0.35 })); bm.scale.set(1.3, 1.4, 1.55); board.add(bm);
+    var pad = new T.Mesh(new T.BoxGeometry(1.1, 0.012, 0.42), new T.MeshStandardMaterial({ color: 0x1a7fd0, roughness: 0.9 })); pad.position.set(-0.35, 0.07, 0); board.add(pad);
+    [-0.55, -0.15].forEach(function(x){ var st = new T.Mesh(new T.TorusGeometry(0.09, 0.022, 6, 12, Math.PI), new T.MeshStandardMaterial({ color: 0x111111 })); st.position.set(x, 0.075, 0.1); st.rotation.y = Math.PI / 2; board.add(st); });
+    var fin = new T.Mesh(new T.BoxGeometry(0.22, 0.32, 0.015), new T.MeshStandardMaterial({ color: 0x222222 })); fin.position.set(-0.95, -0.16, 0); board.add(fin);
+    // the rig: mast, wishbone boom, and the sail -- panels of colour round a clear window
+    var rig = new T.Group(); rig.position.set(0.25, 0.07, 0); g.add(rig);
+    var mastM = new T.MeshStandardMaterial({ color: 0x2b2d33, roughness: 0.4 });
+    var mast = new T.Mesh(new T.CylinderGeometry(0.022, 0.03, 4.3, 8), mastM); mast.position.y = 2.15; rig.add(mast);
+    var sc = document.createElement('canvas'); sc.width = 256; sc.height = 512; var c = sc.getContext('2d');
+    c.fillStyle = '#f2f2f2'; c.fillRect(0, 0, 256, 512);
+    var cols = ['#ff3b2f', '#ffb000', '#1b1b1b', '#1a7fd0'];
+    for(var p = 0; p < 4; p++){ c.fillStyle = cols[p]; c.beginPath(); c.moveTo(0, p * 128); c.lineTo(256, p * 128 + 60); c.lineTo(256, p * 128 + 128); c.lineTo(0, p * 128 + 80); c.closePath(); c.fill(); }
+    c.fillStyle = 'rgba(210,235,255,0.55)'; c.fillRect(40, 300, 150, 110);                    // the window
+    c.strokeStyle = 'rgba(0,0,0,0.5)'; c.lineWidth = 3; for(var bt = 1; bt < 7; bt++){ c.beginPath(); c.moveTo(0, bt * 70); c.lineTo(256, bt * 70 + 30); c.stroke(); }   // battens
+    var stx = new T.CanvasTexture(sc); stx.encoding = T.sRGBEncoding;
+    // the sail's outline in the rig's frame: along the mast (luff), out to the clew at the boom's end, down to the foot
+    var sh = new T.Shape(); sh.moveTo(0, 0.25); sh.lineTo(0, 4.25); sh.quadraticCurveTo(0.9, 3.0, 1.85, 1.35); sh.lineTo(1.6, 0.35); sh.quadraticCurveTo(0.8, 0.15, 0, 0.25);
+    var sg_ = new T.ShapeGeometry(sh, 12), sp = sg_.attributes.position, suv = sg_.attributes.uv;
+    for(var i = 0; i < sp.count; i++){ var sx = sp.getX(i), sy = sp.getY(i); suv.setXY(i, sx / 1.9, sy / 4.3); sp.setZ(i, 0.18 * Math.sin(Math.PI * Math.min(1, sx / 1.85)) * Math.min(1, sy / 1.2)); }   // (the sail's belly)
+    sg_.computeVertexNormals();
+    var sail = new T.Mesh(sg_, new T.MeshStandardMaterial({ map: stx, side: T.DoubleSide, roughness: 0.55, transparent: true, opacity: 0.97 }));
+    var sailG = new T.Group(); sailG.add(sail); rig.add(sailG); sail.rotation.y = Math.PI;      // (the sail trails back from the mast, toward the tail)
+    var boomM = new T.MeshStandardMaterial({ color: 0x9aa2ab, metalness: 0.6, roughness: 0.35 });
+    var boom = new T.Mesh(new T.TorusGeometry(0.95, 0.018, 6, 24, Math.PI), boomM); boom.scale.set(1, 0.14, 1); boom.rotation.set(Math.PI / 2, 0, Math.PI / 2); boom.position.set(-0.95, 1.25, 0); sailG.add(boom);
+    g.userData = { board: board, rig: rig, sailG: sailG, sail: sail };
+    return g;
+  }
+  // the rider on it: sideways to the board, facing the sail, hanging back against its pull
+  function wsPose(R, o){
+    var T = sg3.T, P = R.parts, X = R.extra, V = function(x, y, z){ return new T.Vector3(x, y, z); };
+    var k = o.k, kn = o.kneel || 0;
+    // (the rider's own frame: +x where the chest faces (the sail), z along the board, back foot at +z)
+    var footB = V(-0.02, 0.09, 0.55), footF = V(-0.02, 0.09, 0.15);   // (in the straps)
+    var hip = V(-0.18 - 0.1 * o.hang, 0.86 - 0.25 * k - 0.45 * kn, 0.22);
+    var kneeB = V(0.1 + 0.08 * k, 0.47 - 0.1 * k - 0.3 * kn, 0.38), kneeF = V(0.12 + 0.08 * k, 0.48 - 0.1 * k - 0.3 * kn, 0.06);
+    var sh = V(hip.x - 0.08 - 0.12 * o.hang, hip.y + 0.55, 0.2);
+    var shB = V(sh.x, sh.y - 0.02, sh.z + 0.18), shF = V(sh.x, sh.y - 0.02, sh.z - 0.18);
+    var haB = o.hB || V(0.45, 1.2, 0.48), haF = o.hF || V(0.48, 1.25, -0.02);
+    var elB = shB.clone().lerp(haB, 0.5).add(V(-0.05, -0.12, 0.04)), elF = shF.clone().lerp(haF, 0.5).add(V(-0.05, -0.12, -0.04));
+    var nk = V(sh.x + 0.04, sh.y + 0.1, sh.z), hd = V(sh.x + 0.07, sh.y + 0.25, sh.z);
+    sg3Limb(T, P.thighB, hip, kneeB); sg3Limb(T, P.shinB, kneeB, footB); sg3Limb(T, P.thighF, hip, kneeF); sg3Limb(T, P.shinF, kneeF, footF);
+    sg3Limb(T, P.torso, hip, sh); sg3Limb(T, P.stripe, V(hip.x + 0.03, hip.y + 0.05, hip.z - 0.15), V(sh.x + 0.02, sh.y - 0.05, sh.z - 0.16)); sg3Limb(T, P.neck, sh, nk);
+    sg3Limb(T, P.uArmB, shB, elB); sg3Limb(T, P.fArmB, elB, haB); sg3Limb(T, P.uArmF, shF, elF); sg3Limb(T, P.fArmF, elF, haF);
+    X.chest.position.copy(hip).lerp(sh, 0.72); X.chest.quaternion.setFromUnitVectors(V(0, 1, 0), sh.clone().sub(hip).normalize());
+    X.hips.position.copy(hip); X.handB.position.copy(haB); X.handF.position.copy(haF); X.footB.position.copy(footB); X.footF.position.copy(footF);
+    R.head.position.copy(hd); R.head.rotation.z = -0.25; R.hair.position.copy(hd).add(V(-0.02, 0.025, 0)); R.hair.rotation.z = 0.45; R.vest.position.copy(hip).lerp(sh, 0.6);
+  }
+  function wsFrame(){
+    var T = sg3.T; if(!T || !sg3.scene || !sg3.rider) return;
+    var on = sg.phase === 'wind' && sg.ws, R = sg3.rider;
+    if(!sg3.wsRig){ sg3.wsRig = wsRig(T); R.g.add(sg3.wsRig); }
+    sg3.wsRig.visible = !!on;
+    if(!on) return;
+    var W = sg.ws, Wd = W.wind, now = performance.now() / 1000;
+    [R.board, R.stripe, R.fin, R.vest].forEach(function(o){ if(o) o.visible = false; });
+    R.g.visible = true; R.body.children.forEach(function(ch){ if(ch !== R.board && ch !== R.stripe && ch !== R.fin && ch !== R.vest) ch.visible = true; });
+    var LB = typeof lab !== 'undefined' && lab.bodies && lab.bodies[0]; if(LB && LB.shoeU) LB.shoeU.value = 0; if(LB && LB.skateU) LB.skateU.value = 0;
+    // the board on the water: along its heading, tilted with the swell, heeled onto its rail in a carve
+    var fx = Math.cos(W.hd), fz = Math.sin(W.hd), A = W.air;
+    var hdv = A ? A.hd0 + A.rot : W.hd, bx = Math.cos(hdv), bz = Math.sin(hdv);
+    var fwd = new T.Vector3(bx, (W.slope || 0) * 0.8, bz).normalize(), up = new T.Vector3(0, 1, 0);
+    var side = new T.Vector3().crossVectors(fwd, up).normalize(); up.crossVectors(side, fwd).normalize();
+    var q = new T.Quaternion().setFromRotationMatrix(new T.Matrix4().makeBasis(fwd, up, side));
+    var heel = A ? 0 : (W.steer || 0) * Math.min(1, W.v / 6) * 0.45;           // (onto the rail, into the turn)
+    q.multiply(new T.Quaternion().setFromAxisAngle(new T.Vector3(1, 0, 0), heel));
+    if(A && A.loop) q.multiply(new T.Quaternion().setFromAxisAngle(new T.Vector3(0, 0, 1), -A.loop));   // (a loop: round the board's side axis)
+    var bob = W.v < 4 && !A ? Math.sin(now * 1.6) * 0.04 : 0;
+    R.g.position.set(W.x, W.y + 0.08 + bob - (W.crash > 0 ? 0.25 : 0), W.z); R.g.quaternion.copy(q);
+    if(A){ A.hmax = Math.max(A.hmax || 0, W.y - A.y0); }
+    // the sail on the leeward side, sheeted to the wind: close-hauled upwind, let out downwind
+    var a = Math.acos(Math.max(-1, Math.min(1, fx * -Wd.to[0] + fz * -Wd.to[1])));
+    W.leeS = (W.leeS || W.lee) + (W.lee - (W.leeS || W.lee)) * 0.12;                // (the rig swings across in a tack or jibe)
+    var Ls = W.leeS, U = sg3.wsRig.userData, sheet = Math.max(0.15, Math.min(1.25, (a - 0.6) * 0.6));
+    U.sailG.rotation.y = Ls * sheet;                                           // (the sail trails off to leeward)
+    U.rig.rotation.set(0, 0, 0);
+    // the mast raked back and leant to windward when powered up; down on the water in a crash
+    var power = W.crash > 0 ? 0 : Math.min(1, W.v / 7);
+    U.rig.rotation.z = 0.12 + 0.1 * power; U.rig.rotation.x = -Ls * 0.18 * power;   // (leant to windward against the pull)
+    if(W.crash > 0){ U.rig.rotation.x = Ls * 1.45; U.rig.rotation.z = 0.1; }
+    if(A && A.flip) U.sailG.rotation.y = -Ls * sheet;
+    // the rider: facing the sail, feet in the straps, hanging out against the pull
+    R.body.position.set(0, 0.05, -Ls * 0.12);                                // (on the windward rail)
+    var yaw = -Math.PI / 2 * Ls; R.body.rotation.set(0, yaw, 0);
+    var k = A ? 0.8 : W.landT > 0 ? 0.9 : W.v > 4.2 ? 0.45 + 0.2 * Math.abs(W.steer || 0) : 0.3;
+    W.k = (W.k || 0.4) + (k - (W.k || 0.4)) * 0.25;
+    var hang = W.crash > 0 ? 0 : 0.5 + 0.8 * power;
+    if(W.crash > 0){ wsPose(R, { k: 0.4, hang: 0, kneel: 1, hB: new T.Vector3(0.5, 0.4, 0.5), hF: new T.Vector3(0.5, 0.4, -0.1) }); R.body.position.y = -0.5; }
+    else wsPose(R, { k: W.k, hang: hang });
+    // the camera: behind and to windward, high enough to see over the sail
+    var back = new T.Vector3(fx, 0, fz), lat = new T.Vector3(-fz, 0, fx);
+    var cw = new T.Vector3(W.x, W.y, W.z).addScaledVector(back, -7.5).addScaledVector(lat, -Ls * 3.5).add(new T.Vector3(0, 3.2, 0));
+    var lk = new T.Vector3(W.x, W.y + 1.4, W.z).addScaledVector(back, 2);
+    sg3.wsCam = sg3.wsCam || { p: cw.clone(), l: lk.clone() }; sg3.wsCam.p.lerp(cw, 0.06); sg3.wsCam.l.lerp(lk, 0.12);
+    sg3.cam.position.copy(sg3.wsCam.p); sg3.cam.lookAt(sg3.wsCam.l); var fv = 58 + Math.min(12, W.v * 1.0); if(Math.abs(sg3.cam.fov - fv) > 0.1){ sg3.cam.fov += (fv - sg3.cam.fov) * 0.05; sg3.cam.updateProjectionMatrix(); } sg3.cam.updateMatrixWorld();
+    // the wind's arrow, the way it blows on the screen
+    var el = document.getElementById('wsWind');
+    if(el){ var cy = Math.atan2(sg3.wsCam.l.z - sg3.wsCam.p.z, sg3.wsCam.l.x - sg3.wsCam.p.x), wa = Math.atan2(Wd.to[1], Wd.to[0]) - cy;
+      el.querySelector('i').style.transform = 'rotate(' + (wa * 180 / Math.PI + 90).toFixed(0) + 'deg)'; }
+  }
+  function wsKmh(){ var W = sg.ws; return W ? Math.round(W.v * 3.6) : 0; }
+  sg3PostRender = (function(orig){ return function(){ try { wsFrame(); } catch(e){ if(!sg3.wsWarn){ sg3.wsWarn = 1; console.warn('windsurf:', e); } } orig(); }; })(sg3PostRender);
+  sg3Render = (function(orig){ return function(){ var r = orig(); if(sg.phase === 'wind' && sg3.T){ var q = sg3.rider.g.position, a = q.clone().add(new sg3.T.Vector3(0, 2.4, 0)).project(sg3.cam), f = q.clone().project(sg3.cam);
+    return { sx: (a.x + 1) / 2 * W, sy: (1 - f.y) / 2 * H, sc: Math.max(0.6, Math.abs((f.y - a.y) / 2 * H) / 105 * 1.1) }; } return r; }; })(sg3Render);
+  sgUpdate = (function(orig){ return function(dt){
+    if(sg.phase === 'wind' && sg.ws){
+      sg.t += dt; sg.chainT = Math.max(0, sg.chainT - dt);
+      sg.texts.forEach(function(tx){ tx.life -= dt; tx.y += dt * 40; }); sg.texts = sg.texts.filter(function(tx){ return tx.life > 0; });
+      // the sets keep rolling in
+      if(!(sg.peak && sg.peak.shared)){ sg.pad.t += dt; if(sg.pad.t > sg.pad.T + 4) sg.pad = sgNewSet(false); sg.pad.k = sg.pad.t / sg.pad.T; }
+      if(sg.peak && sg.peak.shared) sgNetTick();
+      var d = Math.min(dt, 0.05); wsUpdate(d); wsSpock(d);
+      var Wn = sg.ws; if(Wn){ sg.x = Wn.x / SG3_M; sg.walk = sg.walk || { t: 1, ph: 0 }; sg.walk.x = Wn.x; sg.walk.z = Wn.z; sg.walk.hd = Wn.hd; }
+      return;
+    }
+    // Lac Bay: you arrive on the water with a sail
+    if(sg.phase === 'paddle' && sg.spot && sg.spot.windsurf && sgLot && !sg.wsAuto){ sg.wsAuto = true; sg.walk = { x: sgLot.parkX, z: SG_EDGE_Z, t: 1, ph: 0 }; wsEnter(); return; }
+    orig(dt);
+  }; })(sgUpdate);
+  // the buttons: a sail from the beach, back to the beach from the water; the wind's arrow
+  (function(){
+    var b = document.createElement('button'); b.className = 'sg-peak-btn sg-ball-btn'; b.id = 'wsBtn'; b.type = 'button'; b.hidden = true; b.style.bottom = '258px';
+    var ref = document.getElementById('sgBallBtn'); ref.parentNode.insertBefore(b, ref.nextSibling);
+    var wi = document.createElement('div'); wi.id = 'wsWind'; wi.hidden = true;
+    wi.style.cssText = 'position:absolute;top:64px;right:14px;z-index:6;background:rgba(10,30,50,0.55);color:#fff;border-radius:14px;padding:6px 10px;font:bold 14px Rubik,Arial;text-align:center;pointer-events:none';
+    wi.innerHTML = '<i style="display:block;font-style:normal;font-size:26px;line-height:28px">⬆</i><span></span>';
+    ref.parentNode.insertBefore(wi, ref.nextSibling);
+    b.addEventListener('click', function(e){ e.stopPropagation(); if(sg.phase === 'wind'){ wsLeave(); return; } if(sg.phase === 'walk' && sgLot) wsEnter(); });
+    setInterval(function(){
+      var show = '', on = state === 'surfgame' && sgLot && sg.spot;
+      if(on && sg.phase === 'wind') show = L('🏖️ לחוף', '🏖️ To the beach');
+      else if(on && sg.phase === 'walk' && sg.walk && !sgBG.in && sgHutOpen === null && !sg.spot.tow) show = L('🌬️ גלישת רוח', '🌬️ Windsurf');
+      b.hidden = !show; if(show && b.textContent !== show) b.textContent = show;
+      var riding = sg.phase === 'wind'; b.classList.toggle('is-leave', riding); b.style.bottom = riding ? '' : '258px';
+      wi.hidden = !riding; if(riding && sg.ws) wi.querySelector('span').textContent = sg.ws.wind.kmh + L(' קמ"ש', ' km/h');
+    }, 200);
+  })();
+  // ---- Lac Bay, Bonaire: a shallow turquoise lagoon behind a reef, dry low scrub and mangroves
+  // round it, the trade winds blowing steady every day ----
+  LAB_SPOT_LOOK.lacbay = { bed: [1.0, 0.18, 0xf2e8c8, 0xe2d6aa, [0.28, 0.07, 0.05], 0x12a6b4], glow: 0x5ae2e0, amp: 0.3, cloud: 0.3, shore: [0xf4e8c8, 0x8f9a58, 0.22] };
+  labSpotProps = (function(orig){ return function(T, S, id, m){
+    if(id !== 'lacbay') return orig(T, S, id, m);
+    var P = S.props, rnd = (function(s){ return function(){ s = (s * 16807) % 2147483647; return s / 2147483647; }; })(4217);
+    var mangM = m(0x2f6b34), scrubM = m(0x7f8a4e), cactM = m(0x4f7a46);
+    // mangroves along the far ends of the bay, low scrub and organ-pipe cacti on the dry land
+    for(var i = 0; i < 60; i++){ var x = -400 + i * 14 + rnd() * 8, big = rnd() < 0.5;
+      var b = new T.Mesh(new T.SphereGeometry(big ? 3.2 : 2, 8, 6), big ? mangM : scrubM); b.scale.set(1.6, 0.6, 1.2); b.position.set(x, 1.4, 214 + rnd() * 18); P.add(b); }
+    for(var c = 0; c < 18; c++){ var cx = -200 + c * 26 + rnd() * 10, cz = 222 + rnd() * 10, hc = 3 + rnd() * 3;
+      for(var a2 = 0; a2 < 3; a2++){ var cy = new T.Mesh(new T.CylinderGeometry(0.22, 0.25, hc - a2 * 0.6, 6), cactM); cy.position.set(cx + (a2 - 1) * 0.5, (hc - a2 * 0.6) / 2 + 0.9, cz); P.add(cy); } }
+    return true;
+  }; })(labSpotProps);
+  // the forecast here: the trades, 28-40 km/h, every day; the swell stays out on the reef
+  var WS_TRADE = { id: 'trade', name: L('🌬️ רוח טרייד', '🌬️ Trade wind'), chop: 0.7, hollow: 0.4 };
+  sgForecast = (function(orig){ return function(spot, off){
+    var f = orig(spot, off); if(!spot || !spot.windsurf) return f;
+    var r = surfHash('ws:' + spot.id + ':' + sgDayKey(off)) % 1000 / 1000;
+    f.wind = WS_TRADE; f.kmh = Math.round(28 + 12 * r); f.h = 0.6; f.hm = Math.round((SG3_H0[spot.id] || 0.6) * 0.6 * 10) / 10; f.stars = 5;
+    return f;
+  }; })(sgForecast);
+  // <<< windsurfing
   // idle player pose before first game
   resetGame();
   requestAnimationFrame(frame);
