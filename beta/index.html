@@ -6179,7 +6179,7 @@
     if(sg3.state === 'ready'){
       var p3 = sg3Render(); sgHud(p3.sx, p3.sy, p3.sc);
       document.getElementById('sgCamBtn').hidden = !(sg.phase === 'ride' || sg.phase === 'air' || sg.phase === 'tow' || sg.phase === 'done');
-      document.getElementById('sgPeakBtn').hidden = !(sg.phase === 'paddle' && !sg.tour && (Math.abs(sg.x - sg.curl - 300) > 500 || Math.abs(sg.dz) > 12));   // in the water, far from the peak
+      document.getElementById('sgPeakBtn').hidden = !((sg.phase === 'paddle' && !sg.tour && (Math.abs(sg.x - sg.curl - 300) > 500 || Math.abs(sg.dz) > 12)) || wsFar());   // in the water, far from the peak
       document.getElementById('sgExitBtn').hidden = sg.phase === 'over' || sg.phase === 'menu';
       var bchB = document.getElementById('sgBeachBtn'); bchB.hidden = !(sg.phase === 'paddle' && sgLot && !sg.tour);
       if(!bchB.hidden && !bchB.textContent) bchB.textContent = L('🏖️ חזרה לחוף', '🏖️ Back to the beach');
@@ -14581,7 +14581,7 @@
   // never while the name field is being typed in. Everything worth keeping
   // (coins, skins, name, league) is in localStorage, so a reload loses nothing.
   // 'dev' = a local or preview copy: the updater stays off entirely.
-  var BUILD_VERSION = '20261104-165755';
+  var BUILD_VERSION = '20261104-170305';
   var UPDATE_CHECK_MS = 60000;
   var UPDATE_TRIED_KEY = 'canyonChaseTriedUpdate';
   var pendingSubmits = 0;
@@ -16140,6 +16140,10 @@
     }, 200);
   })();
   // <<< skatepark
+  // >>> finish button (2026-11-04)
+  // (finishing from the skatepark: your shells first, then the menu)
+  sgOpenMenu = (function(orig){ return function(){ try { if(sg.phase === 'skate' && sg.skate) skLeave(); } catch(e){} return orig.apply(this, arguments); }; })(sgOpenMenu);
+  // <<< finish button
   // >>> beach textures (lab/beachtex-block.js via lab/beachtex.js)
   // ---------- the beach in pictures by ChatGPT (2026-11-04) ----------
   // Everything on the beach that doesn't move, drawn with ChatGPT's image model (beach/*.jpg beside
@@ -16541,6 +16545,20 @@
   }; })(sgForecast);
   // (finishing from the skatepark or the water with a sail: your shells first, then the menu)
   sgOpenMenu = (function(orig){ return function(){ try { if(sg.phase === 'skate' && sg.skate) skLeave(); if(sg.phase === 'wind' && sg.ws) wsLeave(); } catch(e){} return orig.apply(this, arguments); }; })(sgOpenMenu);
+  // ---- 🚀 to the peak with the sail: out in front of the take-off line where the waves are
+  // biggest, sailing, the next set on its way ----
+  function wsPeakX(){ return (sg.curl + 300) * SG3_M; }
+  function wsFar(){ var W = sg.ws; if(sg.phase !== 'wind' || !W || W.air || W.crash > 0 || sg.spot.windsurf) return false;
+    return Math.abs(W.x - wsPeakX()) > 40 || Math.abs(W.z - (sg3ZLine(W.x) - 15)) > 35; }
+  document.getElementById('sgPeakBtn').addEventListener('click', function(e){
+    if(sg.phase !== 'wind' || !sg.ws) return; e.stopPropagation();
+    var W = sg.ws, Wd = W.wind, px = wsPeakX(), zL = sg3ZLine(px);
+    // a beam reach along the line, the way the wind lets you
+    var fr = [-Wd.to[0], -Wd.to[1]], h1 = [-fr[1], fr[0]], h2 = [fr[1], -fr[0]], h = h1[1] < h2[1] ? h1 : h2;
+    W.x = px; W.z = zL - 15; W.hd = Math.atan2(h[1], h[0]); W.lee = 0; W.v = Math.max(W.v, Math.min(Wd.v, 8)); W.air = null; W.crash = 0; W.y = wsWaterY(W.x, W.z);
+    sg3.wsCam = null;
+    sgAddText(L('🚀 השתגרתם לפיק! חכו לגל מאחוריכם ופנו לחוף', '🚀 You\'re at the peak! Wait for a wave behind you and turn for the beach'), '#7fffb0');
+  }, true);
   // <<< windsurfing
   // idle player pose before first game
   resetGame();
