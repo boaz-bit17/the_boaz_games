@@ -14578,7 +14578,7 @@
   // never while the name field is being typed in. Everything worth keeping
   // (coins, skins, name, league) is in localStorage, so a reload loses nothing.
   // 'dev' = a local or preview copy: the updater stays off entirely.
-  var BUILD_VERSION = '20261103-161622';
+  var BUILD_VERSION = '20261104-152436';
   var UPDATE_CHECK_MS = 60000;
   var UPDATE_TRIED_KEY = 'canyonChaseTriedUpdate';
   var pendingSubmits = 0;
@@ -16137,6 +16137,65 @@
     }, 200);
   })();
   // <<< skatepark
+  // >>> beach textures (lab/beachtex-block.js via lab/beachtex.js)
+  // ---------- the beach in pictures by ChatGPT (2026-11-04) ----------
+  // Everything on the beach that doesn't move, drawn with ChatGPT's image model (beach/*.jpg beside
+  // the game): dry sand, wet sand, the road's asphalt, the boardwalk's planks, the huts' painted
+  // boards and tin roofs, the town's facades, the scrub on the hills. Laid over the materials the
+  // beach is built with, as they appear (and again when a beach is rebuilt); the colours they had
+  // stay as the tint, so a pink hut is still pink.
+  var BX = { img: {} };
+  // a texture of one of the pictures, repeated rx x ry times (each use its own, the picture shared)
+  function bxTex(T, name, rx, ry){
+    var im = BX.img[name];
+    if(!im){ im = BX.img[name] = new Image(); im.src = 'beach/' + name + '.jpg'; im.bxWait = []; im.onload = function(){ im.bxWait.forEach(function(t){ t.needsUpdate = true; }); im.bxWait = null; }; }
+    var t = new T.Texture(im); t.wrapS = t.wrapT = T.RepeatWrapping; t.repeat.set(rx, ry); t.encoding = T.sRGBEncoding; t.anisotropy = 8; t.userData.bx = name;
+    if(im.complete && im.naturalWidth) t.needsUpdate = true; else im.bxWait.push(t);
+    return t;
+  }
+  function bxSet(T, mat, name, rx, ry, tint, bump){
+    if(!mat || (mat.map && mat.map.userData.bx === name)) return;
+    mat.map = bxTex(T, name, rx, ry); if(bump){ mat.bumpMap = mat.map; mat.bumpScale = bump; }
+    if(tint !== undefined) mat.color.set(tint);
+    mat.needsUpdate = true;
+  }
+  function bxFrame(){
+    var T = sg3.T; if(!T || !sg3.scene) return;
+    // the sand, the slope into the sea and the hills (checked every frame: another loader may set them later)
+    var S = sg3.shore;
+    if(S){
+      bxSet(T, S.sandM, 'sand', 4000 / 3, 44 / 3, 0xf4ecdc, 0.35);
+      bxSet(T, S.slabM, 'sand', 4000 / 3, 1, 0xf4ecdc);
+      bxSet(T, S.wetM, 'wetsand', 4000 / 3, 16 / 3, 0xffffff, 0.2);
+      bxSet(T, S.hillM, 'hill', 4000 / 30, 1, 0xbcd6ae);
+    }
+    if(sg3.road) bxSet(T, sg3.road.material, 'asphalt', 4000 / 4, 7 / 4, 0xffffff);
+    if(sg3.lot && sg3.lot.children[0]) bxSet(T, sg3.lot.children[0].material, 'asphalt', 44 / 4, 7 / 4, 0xe8e8e8);
+    // the beach's own things: picked out by the colours they're built in
+    if(sg3.beach && !sg3.beach.userData.bx){
+      sg3.beach.userData.bx = true;
+      var hutC = {}, roofC = {}; SG_HUTS.forEach(function(h){ hutC[h.color] = 1; roofC[h.roof] = 1; });
+      sg3.beach.traverse(function(o){
+        if(!o.isMesh || !o.material || o.material.isMeshBasicMaterial || Array.isArray(o.material)) return;
+        var m = o.material, c = m.color ? m.color.getHex() : -1, geo = o.geometry && o.geometry.type;
+        if(c === 0xa47a4c) bxSet(T, m, 'planks', 56 / 2.4, 1);                                 // the boardwalk
+        else if(hutC[c] && geo === 'BoxGeometry') bxSet(T, m, 'hutwood', 2, 1.4);               // the huts' walls (painted their colour)
+        else if(roofC[c] || (c === 0xd23a2a && geo === 'ConeGeometry')) bxSet(T, m, 'roof', 3, 1);   // tin roofs
+        else if(c === 0x9a6b3f) bxSet(T, m, 'planks', 1, 1);                                   // posts, the tower's ladder
+        else if(c === 0xf3f1ea && geo === 'BoxGeometry') bxSet(T, m, 'hutwood', 1, 1);          // the lifeguard tower's white boards
+      });
+    }
+    // the town: its walls of windows become real facades, two floors by two windows a repeat
+    if(sg3.city && !sg3.city.userData.bx){
+      sg3.city.userData.bx = true;
+      sg3.city.traverse(function(o){
+        if(!o.isMesh || !o.material || Array.isArray(o.material)) return;
+        var m = o.material; if(m.map && m.map.image && m.map.image.width === 64 && !m.map.userData.bx) bxSet(T, m, 'facade', 0.5, 0.5);
+      });
+    }
+  }
+  sg3PostRender = (function(orig){ return function(){ try { bxFrame(); } catch(e){ if(!BX.warned){ BX.warned = 1; console.warn('beach textures:', e); } } orig(); }; })(sg3PostRender);
+  // <<< beach textures
   // idle player pose before first game
   resetGame();
   requestAnimationFrame(frame);
