@@ -14581,7 +14581,7 @@
   // never while the name field is being typed in. Everything worth keeping
   // (coins, skins, name, league) is in localStorage, so a reload loses nothing.
   // 'dev' = a local or preview copy: the updater stays off entirely.
-  var BUILD_VERSION = '20261105-150015';
+  var BUILD_VERSION = '20261105-150635';
   var UPDATE_CHECK_MS = 60000;
   var UPDATE_TRIED_KEY = 'canyonChaseTriedUpdate';
   var pendingSubmits = 0;
@@ -15761,7 +15761,9 @@
       if(S.air && !S.air.armed && (Math.abs(J.x) < 0.2 || J.x * S.air.x0 < -0.2)) S.air.armed = true;
       steer = S.air && S.air.armed ? J.x : 0; var slL = Math.abs(skGrad(S.u, S.w)[0]);   /* (on a ramp either arrow pumps -- in a bowl you go back and forth; on the flat, against your roll brakes) */
       var inBowl = S.y < -0.4;   /* (down in a bowl the walls send you back and forth: any arrow pumps there, none brakes) */
-      pump = want * su > 0.3 || (Math.abs(J.x) > 0.3 && (slL > 0.3 || inBowl)); brake = want * su < -0.3 && slL <= 0.3 && !inBowl; own = false; S.want = want; }
+      var spX = Math.abs(S.v[0]);
+      S.pushOK = want * su > 0.3;   /* (the foot only ever pushes the way you hold) */
+      pump = S.pushOK || (Math.abs(J.x) > 0.3 && (slL > 0.3 || inBowl)); brake = want * su < -0.3 && slL <= 0.3 && (!inBowl || spX < 2.2); own = false; S.want = want; }
     S.pumping = pump;
     var upNow = J.y < -0.5; if(upNow && !S.upWas){ S.popAt = S.t; S.pressAt = S.t; }
     var tap = !upNow && S.upWas && S.t - (S.pressAt || -9) < 0.22; S.upWas = upNow;   /* (a tap: an ollie; a hold: pushing and pumping) */
@@ -15826,7 +15828,7 @@
     if(vl > 1e-6){ v[0] *= sp / vl; v[1] *= sp / vl; v[2] *= sp / vl; }
     // carve: turn the velocity round the surface normal
     // holding ⬆️ (and not steering yourself): the board snakes left-right on its own, the surfskate pump
-    var canPush = pump && slope < 0.3 && sp < 6.2 && (S.lane !== undefined || Math.abs(J.x) < 0.45);
+    var canPush = pump && slope < 0.3 && sp < 6.2 && (S.lane !== undefined ? S.pushOK : Math.abs(J.x) < 0.45);
     if(S.pushP > 0 || canPush){ S.pushP = (S.pushP || 0) + dt / 1.05; if(S.pushP >= 1) S.pushP = canPush ? S.pushP - 1 + 1e-6 : 0; }
     var pushing = S.pushP > 0;
     if(pump && !pushing){ S.pp = (S.pp || 0) + dt * (3.0 + 0.12 * sp); if(S.lane === undefined && Math.abs(steer) < 0.25) steer = 0.85 * Math.sin(S.pp); }
@@ -15842,7 +15844,7 @@
     var acc = 0;
     // (what real riders do: push with the back foot to get going, then pump -- heel to toe,
     // down into each turn and up out of it; in a bowl, weight on the way down)
-    if(pushing && S.pushP > 0.12 && S.pushP < 0.5) acc += 3.6 * Math.max(0, 1 - sp / 7.5);   /* (~1.4 m/s a push from a standstill, ~0.75 at 13 km/h; strong pushing tops out ~24 km/h) */   // the foot on the ground, driving back
+    if(pushing && S.pushP > 0.12 && S.pushP < 0.5 && (S.lane === undefined || S.pushOK)) acc += 3.6 * Math.max(0, 1 - sp / 7.5);   /* (~1.4 m/s a push from a standstill, ~0.75 at 13 km/h; strong pushing tops out ~24 km/h) */   // the foot on the ground, driving back
     if(pump && !pushing){
       // over curved concrete -- crouched over the crests, standing up through the dips, where the
       // curve presses you into the board -- each pump adds energy in proportion to the curve and
