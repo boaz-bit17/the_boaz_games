@@ -14581,7 +14581,7 @@
   // never while the name field is being typed in. Everything worth keeping
   // (coins, skins, name, league) is in localStorage, so a reload loses nothing.
   // 'dev' = a local or preview copy: the updater stays off entirely.
-  var BUILD_VERSION = '20261104-214251';
+  var BUILD_VERSION = '20261105-054408';
   var UPDATE_CHECK_MS = 60000;
   var UPDATE_TRIED_KEY = 'canyonChaseTriedUpdate';
   var pendingSubmits = 0;
@@ -15476,7 +15476,9 @@
   var SK_STEPS = [{ u: 44, d: 0.45 }, { u: 48, d: -0.45 }, { u: 54, d: -0.3 }, { u: 55, d: -0.3 }, { u: 56, d: -0.3 }].map(function(St){ return { u: SK.W - St.u, d: -St.d }; });
   var SK_SPINE = SK.W - 66;
   function skH(u, w){ return skProf(u); }
-  function skGrad(u, w){ var e = 0.04; return [(skProf(u + e) - skProf(u - e)) / (2 * e), 0]; }
+  function skGrad(u, w){ var e = 0.04;
+    for(var i = 0; i < SK_STEPS.length; i++) if(Math.abs(u - SK_STEPS[i].u) < 0.12){ u += u < SK_STEPS[i].u ? -0.16 : 0.16; break; }   /* (at a sheer step: the slope of the ground beside it, not of the 5 cm the samples smear it over) */
+    return [(skProf(u + e) - skProf(u - e)) / (2 * e), 0]; }
   // a texture drawn by ChatGPT's image model (skate/*.jpg beside the game), on a canvas stand-in until it loads
   function skTex(T, url, fallback, rep){
     var tx = fallback ? fallback() : new T.Texture(); tx.wrapS = tx.wrapT = T.RepeatWrapping; if(rep) tx.repeat.set(rep[0], rep[1]); tx.anisotropy = 8;
@@ -15714,7 +15716,7 @@
   function skEnter(){
     var S = sg.skate = { u: SK.W - 2, w: SK.D / 2, y: 1.8, v: [-1.4, 0, 0], hd: Math.PI, air: null, bail: 0, carve: 0, lastCarve: -9, wallT: 0, speedT: -9, score0: sg.score, t: 0, ok: false };
     S.y = skH(S.u, S.w); sg3.skSide = null; sg.phase = 'skate'; sg.score = 0; sg.chain = 0; sg.chainT = 0; sg.counts = {}; sg.lastMove = '';
-    sgAddText(L('🛹 ⬆️ לדחוף ולפמפם · ⬅️➡️ לקרוב · לחיצה על ⬆️ בקופינג = אייר, לפני לדג׳ = אולי', '🛹 ⬆️ push & pump · ⬅️➡️ carve · tap ⬆️ at the coping to air, before a ledge to ollie'), '#bfe9ff');
+    sgAddText(L('🛹 החזק ⬆️ = דחיפה ברגל ופמפום · לחיצה קצרה על ⬆️ = אולי (בקופינג: אייר) · ⬅️➡️ לקרוב', '🛹 hold ⬆️ = push & pump · tap ⬆️ = ollie (at the coping: air) · ⬅️➡️ carve'), '#bfe9ff');
   }
   function skLeave(){
     var S = sg.skate; if(!S) return;
@@ -15752,7 +15754,8 @@
       return;
     }
     var steer = J.x, pump = J.y < -0.3, brake = J.y > 0.5, own = Math.abs(J.x) > 0.45;   // (own: your turn, not the pump's snake)
-    var upNow = J.y < -0.5; if(upNow && !S.upWas) S.popAt = S.t; S.upWas = upNow;
+    var upNow = J.y < -0.5; if(upNow && !S.upWas){ S.popAt = S.t; S.pressAt = S.t; }
+    var tap = !upNow && S.upWas && S.t - (S.pressAt || -9) < 0.22; S.upWas = upNow;   /* (a tap: an ollie; a hold: pushing and pumping) */
     S.kickT = Math.max(0, (S.kickT || 0) - dt); S.landT = Math.max(0, (S.landT || 0) - dt);
     if(S.grind){ skGrind(dt, J); return; }
     if(S.air){
@@ -15762,10 +15765,25 @@
       var gy = skH(Math.max(0.05, Math.min(SK.W - 0.05, S.u)), Math.max(0.05, Math.min(SK.D - 0.05, S.w)));
       S.u = Math.max(0.05, Math.min(SK.W - 0.05, S.u)); S.w = Math.max(0.05, Math.min(SK.D - 0.05, S.w));
       if(S.y <= gy && S.v[1] < 0){
-        if(A.out){ S.y = gy; var spO = Math.hypot(S.v[0], S.v[2]); S.hd = A.hd0 + A.spin; S.v = [Math.cos(S.hd) * Math.max(1.6, spO), 0, Math.sin(S.hd) * Math.max(1.6, spO)]; S.air = null; S.landT = 0.35;
-          if(A.ollie) sgScore(L('אולי!', 'Ollie!'), 150); else if(A.drop && A.t > 0.25) sgScore(L('דרופ!', 'Drop!'), 120 + Math.round(A.t * 200)); return; }
+        if(A.out){ S.y = gy;
+          // (real landings: the wheels keep the speed along the concrete; the speed into it is taken in the
+          // knees -- the harder, the deeper the crouch and the more is lost; past ~7.5 m/s straight in, a drop
+          // of ~3 m, the legs fold. The board must be pointing the way you go, forwards or backwards)
+          var gO = SK_STEPS.some(function(St){ return Math.abs(S.u - St.u) < 0.45; }) ? [0, 0] : skGrad(S.u, S.w), nO = [-gO[0], 1, -gO[1]], nOl = Math.hypot(nO[0], nO[1], nO[2]); nO = [nO[0] / nOl, nO[1] / nOl, nO[2] / nOl];
+          var vnO = S.v[0] * nO[0] + S.v[1] * nO[1] + S.v[2] * nO[2], imp = Math.max(0, -vnO), vt = [S.v[0] - vnO * nO[0], S.v[1] - vnO * nO[1], S.v[2] - vnO * nO[2]];
+          S.air = null;
+          if(imp > 7.5){ skBail(L('נחיתה קשה מדי!', 'Too hard a landing!')); return; }
+          var face = A.hd0 + A.spin, vth = Math.hypot(vt[0], vt[2]), al = vth > 0.8 ? (Math.cos(face) * vt[0] + Math.sin(face) * vt[2]) / vth : Math.cos(Math.round(A.spin / Math.PI) * Math.PI - A.spin);
+          if(Math.abs(al) < 0.5){ skBail(L('נחיתה עקומה!', 'Landed sideways!')); return; }
+          var keep = Math.max(0.6, 1 - 0.035 * imp); S.v = [vt[0] * keep, vt[1] * keep, vt[2] * keep];
+          S.hd = vth > 0.3 ? Math.atan2(vt[2], vt[0]) : face + (al < 0 ? Math.PI : 0); S.landT = 0.35; S.landK = Math.min(1, imp / 5);
+          var turnsO = Math.round(Math.abs(A.spin) / Math.PI);
+          if(A.ollie) sgScore(turnsO >= 2 ? L('אולי 360!', '360 ollie!') : turnsO ? L('אולי 180!', '180 ollie!') : L('אולי!', 'Ollie!'), (A.flat ? 100 : 150) + 250 * turnsO + Math.round(A.maxY - A.y0 > 0.3 ? 60 : 0));
+          else if(A.drop && A.t > 0.25) sgScore(L('דרופ!', 'Drop!'), 120 + Math.round(A.t * 200)); return; }
         // landing: the board's facing (turned 180 for the way back down, plus any spin) against the way it's going
         S.y = gy; var g2 = skGrad(S.u, S.w), down = Math.atan2(-g2[1], -g2[0]), face = A.hd0 + Math.PI + A.spin;
+        var n2 = [-g2[0], 1, -g2[1]], n2l = Math.hypot(n2[0], n2[1], n2[2]), imp2 = -(S.v[0] * n2[0] + S.v[1] * n2[1] + S.v[2] * n2[2]) / n2l; S.landK = Math.min(1, Math.max(0, imp2) / 5);
+        if(imp2 > 7.5){ S.air = null; skBail(L('נחיתה קשה מדי!', 'Too hard a landing!')); return; }
         var dif = Math.cos(face - down), turns = Math.round(Math.abs(A.spin) / Math.PI);
         if(Math.abs(dif) < 0.55){ S.air = null; skBail(L('נחיתה עקומה!', 'Landed sideways!')); return; }
         S.hd = down; S.landT = 0.35;                                          // (whichever way the board faces, it rolls on down the wall)
@@ -15788,6 +15806,8 @@
     var g = skGrad(S.u, S.w), slope = Math.hypot(g[0], g[1]);
     var n = [-g[0], 1, -g[1]], nl = Math.hypot(n[0], n[1], n[2]); n = [n[0] / nl, n[1] / nl, n[2] / nl];
     var v = S.v, sp = Math.hypot(v[0], v[1], v[2]);
+    if(tap && !S.npc && slope < 0.35 && !(S.kickT > 0)){ S.v = [v[0] + n[0] * 2.9, v[1] + n[1] * 2.9, v[2] + n[2] * 2.9]; S.y += 0.02; S.pushP = 0;
+      S.air = { t: 0, y0: S.y, maxY: S.y, spin: 0, hd0: S.hd, out: true, ollie: true, flat: true }; return; }
     var vn = v[0] * n[0] + v[1] * n[1] + v[2] * n[2]; v[0] -= vn * n[0]; v[1] -= vn * n[1]; v[2] -= vn * n[2];
     var vl = Math.hypot(v[0], v[1], v[2]);
     // nearly stopped on a slope: it starts to roll back down
@@ -15796,7 +15816,10 @@
     if(vl > 1e-6){ v[0] *= sp / vl; v[1] *= sp / vl; v[2] *= sp / vl; }
     // carve: turn the velocity round the surface normal
     // holding ⬆️ (and not steering yourself): the board snakes left-right on its own, the surfskate pump
-    if(pump){ S.pp = (S.pp || 0) + dt * (3.0 + 0.12 * sp); if(Math.abs(steer) < 0.25) steer = 0.85 * Math.sin(S.pp); }
+    var canPush = pump && slope < 0.15 && sp < 5.2 && Math.abs(J.x) < 0.45;
+    if(S.pushP > 0 || canPush){ S.pushP = (S.pushP || 0) + dt / 1.05; if(S.pushP >= 1) S.pushP = canPush ? S.pushP - 1 + 1e-6 : 0; }
+    var pushing = S.pushP > 0;
+    if(pump && !pushing){ S.pp = (S.pp || 0) + dt * (3.0 + 0.12 * sp); if(Math.abs(steer) < 0.25) steer = 0.85 * Math.sin(S.pp); }
     S.steer = (S.steer || 0) + (steer - (S.steer || 0)) * Math.min(1, dt * 12);
     var om = -steer * Math.min(3.2, 1.6 + sp * 0.25);
     if(slope > 1 && Math.abs(J.x) > 0.8 && sp > 2) om *= 1.7;                 // (high on a wall the board whips round quicker: the snap is scored below)                     // (a positive turn round +y goes left)
@@ -15808,7 +15831,8 @@
     var acc = 0;
     // (what real riders do: push with the back foot to get going, then pump -- heel to toe,
     // down into each turn and up out of it; in a bowl, weight on the way down)
-    if(pump){ if(sp < 2.5 && slope < 0.15) acc += 2.2 * (1 - sp / 2.5) + 0.6;          // a foot push or two to get rolling
+    if(pushing && S.pushP > 0.12 && S.pushP < 0.5) acc += 3.4 * Math.max(0, 1 - sp / 5.8);   // the foot on the ground, driving back
+    if(pump && !pushing){
       // over curved concrete -- crouched over the crests, standing up through the dips, where the
       // curve presses you into the board -- each pump adds energy in proportion to the curve and
       // the speed squared (Kuroda et al. 2023, arXiv:2312.17671; some 17% a pump on a ramp): rollers
@@ -15825,7 +15849,7 @@
     acc -= 0.13 + 0.005 * sp * sp;                                          // rolling (soft wheels on concrete, ~0.2 m/s lost a second as measured on a half-pipe) and air (a standing rider, CdA ~0.6 m2)
     sp = Math.max(0, Math.min(SK.MAXV, sp + acc * dt));
     if(sp < 0.05 && !pump && slope < 0.05){ sp = 0; }
-    var y0 = S.y;
+    var y0 = S.y, spPre = sp;
     S.u += dir[0] * sp * dt; S.w += dir[2] * sp * dt;
     // the height gained or lost is paid for in speed (climbing past what you had: you roll back)
     var y1 = skH(Math.max(0.01, Math.min(SK.W - 0.01, S.u)), Math.max(0.01, Math.min(SK.D - 0.01, S.w)));
@@ -15848,7 +15872,8 @@
         if(!S.ollieHint){ S.ollieHint = 1; sgAddText(L('⬆️ לחיצה קצרה לפני הלדג׳ = אולי למעלה', '⬆️ tap just before the ledge = ollie up'), '#bfe9ff'); }
         return;
       }
-      if(sp > 1.2){ S.y = y0; S.v = [v[0], 0.4, v[2]]; S.air = { t: 0, y0: S.y, maxY: S.y, spin: 0, hd0: S.hd, out: true, drop: true }; return; }
+      if(sp > 1.2){ S.y = y0; var hh = Math.hypot(v[0], v[2]) || 1; S.v = [v[0] / hh * spPre, 0.4, v[2] / hh * spPre];   /* (off the edge at the speed you rolled up to it: the fall is all downward) */
+        S.air = { t: 0, y0: S.y, maxY: S.y, spin: 0, hd0: S.hd, out: true, drop: true }; return; }
     }
     // over a lip with coping, going up the wall: an air, a hop out onto the deck, or a kickturn back down
     for(var li = 0; li < SK_LIPS.length; li++){ var Lp = SK_LIPS[li];
@@ -15946,7 +15971,7 @@
     if(!sg3.skLocals){
       sg3.skLocals = SK_LOCALS.map(function(o){
         var r = sg3NpcPerson(T, o.seed), bd = skBoard(T); r.body.add(bd); bd.position.y = -0.05; sg3.scene.add(r.g);
-        var S = { u: o.u, w: o.w, y: skH(o.u, o.w), v: [Math.cos(o.hd) * 3, 0, Math.sin(o.hd) * 3], hd: o.hd, air: null, bail: 0, t: 0 };
+        var S = { u: o.u, w: o.w, y: skH(o.u, o.w), v: [Math.cos(o.hd) * 3, 0, Math.sin(o.hd) * 3], hd: o.hd, air: null, bail: 0, t: 0, npc: true };
         return { r: r, bd: bd, S: S, B: { dir: 1, next: 0, seed: o.seed * 977 } };
       });
     }
@@ -15968,6 +15993,7 @@
       var st2 = S.steer || 0, lo = { k: N.k, tw: -st2 * 0.35, aF: [0.42, -0.1, -0.3 - 0.35 * st2], aB: [0.2, -0.3, 0.12 - 0.2 * st2] };
       if(S.air && S.air.t > 0.12 && S.v[1] > -1.5){ lo.k = 0.95; lo.lift = 0.24; lo.hB = new T.Vector3(-0.03, 0.37, -0.15); lo.aF = [0.3, -0.08, -0.55]; }   // (the same grab as yours)
       if(S.grind){ lo.aF = [0.15, -0.05, -0.62]; lo.aB = [-0.1, -0.05, 0.62]; }
+      if(S.pushP > 0 && !S.air){ lo.push = S.pushP; lo.k = 0.72; lo.aB = [0.0, -0.38, 0.3]; }
       if(S.bail > 0){ lo.kneel = 1; lo.k = 0.5; lo.tw = 0; }
       skPose(N.r, lo); N.bd.position.y = -0.05 + (lo.lift || 0); N.bd.rotation.x = S.air || S.bail > 0 ? 0 : -(S.lean || 0) * 0.65; N.bd.visible = !S.loose;
       if(N.bd.userData.front){ N.bd.userData.front.rotation.y = (S.steer || 0) * 0.55; N.bd.userData.arm.rotation.y = (S.steer || 0) * 0.4; }
@@ -15983,6 +16009,10 @@
     var T = sg3.T, P = R.parts, X = R.extra, V = function(x, y, z){ return new T.Vector3(x, y, z); };
     var k = o.k, lift = o.lift || 0, kn = o.kneel || 0;
     var footB = V(-0.235, 0.08 + lift, 0.01), footF = V(0.19, 0.08 + lift, -0.01);   // (over the back truck, on the front bolts: ~43 cm, shoulder width)
+    if(o.push !== undefined){ var pq = o.push, onB = V(-0.235, 0.08, 0.01), gA = V(0.12, -0.02, 0.21), gB = V(-0.52, -0.02, 0.21);   /* (the back foot: off the board, planted by the front foot, driven back, home again) */
+      if(pq < 0.12) footB = onB.clone().lerp(gA, pq / 0.12).add(V(0, 0.06 * Math.sin(Math.PI * pq / 0.12), 0));
+      else if(pq < 0.5) footB = gA.clone().lerp(gB, (pq - 0.12) / 0.38);
+      else if(pq < 0.8){ var rq = (pq - 0.5) / 0.3; footB = gB.clone().lerp(onB, rq).add(V(0, 0.16 * Math.sin(Math.PI * rq), 0)); } }
     if(kn){ footB.lerp(V(-0.5, 0.1, 0.13), kn); footF.lerp(V(-0.45, 0.1, -0.13), kn); }      // (kneeling: the shins flat behind)
     var hip = V(-0.03, 0.86 - 0.26 * k - 0.2 * kn + lift * 0.35, 0);
     // (the knees bend forward, toward the way the body faces: the real body reads its facing from them,
@@ -16072,11 +16102,12 @@
     if(pumping){ var ps = Math.sin(pp); o.k = 0.55 + 0.3 * ps; o.tw = 0.28 * Math.sin(pp + 0.6); o.aF = [0.45, -0.2, -0.3 + 0.22 * ps]; o.aB = [0.25, -0.3, 0.1 + 0.22 * ps]; }
     var tIn = Math.abs(J.x) > 0.2 ? J.x : st;                                  // (the shoulders turn with your input, ahead of the board)
     if(!pumping || Math.abs(J.x) > 0.45){ o.tw = -tIn * 0.35; o.k = Math.max(o.k, 0.55 + 0.3 * Math.abs(st)); o.aF = [0.42, -0.1, -0.3 - 0.35 * tIn]; o.aB = [0.2, -0.3, 0.12 - 0.2 * tIn]; }
+    if(S.pushP > 0 && !S.air){ o.push = S.pushP; o.k = 0.72; o.tw = 0.12; o.fx = 0.05; o.aF = [0.4, -0.25, -0.28]; o.aB = [0.0, -0.38, 0.3]; }   // (weight on the front foot, its knee bent, the back foot pushing)
     if(S.btT > 0){ o.k = 0.95; o.fx = 0.06; o.hB = new T.Vector3(-0.05, 0.3, 0.42 * Math.sign(S.lean || 1)); }   // bottom turn: deep, the back hand down to the wall
     if(S.ttT > 0){ var d1 = S.slideDir || 1, ph = 1 - S.ttT / 0.5;                    // top turn / snap: up and open, then the shoulders whip round and the back arm swings through
       o.k = 0.35 + 0.4 * ph; o.tw = d1 * 0.45 * Math.sin(Math.PI * Math.min(1, ph * 1.4)); o.aB = [0.45, -0.05, -0.4 * d1]; o.aF = [0.25, 0.12, 0.5 * d1]; }
     if(S.grind){ o.k = 0.62; o.tw = 0; o.aF = [0.15, -0.05, -0.62]; o.aB = [-0.1, -0.05, 0.62]; }   // the floater: low, arms out wide for balance
-    if(S.landT > 0){ o.k = 1.0 - 0.4 * (1 - S.landT / 0.35); o.aF = [0.45, -0.25, -0.45]; o.aB = [0.1, -0.25, 0.45]; }   // landing: soaked up in the knees
+    if(S.landT > 0){ o.k = 0.55 + (0.2 + 0.25 * (S.landK === undefined ? 1 : S.landK)) * (S.landT / 0.35);   /* (deeper the harder it was) */ o.aF = [0.45, -0.25, -0.45]; o.aB = [0.1, -0.25, 0.45]; }   // landing: soaked up in the knees
     if(S.air){ var A = S.air, gyA = skH(Math.max(0.05, Math.min(SK.W - 0.05, S.u)), Math.max(0.05, Math.min(SK.D - 0.05, S.w))), hA = S.y - gyA;
       if(A.t < 0.12){ o.k = 0.3; o.aF = [0.35, 0.05, -0.35]; o.aB = [0.1, 0.0, 0.35]; }           // the pop: up tall off the coping
       else if(S.v[1] > -1.5 || hA > 0.7){ o.k = 0.95; o.lift = 0.24; o.fx = 0.05; o.hB = new T.Vector3(-0.03, 0.08 + 0.24 + 0.05, -0.15); o.aF = [0.3, -0.08, -0.55]; }   // knees up, the back hand grabbing the toe edge between the feet, the front arm out
@@ -16086,6 +16117,7 @@
     S.tw = (S.tw || 0) + ((o.tw || 0) - (S.tw || 0)) * 0.3; o.tw = S.tw;
     skPose(R, o);
     sg3.skBoard.position.y += o.lift || 0;
+    if(S.air && S.air.ollie){ var At = S.air.t; sg3.skBoard.rotation.z = 0.45 * Math.min(1, At / 0.05) * Math.max(0, 1 - At / 0.3); }   // (the ollie: tail snapped, nose up, levelled out by the front foot)
     // the body leans into the turn from the ankles; the deck rolls with it, much less (the wheels stay down)
     if(!S.air && !(S.bail > 0)){ R.body.rotation.x = S.lean || 0; sg3.skBoard.rotation.x = -(S.lean || 0) * 0.65; }
     // a kickturn: weight on the tail, the nose lifts as the board pivots on its back wheels
