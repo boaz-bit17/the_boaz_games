@@ -7422,7 +7422,7 @@
       ' return pow(1.0 - min(1.0, a * 4.0), 6.0) * 0.6 + pow(1.0 - min(1.0, b * 4.0), 6.0) * 0.4; }\n' +
       'void main(){\n' +
       ' vec3 V = normalize(uCam - vW); vec3 N = normalize(vN); float inside = 0.0; if(dot(N, V) < 0.0){ N = -N; inside = 1.0; }\n' +
-      ' float sea = step(vThin, -0.5); float thinV = max(vThin, 0.0);\n' +
+      ' float sea = smoothstep(-0.05, -0.9, vThin); float thinV = max(vThin, 0.0);\n' +
       // the surface: three ripple layers flowing with the water
       ' float dd = length(uCam - vW); float det = 1.0 - smoothstep(18.0, 140.0, dd);\n' +
       ' float h = clamp(vW.y / uH, 0.0, 1.0);\n' +
@@ -7767,11 +7767,11 @@
   }
   function sg3Pose(k, look, who){
     var T = sg3.T, R = who || sg3.rider, P = R.parts, X = R.extra, V = function(x, y, z){ return new T.Vector3(x, y, z); };
-    var hip = V(-0.02, 0.86 - 0.24 * k, 0), kneeB = V(-0.27, 0.46 - 0.1 * k, 0.07), kneeF = V(0.24, 0.48 - 0.1 * k, -0.06);
-    var footB = V(-0.36, 0.08, 0.09), footF = V(0.33, 0.08, -0.07);
-    var sh = V(0.1 + 0.12 * k, 1.4 - 0.3 * k, 0), nk = V(sh.x + 0.05, sh.y + 0.1, 0), hd = V(sh.x + 0.1, sh.y + 0.25, 0);
-    var shB = V(sh.x - 0.03, sh.y - 0.02, 0.17), shF = V(sh.x + 0.03, sh.y - 0.02, -0.17);
-    var elB = V(sh.x - 0.27, sh.y - 0.16, 0.3), haB = V(sh.x - 0.52, sh.y - 0.33, 0.36), elF = V(sh.x + 0.26, sh.y - 0.07, -0.3), haF = V(sh.x + 0.52, sh.y - 0.12, -0.36);
+    var hip = V(-0.02, 0.86 - 0.24 * k, 0), kneeB = V(-0.27, 0.46 - 0.1 * k, 0.16), kneeF = V(0.24, 0.48 - 0.1 * k, 0.14);
+    var footB = V(-0.36, 0.08, 0.02), footF = V(0.33, 0.08, -0.01);
+    var sh = V(0.04 + 0.05 * k, 1.4 - 0.3 * k, 0.13 * k), nk = V(sh.x + 0.05, sh.y + 0.1, sh.z), hd = V(sh.x + 0.1, sh.y + 0.25, sh.z);
+    var shB = V(sh.x - 0.15, sh.y - 0.02, sh.z + 0.085), shF = V(sh.x + 0.15, sh.y - 0.02, sh.z - 0.085);
+    var elB = V(sh.x - 0.36, sh.y - 0.16, sh.z + 0.14), haB = V(sh.x - 0.62, sh.y - 0.3, sh.z + 0.2), elF = V(sh.x + 0.36, sh.y - 0.1, sh.z + 0.02), haF = V(sh.x + 0.66, sh.y - 0.16, sh.z + 0.14);
     sg3Limb(T, P.thighB, hip, kneeB); sg3Limb(T, P.shinB, kneeB, footB);
     sg3Limb(T, P.thighF, hip, kneeF); sg3Limb(T, P.shinF, kneeF, footF);
     sg3Limb(T, P.torso, hip, sh); sg3Limb(T, P.stripe, V(hip.x + 0.03, hip.y + 0.05, -0.15), V(sh.x + 0.02, sh.y - 0.05, -0.16));
@@ -7838,6 +7838,7 @@
         // white only right at the lip's edge while it throws; the rest stays clear water
         foam[i] = Math.min(1, br[1] * 1.1 + (r >= 23 && r <= 26 ? 0.12 + 0.3 * br[0] + Math.max(0, br[0] - 0.8) * 2.5 : 0) + (r > 56 && br[1] > 0 ? 0.4 : 0));
         thin[i] = lipZone ? (0.35 + 0.35 * br[0]) * (1 - br[1]) : (r > 22 && r <= 30 ? 0.15 * br[0] : 0);
+        if(r > SG3_ROWS - 8) thin[i] = -(r - (SG3_ROWS - 8)) / 7;
         cave[i] = r >= 34 && r <= 57 ? Math.pow(Math.max(0, br[0] - 0.3) / 0.7, 1.4) * (1 - br[1]) * Math.sin((r - 34) / 23 * Math.PI) : 0;
         curt[i] = r >= 14 && r <= 34 ? Math.max(0, br[0] - 0.4) / 0.6 * (1 - br[1]) * Math.sin((r - 14) / 20 * Math.PI) : 0;
       }
@@ -7966,7 +7967,7 @@
       // the arms reach down to the rails
       var shS = tf(new T.Vector3(0.1 + 0.12 * 0.3, 1.4 - 0.3 * 0.3, 0));
       [[R.parts.uArmF, R.parts.fArmF, R.extra.handF, -1], [R.parts.uArmB, R.parts.fArmB, R.extra.handB, 1]].forEach(function(A){
-        var s0 = shS.clone().add(new T.Vector3(0, 0, A[3] * 0.17)), hd = new T.Vector3(0.3, 0.06, A[3] * 0.26);
+        var s0 = shS.clone().add(new T.Vector3(-A[3] * 0.15, 0, A[3] * 0.085)), hd = new T.Vector3(0.3, 0.06, A[3] * 0.26);
         var hn = s0.clone().lerp(hd, su2), e0 = s0.clone().lerp(hn, 0.5).add(new T.Vector3(0.06, 0.04, A[3] * 0.06));
         sg3Limb(T, A[0], s0, e0); sg3Limb(T, A[1], e0, hn); A[2].position.copy(hn);
       });
@@ -14584,7 +14585,7 @@
   // never while the name field is being typed in. Everything worth keeping
   // (coins, skins, name, league) is in localStorage, so a reload loses nothing.
   // 'dev' = a local or preview copy: the updater stays off entirely.
-  var BUILD_VERSION = '20261106-124034';
+  var BUILD_VERSION = '20261106-150845';
   var UPDATE_CHECK_MS = 60000;
   var UPDATE_TRIED_KEY = 'canyonChaseTriedUpdate';
   var pendingSubmits = 0;
@@ -14952,14 +14953,14 @@
           sh.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\n  vSuit = aSuit; vAcc = aAcc; vShoe = aShoe; vSole = aSole; vTee = aTee; vShorts = aShorts;');
         sh.fragmentShader = 'uniform vec3 uSuit;\nuniform vec3 uAcc;\nuniform float uShoe;\nvarying float vSuit;\nvarying float vAcc;\nvarying float vShoe;\nvarying float vSole;\nuniform float uSkate;\nuniform vec3 uShorts;\nvarying float vTee;\nvarying float vShorts;\n' + sh.fragmentShader
           .replace('#include <map_fragment>', '#include <map_fragment>\n  float suitK = smoothstep(0.42, 0.58, vSuit) * (1.0 - uSkate);\n  float teeK = smoothstep(0.4, 0.6, vTee) * uSkate, shortK = smoothstep(0.4, 0.6, vShorts) * uSkate, clothK = max(teeK, shortK);\n' +
-            '  diffuseColor.rgb = mix(diffuseColor.rgb, mix(uSuit, uAcc, smoothstep(0.3, 0.42, vAcc)), suitK);\n' +
+            '  diffuseColor.rgb = mix(diffuseColor.rgb, mix(uSuit, uSuit * 0.42, smoothstep(0.3, 0.62, vAcc)), suitK);\n' +
             // skate shoes: navy canvas uppers, white rubber soles
             '  float shoeK = smoothstep(0.35, 0.6, vShoe) * uShoe;\n  diffuseColor.rgb = mix(diffuseColor.rgb, mix(vec3(0.07, 0.1, 0.18), vec3(0.93), smoothstep(0.3, 0.7, vSole)), shoeK);\n' +
             // skating: a cotton tee in the rider's colour and dark board shorts, bare arms and legs
             '  diffuseColor.rgb = mix(diffuseColor.rgb, uSuit * 0.92, teeK);\n  diffuseColor.rgb = mix(diffuseColor.rgb, uShorts, shortK);')
-          .replace('#include <roughnessmap_fragment>', '#include <roughnessmap_fragment>\n  roughnessFactor = mix(mix(roughnessFactor, 0.36, suitK), 0.92, clothK);')
+          .replace('#include <roughnessmap_fragment>', '#include <roughnessmap_fragment>\n  roughnessFactor = mix(mix(roughnessFactor, 0.5, suitK), 0.92, clothK);')
           // neoprene smooths the body under it: most of the muscle detail goes
-          .replace('#include <normal_fragment_maps>', '  vec3 labGeoN = normal;\n#include <normal_fragment_maps>\n  normal = normalize(mix(normal, labGeoN, max(suitK * 0.65, clothK * 0.85)));');
+          .replace('#include <normal_fragment_maps>', '  vec3 labGeoN = normal;\n#include <normal_fragment_maps>\n  normal = normalize(mix(normal, labGeoN, max(suitK * 0.8, clothK * 0.85)));');
       };
       o.material = m;
     });
@@ -15575,8 +15576,8 @@
     var Ls = sg3.skSunL;
     // (golden hour: a strong sun and a weaker, bluer sky light -- the game's bright sky light washed the shadows out)
     if(!sg3.skHemi){ sc.traverse(function(o){ if(o.isHemisphereLight) sg3.skHemi = o; }); if(sg3.skHemi) sg3.skHemi.userData.i0 = sg3.skHemi.intensity; Ls.userData.i0 = Ls.intensity; }
-    if(sg3.skHemi) sg3.skHemi.intensity = on ? sg3.skHemi.userData.i0 * 0.6 : sg3.skHemi.userData.i0; Ls.intensity = on ? Ls.userData.i0 * 1.35 : Ls.userData.i0;
-    if(!on){ if(Ls.castShadow) Ls.castShadow = false; return; }
+    var kW = !on && sg.phase === 'walk' && !sg3.lowQ && !sgWeak; if(sg3.skHemi) sg3.skHemi.intensity = sg3.skHemi.userData.i0 * (on ? 0.6 : kW ? 0.74 : 1); Ls.intensity = Ls.userData.i0 * (on ? 1.35 : kW ? 0.8 : 1);
+    if(!on){ if(Ls.castShadow && sg.phase !== 'walk') Ls.castShadow = false; return; }
     if(!r.shadowMap.enabled){ r.shadowMap.enabled = true; r.shadowMap.type = T.PCFSoftShadowMap; }
     var P = sg3.skPark; if(!P) return;
     if(!P.userData.lit){
@@ -16211,65 +16212,6 @@
     }, 200);
   })();
   // <<< skatepark
-  // >>> beach textures (lab/beachtex-block.js via lab/beachtex.js)
-  // ---------- the beach in pictures by ChatGPT (2026-11-04) ----------
-  // Everything on the beach that doesn't move, drawn with ChatGPT's image model (beach/*.jpg beside
-  // the game): dry sand, wet sand, the road's asphalt, the boardwalk's planks, the huts' painted
-  // boards and tin roofs, the town's facades, the scrub on the hills. Laid over the materials the
-  // beach is built with, as they appear (and again when a beach is rebuilt); the colours they had
-  // stay as the tint, so a pink hut is still pink.
-  var BX = { img: {} };
-  // a texture of one of the pictures, repeated rx x ry times (each use its own, the picture shared)
-  function bxTex(T, name, rx, ry){
-    var im = BX.img[name];
-    if(!im){ im = BX.img[name] = new Image(); im.src = 'beach/' + name + '.jpg'; im.bxWait = []; im.onload = function(){ im.bxWait.forEach(function(t){ t.needsUpdate = true; }); im.bxWait = null; }; }
-    var t = new T.Texture(im); t.wrapS = t.wrapT = T.RepeatWrapping; t.repeat.set(rx, ry); t.encoding = T.sRGBEncoding; t.anisotropy = 8; t.userData.bx = name;
-    if(im.complete && im.naturalWidth) t.needsUpdate = true; else im.bxWait.push(t);
-    return t;
-  }
-  function bxSet(T, mat, name, rx, ry, tint, bump){
-    if(!mat || (mat.map && mat.map.userData.bx === name)) return;
-    mat.map = bxTex(T, name, rx, ry); if(bump){ mat.bumpMap = mat.map; mat.bumpScale = bump; }
-    if(tint !== undefined) mat.color.set(tint);
-    mat.needsUpdate = true;
-  }
-  function bxFrame(){
-    var T = sg3.T; if(!T || !sg3.scene) return;
-    // the sand, the slope into the sea and the hills (checked every frame: another loader may set them later)
-    var S = sg3.shore;
-    if(S){
-      bxSet(T, S.sandM, 'sand', 4000 / 3, 44 / 3, 0xf4ecdc, 0.35);
-      bxSet(T, S.slabM, 'sand', 4000 / 3, 1, 0xf4ecdc);
-      bxSet(T, S.wetM, 'wetsand', 4000 / 3, 16 / 3, 0xffffff, 0.2);
-      bxSet(T, S.hillM, 'hill', 4000 / 30, 1, 0xbcd6ae);
-    }
-    if(sg3.road) bxSet(T, sg3.road.material, 'asphalt', 4000 / 4, 7 / 4, 0xffffff);
-    if(sg3.lot && sg3.lot.children[0]) bxSet(T, sg3.lot.children[0].material, 'asphalt', 44 / 4, 7 / 4, 0xe8e8e8);
-    // the beach's own things: picked out by the colours they're built in
-    if(sg3.beach && !sg3.beach.userData.bx){
-      sg3.beach.userData.bx = true;
-      var hutC = {}, roofC = {}; SG_HUTS.forEach(function(h){ hutC[h.color] = 1; roofC[h.roof] = 1; });
-      sg3.beach.traverse(function(o){
-        if(!o.isMesh || !o.material || o.material.isMeshBasicMaterial || Array.isArray(o.material)) return;
-        var m = o.material, c = m.color ? m.color.getHex() : -1, geo = o.geometry && o.geometry.type;
-        if(c === 0xa47a4c) bxSet(T, m, 'planks', 56 / 2.4, 1);                                 // the boardwalk
-        else if(hutC[c] && geo === 'BoxGeometry') bxSet(T, m, 'hutwood', 2, 1.4);               // the huts' walls (painted their colour)
-        else if(roofC[c] || (c === 0xd23a2a && geo === 'ConeGeometry')) bxSet(T, m, 'roof', 3, 1);   // tin roofs
-        else if(c === 0x9a6b3f) bxSet(T, m, 'planks', 1, 1);                                   // posts, the tower's ladder
-        else if(c === 0xf3f1ea && geo === 'BoxGeometry') bxSet(T, m, 'hutwood', 1, 1);          // the lifeguard tower's white boards
-      });
-    }
-    // the town: its walls of windows become real facades, two floors by two windows a repeat
-    if(sg3.city && !sg3.city.userData.bx){
-      sg3.city.userData.bx = true;
-      sg3.city.traverse(function(o){
-        if(!o.isMesh || !o.material || Array.isArray(o.material)) return;
-        var m = o.material; if(m.map && m.map.image && m.map.image.width === 64 && !m.map.userData.bx) bxSet(T, m, 'facade', 0.5, 0.5);
-      });
-    }
-  }
-  sg3PostRender = (function(orig){ return function(){ try { bxFrame(); } catch(e){ if(!BX.warned){ BX.warned = 1; console.warn('beach textures:', e); } } orig(); }; })(sg3PostRender);
-  // <<< beach textures
   // >>> windsurfing (lab/wind-block.js via lab/wind.js)
   // ---------- windsurfing (2026-11-04) ----------
   // A board and a sail, at any beach (from the sand: 🌬️) and at Lac Bay, Bonaire -- the flat,
@@ -16688,11 +16630,11 @@
   function sfArms(T, R){
     var Ld = sg3.sfLand; if(!Ld) return;
     var s = sfDepth() * (0.55 + 0.45 * Ld.k); if(s < 0.02) return;
-    var k = R.sfK === undefined ? 0.9 : R.sfK, sh = new T.Vector3(0.1 + 0.12 * k, 1.4 - 0.3 * k, 0);
+    var k = R.sfK === undefined ? 0.9 : R.sfK, sh = new T.Vector3(0.04 + 0.05 * k, 1.4 - 0.3 * k, 0.13 * k);
     [[R.parts.uArmF, R.parts.fArmF, R.extra.handF, -1], [R.parts.uArmB, R.parts.fArmB, R.extra.handB, 1]].forEach(function(A){
-      var s0 = sh.clone().add(new T.Vector3(0, -0.02, A[3] * 0.17));
-      var rest = A[2].position.clone(), out = s0.clone().add(new T.Vector3(A[3] < 0 ? 0.22 : -0.12, 0.02, A[3] * 0.5));
-      var hn = rest.lerp(out, s), e0 = s0.clone().lerp(hn, 0.5).add(new T.Vector3(0, -0.06, A[3] * 0.05));
+      var s0 = sh.clone().add(new T.Vector3(-A[3] * 0.15, -0.02, A[3] * 0.085));
+      var rest = A[2].position.clone(), out = s0.clone().add(new T.Vector3(-A[3] * 0.56, 0.06, 0.12));
+      var hn = rest.lerp(out, s), e0 = s0.clone().lerp(hn, 0.5).add(new T.Vector3(0, -0.06, 0.03));
       sg3Limb(T, A[0], s0, e0); sg3Limb(T, A[1], e0, hn); A[2].position.copy(hn);
     });
   }
@@ -16749,6 +16691,288 @@
     M.material.opacity = (sg.tube > 0.1 ? 0.3 : 0.55) * Math.max(0.3, 1 - fly / (Hm * 1.4));
   }
   // <<< surf realism
+  // >>> beach textures (lab/beachtex-block.js via lab/beachtex.js)
+  // ---------- the beach in pictures by ChatGPT (2026-11-04) ----------
+  // Everything on the beach that doesn't move, drawn with ChatGPT's image model (beach/*.jpg beside
+  // the game): dry sand, wet sand, the road's asphalt, the boardwalk's planks, the huts' painted
+  // boards and tin roofs, the town's facades, the scrub on the hills. Laid over the materials the
+  // beach is built with, as they appear (and again when a beach is rebuilt); the colours they had
+  // stay as the tint, so a pink hut is still pink.
+  var BX = { img: {} };
+  // a texture of one of the pictures, repeated rx x ry times (each use its own, the picture shared)
+  function bxTex(T, name, rx, ry){
+    var im = BX.img[name];
+    if(!im){ im = BX.img[name] = new Image(); im.src = 'beach/' + name + '.jpg'; im.bxWait = []; im.onload = function(){ im.bxWait.forEach(function(t){ t.needsUpdate = true; }); im.bxWait = null; }; }
+    var t = new T.Texture(im); t.wrapS = t.wrapT = T.RepeatWrapping; t.repeat.set(rx, ry); t.encoding = T.sRGBEncoding; t.anisotropy = 8; t.userData.bx = name;
+    if(im.complete && im.naturalWidth) t.needsUpdate = true; else im.bxWait.push(t);
+    return t;
+  }
+  function bxSet(T, mat, name, rx, ry, tint, bump){
+    if(!mat || (mat.map && mat.map.userData.bx === name) || mat.userData.bxWait === name) return;
+    var t = bxTex(T, name, rx, ry), im = BX.img[name];
+    function go(){ mat.userData.bxWait = null; mat.map = t; if(bump){ mat.bumpMap = t; mat.bumpScale = bump; }
+      if(tint !== undefined) mat.color.set(tint);
+      mat.needsUpdate = true; }
+    /* (a texture with no picture yet draws black: what it had stays until the picture has arrived) */
+    if(im.complete && im.naturalWidth) go(); else { mat.userData.bxWait = name; im.addEventListener('load', go); }
+  }
+  function bxFrame(){
+    var T = sg3.T; if(!T || !sg3.scene) return;
+    // the sand, the slope into the sea and the hills (checked every frame: another loader may set them later)
+    var S = sg3.shore;
+    if(S){
+      bxSet(T, S.sandM, 'sand', 4000 / 3, 44 / 3, 0xf4ecdc, 0.35);
+      bxSet(T, S.slabM, 'sand', 4000 / 3, 1, 0xf4ecdc);
+      bxSet(T, S.wetM, 'wetsand', 4000 / 3, 16 / 3, 0xffffff, 0.2);
+      bxSet(T, S.hillM, 'hill', 4000 / 30, 1, 0xbcd6ae);
+    }
+    if(sg3.road) bxSet(T, sg3.road.material, 'asphalt', 4000 / 4, 7 / 4, 0xffffff);
+    if(sg3.lot && sg3.lot.children[0]) bxSet(T, sg3.lot.children[0].material, 'asphalt', 44 / 4, 7 / 4, 0xe8e8e8);
+    // the beach's own things: picked out by the colours they're built in
+    if(sg3.beach && !sg3.beach.userData.bx){
+      sg3.beach.userData.bx = true;
+      var hutC = {}, roofC = {}; SG_HUTS.forEach(function(h){ hutC[h.color] = 1; roofC[h.roof] = 1; });
+      sg3.beach.traverse(function(o){
+        if(!o.isMesh || !o.material || o.material.isMeshBasicMaterial || Array.isArray(o.material)) return;
+        var m = o.material, c = m.color ? m.color.getHex() : -1, geo = o.geometry && o.geometry.type;
+        if(c === 0xa47a4c) bxSet(T, m, 'planks', 56 / 2.4, 1);                                 // the boardwalk
+        else if(hutC[c] && geo === 'BoxGeometry') bxSet(T, m, 'hutwood', 2, 1.4);               // the huts' walls (painted their colour)
+        else if(roofC[c] || (c === 0xd23a2a && geo === 'ConeGeometry')) bxSet(T, m, 'roof', 3, 1);   // tin roofs
+        else if(c === 0x9a6b3f) bxSet(T, m, 'planks', 1, 1);                                   // posts, the tower's ladder
+        else if(c === 0xf3f1ea && geo === 'BoxGeometry') bxSet(T, m, 'hutwood', 1, 1);          // the lifeguard tower's white boards
+      });
+    }
+    // the town: its walls of windows become real facades, two floors by two windows a repeat
+    if(sg3.city && !sg3.city.userData.bx){
+      sg3.city.userData.bx = true;
+      sg3.city.traverse(function(o){
+        if(!o.isMesh || !o.material || Array.isArray(o.material)) return;
+        var m = o.material; if(m.map && m.map.image && m.map.image.width === 64 && !m.map.userData.bx) bxSet(T, m, 'facade', 0.5, 0.5);
+      });
+    }
+  }
+  sg3PostRender = (function(orig){ return function(){ try { bxFrame(); } catch(e){ if(!BX.warned){ BX.warned = 1; console.warn('beach textures:', e); } } orig(); }; })(sg3PostRender);
+  // <<< beach textures
+  // >>> beach look (lab/gfx-block.js via lab/gfx.js)
+  // ---------- the look of a real beach (2026-11-06) ----------
+  // Nothing here changes how the game plays. The sand keeps its colour instead of being tinted twice,
+  // large-scale variation breaks up every repeating texture, the sand goes dark and shiny where the sea
+  // last reached, footprints stay behind you, the sun casts shadows while you walk, the board gets a
+  // traction pad, a stringer, wax and reflections, and the beach gets palms, more umbrellas and far-off people.
+  var GFX = { t: { value: 0 }, n: 0, warned: false };
+
+  // two big, rotated looks at the same picture multiply it, so no tile ever shows twice alike
+  function gfxMacro(T, mat, o){
+    if(!mat || !mat.map || mat.userData.gfx) return;
+    mat.userData.gfx = true;
+    mat.customProgramCacheKey = function(){ return 'gfx-' + JSON.stringify(o); };
+    mat.onBeforeCompile = function(sh){
+      sh.uniforms.uGfxT = GFX.t;
+      sh.vertexShader = 'varying vec3 vGW;\n' + sh.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\n  vGW = (modelMatrix * vec4(transformed, 1.0)).xyz;');
+      var body = '#include <map_fragment>\n' +
+        '  vec2 gP = vGW.' + o.plane + ';\n' +
+        '  float gM = max(0.02, dot(texture2D(map, vec2(0.5), 12.0).rgb, vec3(0.333)));\n' +
+        '  float gA = dot(texture2D(map, mat2(0.8, -0.6, 0.6, 0.8) * gP * ' + o.a.toFixed(4) + ' + vec2(0.37, 0.11)).rgb, vec3(0.333)) / gM;\n' +
+        '  float gB = dot(texture2D(map, mat2(0.6, 0.8, -0.8, 0.6) * gP * ' + o.b.toFixed(4) + ' + vec2(0.13, 0.71)).rgb, vec3(0.333)) / gM;\n' +
+        '  diffuseColor.rgb *= clamp(mix(1.0, gA, ' + o.ka.toFixed(2) + ') * mix(1.0, gB, ' + o.kb.toFixed(2) + '), 0.6, 1.35);\n';
+      if(o.sat !== undefined) body += '  float gL = dot(diffuseColor.rgb, vec3(0.3, 0.59, 0.11)); diffuseColor.rgb = mix(vec3(gL), diffuseColor.rgb, ' + o.sat.toFixed(2) + ') * ' + (o.gain || 1).toFixed(2) + ';\n';
+      if(o.haze) body += '  diffuseColor.rgb = mix(diffuseColor.rgb * 1.3 + 0.015, vec3(0.6, 0.7, 0.78), ' + o.haze.toFixed(2) + ');\n';
+      if(o.wet) body +=
+        /* (the line the last wave reached, wandering along the beach and breathing with the wash) */
+        '  float gZ = 180.7 + 0.55 * sin(vGW.x * 0.07) + 0.3 * sin(vGW.x * 0.31 + 1.7) + 0.12 * sin(vGW.x * 1.3) + 0.45 * sin(uGfxT * 0.55);\n' +
+        '  float gWet = smoothstep(gZ + 0.9, gZ - 0.35, vGW.z);\n' +
+        '  diffuseColor.rgb = mix(diffuseColor.rgb, diffuseColor.rgb * vec3(0.5, 0.52, 0.56) + vec3(0.012, 0.018, 0.026), gWet);\n';
+      sh.fragmentShader = 'varying vec3 vGW;\nuniform float uGfxT;\n' + sh.fragmentShader.replace('#include <map_fragment>', body);
+      if(o.wet) sh.fragmentShader = sh.fragmentShader.replace('#include <roughnessmap_fragment>', '#include <roughnessmap_fragment>\n  roughnessFactor = mix(roughnessFactor, 0.42, gWet);');
+    };
+    mat.needsUpdate = true;
+  }
+  // the beach's colours were laid over a picture that already has them (a yellow sand, a burnt hill):
+  // only a hint of them stays, enough to tell one beach from another
+  sg3SetShore = (function(orig){ return function(T, S, id){
+    var r = orig.apply(this, arguments), white = new T.Color(0xffffff);
+    S.sandM.color.lerp(white, 0.72); S.slabM.color.lerp(white, 0.72); S.wetM.color.lerp(white, 0.5); S.hillM.color.lerp(white, 0.72);
+    S.gfxTint = true;
+    return r; }; })(sg3SetShore);
+
+  // ---- the board: a stringer down the middle, a grooved tail pad, waxed fibreglass ----
+  function gfxBoardTex(T){
+    if(GFX.boardTex) return GFX.boardTex;
+    var cv = document.createElement('canvas'); cv.width = cv.height = 256; var c = cv.getContext('2d'); c.fillStyle = '#f7f7f5'; c.fillRect(0, 0, 256, 256);
+    for(var i = 0; i < 2600; i++){ var a = 0.03 + Math.random() * 0.05; c.fillStyle = Math.random() < 0.5 ? 'rgba(0,0,0,' + a + ')' : 'rgba(255,255,255,' + (a * 2) + ')'; c.fillRect(Math.random() * 256, Math.random() * 256, 1 + Math.random() * 2, 1 + Math.random() * 2); }
+    for(var w = 0; w < 90; w++){ c.strokeStyle = 'rgba(255,255,255,0.22)'; c.lineWidth = 1 + Math.random() * 2; c.beginPath(); var x = Math.random() * 256, y = Math.random() * 256; c.arc(x, y, 3 + Math.random() * 7, 0, 5); c.stroke(); }   /* (wax, rubbed on in circles) */
+    var t = new T.CanvasTexture(cv); t.wrapS = t.wrapT = T.RepeatWrapping; t.repeat.set(2.4, 2.4); t.encoding = T.sRGBEncoding; t.anisotropy = 4;
+    return (GFX.boardTex = t);
+  }
+  function gfxPadTex(T){
+    if(GFX.padTex) return GFX.padTex;
+    var cv = document.createElement('canvas'); cv.width = 128; cv.height = 64; var c = cv.getContext('2d'); c.fillStyle = '#33363c'; c.fillRect(0, 0, 128, 64);
+    c.strokeStyle = '#50545c'; c.lineWidth = 2; for(var x = -64; x < 192; x += 8){ c.beginPath(); c.moveTo(x, 0); c.lineTo(x + 32, 32); c.lineTo(x, 64); c.stroke(); }
+    var t = new T.CanvasTexture(cv); t.encoding = T.sRGBEncoding;
+    return (GFX.padTex = t);
+  }
+  sg3BoardDeco = (function(orig){ return function(T, board){
+    orig.apply(this, arguments);
+    if(board.material && board.material.isMeshStandardMaterial){ board.material.map = gfxBoardTex(T); board.material.roughness = 0.3; board.material.metalness = 0; board.material.needsUpdate = true; }
+    /* the stringer, following the board's rocker */
+    var N = 26, P = new Float32Array((N + 1) * 6), ix = [];
+    for(var i = 0; i <= N; i++){ var x = -0.88 + 1.83 * i / N, y = 0.0395 + (x > 0 ? 0.13 * Math.pow(x / 0.97, 3) : 0.035 * Math.pow(x / 0.9, 2));
+      P.set([x, y, -0.0045, x, y, 0.0045], i * 6); if(i < N) ix.push(i * 2, i * 2 + 1, i * 2 + 2, i * 2 + 1, i * 2 + 3, i * 2 + 2); }
+    var sg = new T.BufferGeometry(); sg.setAttribute('position', new T.BufferAttribute(P, 3)); sg.setIndex(ix); sg.computeVertexNormals();
+    var st = new T.Mesh(sg, new T.MeshStandardMaterial({ color: 0x8a6238, roughness: 0.5, side: T.DoubleSide })); board.add(st);
+    /* the tail pad, under the back foot */
+    var pad = new T.Mesh(new T.BoxGeometry(0.34, 0.01, 0.27), new T.MeshStandardMaterial({ color: 0xffffff, map: gfxPadTex(T), roughness: 0.92 }));
+    pad.position.set(-0.56, 0.054, 0); pad.rotation.z = -0.05; board.add(pad);
+  }; })(sg3BoardDeco);
+
+  // ---- palms, umbrellas and people far along the sand: one draw call each ----
+  function gfxPalmGeo(T){
+    if(GFX.palmGeo) return GFX.palmGeo;
+    var pos = [], col = [], ix = [];
+    function v(x, y, z, r, g, b){ pos.push(x, y, z); col.push(r, g, b); return pos.length / 3 - 1; }
+    var H = 8.5, S = 7, R = 6, bx = function(t){ return 0.9 * t * t; };
+    for(var s = 0; s <= S; s++){ var t = s / S, rr = 0.26 - 0.13 * t, ring = 0.82 + 0.18 * (s % 2);
+      for(var a = 0; a < R; a++){ var an = a / R * Math.PI * 2; v(bx(t) + Math.cos(an) * rr, t * H, Math.sin(an) * rr, 0.42 * ring, 0.31 * ring, 0.2 * ring); } }
+    for(var s2 = 0; s2 < S; s2++) for(var a2 = 0; a2 < R; a2++){ var p = s2 * R + a2, q = s2 * R + (a2 + 1) % R; ix.push(p, p + R, q, q, p + R, q + R); }
+    var F = 13, seed = 11, rnd = function(){ seed = (seed * 16807) % 2147483647; return seed / 2147483647; }, tx = bx(1);
+    for(var f = 0; f < F; f++){
+      var ang = f / F * Math.PI * 2 + rnd() * 0.3, lift = (f % 2 ? 0.75 : 0.25) + rnd() * 0.2, Ln = 3.1 + rnd() * 0.9, ca = Math.cos(ang), sa = Math.sin(ang), G = 8, shade = 0.75 + rnd() * 0.35, base = pos.length / 3;
+      for(var g = 0; g <= G; g++){ var u = g / G, out = Ln * u, up = lift * Ln * u - 1.9 * Ln * 0.42 * u * u, w = 0.42 * Math.sin(Math.min(1, u * 1.15) * Math.PI) * (g % 2 ? 1 : 0.62) + 0.015, drop = 0.16 * w / 0.42;
+        var cx = tx + ca * out, cy = H + up, cz = sa * out, gr = (0.33 + 0.1 * u) * shade;
+        v(cx - sa * w, cy - drop, cz + ca * w, 0.16 * shade, gr, 0.1 * shade); v(cx, cy, cz, 0.13 * shade, gr * 0.72, 0.08 * shade); v(cx + sa * w, cy - drop, cz - ca * w, 0.16 * shade, gr, 0.1 * shade);
+      }
+      for(var g2 = 0; g2 < G; g2++){ var b0 = base + g2 * 3; ix.push(b0, b0 + 1, b0 + 3, b0 + 1, b0 + 4, b0 + 3, b0 + 1, b0 + 2, b0 + 4, b0 + 2, b0 + 5, b0 + 4); }
+    }
+    var geo = new T.BufferGeometry(); geo.setAttribute('position', new T.Float32BufferAttribute(pos, 3)); geo.setAttribute('color', new T.Float32BufferAttribute(col, 3)); geo.setIndex(ix); geo.computeVertexNormals();
+    return (GFX.palmGeo = geo);
+  }
+  function gfxUmbrellaGeo(T){
+    if(GFX.umbGeo) return GFX.umbGeo;
+    var pos = [], col = [], ix = [];
+    function v(x, y, z, k){ pos.push(x, y, z); col.push(k, k, k); return pos.length / 3 - 1; }
+    var n = 12, top = v(0, 2.62, 0, 1);
+    for(var i = 0; i < n; i++){ var a0 = i / n * Math.PI * 2, a1 = (i + 1) / n * Math.PI * 2, k = i % 2 ? 1 : 0.62;
+      var p = v(0, 2.62, 0, k), q = v(Math.cos(a0) * 1.45, 2.14, Math.sin(a0) * 1.45, k), r = v(Math.cos(a1) * 1.45, 2.14, Math.sin(a1) * 1.45, k); ix.push(p, q, r); }
+    var s = [[-0.03, -0.03], [0.03, -0.03], [0.03, 0.03], [-0.03, 0.03]], b = pos.length / 3; s.forEach(function(c){ v(c[0], 0, c[1], 0.95); v(c[0], 2.6, c[1], 0.95); });
+    for(var e = 0; e < 4; e++){ var a = b + e * 2, c2 = b + ((e + 1) % 4) * 2; ix.push(a, a + 1, c2, c2, a + 1, c2 + 1); }
+    var bt = pos.length / 3; [[0.35, 0.05], [1.35, 0.05], [1.35, 1.9], [0.35, 1.9]].forEach(function(c){ v(c[0], 0.03, c[1] - 0.8, 0.9); }); ix.push(bt, bt + 2, bt + 1, bt, bt + 3, bt + 2);   /* (a towel) */
+    var geo = new T.BufferGeometry(); geo.setAttribute('position', new T.Float32BufferAttribute(pos, 3)); geo.setAttribute('color', new T.Float32BufferAttribute(col, 3)); geo.setIndex(ix); geo.computeVertexNormals();
+    return (GFX.umbGeo = geo);
+  }
+  sg3BuildBeach = (function(orig){ return function(T, spot){
+    var g = orig.apply(this, arguments), rnd = (function(s){ return function(){ s = (s * 16807) % 2147483647; return (s - 1) / 2147483646; }; })(surfHash(spot.id) % 90000 + 31);
+    var M = new T.Matrix4(), Q = new T.Quaternion(), Y = new T.Vector3(0, 1, 0), P = new T.Vector3(), Sc = new T.Vector3(), C = new T.Color();
+    /* palms: behind the huts on the land side of the lot (the park fills the other side), a few down the sand */
+    var hutX = (typeof SG_HUTS !== 'undefined' ? SG_HUTS : []).map(function(h){ return h.x; }).filter(function(x){ return typeof x === 'number'; });
+    var pl = []; for(var i = 0; i < 12; i++){ pl.push([-22 - i * 11 - rnd() * 6, 198.5 + rnd() * 6]); } [-64, -72, -104, -122, 62, 72, 104, 122].forEach(function(x){ pl.push([x + rnd() * 3, 184.2 + rnd() * 1.6]); });
+    pl = pl.filter(function(p){ return !hutX.some(function(x){ return Math.abs(x - p[0]) < 6 && p[1] > 190; }); });
+    var pm = new T.InstancedMesh(gfxPalmGeo(T), new T.MeshStandardMaterial({ vertexColors: true, roughness: 0.85, side: T.DoubleSide }), pl.length);
+    pl.forEach(function(p, k){ var s = 0.8 + rnd() * 0.45; M.compose(P.set(p[0], (typeof sgGroundY === 'function' ? sgGroundY(p[1]) : SG_SAND_Y) - 0.05, p[1]), Q.setFromAxisAngle(Y, rnd() * 6.28), Sc.set(s, s, s)); pm.setMatrixAt(k, M); });
+    pm.castShadow = true; g.add(pm);
+    /* more umbrellas, in among the ones already there */
+    var ub = []; for(var u = 0; u < 22; u++){ var sd = u % 2 ? 1 : -1, x = sd * (34 + rnd() * 128), z = 180.8 + rnd() * 5; if(Math.abs(Math.abs(x) - 48) < 7 || Math.abs(Math.abs(x) - 85) < 7) x += sd * 13; ub.push([x, z]); }
+    var um = new T.InstancedMesh(gfxUmbrellaGeo(T), new T.MeshStandardMaterial({ vertexColors: true, roughness: 0.7, side: T.DoubleSide }), ub.length), hues = [0xe74c3c, 0xf1c40f, 0x3498db, 0x2ecc71, 0xff7eb6, 0xff8c1a, 0x1abc9c, 0xf4f1e8];
+    ub.forEach(function(p, k){ M.compose(P.set(p[0], SG_SAND_Y, p[1]), Q.setFromAxisAngle(Y, rnd() * 6.28), Sc.set(1, 1, 1)); um.setMatrixAt(k, M); um.setColorAt(k, C.setHex(hues[Math.floor(rnd() * hues.length)])); });
+    um.castShadow = true; g.add(um);
+    /* people far along the sand, past where the walking ones go */
+    var far = []; for(var f = 0; f < 44; f++){ var sd2 = f % 2 ? 1 : -1; far.push([sd2 * (128 + rnd() * 44), 178.6 + rnd() * 7.2, rnd() < 0.3 ? 0.55 : 1]); }
+    var bodyG = new T.CylinderGeometry(0.15, 0.13, 1.25, 7); bodyG.translate(0, 0.62, 0); var headG = new T.SphereGeometry(0.115, 8, 6); headG.translate(0, 1.42, 0);
+    var bm = new T.InstancedMesh(bodyG, new T.MeshStandardMaterial({ roughness: 0.8 }), far.length), hm = new T.InstancedMesh(headG, new T.MeshStandardMaterial({ roughness: 0.7 }), far.length);
+    var shirts = [0xe74c3c, 0x2c3e50, 0xff5fa2, 0xf1c40f, 0x3498db, 0x1abc9c, 0xf4f1e8, 0xd9a066], skinsF = [0xf1c7a0, 0xe2ab80, 0xc08a5e, 0x8a5534];
+    far.forEach(function(p, k){ M.compose(P.set(p[0], SG_SAND_Y, p[1]), Q.identity(), Sc.set(1, p[2], 1)); bm.setMatrixAt(k, M); hm.setMatrixAt(k, M); bm.setColorAt(k, C.setHex(shirts[Math.floor(rnd() * shirts.length)])); hm.setColorAt(k, C.setHex(skinsF[Math.floor(rnd() * skinsF.length)])); });
+    bm.frustumCulled = hm.frustumCulled = pm.frustumCulled = um.frustumCulled = false; g.add(bm); g.add(hm);
+    /* everything standing on the beach casts a shadow, the flat things catch them */
+    g.traverse(function(o){ if(o.isMesh){ o.castShadow = true; o.receiveShadow = true; } });
+    return g; }; })(sg3BuildBeach);
+
+  // ---- footprints in the sand behind you ----
+  function gfxPrints(T){
+    if(!GFX.pr){
+      var cv = document.createElement('canvas'); cv.width = 64; cv.height = 128; var c = cv.getContext('2d'); c.fillStyle = 'rgba(40,28,14,0.95)';
+      c.beginPath(); c.ellipse(32, 92, 15, 24, 0, 0, 7); c.fill(); c.beginPath(); c.ellipse(34, 48, 20, 20, 0, 0, 7); c.fill();
+      [[14, 18, 5], [24, 12, 6], [35, 10, 7], [46, 13, 6], [55, 22, 5]].forEach(function(t){ c.beginPath(); c.arc(t[0], t[1], t[2], 0, 7); c.fill(); });
+      var geo = new T.PlaneGeometry(0.15, 0.3); geo.rotateX(-Math.PI / 2);
+      var m = new T.InstancedMesh(geo, new T.MeshBasicMaterial({ map: new T.CanvasTexture(cv), transparent: true, opacity: 0.46, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -3, polygonOffsetUnits: -3 }), 150);
+      M4Zero = new T.Matrix4().makeScale(0, 0, 0); for(var i = 0; i < 150; i++) m.setMatrixAt(i, M4Zero);
+      m.frustumCulled = false; m.renderOrder = 1; sg3.scene.add(m);
+      GFX.pr = { m: m, i: 0, last: null, side: 1, q: new T.Quaternion(), mx: new T.Matrix4(), p: new T.Vector3(), s: new T.Vector3(1, 1, 1), y: new T.Vector3(0, 1, 0) };
+    }
+    var Pr = GFX.pr, W = sg.phase === 'walk' && sg.walk;
+    Pr.m.visible = !!sgLot && sg.phase === 'walk';
+    if(!W || !sgLot || sgBG.in) { Pr.last = null; return; }
+    var inLot = Math.abs(W.x - sgLot.parkX) < SG_BAY * 4.5 + 0.8 && W.z > SG_LOT_Z - 3.8 && W.z < SG_LOT_Z + 3.8, onSand = !inLot && W.z > 177.6 && W.z < SG_LOT_Z + 2.4 && W.z < SG_ROAD_Z - 3.6;
+    if(!onSand){ Pr.last = null; return; }
+    if(!Pr.last){ Pr.last = { x: W.x, z: W.z }; return; }
+    var dx = W.x - Pr.last.x, dz = W.z - Pr.last.z, d = Math.hypot(dx, dz); if(d < 0.62) return;
+    var hd = Math.atan2(dz, dx), o = 0.13 * Pr.side; Pr.side = -Pr.side; Pr.last = { x: W.x, z: W.z };
+    Pr.q.setFromAxisAngle(Pr.y, -hd - Math.PI / 2 + Math.PI);
+    Pr.p.set(W.x - Math.sin(hd) * o, sgWalkY(W.x, W.z) + 0.016, W.z + Math.cos(hd) * o);
+    Pr.mx.compose(Pr.p, Pr.q, Pr.s); Pr.m.setMatrixAt(Pr.i, Pr.mx); Pr.i = (Pr.i + 1) % 150; Pr.m.instanceMatrix.needsUpdate = true;
+  }
+  var M4Zero;
+
+  // ---- the sun's shadows while you walk the beach (skating has its own view of the same light) ----
+  function gfxLight(T){
+    var sc = sg3.scene, r = sg3.r, walk = sg.phase === 'walk' && sg.walk, skate = sg.phase === 'skate';
+    if(!sg3.skSunL){ sc.traverse(function(o){ if(o.isDirectionalLight && (!sg3.skSunL || o.intensity > sg3.skSunL.intensity)) sg3.skSunL = o; }); if(!sg3.skSunL) return; }
+    var Ls = sg3.skSunL;
+    if(walk && !sg3.lowQ && !(typeof sgWeak !== 'undefined' && sgWeak)){   /* (a shadow pass of the whole beach is too much for a weak phone) */
+      if(!r.shadowMap.enabled){ r.shadowMap.enabled = true; r.shadowMap.type = T.PCFSoftShadowMap; }
+      if(!GFX.lit){ GFX.lit = true; Ls.shadow.mapSize.set(2048, 2048); Ls.shadow.bias = -0.0004; Ls.shadow.normalBias = 0.05; Ls.shadow.radius = 3; if(Ls.shadow.map){ Ls.shadow.map.dispose(); Ls.shadow.map = null; }
+        var mark = function(o){ if(o.material) (Array.isArray(o.material) ? o.material : [o.material]).forEach(function(m){ m.needsUpdate = true; }); }; sc.traverse(mark); }
+      if(!Ls.target.parent) sc.add(Ls.target);
+      var D0 = sg3.wm.uniforms.uSunDir.value, D = GFX.dirW || (GFX.dirW = new T.Vector3(D0.x, 0.62, D0.z).normalize()), sx = Math.round(sg.walk.x / 3) * 3, sz = Math.round(sg.walk.z / 3) * 3;
+      Ls.target.position.set(sx, SG_SAND_Y, sz); Ls.position.copy(Ls.target.position).addScaledVector(D, 90);
+      var cam = Ls.shadow.camera; if(GFX.camFor !== 'walk'){ GFX.camFor = 'walk'; cam.left = -46; cam.right = 46; cam.top = 30; cam.bottom = -30; cam.near = 5; cam.far = 220; cam.updateProjectionMatrix(); }
+      if(sg3.shore && !sg3.shore.gfxRecv){ sg3.shore.gfxRecv = true; sg3.shore.g.traverse(function(o){ if(o.isMesh && o !== sg3.shore.hills) o.receiveShadow = true; }); }
+      if(sg3.road) sg3.road.receiveShadow = true; if(sg3.lot) sg3.lot.traverse(function(o){ if(o.isMesh) o.receiveShadow = true; });
+      if(sg3.rider && !sg3.rider.gfxCast && sg3.rider.lab && sg3.rider.lab.root){ sg3.rider.gfxCast = true; sg3.rider.lab.root.traverse(function(o){ if(o.isMesh){ o.castShadow = true; o.frustumCulled = false; } }); sg3.rider.board.castShadow = true; }
+      Ls.castShadow = true;
+      if(!GFX.fill){ sc.traverse(function(o){ if(o.isDirectionalLight && o !== Ls) GFX.fill = o; }); if(GFX.fill) GFX.fill.userData.i0 = GFX.fill.intensity; } if(GFX.fill) GFX.fill.intensity = GFX.fill.userData.i0 * 0.55;
+    } else if(GFX.camFor === 'walk' && !skate){
+      /* the ride: the sun back low behind the wave */
+      GFX.camFor = null; var D1 = sg3.wm.uniforms.uSunDir.value; Ls.target.position.set(0, 0, 0); Ls.position.copy(D1).multiplyScalar(100); if(GFX.fill) GFX.fill.intensity = GFX.fill.userData.i0;
+    } else if(skate && sg3.skPark && GFX.camFor === 'walk'){
+      /* back over the park for skating, the way it set the light up */
+      if(GFX.fill) GFX.fill.intensity = GFX.fill.userData.i0;
+      GFX.camFor = 'skate'; var c = new T.Vector3(skX0() + SK.W / 2, SG_SAND_Y + SK.DECK, SK_Z0 + SK.D / 2), Dk = sg3.wm.uniforms.uSunDir.value;
+      Ls.target.position.copy(c); Ls.position.copy(c).addScaledVector(Dk, 90); var cm = Ls.shadow.camera; cm.left = -75; cm.right = 75; cm.top = 45; cm.bottom = -45; cm.updateProjectionMatrix();
+    }
+  }
+  // ---- reflections: the world photographed once, for the shine on the board and the neoprene ----
+  function gfxEnv(T){
+    if(GFX.env === undefined && (sg.phase === 'walk' || sg.phase === 'ride' || sg.phase === 'paddle') && ++GFX.n > 40){
+      GFX.env = null;
+      try {
+        var crt = new T.WebGLCubeRenderTarget(128), cc = new T.CubeCamera(0.5, 800, crt); cc.position.copy(sg3.cam.position); cc.position.y = Math.max(2.5, cc.position.y);
+        var vis = sg3.rider.g.visible; sg3.rider.g.visible = false; cc.update(sg3.r, sg3.scene); sg3.rider.g.visible = vis;
+        var pm = new T.PMREMGenerator(sg3.r); GFX.env = pm.fromCubemap(crt.texture).texture; pm.dispose(); crt.dispose();
+      } catch(e){ GFX.env = null; }
+    }
+    if(!GFX.env) return;
+    var R = sg3.rider;
+    if(R.board && R.board.material && R.board.material.envMap !== GFX.env){ R.board.material.envMap = GFX.env; R.board.material.envMapIntensity = 1.1; R.board.material.needsUpdate = true; }
+    if(R.lab && R.lab.root && !R.lab.gfxEnv){ R.lab.gfxEnv = true; R.lab.root.traverse(function(o){ if(o.isMesh && o.material && o.material.name === 'lab-suit'){ o.material.envMap = GFX.env; o.material.envMapIntensity = 0.55; o.material.needsUpdate = true; } }); }
+  }
+  function gfxFrame(){
+    var T = sg3.T; if(!T || !sg3.scene) return;
+    GFX.t.value = performance.now() / 1000;
+    var S = sg3.shore;
+    if(S){
+      if(!S.gfxTint && sg.spot && sg.spot.id){ S.gfxTint = true; var w = new T.Color(0xffffff); S.hillM.color.lerp(w, 0.5); }
+      if(S.sandM.bumpScale > 0.16) S.sandM.bumpScale = 0.16;
+      if(S.sandM.map && S.sandM.map.userData.bx) gfxMacro(T, S.sandM, { plane: 'xz', a: 0.0713, b: 0.0091, ka: 0.4, kb: 0.4, wet: true, sat: 0.62, gain: 1.12 });
+      if(S.wetM.map && S.wetM.map.userData.bx) gfxMacro(T, S.wetM, { plane: 'xz', a: 0.0713, b: 0.0091, ka: 0.4, kb: 0.4, sat: 0.7 });
+      if(S.hillM.map && S.hillM.map.userData.bx) gfxMacro(T, S.hillM, { plane: 'xy', a: 0.0137, b: 0.0021, ka: 0.45, kb: 0.45, haze: 0.3 });
+    }
+    /* the asphalt: no more sand showing through it, no repeating patches */
+    [sg3.road && sg3.road.material, sg3.lot && sg3.lot.children[0] && sg3.lot.children[0].material].forEach(function(m){ if(!m) return;
+      if(!m.polygonOffset){ m.polygonOffset = true; m.polygonOffsetFactor = -2; m.polygonOffsetUnits = -2; m.needsUpdate = true; }
+      if(m.map && m.map.userData.bx) gfxMacro(T, m, { plane: 'xz', a: 0.0619, b: 0.0083, ka: 0.18, kb: 0.2 }); });
+    gfxPrints(T); gfxLight(T); gfxEnv(T);
+  }
+  sg3PostRender = (function(orig){ return function(){ try { gfxFrame(); } catch(e){ if(!GFX.warned){ GFX.warned = true; console.warn('gfx:', e); } } orig(); }; })(sg3PostRender);
+  // <<< beach look
   // idle player pose before first game
   resetGame();
   requestAnimationFrame(frame);
