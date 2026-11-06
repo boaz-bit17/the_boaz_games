@@ -5642,7 +5642,7 @@
     sg.th += (target - sg.th) * Math.min(1, dt * 4.6 * (1 - 0.32 * bSz));          // a long board turns slowly
     // far out on the shoulder the wave has no push left
     var push = Math.max(0.25, Math.min(1, 1 - (gap - 900) / 700));
-    sg.v += -Math.sin(sg.th) * SG_G * push * dt;
+    sg.v += -Math.sin(sg.th) * SG_G * push * (0.72 + 0.56 * Math.max(0, Math.min(1, sg.h))) * dt;
     sg.v -= sg.v * 0.1 * (1 - 0.3 * bSz) * dt;                         // ...and glides
     if(sg.h <= 0.001 && sg.th < 0){ sg.v -= 120 * dt; }            // flat water at the bottom
     var vmax = 720 * (1 + 0.06 * up.speed) * (1 + 0.04 * bSz);
@@ -7873,7 +7873,7 @@
     if(sg.phase === 'air' && sg.air){
       var lip = faceAt(1);
       p.set(sx, lip[1] + sg.air.y * Hm * 0.9, lip[0]);
-      var pitch = Math.atan2(sg.air.vy * 2.2, 1);
+      var pitch = Math.atan2(sg.air.vy * (sg.air.vy > 0 ? 0.5 : 0.22), 1);   /* (levelling out on the way down, spotting the landing) */
       if(sg.air.sup){ var su0 = sg.air.sup; pitch *= 1 - 0.75 * su0 * su0 * (3 - 2 * su0); }   // superman: the board levels out under you
       fwd = new T.Vector3(Math.cos(pitch), Math.sin(pitch), 0); up = new T.Vector3(-Math.sin(pitch), Math.cos(pitch), 0);
       flip = sg.air.rot;
@@ -7920,6 +7920,7 @@
     R.body.rotation.x = sg3.bank;
     if(flip) R.body.rotation.y = flip;            // an air 360: spinning around, board under the feet
     if(sg.phase === 'air' && sg.air && sg.air.fl) R.body.rotation.z = sg.air.fl;   // the backflip: nose up and over
+    sfBody(T, R, flip, Hm, dtR);
     if(sg.phase === 'wipe' || sg.phase === 'over'){ var wt = sg.wipe ? sg.wipe.t : 1; R.body.rotation.set(wt * 5, 0, wt * 7); R.g.position.y -= Math.min(1, wt) * 0.8; }
     // colours of the chosen board and surfer
     var rd = sgMyRider(), lkMe = sgMyLook();
@@ -7933,7 +7934,8 @@
     var povNow = (sg3.camMode === 'pov' && riding3) || sg.phase === 'paddle';
     var chaseNow = sg3.camMode === 'chase' && (riding3 || sg.phase === 'wipe' || sg.phase === 'over') && sg.phase !== 'paddle';
     R.body.children.forEach(function(ch){ if(ch !== R.board && ch !== R.stripe && ch !== R.fin) ch.visible = !povNow; });
-    sg3Pose(sg.phase === 'paddle' ? 0.05 : sg.phase === 'air' && sg.air && sg.air.sup > 0.01 ? 0.3 : sg.tube > 0.1 ? 0.95 : sg.phase === 'ride' && (sg.joy && sg.joy.y < -0.3) ? 0.25 : 0.65);
+    R.sfK = sfCrouch(sg.phase === 'paddle' ? 0.05 : sg.phase === 'air' && sg.air && sg.air.sup > 0.01 ? 0.3 : sg.tube > 0.1 ? 0.95 : sg.phase === 'ride' && (sg.joy && sg.joy.y < -0.3) ? 0.25 : 0.65);
+    sg3Pose(R.sfK); sfArms(T, R);
     if(sg.phase === 'paddle') sg3PoseProne(T, R, sg.pad.kL || 0, sg.pad.kR || 0);
     if(sg.phase === 'walk' && sg.walk){ sg3PoseWalk(T, R, sg.walk.ph, 0); R.stripe.visible = false; R.fin.visible = false;
       if(sgBG.in){ var Gm = sgBG.in, mk = sgMeK(), mvd = sg3.lastWk && Math.hypot(sg.walk.x - sg3.lastWk.x, sg.walk.z - sg3.lastWk.z) > 0.004, dvM = sgBallDive(Gm, mk);
@@ -8042,6 +8044,7 @@
         0.5 + Math.random() * 0.6, 0.04 + Math.random() * 0.09, 0.9);
     }
     sg3.lastSpray = sg.spray.length;
+    sfSpray(emit, p, fwd, side3, nrm, sq); sfShadow(T, p, fwd, faceAt, Hm, hh);
     step(sg3.billows, dtR, 1.6, 0.6); step(sg3.spray, dtR, 9.8, 0.3);
 
     // the wake on the face
@@ -14578,7 +14581,7 @@
   // never while the name field is being typed in. Everything worth keeping
   // (coins, skins, name, league) is in localStorage, so a reload loses nothing.
   // 'dev' = a local or preview copy: the updater stays off entirely.
-  var BUILD_VERSION = '20261106-122254';
+  var BUILD_VERSION = '20261106-124542';
   var UPDATE_CHECK_MS = 60000;
   var UPDATE_TRIED_KEY = 'canyonChaseTriedUpdate';
   var pendingSubmits = 0;
@@ -16264,6 +16267,109 @@
   }
   sg3PostRender = (function(orig){ return function(){ try { bxFrame(); } catch(e){ if(!BX.warned){ BX.warned = 1; console.warn('beach textures:', e); } } orig(); }; })(sg3PostRender);
   // <<< beach textures
+  // >>> surf realism (lab/surfreal-block.js via lab/surfreal.js)
+  // ---- the surf ride, more real: only what it lacked (the wave, the foam, the rail spray and the lean
+  // were already there). A shadow on the water; a real landing -- the board settling onto the face
+  // instead of snapping to it, the knees taking the impact, arms out for balance; water thrown at
+  // the take-off and on landing, as much as the hit deserves ----
+
+  // (called right after the rider is placed: remembers how you were in the air, and blends out of it)
+  function sfBody(T, R, flip, Hm, dtR){
+    var was = sg3.sfPh, ph = sg.phase; sg3.sfPh = ph;
+    if(ph === 'air' && sg.air){
+      sg3.sfVy = sg.air.vy; sg3.sfFlip = flip || 0; sg3.sfFl = sg.air.fl || 0;
+      sg3.sfQ = (sg3.sfQ || new T.Quaternion()).copy(R.g.quaternion);
+      sg3.sfP = (sg3.sfP || new T.Vector3()).copy(R.g.position);
+    }
+    if(was === 'air' && ph === 'ride' && sg3.sfQ){
+      var near = function(a){ var P2 = Math.PI * 2; a = ((a % P2) + P2) % P2; return a > Math.PI ? a - P2 : a; };
+      var imp = Math.max(0, -(sg3.sfVy || 0)) * Hm * 0.9;                  /* (m/s straight into the water) */
+      sg3.sfLand = { t: 0, k: Math.min(1, imp / 6), q: sg3.sfQ.clone(), off: sg3.sfP.clone().sub(R.g.position), yaw: near(sg3.sfFlip), fl: near(sg3.sfFl), splash: true };
+    }
+    var Ld = sg3.sfLand; if(!Ld) return;
+    if(ph !== 'ride' || Ld.t > 0.75){ sg3.sfLand = null; return; }
+    Ld.t += dtR;
+    var b = Math.max(0, 1 - Ld.t / 0.16); b = b * b * (3 - 2 * b);         /* (~a sixth of a second to settle onto the face) */
+    if(b > 0){ R.g.position.addScaledVector(Ld.off, b); R.g.quaternion.slerp(Ld.q, b); }
+    var d = Math.exp(-Ld.t * 9);                                           /* (landed a little off straight: the board skids round) */
+    R.body.rotation.y += Ld.yaw * d; R.body.rotation.z += Ld.fl * d;
+  }
+  // how far the knees give: down fast, held a moment, up slowly; deeper the harder you came down
+  function sfDepth(){
+    var Ld = sg3.sfLand; if(!Ld) return 0;
+    var t = Ld.t, dn = Math.min(1, t / 0.07), up = t < 0.12 ? 1 : Math.max(0, 1 - (t - 0.12) / 0.55);
+    return dn * up * up * (3 - 2 * up);
+  }
+  function sfCrouch(k){
+    var Ld = sg3.sfLand; if(!Ld) return k;
+    var low = Math.max(k, 0.82 + 0.26 * Ld.k);
+    return k + (low - k) * sfDepth();
+  }
+  // the arms out to the sides for balance, as the knees take it
+  function sfArms(T, R){
+    var Ld = sg3.sfLand; if(!Ld) return;
+    var s = sfDepth() * (0.55 + 0.45 * Ld.k); if(s < 0.02) return;
+    var k = R.sfK === undefined ? 0.9 : R.sfK, sh = new T.Vector3(0.1 + 0.12 * k, 1.4 - 0.3 * k, 0);
+    [[R.parts.uArmF, R.parts.fArmF, R.extra.handF, -1], [R.parts.uArmB, R.parts.fArmB, R.extra.handB, 1]].forEach(function(A){
+      var s0 = sh.clone().add(new T.Vector3(0, -0.02, A[3] * 0.17));
+      var rest = A[2].position.clone(), out = s0.clone().add(new T.Vector3(A[3] < 0 ? 0.22 : -0.12, 0.02, A[3] * 0.5));
+      var hn = rest.lerp(out, s), e0 = s0.clone().lerp(hn, 0.5).add(new T.Vector3(0, -0.06, A[3] * 0.05));
+      sg3Limb(T, A[0], s0, e0); sg3Limb(T, A[1], e0, hn); A[2].position.copy(hn);
+    });
+  }
+  // the water thrown: a sheet off the tail at the take-off, a ring and foam where you land
+  function sfSpray(emit, p, fwd, side, nrm, sq){
+    var was = sg3.sfSprayPh, ph = sg.phase, r = Math.random; sg3.sfSprayPh = ph;
+    if(was === 'ride' && ph === 'air'){
+      for(var i = 0; i < 110; i++){ var f = r() * 1.2;
+        emit(sg3.spray, p.x - fwd.x * (0.3 + f * 0.5), p.y + 0.05, p.z - fwd.z * 0.5,
+          -fwd.x * (0.8 + r() * 3) + side.x * (r() - 0.5) * 3, (1.5 + r() * 4.5) * sq, nrm.z * (0.4 + r() * 2) + (r() - 0.5) * 1.2,
+          0.55 + r() * 0.6, 0.05 + r() * 0.13, 0.95); }
+    }
+    var Ld = sg3.sfLand;
+    if(Ld && Ld.splash){ Ld.splash = false;
+      var n = 90 + 240 * Ld.k;
+      for(var j = 0; j < n; j++){ var a = r() * Math.PI * 2, sp = (0.8 + r() * 3) * (0.6 + Ld.k);
+        emit(sg3.spray, p.x + Math.cos(a) * 0.5, p.y + 0.04, p.z + Math.sin(a) * 0.3,
+          Math.cos(a) * sp + fwd.x * 1.5, (1.2 + r() * (2.5 + 5 * Ld.k)) * sq, Math.sin(a) * sp * 0.7 + nrm.z * (0.3 + r()),
+          0.5 + r() * 0.6, 0.05 + r() * 0.14, 0.95); }
+      for(var m = 0; m < 12 + 30 * Ld.k; m++) emit(sg3.billows, p.x + (r() - 0.5) * 1.6, p.y + 0.1, p.z + (r() - 0.3) * 0.8,
+        (r() - 0.3) * 2, 0.5 + r() * 1.6, (r() - 0.3) * 1.5, 0.7 + r() * 0.7, 0.25 + r() * 0.35, 0.5);
+    }
+  }
+  // the surfer's shadow on the water: laid over the curve of the face (a small patch that follows its
+  // shape), stretched the way the low sun throws it, wider and fainter the higher you fly
+  var SF_N = 7;
+  function sfShadow(T, p, fwd, faceAt, Hm, hh){
+    var on = sg.phase === 'ride' || sg.phase === 'air' || sg.phase === 'done';
+    if(!sg3.sfSh){
+      var cv = document.createElement('canvas'); cv.width = 128; cv.height = 64; var c = cv.getContext('2d');
+      c.translate(64, 32); c.scale(1, 0.5); var g = c.createRadialGradient(0, 0, 3, 0, 0, 62);
+      g.addColorStop(0, 'rgba(4,22,32,1)'); g.addColorStop(0.45, 'rgba(4,22,32,0.72)'); g.addColorStop(1, 'rgba(4,22,32,0)');
+      c.fillStyle = g; c.fillRect(-64, -64, 128, 128);
+      var geo = new T.BufferGeometry(), N = SF_N, pos = new Float32Array(N * N * 3), uv = new Float32Array(N * N * 2), ix = [];
+      for(var a = 0; a < N - 1; a++) for(var b = 0; b < N - 1; b++){ var q = a * N + b; ix.push(q, q + N, q + 1, q + 1, q + N, q + N + 1); }
+      geo.setAttribute('position', new T.BufferAttribute(pos, 3)); geo.setAttribute('uv', new T.BufferAttribute(uv, 2)); geo.setIndex(ix);
+      var tx = new T.CanvasTexture(cv); tx.wrapS = tx.wrapT = T.ClampToEdgeWrapping;
+      sg3.sfSh = new T.Mesh(geo, new T.MeshBasicMaterial({ map: tx, transparent: true, depthWrite: false, side: T.DoubleSide, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -4, fog: false, toneMapped: false }));
+      sg3.sfSh.frustumCulled = false; sg3.sfSh.renderOrder = 1; sg3.scene.add(sg3.sfSh);
+    }
+    var M = sg3.sfSh; M.visible = on; if(!on) return;
+    var lipY = faceAt(1)[1], fly = sg.phase === 'air' ? Math.max(0, p.y - lipY) : 0;
+    var hc = sg.phase === 'air' ? Math.max(0.3, 0.9 - 0.45 * fly / Hm) : Math.max(0.02, hh - 0.25 / (Hm * 1.2));
+    var xc = p.x + 0.55 + Math.min(Hm * 0.8, fly * 1.2);                    /* (the sun is low and behind you: thrown forward along the face) */
+    var along = Math.sqrt(fwd.y * fwd.y + fwd.z * fwd.z) * (fwd.y < 0 ? -1 : 1), ang = sg.phase === 'air' ? 0 : Math.atan2(along, Math.abs(fwd.x) + 1e-3);
+    var ca = Math.cos(ang), sa = Math.sin(ang), grow = 1 + Math.min(1.4, fly * 0.45), Lg = 2.9 * grow, Wd = 1.5 * grow, P2 = 4.2 * grow;
+    var A = M.geometry.attributes, N2 = SF_N, capH = sg.phase === 'air' ? 1 : Math.max(0, hh - 0.01);   /* (on the water below the board, never across it) */
+    for(var i = 0; i < N2; i++) for(var j = 0; j < N2; j++){
+      var ox = (i / (N2 - 1) - 0.5) * P2, oy = (j / (N2 - 1) - 0.5) * P2, h = Math.max(0, Math.min(capH, hc + oy / (Hm * 1.2))), fq = faceAt(h), k = (i * N2 + j);
+      A.position.array[k * 3] = xc + ox; A.position.array[k * 3 + 1] = fq[1] + 0.05; A.position.array[k * 3 + 2] = fq[0] + 0.2 + Math.min(0.6, fly);
+      A.uv.array[k * 2] = (ox * ca + oy * sa) / Lg + 0.5; A.uv.array[k * 2 + 1] = (-ox * sa + oy * ca) / Wd + 0.5;
+    }
+    A.position.needsUpdate = true; A.uv.needsUpdate = true;
+    M.material.opacity = (sg.tube > 0.1 ? 0.3 : 0.55) * Math.max(0.3, 1 - fly / (Hm * 1.4));
+  }
+  // <<< surf realism
   // idle player pose before first game
   resetGame();
   requestAnimationFrame(frame);
