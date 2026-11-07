@@ -14585,7 +14585,7 @@
   // never while the name field is being typed in. Everything worth keeping
   // (coins, skins, name, league) is in localStorage, so a reload loses nothing.
   // 'dev' = a local or preview copy: the updater stays off entirely.
-  var BUILD_VERSION = '20261107-191849';
+  var BUILD_VERSION = '20261107-192612';
   var UPDATE_CHECK_MS = 60000;
   var UPDATE_TRIED_KEY = 'canyonChaseTriedUpdate';
   var pendingSubmits = 0;
@@ -16481,7 +16481,7 @@
   function skEnter(){
     var S = sg.skate = { lane: SK_LANE, u: SK.W - 2, w: SK_LANE, y: 1.8, v: [-1.4, 0, 0], hd: Math.PI, air: null, bail: 0, carve: 0, lastCarve: -9, wallT: 0, speedT: -9, score0: sg.score, t: 0, ok: false };
     S.y = skH(S.u, S.w); sg3.skSide = null; sg.phase = 'skate'; sg.score = 0; sg.chain = 0; sg.chainT = 0; sg.counts = {}; sg.lastMove = '';
-    sgAddText(L('🛹 ➡️⬅️ לכיוון הנסיעה = דחיפה ופמפום · לכיוון השני = בלימה וסיבוב · ⬆️ = אולי (בקופינג: אייר) · ➡️⬅️ באוויר = סיבוב', '🛹 ➡️⬅️ the way you go = push & pump · the other way = brake & turn · ⬆️ = ollie (at the coping: air) · ➡️⬅️ in the air = spin'), '#bfe9ff');
+    sgAddText(L('🛹 ➡️⬅️ לכיוון הנסיעה = דחיפה ופמפום · לכיוון השני = בלימה וסיבוב · לחיצה על ⬆️ = אולי (בקופינג: אייר) · ⬇️ / החזקת ⬆️ = לצדדים · ➡️⬅️ באוויר = סיבוב', '🛹 ➡️⬅️ the way you go = push & pump · the other way = brake & turn · tap ⬆️ = ollie (at the coping: air) · ⬇️ / hold ⬆️ = across · ➡️⬅️ in the air = spin'), '#bfe9ff');
   }
   function skLeave(){
     var S = sg.skate; if(!S) return;
@@ -16503,7 +16503,15 @@
   }
   function skUpdate(dt){
     var S = sg.skate, J = sgJoyVec(); S.t += dt;
-    if(S.lane !== undefined){ S.w = S.lane; S.v[2] = 0; }
+    if(S.lane !== undefined){
+      /* (across the park too: ⬇️ toward the screen, ⬆️ held into it -- a tap of ⬆️ stays an ollie. A carve when you're rolling, a few shuffling steps when you're not) */
+      if(!S.npc && !S.air && !(S.bail > 0)){
+        var dW = J.y < -0.3 && S.t - (S.pressAt === undefined ? -9 : S.pressAt) > 0.22 ? 1 : J.y > 0.3 ? -1 : 0, spW = Math.abs(S.v[0]), rateW = Math.min(3.2, 0.9 + spW * 0.6);
+        S.lane = Math.max(0.5, Math.min(SK.D - 0.5, S.lane + dW * rateW * dt));
+        var atEdge = S.lane <= 0.5 && dW < 0 || S.lane >= SK.D - 0.5 && dW > 0, yawT = atEdge ? 0 : dW * Math.atan2(rateW, Math.max(1, spW)) * (S.v[0] >= 0 ? 1 : -1);
+        S.yawW = (S.yawW || 0) + (yawT - (S.yawW || 0)) * Math.min(1, dt * 9);
+      }
+      S.w = S.lane; S.v[2] = 0; }
     if(S.bail > 0){
       S.bail -= dt;
       // on the knees: down the slope, slowed by the pads on the concrete
@@ -16858,7 +16866,7 @@
     // where and how: on the surface's normal, facing the way it rolls; in the air turned by the spin
     var g = S.grind ? [0, 0] : skGrad(S.u, S.w), up = new T.Vector3(-g[0], 1, -g[1]).normalize();
     // the front truck frees the nose: it swings into the turn ahead of the tail
-    var yawOff = S.air ? 0 : -(S.steer || 0) * 0.3;
+    var yawOff = S.air ? 0 : -(S.steer || 0) * 0.3 + (S.yawW || 0);
     // a snap: the back wheels slide out, then grip again
     if(S.slideT > 0) yawOff += (S.slideDir || 1) * 0.6 * Math.sin(Math.PI * (1 - S.slideT / 0.4));
     if(S.kickT > 0) yawOff += (S.kickDir || 1) * Math.PI * (S.kickT / 0.35);   // (the turn round at the top, shown as it happens)
