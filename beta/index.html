@@ -4726,7 +4726,9 @@
     { id: 'aloha',   name: L('אלוהה', 'Aloha'),                  price: 1000,  skin: '#b97a56', hair: '#1a0f08', suit: '#e23b3b', accent: '#ffd2e0' },
     { id: 'charger', name: L('רוכב הענקים', 'Big-Wave Charger'), price: 1600,  skin: '#e8c19e', hair: '#d9b26a', suit: '#2b2f36', accent: '#ff7a00' },
     { id: 'champ',   name: L('אלוף האוויר', 'Air Champ'),        price: 2400,  skin: '#c08a5e', hair: '#2e1c10', suit: '#ffd21f', accent: '#00a03c' },
-    { id: 'tube',    name: L('אגדת הצינור', 'Tube Legend'),     price: 3200,  skin: '#e2ab80', hair: '#d1aa6a', suit: '#141619', accent: '#c8102e' }
+    { id: 'tube',    name: L('אגדת הצינור', 'Tube Legend'),     price: 3200,  skin: '#e2ab80', hair: '#d1aa6a', suit: '#141619', accent: '#c8102e' },
+    { id: 'wahine', fem: true, name: L('הגולשת', 'The Wahine'), price: 0, skin: '#e8b48c', hair: '#5a3418', suit: '#12a39a', accent: '#f2a65a' },
+    { id: 'queen', fem: true, name: L('מלכת הגלים', 'Wave Queen'), price: 1200, skin: '#a86f4a', hair: '#16100c', suit: '#7a2bb8', accent: '#ffc23d' }
   ];
   var SG_DRIVE_M = { pool: 220, olga: 320, pipe: 420, air: 260, naz: 0 };     // metres of coast road to each beach's car park (a 15-30 s drive)
   function sgDriveM(spot){ var m = SG_DRIVE_M[spot.id] || 300; return sgSave.car === 'bike' ? Math.round(m * 0.3) : m; }
@@ -7202,13 +7204,13 @@
   }
   function sg3PoseSit(T, R, t){
     var P = R.parts, X = R.extra, V = function(x, y, z){ return new T.Vector3(x, y, z); };
-    var hip = V(0, 0.2, 0), sh = V(-0.16, 0.68, 0), nk = V(-0.12, 0.78, 0), hd = V(-0.07, 0.92, 0);
+    var hip = V(0, 0.14, 0), sh = V(-0.16, 0.62, 0), nk = V(-0.12, 0.72, 0), hd = V(-0.07, 0.86, 0);
     sg3Limb(T, P.torso, hip, sh); sg3Limb(T, P.stripe, V(0.02, 0.24, -0.12), V(-0.13, 0.64, -0.12)); sg3Limb(T, P.neck, sh, nk);
-    [[P.thighB, P.shinB, X.footB, 1], [P.thighF, P.shinF, X.footF, -1]].forEach(function(Lg){ var kn = V(0.34, 0.46, Lg[3] * 0.13), ft = V(0.62, 0.07, Lg[3] * 0.15), hp = V(0, 0.18, Lg[3] * 0.1);
+    [[P.thighB, P.shinB, X.footB, 1], [P.thighF, P.shinF, X.footF, -1]].forEach(function(Lg){ var kn = V(0.34, 0.46, Lg[3] * 0.13), ft = V(0.62, 0.07, Lg[3] * 0.15), hp = V(0, 0.12, Lg[3] * 0.1);
       sg3Limb(T, Lg[0], hp, kn); sg3Limb(T, Lg[1], kn, ft); Lg[2].position.copy(ft).add(V(0.05, 0, 0)); });
     var sB = V(sh.x, sh.y - 0.04, 0.19), hB = V(-0.42, 0.06, 0.26), eB = sB.clone().lerp(hB, 0.5).add(V(-0.04, 0, 0.04));
     sg3Limb(T, P.uArmB, sB, eB); sg3Limb(T, P.fArmB, eB, hB); X.handB.position.copy(hB);
-    var d = Math.pow(Math.max(0, Math.sin(t * 0.5)), 2), sF = V(sh.x, sh.y - 0.04, -0.19), hF = V(0.28 - 0.3 * d, 0.44 + 0.42 * d, -0.2 + 0.1 * d), eF = sF.clone().lerp(hF, 0.5).add(V(0.08, -0.08, -0.06));
+    var d = Math.pow(Math.max(0, Math.sin(t * 0.5)), 2), sF = V(sh.x, sh.y - 0.04, -0.19), hF = V(0.3 - 0.15 * d, 0.38 + 0.34 * d, -0.18 + 0.12 * d), eF = sF.clone().lerp(hF, 0.5).add(V(0.08, -0.08, -0.06));
     sg3Limb(T, P.uArmF, sF, eF); sg3Limb(T, P.fArmF, eF, hF); X.handF.position.copy(hF);
     var dC = V(0, 0, 0).subVectors(sh, hip).normalize(); X.chest.position.copy(hip).lerp(sh, 0.7); X.chest.quaternion.setFromUnitVectors(V(0, 1, 0), dC); X.hips.position.copy(hip);
     R.head.position.copy(hd); R.head.rotation.set(0, 0.4 * Math.sin(t * 0.2), -0.1 - 0.4 * d); R.hair.position.copy(hd).add(V(-0.02, 0.03, 0)); R.hair.rotation.set(0, 0, 0.3);
@@ -14585,7 +14587,7 @@
   // never while the name field is being typed in. Everything worth keeping
   // (coins, skins, name, league) is in localStorage, so a reload loses nothing.
   // 'dev' = a local or preview copy: the updater stays off entirely.
-  var BUILD_VERSION = '20261107-203645';
+  var BUILD_VERSION = '20261107-205727';
   var UPDATE_CHECK_MS = 60000;
   var UPDATE_TRIED_KEY = 'canyonChaseTriedUpdate';
   var pendingSubmits = 0;
@@ -14916,7 +14918,7 @@
     mesh.bind(new T.Skeleton(sk.bones.map(function(b){ return bones[b.name]; }), sk.boneInverses.map(function(m){ return m.clone(); })), mesh.bindMatrix.clone());
   }
   function labDress(T, root, R, boneNames){
-    var suitU = { value: R.suitM.color.clone() }, accU = { value: new T.Color(0x16181d) }, shoeU = { value: 0 }, skateU = { value: 0 }, shortsU = { value: new T.Color(0x2a2e36) }, teeU = { value: 1 }, skinU = { value: new T.Color(1, 1, 1) }, paintU = { value: 1 }, covU = { value: new T.Vector4(-1, -1, -1, -1) };
+    var suitU = { value: R.suitM.color.clone() }, accU = { value: new T.Color(0x16181d) }, shoeU = { value: 0 }, skateU = { value: 0 }, shortsU = { value: new T.Color(0x2a2e36) }, teeU = { value: 1 }, skinU = { value: new T.Color(1, 1, 1) }, paintU = { value: 1 }, covU = { value: new T.Vector4(-1, -1, -1, -1) }, crU = { value: new T.Vector4(0, 0, 0, 0) };
     root.traverse(function(o){
       if(!o.isMesh) return;
       o.frustumCulled = false; o.castShadow = true;
@@ -14948,36 +14950,41 @@
       var m = o.material.clone(); m.name = 'lab-suit';
       m.onBeforeCompile = function(sh){
         labBendInject(sh);
-        sh.uniforms.uSuit = suitU; sh.uniforms.uAcc = accU; sh.uniforms.uShoe = shoeU; sh.uniforms.uSkate = skateU; sh.uniforms.uShorts = shortsU; o.geometry.computeBoundingBox(); var bbG = o.geometry.boundingBox; sh.uniforms.uRestMin = { value: new T.Vector3((bbG.min.x + bbG.max.x) / 2, bbG.min.y, (bbG.min.z + bbG.max.z) / 2) }; sh.uniforms.uRestH = { value: bbG.max.y - bbG.min.y }; sh.uniforms.uTeeOn = teeU; sh.uniforms.uSkinT = skinU; sh.uniforms.uPaint = paintU; sh.uniforms.uCov = covU;
+        sh.uniforms.uSuit = suitU; sh.uniforms.uAcc = accU; sh.uniforms.uShoe = shoeU; sh.uniforms.uSkate = skateU; sh.uniforms.uShorts = shortsU; o.geometry.computeBoundingBox(); var bbG = o.geometry.boundingBox; sh.uniforms.uRestMin = { value: new T.Vector3((bbG.min.x + bbG.max.x) / 2, bbG.min.y, (bbG.min.z + bbG.max.z) / 2) }; sh.uniforms.uRestH = { value: bbG.max.y - bbG.min.y }; sh.uniforms.uTeeOn = teeU; sh.uniforms.uSkinT = skinU; sh.uniforms.uPaint = paintU; sh.uniforms.uCov = covU; sh.uniforms.uCr = crU;
         sh.vertexShader = 'varying vec3 vRest;\nuniform vec3 uRestMin;\nuniform float uRestH;\nattribute float aSuit;\nattribute float aAcc;\nattribute float aShoe;\nattribute float aSole;\nvarying float vSuit;\nvarying float vAcc;\nvarying float vShoe;\nvarying float vSole;\nattribute float aTee;\nattribute float aShorts;\nvarying float vTee;\nvarying float vShorts;\n' +
           sh.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\n  vRest = (position - uRestMin) / uRestH;\n  vSuit = aSuit; vAcc = aAcc; vShoe = aShoe; vSole = aSole; vTee = aTee; vShorts = aShorts;');
-        sh.fragmentShader = 'varying vec3 vRest;\nuniform vec3 uSuit;\nuniform vec3 uAcc;\nuniform float uShoe;\nvarying float vSuit;\nvarying float vAcc;\nvarying float vShoe;\nvarying float vSole;\nuniform float uSkate;\nuniform vec3 uShorts;\nuniform float uTeeOn;\nuniform vec3 uSkinT;\nuniform float uPaint;\nuniform vec4 uCov;\nvarying float vTee;\nvarying float vShorts;\n' + sh.fragmentShader
-          .replace('#include <map_fragment>', '#include <map_fragment>\n  diffuseColor.rgb *= uSkinT;\n  float suitK = smoothstep(0.42, 0.58, vSuit) * (1.0 - uSkate);\n  float teeK = step(0.2, vTee) * smoothstep(0.525, 0.53, vRest.y) * (1.0 - smoothstep(0.255, 0.26, abs(vRest.x))) * uSkate * uTeeOn * uPaint, shortK = step(0.1, vShorts) * smoothstep(0.34, 0.345, vRest.y) * (1.0 - smoothstep(0.56, 0.565, vRest.y)) * uSkate * uPaint, clothK = max(teeK, shortK);\n  if(uCov.x >= 0.0 && vTee > 0.3 && vRest.y > uCov.x + 0.02 && abs(vRest.x) < uCov.y - 0.012) discard;\n  if(uCov.z >= 0.0 && vShorts > 0.15 && vRest.y > uCov.z + 0.02 && vRest.y < uCov.w - 0.012) discard;\n' +
+        sh.fragmentShader = 'varying vec3 vRest;\nuniform vec3 uSuit;\nuniform vec3 uAcc;\nuniform float uShoe;\nvarying float vSuit;\nvarying float vAcc;\nvarying float vShoe;\nvarying float vSole;\nuniform float uSkate;\nuniform vec3 uShorts;\nuniform float uTeeOn;\nuniform vec3 uSkinT;\nuniform float uPaint;\nuniform vec4 uCov;\nuniform vec4 uCr;\nvarying float vTee;\nvarying float vShorts;\n' + sh.fragmentShader
+          .replace('#include <map_fragment>', '#include <map_fragment>\n  diffuseColor.rgb *= uSkinT;\n  float suitK = smoothstep(0.485, 0.515, vSuit) * (1.0 - uSkate);\n  float teeK = step(0.2, vTee) * smoothstep(0.525, 0.53, vRest.y) * (1.0 - smoothstep(0.255, 0.26, abs(vRest.x))) * uSkate * uTeeOn * uPaint, shortK = step(0.1, vShorts) * smoothstep(0.34, 0.345, vRest.y) * (1.0 - smoothstep(0.56, 0.565, vRest.y)) * uSkate * uPaint, clothK = max(teeK, shortK);\n  if(uCov.x >= 0.0 && vTee > 0.3 && vRest.y > uCov.x + 0.02 && vRest.y < 0.82 && abs(vRest.x) < uCov.y - 0.012) discard;\n  if(uCov.z >= 0.0 && vShorts > 0.15 && vRest.y > uCov.z + 0.02 && vRest.y < uCov.w - 0.012) discard;\n' +
             '  float wY = vRest.y, wX = abs(vRest.x), wZ = vRest.z, wPx = max(fwidth(wY) + fwidth(wX), 0.0006);\n' +
             '  float wArm = step(0.7, wY) * step(0.13, wX), wTor = step(0.52, wY) * (1.0 - step(0.13, wX)), wLeg = 1.0 - step(0.52, wY);\n' +
             '  vec3 wMain = uSuit * 0.86, wDark = uSuit * 0.2 + vec3(0.02), wC = wDark;\n' +
             '  float wCol = wTor * (1.0 - smoothstep(0.086, 0.086 + wPx, wX)) + wLeg * step(0.33, wY) + wArm * (1.0 - step(0.27, wX));\n' +
             '  wC = mix(wC, wMain, clamp(wCol, 0.0, 1.0));\n' +
-            '  float wAcc = wTor * smoothstep(0.735, 0.735 + wPx, wY) * (1.0 - smoothstep(0.752, 0.752 + wPx, wY)) * (1.0 - step(0.086, wX));\n' +
+            '  float wAcc = wTor * smoothstep(0.772, 0.772 + wPx, wY) * (1.0 - smoothstep(0.786, 0.786 + wPx, wY)) * (1.0 - step(0.086, wX));\n' +
             '  wAcc = max(wAcc, wLeg * step(0.33, wY) * step(0.035, wX) * (1.0 - smoothstep(0.011, 0.011 + wPx, abs(wZ - 0.0))));\n' +
             '  wAcc = max(wAcc, wArm * smoothstep(0.236, 0.236 + wPx, wX) * (1.0 - smoothstep(0.252, 0.252 + wPx, wX)));\n' +
             '  wC = mix(wC, uAcc * 0.9, wAcc);\n' +
             '  float wKn = wLeg * smoothstep(0.262, 0.262 + wPx, wY) * (1.0 - smoothstep(0.316, 0.316 + wPx, wY)) * step(0.0, wZ);\n' +
             '  float wGr = 0.5 + 0.5 * step(0.5, fract(wY * 150.0)) * clamp(0.0016 / wPx, 0.0, 1.0);\n' +
             '  wC = mix(wC, vec3(0.1, 0.105, 0.115) * (0.7 + 0.6 * wGr), wKn);\n' +
-            '  float wS = 1.0 - smoothstep(0.0011, 0.0011 + wPx, abs(wX - 0.086));\n' +
+            '  float wS = 1.0 - smoothstep(0.0019, 0.0019 + wPx, abs(wX - 0.086));\n' +
             '  float wSeam = wTor * wS;\n' +
-            '  wSeam = max(wSeam, (1.0 - smoothstep(0.0011, 0.0011 + wPx, abs(wY - 0.52))) * (1.0 - step(0.13, wX)));\n' +
-            '  wSeam = max(wSeam, (1.0 - smoothstep(0.0011, 0.0011 + wPx, abs(wY - 0.33))) * wLeg);\n' +
-            '  wSeam = max(wSeam, wArm * (1.0 - smoothstep(0.0011, 0.0011 + wPx, abs(wX - 0.27))));\n' +
-            '  wSeam = max(wSeam, (1.0 - smoothstep(0.0011, 0.0011 + wPx, abs(wX - 0.13))) * step(0.7, wY));\n' +
+            '  wSeam = max(wSeam, (1.0 - smoothstep(0.0019, 0.0019 + wPx, abs(wY - 0.52))) * (1.0 - step(0.13, wX)));\n' +
+            '  wSeam = max(wSeam, (1.0 - smoothstep(0.0019, 0.0019 + wPx, abs(wY - 0.33))) * wLeg);\n' +
+            '  wSeam = max(wSeam, wArm * (1.0 - smoothstep(0.0019, 0.0019 + wPx, abs(wX - 0.27))));\n' +
+            '  wSeam = max(wSeam, (1.0 - smoothstep(0.0019, 0.0019 + wPx, abs(wX - 0.13))) * step(0.7, wY));\n' +
             '  wSeam *= clamp(0.005 / wPx, 0.0, 1.0);\n' +
             '  wC *= 1.0 - 0.62 * wSeam;\n' +
             '  wC += vec3(0.1) * wSeam * step(0.5, fract((wX + wY) * 170.0)) * clamp(0.0012 / wPx, 0.0, 1.0);\n' +
-            '  float wZip = (1.0 - step(0.0, wZ)) * (1.0 - smoothstep(0.0042, 0.0042 + wPx, wX)) * step(0.555, wY) * (1.0 - step(0.82, wY));\n' +
-            '  wC = mix(wC, vec3(0.46, 0.47, 0.5) * (0.75 + 0.45 * step(0.5, fract(wY * 260.0))), wZip);\n' +
+            '  float wZip = (1.0 - step(0.0, wZ)) * (1.0 - smoothstep(0.0042, 0.0042 + wPx, wX)) * step(0.62, wY) * (1.0 - step(0.82, wY));\n' +
+            '  wC = mix(wC, vec3(0.2, 0.21, 0.23) * (0.75 + 0.5 * step(0.5, fract(wY * 260.0))), wZip);\n' +
             '  float wCuf = max(smoothstep(0.392, 0.392 + wPx, wX) * step(0.7, wY), wLeg * (1.0 - smoothstep(0.082, 0.082 + wPx, wY)));\n' +
             '  wC = mix(wC, uSuit * 0.08 + vec3(0.012), wCuf);\n' +
+            '  float wCK = wLeg * exp(-pow((wY - 0.285) / 0.03, 2.0)) * (vRest.x > 0.0 ? uCr.x : uCr.y);\n' +
+            '  float wCE = step(0.7, wY) * exp(-pow((wX - 0.31) / 0.03, 2.0)) * (vRest.x > 0.0 ? uCr.z : uCr.w);\n' +
+            '  float wCH = exp(-pow((wY - 0.535) / 0.022, 2.0)) * (1.0 - step(0.13, wX)) * max(uCr.x, uCr.y) * 0.7;\n' +
+            '  float wFold = max(max(wCK, wCE), wCH) * (0.5 + 0.5 * sin((wY + wX) * 380.0 + sin(wX * 240.0 + wZ * 200.0) * 2.2)) * clamp(0.003 / wPx, 0.0, 1.0);\n' +
+            '  wC *= 1.0 - 0.45 * wFold;\n' +
             '  diffuseColor.rgb = mix(diffuseColor.rgb, wC, suitK);\n' +
             // skate shoes: navy canvas uppers, white rubber soles
             '  float shoeK = smoothstep(0.35, 0.6, vShoe) * uShoe;\n  diffuseColor.rgb = mix(diffuseColor.rgb, mix(vec3(0.07, 0.1, 0.18), vec3(0.93), smoothstep(0.3, 0.7, vSole)), shoeK);\n' +
@@ -14989,7 +14996,7 @@
       };
       o.material = m;
     });
-    return { suit: suitU, shoe: shoeU, skate: skateU, shorts: shortsU, tee: teeU, skin: skinU, paint: paintU, cov: covU, acc: accU };
+    return { suit: suitU, shoe: shoeU, skate: skateU, shorts: shortsU, tee: teeU, skin: skinU, paint: paintU, cov: covU, acc: accU, cr: crU };
   }
   // a rotation that takes the frame (along = y, side = z) to (a, s)
   function labBasis(T, a, s){
@@ -15006,7 +15013,7 @@
     var hair = (R.bpHair || lab.hair).scene.clone(true), hairMeshes = [];
     hair.traverse(function(o){ if(o.isSkinnedMesh) hairMeshes.push(o); });
     hairMeshes.forEach(function(o){ labRebind(T, o, bones); o.material = o.material.clone(); o.userData.hair = true; o.frustumCulled = false; o.castShadow = true; root.add(o); });
-    root.traverse(function(o){ if(o.isMesh && /Eyebrows/i.test(o.name)){ o.material = o.material.clone(); hairMeshes.push(o); } });
+    var browsM = []; root.traverse(function(o){ if(o.isMesh && /Eyebrows/i.test(o.name)){ o.material = o.material.clone(); browsM.push(o); } });
     var dressU = labDress(T, root, R), suitU = dressU.suit;
     // (on the rider group, not the body: the game turns everything on the body for the prone
     // and superman poses each frame, which would pile up on a body that isn't re-posed from scratch)
@@ -15016,7 +15023,7 @@
     R.g.updateMatrixWorld(true);
     var wp = function(b){ return b.getWorldPosition(new T.Vector3()); };
     var leg = wp(B.LeftUpLeg).distanceTo(wp(B.LeftLeg)) + wp(B.LeftLeg).distanceTo(wp(B.LeftFoot));
-    root.scale.multiplyScalar(0.82 / leg); R.g.updateMatrixWorld(true);
+    root.scale.multiplyScalar(0.82 * R.g.scale.y / leg); R.g.updateMatrixWorld(true);
     // rest frames, in the doll's body space: each bone's rotation and its (along, side) axes;
     // which way the model faces comes from its toes
     var bq = R.body.getWorldQuaternion(new T.Quaternion()), bqi = bq.clone().invert();
@@ -15047,7 +15054,7 @@
     Object.keys(P).forEach(function(k){ P[k].layers.set(5); });
     Object.keys(X).forEach(function(k){ X[k].traverse(function(o){ o.layers.set(5); }); });
     R.head.traverse(function(o){ o.layers.set(5); }); R.hair.layers.set(5);
-    var body = { R: R, root: root, B: B, K: K, L: L, suitU: suitU, shoeU: dressU.shoe, skateU: dressU.skate, shortsU: dressU.shorts, teeU: dressU.tee, skinU: dressU.skin, paintU: dressU.paint, covU: dressU.cov, accU: dressU.acc, hair: hairMeshes };
+    var body = { R: R, root: root, B: B, K: K, L: L, suitU: suitU, shoeU: dressU.shoe, skateU: dressU.skate, shortsU: dressU.shorts, teeU: dressU.tee, skinU: dressU.skin, paintU: dressU.paint, covU: dressU.cov, accU: dressU.acc, crU: dressU.cr, brows: browsM, hair: hairMeshes };
     lab.bodies.push(body); R.lab = body;
     return body;
   }
@@ -15121,7 +15128,7 @@
             b.quaternion.copy(q0).multiply(new T.Quaternion().setFromAxisAngle(axis, sn * 0.4)); b.updateMatrixWorld(true);
             var d = wp(tip).sub(t0).dot(n); if(d > bestD){ bestD = d; best = [axis, sn]; }
           }); });
-          var ang = f === 'thumb' ? [0.12, 0.22, 0.18][j - 1] : [0.42, 0.6, 0.42][j - 1] * (f === 'pinky' ? 1.2 : f === 'index' ? 0.8 : 1);
+          var ang = f === 'thumb' ? [0.12, 0.22, 0.18][j - 1] : [0.2, 0.32, 0.22][j - 1] * (f === 'pinky' ? 1.2 : f === 'index' ? 0.8 : 1);
           b.quaternion.copy(q0).multiply(new T.Quaternion().setFromAxisAngle(best[0], best[1] * ang)); b.updateMatrixWorld(true);
         }
       });
@@ -15131,7 +15138,7 @@
     var R = body.R, B = body.B, K = body.K, L = body.L, P = R.parts, X = R.extra;
     body.suitU.value.copy(R.suitM.color);
     if(!body.npc && body.skinU){ body.accU.value.copy(R.accM.color); body.skinU.value.copy(R.skinM.color); body.skinU.value.r = Math.min(1.1, body.skinU.value.r / 0.871 * 0.92); body.skinU.value.g = Math.min(1.1, body.skinU.value.g / 0.572 * 0.92); body.skinU.value.b = Math.min(1.1, body.skinU.value.b / 0.352 * 0.92); }
-    body.hair.forEach(function(h){ h.material.color.copy(R.hairM.color).multiplyScalar(1.6); });
+    body.hair.forEach(function(h){ h.material.color.copy(R.hairM.color).multiplyScalar(1.6); }); (body.brows || []).forEach(function(h){ h.material.color.copy(R.hairM.color).multiplyScalar(0.72); });
     R.g.updateMatrixWorld(true);
     var bq = R.body.getWorldQuaternion(new T.Quaternion()), bqi = bq.clone().invert();
     var W = function(v){ return R.body.localToWorld(v.clone()); };
@@ -17029,7 +17036,7 @@
   }
   function bpPeople(U){
     var out = [];
-    (U.sunb || []).forEach(function(o){ o.r.bpNoLook = true; out.push(o.r); }); (U.sitters || []).forEach(function(o){ out.push(o.r); }); (U.walkers || []).forEach(function(o){ out.push(o.r); });
+    (U.sunb || []).forEach(function(o){ o.r.bpNoLook = true; o.r.bpLie = true; out.push(o.r); }); (U.sitters || []).forEach(function(o){ o.r.bpDrink = true; out.push(o.r); }); (U.walkers || []).forEach(function(o){ out.push(o.r); });
     (U.matkot || []).forEach(function(o){ o.a.bpNoLook = o.b.bpNoLook = true; out.push(o.a, o.b); }); (U.swim || []).forEach(function(o){ o.r.bpNoLook = true; out.push(o.r); });
     return out;
   }
@@ -17042,14 +17049,14 @@
     var m = new T.MeshStandardMaterial({ color: col, roughness: 0.82, side: T.DoubleSide });
     var c2 = new T.Color(col2), pu = { value: pat };
     m.onBeforeCompile = function(sh){
-      sh.uniforms.uC2 = { value: c2 }; sh.uniforms.uPat = pu;
-      sh.vertexShader = 'varying vec3 vCl;\n' + sh.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\n  vCl = position;');
+      sh.uniforms.uC2 = { value: c2 }; sh.uniforms.uPat = pu; sh.uniforms.uGfxT = GFX.t; src.geometry.computeBoundingBox(); sh.uniforms.uHem = { value: src.geometry.boundingBox.min.y };
+      sh.vertexShader = 'varying vec3 vCl;\nuniform float uGfxT;\nuniform float uHem;\n' + sh.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\n  vCl = position;\n  float gH = clamp(1.0 - (position.y - uHem) / 0.16, 0.0, 1.0);\n  transformed += objectNormal * gH * gH * 0.012 * sin(uGfxT * 3.1 + position.x * 14.0 + position.z * 9.0);');
       sh.fragmentShader = 'varying vec3 vCl;\nuniform vec3 uC2;\nuniform float uPat;\n' + sh.fragmentShader.replace('#include <color_fragment>', '#include <color_fragment>\n' +
         '  float gP = 0.0;\n' +
         '  if(uPat > 0.5 && uPat < 1.5) gP = step(0.5, fract(vCl.y * 9.0));\n' +                                           /* hoops */
         '  else if(uPat > 1.5 && uPat < 2.5) gP = 1.0 - smoothstep(0.012, 0.02, abs(abs(vCl.x) - 0.17));\n' +                 /* a stripe down the side */
         '  else if(uPat > 2.5) gP = smoothstep(0.45, 0.55, sin(vCl.x * 42.0 + sin(vCl.y * 21.0) * 1.5) * sin(vCl.y * 42.0));\n' +   /* a holiday print */
-        '  diffuseColor.rgb = mix(diffuseColor.rgb, uC2, gP * 0.9);\n');
+        '  diffuseColor.rgb = mix(diffuseColor.rgb, uC2, gP * 0.9);\n  diffuseColor.rgb *= 1.0 + 0.075 * sin(vCl.y * 62.0 + sin(vCl.x * 30.0) * 2.2) * sin(vCl.x * 38.0 + vCl.z * 31.0);\n');
     };
     m.customProgramCacheKey = function(){ return 'bp-cloth'; };
     src.material = m; src.frustumCulled = false; src.castShadow = true;
@@ -17060,20 +17067,24 @@
     var female = i % 5 === 1 || i % 5 === 3, sex = female ? 'f' : 'm', hairs = female ? ['Long', 'Buns'] : ['SimpleParted', 'Buzzed'];
     var cols = [0x1f3a5f, 0x2c2f36, 0xa33b3b, 0x1d7a6e, 0x5b4a8a, 0xd98a32, 0xe8e4d8, 0x2f7fc1, 0xd9547e, 0xf0c64a];
     R.bpModel = BP.models[sex]; R.bpHair = BP.models[hairs[i % 2]];
+    var sc = [1, 0.96, 1.05, 0.83, 1.02, 0.94, 1.07, 0.99][i % 8], heavy = [0, 0, 0.6, 0, 1, 0.25, 0, 0.8][i % 8];
+    R.g.scale.setScalar(sc); if(i % 8 === 4) R.hairM.color.set('#b5b2aa');
     labAttach(T, R);
-    var b = R.lab, top = i % 4 === 0 ? 'tee' : female || i % 3 === 0 ? 'tank' : null; b.npc = true; b.bpI = i;
+    var b = R.lab, top = R.bpLie ? (female ? 'tank' : null) : i % 4 === 0 ? 'tee' : female || i % 3 === 0 ? 'tank' : null;   /* (lying on their fronts, sleeves bunch up) */  b.npc = true; b.bpI = i;
     b.hair.forEach(function(h){ h.material.side = T.DoubleSide; }); b.skateU.value = 1; b.paintU.value = 0;                                      /* (no wetsuit, and no clothes painted on: they wear real ones) */
     bpWear(T, b, sex, 'shorts', cols[(i * 3 + 2) % cols.length], cols[(i * 5 + 6) % cols.length], [0, 2, 3, 0, 2][i % 5]);
     b.covU.value.z = female ? 0.36 : 0.345; b.covU.value.w = 0.6;
     if(top){ bpWear(T, b, sex, top, cols[(i * 7 + 1) % cols.length], cols[(i * 2 + 6) % cols.length], [0, 1, 0, 3][i % 4]); b.covU.value.x = female ? 0.53 : 0.525; b.covU.value.y = top === 'tee' ? 0.25 : 0.125; }
     b.skinU.value.copy(R.skinM.color).multiply(new T.Color(1 / 0.871, 1 / 0.572, 1 / 0.352)).multiplyScalar(0.92);   /* (the picture is the lightest skin: the person's colour relative to it) */
     b.skinU.value.r = Math.min(1.1, b.skinU.value.r); b.skinU.value.g = Math.min(1.1, b.skinU.value.g); b.skinU.value.b = Math.min(1.1, b.skinU.value.b);
+    b.root.traverse(function(o){ if(o.morphTargetDictionary && o.morphTargetDictionary.Heavy !== undefined) o.morphTargetInfluences[o.morphTargetDictionary.Heavy] = heavy; });
+    if(R.bpDrink){ var dr = new T.Mesh(new T.CylinderGeometry(0.028, 0.03, 0.15, 10), new T.MeshStandardMaterial({ color: [0x2f8f4e, 0xc8452f, 0x2f6fb5][i % 3], roughness: 0.35 })); dr.position.set(0, 0.06, 0); R.extra.handF.add(dr); dr.layers.set(0); b.drink = dr; }
     BP.list.push(b); BP.count++;
   }
   // between the real body and the doll, when the machine needs the room
   function bpOn(b, on){
     b.off = !on; b.root.visible = on; var R = b.R, ly = on ? 5 : 0, P = R.parts, X = R.extra;
-    Object.keys(P).forEach(function(k){ P[k].layers.set(ly); }); Object.keys(X).forEach(function(k){ X[k].traverse(function(o){ o.layers.set(ly); }); }); R.head.traverse(function(o){ o.layers.set(ly); }); R.hair.layers.set(ly);
+    Object.keys(P).forEach(function(k){ P[k].layers.set(ly); }); Object.keys(X).forEach(function(k){ X[k].traverse(function(o){ o.layers.set(ly); }); }); R.head.traverse(function(o){ o.layers.set(ly); }); R.hair.layers.set(ly); if(b.drink) b.drink.layers.set(0);
   }
   function bpFrame(){
     var T = sg3.T; if(!T || typeof lab === 'undefined' || lab.state !== 'ready') return;
@@ -17088,23 +17099,56 @@
     /* how the machine is coping: as many real people as it runs smoothly with */
     var now = window.performance.now(), dt = now - (BP.last || now); BP.last = now;
     if(dt > 0 && dt < 200 && !document.hidden){ BP.ema = BP.ema === undefined ? dt : BP.ema + (dt - BP.ema) * 0.03;
-      if(BP.limit === undefined) BP.limit = typeof sgWeak !== 'undefined' && sgWeak ? 6 : 16;
+      if(BP.limit === undefined) BP.limit = typeof sgWeak !== 'undefined' && sgWeak ? 6 : 20;
       if(BP.ema > 34){ BP.slow = (BP.slow || 0) + dt; BP.fast = 0; } else if(BP.ema < 21){ BP.fast = (BP.fast || 0) + dt; BP.slow = 0; } else { BP.slow = 0; BP.fast = 0; }
-      if(BP.slow > 2500 && BP.limit > 2){ BP.slow = 0; BP.limit -= 2; } if(BP.fast > 5000 && BP.limit < 16){ BP.fast = 0; BP.limit += 2; }
+      if(BP.slow > 2500 && BP.limit > 2){ BP.slow = 0; BP.limit -= 2; } if(BP.fast > 5000 && BP.limit < 24){ BP.fast = 0; BP.limit += 2; }
     }
     if(++BP.n % 6) return;                                                     /* (a few times a second is plenty to look round for who's close) */
-    var lim = BP.limit === undefined ? 16 : BP.limit, cam = sg3.cam.position, P = new T.Vector3();
+    var lim = BP.limit === undefined ? 20 : BP.limit, cam = sg3.cam.position, P = new T.Vector3();
     var on = BP.list.filter(function(b){ return !b.off; });
     if(on.length > lim){ var far = null, fd = -1; on.forEach(function(b){ var d = b.R.g.getWorldPosition(P).distanceToSquared(cam); if(d > fd){ fd = d; far = b; } }); if(far) bpOn(far, false); return; }
     if(on.length >= lim) return;
-    var best = -1, bestD = 45 * 45;
+    var best = -1, bestD = 70 * 70;
     BP.people.forEach(function(R, i){ if((R.lab && !R.lab.off) || !R.g.visible) return; var d = R.g.getWorldPosition(P).distanceToSquared(cam); if(d < bestD){ bestD = d; best = i; } });
     if(best < 0) return;
     var Rb = BP.people[best]; if(Rb.lab) bpOn(Rb.lab, true); else bpDress(T, Rb, best);   /* (one at a time: dressing someone takes a moment) */
   }
   sg3PostRender = (function(orig){ return function(){ try { bpFrame(); } catch(e){ BP.state = 'failed'; if(!BP.warned){ BP.warned = true; console.warn('beach people:', e); } } orig(); }; })(sg3PostRender);
   // a body in the crowd needn't be posed every frame: nearby every second one, far off every fourth
+  function bpFace(b){
+    var m = b.faceM, now = window.performance.now() / 1000;
+    if(m === undefined){ m = null; b.root.traverse(function(o){ if(!m && o.morphTargetDictionary && o.morphTargetDictionary.Blink !== undefined) m = o; }); b.faceM = m; b.nextBlink = now + Math.random() * 4; }
+    if(m){ var d = m.morphTargetDictionary, I = m.morphTargetInfluences, wiped = !b.npc && (sg.phase === 'wipe' || sg.phase === 'over');
+      if(now > b.nextBlink){ b.blinkAt = now; b.nextBlink = now + 2 + Math.random() * 4; }
+      var e = (now - (b.blinkAt || -9)) / 0.17; I[d.Blink] = wiped ? 0.92 : e < 1 ? Math.sin(Math.PI * e) : 0;
+      var want = b.npc ? (Math.abs(b.look || 0) > 0.2 ? 0.85 : (b.bpI % 3 === 0 ? 0.25 : 0)) : (now < (BP.smile || 0) ? 1 : 0.08);
+      I[d.Smile] += (want - I[d.Smile]) * 0.1; }
+    if(b.crU && !b.npc){ var T = sg3.T, B = b.B, wp = function(x){ return x.getWorldPosition(new T.Vector3()); };
+      function bent(a, c, f){ var u = wp(c).sub(wp(a)).normalize(), v = wp(f).sub(wp(c)).normalize(); return Math.max(0, Math.min(1, Math.acos(Math.max(-1, Math.min(1, u.dot(v)))) / 1.9)); }
+      b.crU.value.set(bent(B.LeftUpLeg, B.LeftLeg, B.LeftFoot), bent(B.RightUpLeg, B.RightLeg, B.RightFoot), bent(B.LeftArm, B.LeftForeArm, B.LeftHand), bent(B.RightArm, B.RightForeArm, B.RightHand)); }
+  }
+  sgScore = (function(orig){ return function(){ BP.smile = window.performance.now() / 1000 + 1.6; return orig.apply(this, arguments); }; })(sgScore);
+  // a surfer of your own: a woman's body, fetched only if you pick her
+  function spFrame(){
+    var T = sg3.T, R = sg3.rider; if(!T || !R || typeof lab === 'undefined' || lab.state !== 'ready' || typeof SG_RIDERS === 'undefined') return;
+    var want = !!sgItem(SG_RIDERS, sgSave.rider).fem;
+    if(want && !BP.sf && typeof THREE !== 'undefined' && THREE.GLTFLoader){ BP.sf = 'loading'; var ld = new THREE.GLTFLoader(), got = {}, ok = function(k){ return function(g){ got[k] = g; if(got.m && got.h) BP.sf = got; }; }, no = function(e){ BP.sf = 'failed'; console.warn('surfer:', e); };
+      ld.load('models/surfer-f.glb', ok('m'), undefined, no); ld.load(BP_FILES.Long, ok('h'), undefined, no); }
+    if(want && (!BP.sf || typeof BP.sf === 'string')) return;
+    if(!R.lab || !!R.lab.fem === want) return;
+    R.g.remove(R.lab.root); lab.bodies = lab.bodies.filter(function(b){ return b !== R.lab; }); R.lab = null; R.gfxCast = false;
+    R.bpModel = want ? BP.sf.m : null; R.bpHair = want ? BP.sf.h : null; labAttach(T, R); R.lab.fem = want;
+  }
+  // other players walking and surfing here: real bodies too, as far as the machine allows
+  function bpGhosts(T){
+    if(!sg3.ghosts || (typeof sgWeak !== 'undefined' && sgWeak)) return;
+    var n = 0; sg3.ghosts.forEach(function(G){ if(G.r.lab) n++; }); if(n >= 4) return;
+    var G = sg3.ghosts.filter(function(G){ return !G.r.lab && G.g.visible; })[0]; if(!G) return;
+    G.r.bpModel = BP.models.m; G.r.bpHair = BP.models.SimpleParted; labAttach(T, G.r);
+  }
+  sg3PostRender = (function(orig){ return function(){ try { spFrame(); if(sg3.T && BP.state === 'ready' && typeof lab !== 'undefined' && lab.state === 'ready') bpGhosts(sg3.T); } catch(e){ if(!BP.warned){ BP.warned = true; console.warn('surfer body:', e); } } orig(); }; })(sg3PostRender);
   function bpPoseNow(b){
+    bpFace(b);
     if(!b.npc) return true;
     b.bpTick = (b.bpTick || 0) + 1;
     var d = b.R.g.getWorldPosition(new sg3.T.Vector3()).distanceToSquared(sg3.cam.position);
