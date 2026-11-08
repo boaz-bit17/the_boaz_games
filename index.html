@@ -5547,8 +5547,10 @@
         P.t = (nowS - nS * PEAK_PERIOD) / 1000;
       }
       // strokes build up paddling speed; it fades when you stop
+      if(Jp.y < -0.5 && P.t - (P.lastStroke || -9) > 0.42) P.taps++;   /* (held: a stroke every 0.42 s, as fast as a real paddler) */
+      if(P.taps > 0) P.lastStroke = P.t;
       while(P.taps > 0){ P.taps--; P.pw = Math.min(1.25, P.pw + 0.3 * sgBoost.paddle * (1 + 0.3 * sgSz())); P.side = -P.side; P[P.side > 0 ? 'kR' : 'kL'] = 1; }
-      P.pw = Math.max(0, P.pw - dt * 0.16); P.kR = Math.max(0, P.kR - dt * 2.4); P.kL = Math.max(0, P.kL - dt * 2.4);
+      P.pw = Math.max(0, P.pw - dt * (P.t - (P.lastStroke || -9) > 0.7 ? 0.9 : 0.16));   /* (a glide of a second or so once you stop) */ P.kR = Math.max(0, P.kR - dt * 2.4); P.kL = Math.max(0, P.kL - dt * 2.4);
       // ⬅️ ➡️ turn the board
       if(Math.abs(Jp.x) > 0.3) sg.hd -= Jp.x * 2.3 * dt;
       // paddle where you're facing (quicker when the peak is far off)
@@ -5565,11 +5567,11 @@
         P.stage = P.t < Math.max(1.6, P.T - 7.5) ? 'horizon' : toReach > 3.2 ? 'position' : 'go';
         if(P.stage === 'go' && P.dzGo === undefined){ P.dzGo = sg.dz; P.pgGo = pg; }   // where you were sitting when it came
         if(toReach <= 0){
-          var dz0 = P.dzGo === undefined ? sg.dz : P.dzGo, facing = Math.cos(sg.hd) > 0.3, outside = dz0 < -Hp * 4, inside = dz0 > Hp * 1.6, why = '';
+          var dz0 = P.dzGo === undefined ? sg.dz : P.dzGo, facing = Math.cos(sg.hd) > 0.05, outside = dz0 < -Hp * 5.5, inside = dz0 > Hp * 2.4, why = '';
           // further out than the take-off line you can still catch it, but you have to be paddling harder
-          var needPw = 0.75 + Math.min(0.4, 0.15 * Math.max(0, -dz0 / Hp - 1.3)) - 0.18 * sgSz();      // a longer board catches it with less
+          var needPw = 0.55 + Math.min(0.3, 0.1 * Math.max(0, -dz0 / Hp - 1.8)) - 0.15 * sgSz();      // a longer board catches it with less
           if(!outside && !inside && pg < 55){ sg.h = 0.5; sgWipe('late'); return; }        // right under the peak: the lip takes you
-          if(!outside && !inside && pg <= 900 && facing && P.pw >= needPw){
+          if(!outside && !inside && pg <= 1150 && facing && P.pw >= needPw){
             // in! the closer to the peak, the deeper the take-off
             sg.phase = 'ride'; sg.catchT = sg.t; sg.h = 0.45; sg.th = -0.55; sg.v = 360; sg.hint = 4; sg.dz = 0;
             sgAddText(L('🏄 תפסתם את הגל!', '🏄 You caught it!'), '#7fffb0');
@@ -5578,7 +5580,7 @@
           }
           why = outside ? L('😕 הייתם רחוק מדי בחוץ — הגל עבר מתחתיכם', '😕 Too far out — it rolled under you')
               : inside ? L('😕 הייתם מדי פנימה — הגל שבר לפניכם', '😕 Too far inside — it broke before it reached you')
-              : pg > 900 ? L('😕 רחוקים מדי מהפיק — הגל עבר מתחתיכם', '😕 Too far from the peak — it rolled under you')
+              : pg > 1150 ? L('😕 רחוקים מדי מהפיק — הגל עבר מתחתיכם', '😕 Too far from the peak — it rolled under you')
               : !facing ? L('😕 לא הסתובבתם לחוף — הגל עבר מתחתיכם', '😕 Not facing the beach — it rolled under you')
               : L('😕 לא חתרתם מספיק חזק — הגל עבר מתחתיכם', '😕 Not paddling hard enough — it rolled under you');
           sgAddText(why, '#ffd0a0'); P.passT = 0; P.stage = 'pass';
@@ -6349,7 +6351,7 @@
       // the paddling speed: fill it up as the wave arrives
       var bw = Math.min(260, W * 0.5), bx = W / 2 - bw / 2, by = H * 0.3 + 18;
       ctx.fillStyle = 'rgba(0,30,50,0.45)'; ctx.fillRect(bx - 2, by - 2, bw + 4, 16);
-      var need = 0.75 + Math.min(0.4, 0.15 * Math.max(0, -sg.dz / Hq - 1.3));
+      var need = 0.55 + Math.min(0.3, 0.1 * Math.max(0, -sg.dz / Hq - 1.8)) - 0.15 * sgSz();
       ctx.fillStyle = P.pw >= need ? '#7fffb0' : go ? '#ffd447' : '#bfe9ff'; ctx.fillRect(bx, by, bw * Math.min(1, P.pw / need), 12);
       ctx.restore();
     }
@@ -8356,6 +8358,12 @@
     sgRenderDesigner(dz);
     var szEl = document.getElementById('sgShopSize'); if(!szEl){ szEl = document.createElement('div'); szEl.id = 'sgShopSize'; szEl.className = 'sg-size'; dz.parentNode.insertBefore(szEl, dz.nextSibling); }
     sgRenderSizes(szEl);
+    var stB = document.getElementById('sgStanceRow'); if(stB) stB.remove();
+    stB = document.createElement('div'); stB.id = 'sgStanceRow'; stB.className = 'sg-opts'; stB.style.margin = '6px 0';
+    [['spot', L('🌊 כיוון הגלים: כמו בחוף', '🌊 Waves: as the beach has them')], ['right', L('➡️ תמיד גלים ימינה', '➡️ Always rights')], ['left', L('⬅️ תמיד גלים שמאלה', '⬅️ Always lefts')]].forEach(function(o){
+      var b = document.createElement('button'); b.type = 'button'; b.className = 'sg-opt' + ((sgSave.waveDir || 'spot') === o[0] ? ' is-on' : ''); b.textContent = o[1];
+      b.addEventListener('click', function(){ sgSave.waveDir = o[0]; sgStore(); sgRenderShop(); }); stB.appendChild(b); });
+    rl.parentNode.insertBefore(stB, rl);
     function buyOrPick(kind, item){
       var owned = sgSave[kind + 's'].indexOf(item.id) !== -1, sel = sgSave[kind] === item.id;
       return { text: sel ? L('✔ נבחר', '✔ Picked') : owned ? L('בחר', 'Pick') : '🐚 ' + fmtScore(item.price), on: !sel && (owned || sgSave.shells >= item.price),
@@ -14599,7 +14607,7 @@
   // never while the name field is being typed in. Everything worth keeping
   // (coins, skins, name, league) is in localStorage, so a reload loses nothing.
   // 'dev' = a local or preview copy: the updater stays off entirely.
-  var BUILD_VERSION = '20261108-155450';
+  var BUILD_VERSION = '20261108-161153';
   var UPDATE_CHECK_MS = 60000;
   var UPDATE_TRIED_KEY = 'canyonChaseTriedUpdate';
   var pendingSubmits = 0;
@@ -14866,7 +14874,8 @@
   // lefts: the picture mirrored, and everything that reads it with it
   function labMirrorFrame(){
     if(!sg3.T || !sg3.cv) return;
-    var want = !!(state === 'surfgame' && sg && sg.spot && sg.spot.left && sg3.cv.style.display !== 'none');
+    var wLeft = sgSave.waveDir === 'left' ? true : sgSave.waveDir === 'right' ? false : !!(sg && sg.spot && sg.spot.left);
+    var want = !!(state === 'surfgame' && sg && sg.spot && wLeft && sg3.cv.style.display !== 'none');
     if(!sg3.mirrorHooked){
       sg3.mirrorHooked = true;
       var V3 = sg3.T.Vector3.prototype, proj = V3.project;
