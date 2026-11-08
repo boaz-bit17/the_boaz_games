@@ -14610,7 +14610,7 @@
   // never while the name field is being typed in. Everything worth keeping
   // (coins, skins, name, league) is in localStorage, so a reload loses nothing.
   // 'dev' = a local or preview copy: the updater stays off entirely.
-  var BUILD_VERSION = '20261108-162139';
+  var BUILD_VERSION = '20261108-204025';
   var UPDATE_CHECK_MS = 60000;
   var UPDATE_TRIED_KEY = 'canyonChaseTriedUpdate';
   var pendingSubmits = 0;
@@ -17460,6 +17460,14 @@
   }
   sg3PostRender = (function(orig){ return function(){ try { sbLeash(); } catch(e){ if(!SB.warned){ SB.warned = true; console.warn('board:', e); } } orig(); }; })(sg3PostRender);
   // <<< surfboard
+  // >>> shell gifts (lab/gift.js)
+  var SG_GIFTS = [{ id: 'tzuf-60k', name: 'צוף מזרחי המלך', shells: 60000 }];
+  function sgGifts(){
+    var nm = playerNick(); sgSave.gifts = sgSave.gifts || {};
+    SG_GIFTS.forEach(function(g){ if(g.name === nm && !sgSave.gifts[g.id]){ sgSave.gifts[g.id] = 1; sgSave.shells += g.shells; sgStore(); } });
+  }
+  sgOpenMenu = (function(orig){ return function(){ try { sgGifts(); } catch(e){} return orig.apply(this, arguments); }; })(sgOpenMenu);
+  // <<< shell gifts
   // idle player pose before first game
   resetGame();
   requestAnimationFrame(frame);
