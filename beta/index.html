@@ -5627,7 +5627,7 @@
         if(off > tol){ sg.h = 1; sgWipe('pearl'); return; }
         if(offF > tol){ sg.h = 1; sgWipe('flip'); return; }
         var flips = Math.round(Math.abs(a.rot) / (Math.PI * 2)), salto = Math.round((a.fl || 0) / TAU), airT = sg.t - a.t0, sup = (a.supT || 0) > 0.12;
-        sg.phase = 'ride'; sg.h = 0.93; sg.th = -0.75; sg.v = Math.max(300, a.vx * 0.95);
+        sg.phase = 'ride'; sg.h = 0.96; sg.th = -0.7; sg.thR = 0; sg.v = Math.max(300, a.vx * 0.95);
         // the name says every part: the superman, the spin (by its direction) and the flip;
         // a spin with a flip is a rodeo, with both parts written out
         var nm = [], spinN = flips ? (a.rot < 0 ? L('אלי-אופ ', 'Alley-oop ') : '') + (flips >= 2 ? '720' : '360') : '', flipN = salto ? (salto > 1 ? L('סלטה כפולה', 'Double backflip') : L('סלטה', 'Backflip')) : '';
@@ -5648,7 +5648,7 @@
     var J = sgJoyVec();
     var target = J.on ? Math.max(-0.95, Math.min(1.05, -J.y * 1.1)) : sg.tube > 0 ? 0 : -0.3;
     var bSz = sgSz();
-    sg.th += (target - sg.th) * Math.min(1, dt * 4.6 * (1 - 0.32 * bSz));          // a long board turns slowly
+    sg.thR = (sg.thR || 0) + ((target - sg.th) * 4.6 * (1 - 0.32 * bSz) - (sg.thR || 0)) * Math.min(1, dt * 11); sg.th += sg.thR * dt;          // a long board turns slowly
     // far out on the shoulder the wave has no push left
     var push = Math.max(0.25, Math.min(1, 1 - (gap - 900) / 700));
     sg.v += -Math.sin(sg.th) * SG_G * push * (0.72 + 0.56 * Math.max(0, Math.min(1, sg.h))) * dt;
@@ -5660,9 +5660,15 @@
     // a cutback: hold back on the stick and the board carves all the way
     // round (psi: 0 = down the line, pi = back at the curl); let go and it
     // carves back. Ride back into the foam and you bounce off it
-    if(sg.rebound) sg.psi = Math.max(0, sg.psi - dt * 9);
-    else if(J.x < -0.4) sg.psi = Math.min(Math.PI, sg.psi + dt * (2 + 1.6 * -J.x) * (1 - 0.35 * bSz));
-    else sg.psi = Math.max(0, sg.psi - dt * (J.x > 0.4 ? 4 : 2.8));
+    var psiCap = 2.55, psiW;
+    if(sg.rebound){ sg.psi = Math.max(0, sg.psi - dt * 6.5); sg.psiR = -6.5; }
+    else {
+      if(J.x < -0.4) psiW = (1.7 + 1.1 * -J.x) * (1 - 0.35 * bSz) * Math.min(1, 0.15 + (psiCap - sg.psi) / 0.55);
+      else psiW = -(J.x > 0.4 ? 3 : 2.1) * Math.min(1, 0.22 + sg.psi / 0.45);
+      sg.psiR = (sg.psiR || 0) + (psiW - (sg.psiR || 0)) * Math.min(1, dt * 8);
+      sg.psi = Math.max(0, Math.min(psiCap, sg.psi + sg.psiR * dt));
+      if(sg.psi <= 0 && psiW < 0) sg.psiR = 0;
+    }
     sg.psiMax = Math.max(sg.psiMax, sg.psi);
     var fwdK = Math.cos(sg.psi), prevX = sg.x;
     sg.x += fwdK * (0.55 + 0.45 * Math.cos(sg.th)) * sg.v * dt;     // the wave carries you along even as you climb
@@ -5682,7 +5688,7 @@
       sg.pumpSign = ps; sg.pumpT = sg.t;
     }
     if(sg.h > 0.88 && sg.th > 0.45) sg.lipT = sg.t;          // hitting the lip vertically
-    if(sg.h < 0){ sg.h = 0; if(sg.th < 0) sg.th *= 0.5; }
+    if(sg.h < 0){ sg.h = 0; if(sg.th < 0){ sg.th -= sg.th * Math.min(1, dt * 9); sg.thR = Math.max(sg.thR || 0, 0); } }
     sg.trail = sg.trail || [];
     sg.trail.push({ x: sg.x, h: sg.h });
     if(sg.trail.length > 80) sg.trail.shift();
@@ -5708,12 +5714,12 @@
         // the wall throws you up even if you came up it slowly
         if(onWall){ sg.v = Math.max(sg.v, 430); sg.th = Math.max(sg.th, 0.75); }
         sg.phase = 'air';
-        sg.air = { y: 0, vy: Math.sin(sg.th) * sg.v / F * 1.25 * lift, vx: Math.cos(sg.th) * sg.v * 1.05, rot: 0, t0: sg.t };
+        sg.air = { y: 0, vy: Math.sin(sg.th) * sg.v / F * 0.95 * lift, vx: Math.cos(sg.th) * sg.v * 1.05, rot: 0, t0: sg.t };
         sg.h = 1;
         sgSplash(3);
         return;
       }
-      sg.h = 1; if(sg.th > 0) sg.th *= 0.6;
+      sg.h = 1; if(sg.th > 0){ sg.th -= sg.th * Math.min(1, dt * 9); sg.thR = Math.min(sg.thR || 0, 0); }
     }
 
     // the barrel: now and then the lip throws over a stretch ahead of the curl
@@ -5727,8 +5733,8 @@
       if(inTube){
         // only staying jammed up against the lip takes you out, not a brush
         // a tunnel with room to move: the lip overhead just stops you climbing
-        if(sg.h > 0.72){ sg.h = 0.72; if(sg.th > 0) sg.th *= 0.5; }
-        if(sg.h < 0.2){ sg.h = 0.2; if(sg.th < 0) sg.th *= 0.5; }      // the bottom is where the lip lands: stay up on the wall
+        if(sg.h > 0.72){ sg.h = 0.72; if(sg.th > 0){ sg.th -= sg.th * Math.min(1, dt * 9); sg.thR = Math.min(sg.thR || 0, 0); } }
+        if(sg.h < 0.2){ sg.h = 0.2; if(sg.th < 0){ sg.th -= sg.th * Math.min(1, dt * 9); sg.thR = Math.max(sg.thR || 0, 0); } }      // the bottom is where the lip lands: stay up on the wall
         // the barrel carries you along nearly at its own pace -- only stalling
         // (pulling back) lets it catch you; pumping gets you out ahead
         if(sg.psi < 0.5 && J.x > -0.3 && sg.x - prevX < curlV * 0.97 * dt) sg.x = prevX + curlV * 0.97 * dt;
@@ -7897,7 +7903,7 @@
       var pitch = Math.atan2(sg.air.vy * (sg.air.vy > 0 ? 0.5 : 0.22), 1);   /* (levelling out on the way down, spotting the landing) */
       if(sg.air.sup){ var su0 = sg.air.sup; pitch *= 1 - 0.75 * su0 * su0 * (3 - 2 * su0); }   // superman: the board levels out under you
       fwd = new T.Vector3(Math.cos(pitch), Math.sin(pitch), 0); up = new T.Vector3(-Math.sin(pitch), Math.cos(pitch), 0);
-      flip = sg.air.rot;
+      if(sg3.rotAir !== sg.air){ sg3.rotAir = sg.air; sg3.rotV = 0; } sg3.rotV += (sg.air.rot - sg3.rotV) * Math.min(1, dtR * 16); flip = sg3.rotV;
     } else {
       if(sg3.thV === undefined || sg3.smPh !== 'on'){ sg3.thV = (sg.th || 0) * 0.82; sg3.psV = sg.psi || 0; } sg3.smPh = 'on';
       sg3.thV += ((sg.th || 0) * 0.82 - sg3.thV) * Math.min(1, dtR * 7); sg3.psV += ((sg.psi || 0) - sg3.psV) * Math.min(1, dtR * 9);
@@ -14616,7 +14622,7 @@
   // never while the name field is being typed in. Everything worth keeping
   // (coins, skins, name, league) is in localStorage, so a reload loses nothing.
   // 'dev' = a local or preview copy: the updater stays off entirely.
-  var BUILD_VERSION = '20261108-211648';
+  var BUILD_VERSION = '20261108-213301';
   var UPDATE_CHECK_MS = 60000;
   var UPDATE_TRIED_KEY = 'canyonChaseTriedUpdate';
   var pendingSubmits = 0;
@@ -17293,12 +17299,12 @@
     if(ph === 'air' && sg.air){
       var A = sg.air, t = sg.t - A.t0, rate = (A.rot - MV.rot) / dt; MV.rot = A.rot; MV.rate += (rate - MV.rate) * Math.min(1, dt * 10);
       var falling = A.vy < 0, nearL = falling && A.y < 0.32, flip = Math.abs(A.fl || 0) > 0.05 && Math.abs(A.fl) % (Math.PI * 2) > 0.2;
-      var tuck = t < 0.1 ? 0 : nearL ? Math.max(0, (A.y - 0.12) / 0.2) : 1;
-      var Pa = mvStance(t < 0.1 ? 0.3 : 0.6 + 0.6 * tuck), lift = 0.14 * tuck * (flip ? 1.3 : 1);
+      var tuck = t < 0.08 ? 0 : nearL ? Math.max(0, (A.y - 0.12) / 0.2) : Math.min(1, (t - 0.08) / 0.22);
+      var Pa = mvStance(0.35 + 0.75 * tuck), lift = 0.14 * tuck * (flip ? 1.3 : 1);
       ['footB', 'footF'].forEach(function(n){ Pa[n].y += lift; }); Pa.kneeB.y += lift * 0.9; Pa.kneeF.y += lift * 0.9; Pa.hip.y += lift * 0.35; Pa.lift = lift;
       // the grab: the back hand on the toe-side rail between the feet; a flip grabs with both
       if(tuck > 0.3){ Pa.haB = mvV(-0.03, lift + 0.07, 0.25); Pa.grabB = true; }
-      Pa.haF = flip && tuck > 0.3 ? mvV(0.16, lift + 0.07, 0.25) : mvV(Pa.sh.x + 0.5, Pa.sh.y + 0.18, Pa.sh.z - 0.22); Pa.grabF = flip && tuck > 0.3;
+      Pa.haF = flip && tuck > 0.3 ? mvV(0.16, lift + 0.07, 0.25) : mvV(Pa.sh.x + 0.5, Pa.sh.y - 0.06, Pa.sh.z - 0.22); Pa.grabF = flip && tuck > 0.3;
       // a spin: the shoulders and the head lead it round
       Pa.tw = Math.max(-0.42, Math.min(0.42, MV.rate * 0.06)); Pa.look = Pa.tw * 0.9;
       // coming down: legs out for the landing, arms wide, eyes on the water
