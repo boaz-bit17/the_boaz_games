@@ -14597,7 +14597,7 @@
   // never while the name field is being typed in. Everything worth keeping
   // (coins, skins, name, league) is in localStorage, so a reload loses nothing.
   // 'dev' = a local or preview copy: the updater stays off entirely.
-  var BUILD_VERSION = '20261108-153415';
+  var BUILD_VERSION = '20261108-153908';
   var UPDATE_CHECK_MS = 60000;
   var UPDATE_TRIED_KEY = 'canyonChaseTriedUpdate';
   var pendingSubmits = 0;
@@ -17325,7 +17325,7 @@
   var SB_X0 = -0.9, SB_X1 = 0.97;
   function sbU(x){ return Math.max(0, Math.min(1, (x - SB_X0) / (SB_X1 - SB_X0))); }
   function sbW(u){ return sbTab([0, 0.02, 0.1, 0.28, 0.46, 0.64, 0.8, 0.9, 0.96, 0.99, 1], [0.13, 0.165, 0.207, 0.255, 0.272, 0.254, 0.205, 0.148, 0.09, 0.035, 0.004], u); }
-  function sbT(u){ return sbTab([0, 0.1, 0.3, 0.46, 0.62, 0.8, 0.95, 1], [0.024, 0.033, 0.05, 0.056, 0.051, 0.036, 0.019, 0.012], u); }
+  function sbT(u){ return 1.5 * sbTab([0, 0.1, 0.3, 0.46, 0.62, 0.8, 0.95, 1], [0.024, 0.033, 0.05, 0.056, 0.051, 0.036, 0.019, 0.012], u); }
   function sbRock(x){ return x > 0 ? 0.13 * Math.pow(x / 0.97, 3) : 0.035 * Math.pow(x / 0.9, 2); }
   function sbYc(x){ return sbRock(x) + 0.012; }
   // the deck's height at (x, z) and the bottom's
@@ -17347,10 +17347,10 @@
       }
     }
     var R = NA + 1;
-    for(var i2 = 0; i2 < NU; i2++) for(var j2 = 0; j2 < NA; j2++){ var a = i2 * R + j2, b = a + R; ix.push(a, a + 1, b, a + 1, b + 1, b); }
+    for(var i2 = 0; i2 < NU; i2++) for(var j2 = 0; j2 < NA; j2++){ var a = i2 * R + j2, b = a + R; ix.push(a, b, a + 1, a + 1, b, b + 1); }   /* (wound so the faces point out: the deck up, the bottom down) */
     // the tail and the nose closed
     [0, NU].forEach(function(i3){ var x = SB_X0 + (i3 ? 1 : 0) * (SB_X1 - SB_X0), ci = pos.length / 3; pos.push(x, sbYc(x) + (i3 ? 0 : 0.002), 0); uv.push(i3 ? 3 : 0, 0.5);
-      for(var j3 = 0; j3 < NA; j3++){ var a2 = i3 * R + j3; if(i3) ix.push(ci, a2, a2 + 1); else ix.push(ci, a2 + 1, a2); } });
+      for(var j3 = 0; j3 < NA; j3++){ var a2 = i3 * R + j3; if(i3) ix.push(ci, a2 + 1, a2); else ix.push(ci, a2, a2 + 1); } });
     var g = new T.BufferGeometry(); g.setAttribute('position', new T.Float32BufferAttribute(pos, 3)); g.setAttribute('uv', new T.Float32BufferAttribute(uv, 2)); g.setIndex(ix); g.computeVertexNormals();
     return (SB.geo = g);
   }
@@ -17380,7 +17380,7 @@
     orig.apply(this, arguments);
     var old = board.material;
     board.material = new T.MeshPhysicalMaterial({ color: old.color.clone(), map: old.map || null, roughness: 0.42, metalness: 0, clearcoat: 0.85, clearcoatRoughness: 0.12, emissive: old.emissive ? old.emissive.clone() : new T.Color(0) });
-    var fm = new T.MeshPhysicalMaterial({ color: 0x1f2a36, roughness: 0.28, clearcoat: 1, clearcoatRoughness: 0.08, transparent: true, opacity: 0.94 });
+    var fm = new T.MeshPhysicalMaterial({ color: 0x1f2a36, roughness: 0.28, clearcoat: 1, clearcoatRoughness: 0.08 });
     board.children.slice().forEach(function(ch){
       if(!ch.isMesh) return;
       var g = ch.geometry, col = ch.material && ch.material.color && ch.material.color.getHex();
