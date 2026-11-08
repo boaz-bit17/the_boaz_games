@@ -5627,7 +5627,7 @@
         sg.phase = 'ride'; sg.h = 0.93; sg.th = -0.75; sg.v = Math.max(300, a.vx * 0.95);
         // the name says every part: the superman, the spin (by its direction) and the flip;
         // a spin with a flip is a rodeo, with both parts written out
-        var nm = [], spinN = flips ? (a.rot < 0 ? L('אלי-אופ ', 'Alley-oop ') : '') + (flips >= 2 ? '720' : '360') : '', flipN = salto ? (salto > 1 ? L('סלטה כפולה', 'Double backflip') : L('סלטה', 'Backflip')) : '';
+        var nm = [], spinN = flips ? (a.rot < 0 ? L('אלי-אופ ', 'Alley-oop ') : '') + String(flips * 360) : '', flipN = salto ? (salto > 1 ? L('סלטה כפולה', 'Double backflip') : L('סלטה', 'Backflip')) : '';
         if(sup) nm.push(L('סופרמן', 'Superman'));
         if(spinN && flipN) nm.push(L('רודאו (', 'Rodeo (') + spinN + ' + ' + flipN + ')');
         else if(flipN) nm.push(flipN);
@@ -14609,7 +14609,7 @@
   // never while the name field is being typed in. Everything worth keeping
   // (coins, skins, name, league) is in localStorage, so a reload loses nothing.
   // 'dev' = a local or preview copy: the updater stays off entirely.
-  var BUILD_VERSION = '20261108-210632';
+  var BUILD_VERSION = '20261108-215146';
   var UPDATE_CHECK_MS = 60000;
   var UPDATE_TRIED_KEY = 'canyonChaseTriedUpdate';
   var pendingSubmits = 0;
@@ -15871,7 +15871,7 @@
         S.hd = down; S.landT = 0.35;                                          // (whichever way the board faces, it rolls on down the wall)
         // named like the surf game's airs: an air, an air reverse (landing backwards), a 360 (an alley-oop the other way round), a 720
         var flips = Math.floor(turns / 2), airT = A.t, oop = A.spin > 0;
-        var name = flips >= 2 ? '720' : flips ? (oop ? L('אלי-אופ ', 'Alley-oop ') : L('אייר ', 'Air ')) + '360' : turns === 1 ? L('אייר ריברס', 'Air reverse') : L('אייר', 'Air');
+        var name = turns >= 2 ? (oop ? L('אלי-אופ ', 'Alley-oop ') : L('אייר ', 'Air ')) + (turns * 180) : turns === 1 ? L('אייר ריברס 180', 'Air reverse 180') : L('אייר', 'Air');
         sgScore(name + '!', 300 + Math.round(250 * airT) + 700 * flips + (oop ? 150 * flips : 0) + (turns % 2 ? 250 : 0));
         // landed on the transition, the speed carries on down the wall (the way the board faces, laid on the surface)
         var sp = Math.hypot(S.v[0], S.v[1], S.v[2]) * 0.85, ln = [-g2[0], 1, -g2[1]], ll = Math.hypot(ln[0], 1, ln[2]); ln = [ln[0] / ll, ln[1] / ll, ln[2] / ll];
