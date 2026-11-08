@@ -7962,7 +7962,7 @@
       sg3.sandBoard.position.set(sgBG.board.x, sgGroundY(sgBG.board.z) + 0.06, sgBG.board.z); sg3.sandBoard.rotation.set(0, -sgBG.board.hd, 0); }
     // off the beach: the board back under your feet
     if(sg.phase !== 'walk' && R.board.position.y !== 0){ R.board.position.set(0, 0, 0); R.board.rotation.set(0, 0, 0); R.fin.visible = true; R.stripe.visible = sgMyLook().line === 1; }
-    if(sg.phase === 'air' && sg.air && sg.air.sup > 0.01){
+    if(false && sg.phase === 'air' && sg.air && sg.air.sup > 0.01){
       // superman: the body swings out flat above the board, legs kicked back,
       // hands on the rails
       var su = sg.air.sup, su2 = su * su * (3 - 2 * su);
@@ -7977,6 +7977,7 @@
         sg3Limb(T, A[0], s0, e0); sg3Limb(T, A[1], e0, hn); A[2].position.copy(hn);
       });
     }
+    try { mvFrame(T, R, dtR); } catch(e){ if(!MV.warned){ MV.warned = true; console.warn('moves:', e); } }
     R.vest.visible = (sg.phase === 'wipe' || sg.phase === 'over') && spot.id === 'naz';
     if(R.vest.visible){ var vs = Math.min(1, (sg.wipe ? sg.wipe.t : 1) * 1.5); R.vest.scale.set(vs, vs * 1.2, vs); }
     // the jet ski at Nazaré
@@ -14593,7 +14594,7 @@
   // never while the name field is being typed in. Everything worth keeping
   // (coins, skins, name, league) is in localStorage, so a reload loses nothing.
   // 'dev' = a local or preview copy: the updater stays off entirely.
-  var BUILD_VERSION = '20261108-075123';
+  var BUILD_VERSION = '20261108-152431';
   var UPDATE_CHECK_MS = 60000;
   var UPDATE_TRIED_KEY = 'canyonChaseTriedUpdate';
   var pendingSubmits = 0;
@@ -16813,6 +16814,125 @@
     g.children.forEach(function(o){ if(o.isMesh && o.geometry && o.geometry.type === 'BoxGeometry' && o.material && o.material.color && o.material.color.getHex() === 0x2c3e50 && near.some(function(p){ return Math.hypot(p.x - o.position.x, p.z - o.position.z) < 1.5; })) o.visible = false; });
     return g; }; })(sg3BuildBeach);
   // <<< beach people
+  // >>> surfer moves (lab/moves-block.js via lab/moves.js)
+  // ---------- the surfer's moves (2026-11-08) ----------
+  // How the body moves through each part of a ride, the way surfers do it: the pop-up from lying to
+  // standing; a bottom turn deep and low with the back hand trailing; a snap opening up, shoulders
+  // whipping round first; a cutback leading with the head and front arm back to the curl; in the
+  // barrel, low with the back hand on the rail; in the air, knees tucked and the board grabbed,
+  // shoulders leading a spin, legs out and arms wide to land; a wipe-out that pitches you off the
+  // board and under, the board kicked away. Only the drawing: no rule, score or speed reads it.
+  var MV = { S: null, rot: 0, rate: 0, th: 0, dTh: 0, w: { bt: 0, sn: 0, cb: 0, tb: 0 } };
+  function mvV(x, y, z){ return new sg3.T.Vector3(x, y, z); }
+  // the standing pose's points (the same as the game's own), at crouch k
+  function mvStance(k){
+    var sh = mvV(0.06 + 0.08 * k, 1.4 - 0.46 * k, 0.24 * k);
+    return { hip: mvV(-0.02, 0.86 - 0.34 * k, 0), kneeB: mvV(-0.27, 0.46 - 0.13 * k, 0.06 + 0.2 * k), kneeF: mvV(0.24, 0.48 - 0.13 * k, 0.05 + 0.2 * k),
+      footB: mvV(-0.36, 0.08, 0.02), footF: mvV(0.33, 0.08, -0.01), sh: sh,
+      haB: mvV(sh.x - 0.42, sh.y - 0.5, sh.z + 0.22), haF: mvV(sh.x + 0.56, sh.y - 0.36, sh.z + 0.2), hd: mvV(sh.x + 0.1, sh.y + 0.25, sh.z), tw: 0, lift: 0 };
+  }
+  // lying on the board, and pushed up on straight arms (the first half of a pop-up)
+  function mvProne(up){
+    var shY = 0.25 + 0.37 * up, hipY = 0.17 + 0.05 * up;
+    return { hip: mvV(-0.22, hipY, 0), kneeB: mvV(-0.62, 0.14, 0.1), kneeF: mvV(-0.62, 0.14, -0.1), footB: mvV(-1.04, 0.12, 0.09), footF: mvV(-1.04, 0.12, -0.09),
+      sh: mvV(0.36, shY, 0), haB: mvV(0.36, 0.07, 0.2), haF: mvV(0.36, 0.07, -0.2), hd: mvV(0.6 - 0.05 * up, shY + 0.15 + 0.1 * up, 0), tw: 0, lift: 0 };
+  }
+  function mvLerp(A, B, f){ var o = {}, ks = {}; Object.keys(A).concat(Object.keys(B)).forEach(function(k){ ks[k] = 1; });
+    Object.keys(ks).forEach(function(k){ var a = A[k], b = B[k], d = k === 'nod' ? -0.25 : 0;
+      if(a && a.isVector3) o[k] = a.clone().lerp(b && b.isVector3 ? b : a, f); else if(b && b.isVector3) o[k] = b.clone();
+      else if(typeof a === 'boolean' || typeof b === 'boolean') o[k] = f > 0.5 ? !!b : !!a;
+      else o[k] = (a === undefined ? d : a) + ((b === undefined ? d : b) - (a === undefined ? d : a)) * f; }); return o; }
+  function mvEase(f){ f = Math.max(0, Math.min(1, f)); return f * f * (3 - 2 * f); }
+  // draw a set of points on the doll (the real body follows the doll)
+  function mvApply(T, R, P){
+    var Pp = R.parts, X = R.extra, c = Math.cos(P.tw), s = Math.sin(P.tw), hip = P.hip;
+    function tw(v){ var x = v.x - hip.x, z = v.z - hip.z; return mvV(hip.x + x * c - z * s, v.y, hip.z + x * s + z * c); }   /* (the upper body turned round the spine) */
+    var sh = tw(P.sh), shB = tw(mvV(P.sh.x - 0.15, P.sh.y - 0.02, P.sh.z + 0.085)), shF = tw(mvV(P.sh.x + 0.15, P.sh.y - 0.02, P.sh.z - 0.085));
+    var haB = P.grabB ? P.haB : tw(P.haB), haF = P.grabF ? P.haF : tw(P.haF), hd = tw(P.hd), nk = sh.clone().lerp(hd, 0.4);
+    var elB = shB.clone().lerp(haB, 0.5).add(mvV(-0.05, -0.08, 0.06)), elF = shF.clone().lerp(haF, 0.5).add(mvV(0.04, -0.08, -0.04));
+    sg3Limb(T, Pp.thighB, hip, P.kneeB); sg3Limb(T, Pp.shinB, P.kneeB, P.footB);
+    sg3Limb(T, Pp.thighF, hip, P.kneeF); sg3Limb(T, Pp.shinF, P.kneeF, P.footF);
+    sg3Limb(T, Pp.torso, hip, sh); sg3Limb(T, Pp.stripe, mvV(hip.x + 0.03, hip.y + 0.05, -0.15), mvV(sh.x + 0.02, sh.y - 0.05, sh.z - 0.16));
+    sg3Limb(T, Pp.neck, sh, nk);
+    sg3Limb(T, Pp.uArmB, shB, elB); sg3Limb(T, Pp.fArmB, elB, haB); sg3Limb(T, Pp.uArmF, shF, elF); sg3Limb(T, Pp.fArmF, elF, haF);
+    X.chest.position.copy(hip).lerp(sh, 0.72); X.chest.quaternion.setFromUnitVectors(mvV(0, 1, 0), sh.clone().sub(hip).normalize());
+    X.hips.position.copy(hip); X.handB.position.copy(haB); X.handF.position.copy(haF); X.footB.position.copy(P.footB); X.footF.position.copy(P.footF);
+    R.head.position.copy(hd); R.head.rotation.set(0, P.look || 0, P.nod === undefined ? -0.25 : P.nod);
+    R.hair.position.copy(hd).add(mvV(-0.02, 0.025, 0)); R.hair.rotation.set(0, P.look || 0, 0.45);
+    R.vest.position.copy(hip).lerp(sh, 0.6);
+  }
+  function mvFrame(T, R, dt){
+    var ph = sg.phase, on = ph === 'ride' || ph === 'air' || ph === 'done' || ph === 'wipe' || ph === 'over';
+    if(!on){ MV.S = null; if(R.head.rotation.y) R.head.rotation.y = 0; return; }
+    dt = Math.max(0.001, Math.min(0.05, dt || 0.016));
+    var k = R.sfK === undefined ? 0.86 : R.sfK, P = mvStance(k), W = MV.w;
+    // how the board is turning (smoothed): up the face or down it, and round toward the curl
+    var dTh = ((sg.th || 0) - MV.th) / dt; MV.th = sg.th || 0; MV.dTh += (Math.max(-6, Math.min(6, dTh)) - MV.dTh) * Math.min(1, dt * 8);
+    function ease(key, want, up){ W[key] += ((want ? 1 : 0) - W[key]) * Math.min(1, dt * (want ? up : 3)); return mvEase(W[key]); }
+    if(ph === 'ride' || ph === 'done'){
+      var h = sg.h || 0, psi = sg.psi || 0, inT = sg.tube > 0.1;
+      // the bottom turn: low on the face, turning up it -- compressed, the back hand trailing behind toward the wave
+      var bt = ease('bt', !inT && h < 0.45 && MV.dTh > 0.5, 7);
+      if(bt > 0.01){ var Pb = mvStance(Math.min(1.25, k + 0.3)); Pb.haB = mvV(-0.42, 0.16, -0.12); Pb.haF = mvV(0.5, Pb.sh.y - 0.15, Pb.sh.z + 0.42); Pb.tw = 0.18; Pb.look = 0.3; P = mvLerp(P, Pb, bt); }
+      // the snap: high, swinging back down -- tall, then the shoulders whip round first and the arms follow through
+      var sn = ease('sn', !inT && h > 0.68 && MV.dTh < -0.6, 9);
+      if(sn > 0.01){ var Ps = mvStance(Math.max(0.45, k - 0.35)); Ps.tw = -0.62; Ps.haB = mvV(Ps.sh.x + 0.25, Ps.sh.y - 0.15, Ps.sh.z + 0.5); Ps.haF = mvV(Ps.sh.x + 0.35, Ps.sh.y - 0.55, Ps.sh.z - 0.35); Ps.look = -0.45; P = mvLerp(P, Ps, sn); }
+      // the cutback: carving back to the curl -- the head and the front arm lead the way round
+      var cb = ease('cb', !inT && psi > 0.35, 5);
+      if(cb > 0.01){ var f = Math.min(1, psi / 2.2), Pc = mvStance(Math.min(1.15, k + 0.15)); Pc.tw = 0.55 * f; Pc.haF = mvV(Pc.sh.x - 0.25, Pc.sh.y + 0.08, Pc.sh.z + 0.48); Pc.haB = mvV(Pc.sh.x - 0.5, Pc.sh.y - 0.38, Pc.sh.z + 0.05); Pc.look = 0.95 * f; P = mvLerp(P, Pc, cb); }
+      // in the barrel: low over the board, the back hand on the rail, the front hand forward, looking for the way out
+      var tb = ease('tb', inT, 4);
+      if(tb > 0.01){ var Pt = mvStance(1.15); Pt.kneeB = mvV(-0.24, 0.22, 0.2); Pt.haB = mvV(-0.04, 0.09, 0.27); Pt.grabB = true; Pt.haF = mvV(Pt.sh.x + 0.5, Pt.sh.y - 0.12, Pt.sh.z + 0.12); Pt.look = -0.3; Pt.nod = 0.05; P = mvLerp(P, Pt, tb); }
+      // the pop-up: lying, pushed up on the arms, feet swung through under the body, up into the stance
+      var s = sg.catchT !== undefined && ph === 'ride' ? (sg.t - sg.catchT) / 0.6 : 9;
+      if(s >= 0 && s < 1){
+        var low = mvStance(1.3); low.haB = mvV(-0.1, 0.08, 0.2); low.haF = mvV(0.25, 0.08, 0.18); low.hd = mvV(0.45, low.sh.y + 0.2, low.sh.z);
+        P = s < 0.28 ? mvLerp(mvProne(0), mvProne(1), mvEase(s / 0.28)) : s < 0.6 ? mvLerp(mvProne(1), low, mvEase((s - 0.28) / 0.32)) : mvLerp(low, P, mvEase((s - 0.6) / 0.4));
+      }
+    } else { W.bt = W.sn = W.cb = W.tb = 0; }
+    if(ph === 'air' && sg.air){
+      var A = sg.air, t = sg.t - A.t0, rate = (A.rot - MV.rot) / dt; MV.rot = A.rot; MV.rate += (rate - MV.rate) * Math.min(1, dt * 10);
+      var falling = A.vy < 0, nearL = falling && A.y < 0.32, flip = Math.abs(A.fl || 0) > 0.05 && Math.abs(A.fl) % (Math.PI * 2) > 0.2;
+      var tuck = t < 0.1 ? 0 : nearL ? Math.max(0, (A.y - 0.12) / 0.2) : 1;
+      var Pa = mvStance(t < 0.1 ? 0.3 : 0.6 + 0.6 * tuck), lift = 0.22 * tuck * (flip ? 1.3 : 1);
+      ['footB', 'footF'].forEach(function(n){ Pa[n].y += lift; }); Pa.kneeB.y += lift * 0.9; Pa.kneeF.y += lift * 0.9; Pa.hip.y += lift * 0.35; Pa.lift = lift;
+      // the grab: the back hand on the toe-side rail between the feet; a flip grabs with both
+      if(tuck > 0.3){ Pa.haB = mvV(-0.03, lift + 0.07, 0.25); Pa.grabB = true; }
+      Pa.haF = flip && tuck > 0.3 ? mvV(0.16, lift + 0.07, 0.25) : mvV(Pa.sh.x + 0.5, Pa.sh.y + 0.18, Pa.sh.z - 0.22); Pa.grabF = flip && tuck > 0.3;
+      // a spin: the shoulders and the head lead it round
+      Pa.tw = Math.max(-0.75, Math.min(0.75, MV.rate * 0.11)); Pa.look = Pa.tw * 0.9;
+      // coming down: legs out for the landing, arms wide, eyes on the water
+      if(nearL){ var g = 1 - tuck; Pa.haB = Pa.haB.clone().lerp(mvV(Pa.sh.x - 0.55, Pa.sh.y - 0.02, Pa.sh.z + 0.42), g); Pa.haF = Pa.haF.clone().lerp(mvV(Pa.sh.x + 0.55, Pa.sh.y - 0.02, Pa.sh.z - 0.3), g); Pa.nod = -0.25 - 0.35 * g; }
+      var su = A.sup || 0;
+      if(su > 0.01){ var su2 = mvEase(su), lf = Math.max(Pa.lift, 0.12);
+        var Pm = { hip: mvV(-0.42, lf + 0.62, 0.02), sh: mvV(0.16, lf + 0.56, 0.04), kneeB: mvV(-0.86, lf + 0.74, 0.12), kneeF: mvV(-0.86, lf + 0.78, -0.08), footB: mvV(-1.28, lf + 0.86, 0.14), footF: mvV(-1.28, lf + 0.9, -0.1),
+          haB: mvV(0.05, lf + 0.06, 0.25), haF: mvV(0.12, lf + 0.06, -0.25), hd: mvV(0.42, lf + 0.66, 0.04), tw: 0, lift: lf, grabB: true, grabF: true, look: 0, nod: 0.35 };
+        Pa = mvLerp(Pa, Pm, su2); Pa.grabB = Pa.grabF = su2 > 0.5; }
+      P = Pa;
+    } else MV.rot = 0;
+    var wiping = ph === 'wipe' || ph === 'over';
+    if(wiping){
+      var wt = sg.wipe ? sg.wipe.t : 1, r = sg.wipe ? sg.wipe.reason : 'falls', fwd = r === 'pearl' || r === 'superman' || r === 'flip', e = mvEase(wt / 0.45), on2 = Math.max(0, wt - 0.45);
+      // thrown off the board: over the nose, or back into the wave; then under, turning slowly
+      R.body.rotation.set(fwd ? 0.15 * e : -1.35 * e - on2 * 1.6, 0.25 * Math.sin(wt * 3), fwd ? -1.5 * e - on2 * 1.4 : 0.2 * e);
+      R.g.position.y += Math.min(1, wt) * 0.8 - Math.min(1.7, e * 0.45 + on2 * 0.7);
+      var Pw = mvStance(0.45), fl = Math.sin(wt * 15);
+      Pw.haB = mvV(Pw.sh.x - 0.38, Pw.sh.y + 0.36 + 0.09 * fl, Pw.sh.z + 0.32); Pw.haF = mvV(Pw.sh.x + 0.42, Pw.sh.y + 0.3 - 0.09 * fl, Pw.sh.z - 0.22);
+      var lg = fwd ? 1 : -1; Pw.kneeB = Pw.kneeB.clone().lerp(mvV(-0.2, 0.42, 0.22), e); Pw.kneeF = Pw.kneeF.clone().lerp(mvV(0.12, 0.46, 0.06), e);
+      Pw.footB = Pw.footB.clone().lerp(mvV(-0.42 - 0.08 * lg, 0.2 + 0.05 * Math.sin(wt * 9), 0.3), e); Pw.footF = Pw.footF.clone().lerp(mvV(-0.12, 0.16 + 0.05 * Math.sin(wt * 9 + 2), 0.12), e); Pw.hip = Pw.hip.clone().lerp(mvV(-0.05, 0.62, 0.06), e); Pw.tw = 0.3 * Math.sin(wt * 4); Pw.nod = fwd ? -0.6 : 0.3;
+      P = mvLerp(P, Pw, Math.min(1, wt * 5));
+      // the board kicked away from the feet
+      R.board.position.set(fwd ? 0.45 * e : -0.25 * e, 0.12 * e + 0.35 * Math.sin(Math.PI * Math.min(1, wt / 0.7)), fwd ? 0.1 * e : 0.55 * e);
+      R.board.rotation.set(0.9 * e + on2 * 0.6, 0, fwd ? 1.3 * e : 0.35 * e); R.stripe.visible = false; R.fin.visible = false;
+    }
+    // follow the targets on springs, so nothing snaps from one move to the next
+    if(!MV.S) MV.S = P; else { var a = Math.min(1, dt * 16); MV.S = mvLerp(MV.S, P, a); }
+    if(P.grabB) MV.S.grabB = true; else delete MV.S.grabB; if(P.grabF) MV.S.grabF = true; else delete MV.S.grabF;
+    mvApply(T, R, MV.S);
+    if(MV.S.lift > 0.005 && !wiping){ R.board.position.y = MV.S.lift; }
+    if(ph === 'ride' && typeof sfArms === 'function' && sg3.sfLand) sfArms(T, R);
+  }
+  // <<< surfer moves
   // idle player pose before first game
   resetGame();
   requestAnimationFrame(frame);
