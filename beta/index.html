@@ -7987,8 +7987,6 @@
         sg3Limb(T, A[0], s0, e0); sg3Limb(T, A[1], e0, hn); A[2].position.copy(hn);
       });
     }
-    var gfy = !!sgSave.goofy && !!R.lab && /^(ride|air|done|wipe|over|tow|paddle)$/.test(sg.phase), gsz = gfy ? -1 : 1;
-    if(R.body.scale.z !== gsz) R.body.scale.z = gsz;   /* (goofy: the stance mirrored, the right foot forward; the real body follows the doll) */
     try { mvFrame(T, R, dtR); } catch(e){ if(!MV.warned){ MV.warned = true; console.warn('moves:', e); } }
     R.vest.visible = (sg.phase === 'wipe' || sg.phase === 'over') && spot.id === 'naz';
     if(R.vest.visible){ var vs = Math.min(1, (sg.wipe ? sg.wipe.t : 1) * 1.5); R.vest.scale.set(vs, vs * 1.2, vs); }
@@ -8365,9 +8363,9 @@
     sgRenderSizes(szEl);
     var stB = document.getElementById('sgStanceRow'); if(stB) stB.remove();
     stB = document.createElement('div'); stB.id = 'sgStanceRow'; stB.className = 'sg-opts'; stB.style.margin = '6px 0';
-    [[false, L('🦶 רגולר — רגל שמאל קדימה', '🦶 Regular — left foot forward')], [true, L('🦶 גופי — רגל ימין קדימה', '🦶 Goofy — right foot forward')]].forEach(function(o){
-      var b = document.createElement('button'); b.type = 'button'; b.className = 'sg-opt' + (!!sgSave.goofy === o[0] ? ' is-on' : ''); b.textContent = o[1];
-      b.addEventListener('click', function(){ sgSave.goofy = o[0]; sgStore(); sgRenderShop(); }); stB.appendChild(b); });
+    [['spot', L('🌊 כיוון הגלים: כמו בחוף', '🌊 Waves: as the beach has them')], ['right', L('➡️ תמיד גלים ימינה', '➡️ Always rights')], ['left', L('⬅️ תמיד גלים שמאלה', '⬅️ Always lefts')]].forEach(function(o){
+      var b = document.createElement('button'); b.type = 'button'; b.className = 'sg-opt' + ((sgSave.waveDir || 'spot') === o[0] ? ' is-on' : ''); b.textContent = o[1];
+      b.addEventListener('click', function(){ sgSave.waveDir = o[0]; sgStore(); sgRenderShop(); }); stB.appendChild(b); });
     rl.parentNode.insertBefore(stB, rl);
     function buyOrPick(kind, item){
       var owned = sgSave[kind + 's'].indexOf(item.id) !== -1, sel = sgSave[kind] === item.id;
@@ -14612,7 +14610,7 @@
   // never while the name field is being typed in. Everything worth keeping
   // (coins, skins, name, league) is in localStorage, so a reload loses nothing.
   // 'dev' = a local or preview copy: the updater stays off entirely.
-  var BUILD_VERSION = '20261108-160305';
+  var BUILD_VERSION = '20261108-160623';
   var UPDATE_CHECK_MS = 60000;
   var UPDATE_TRIED_KEY = 'canyonChaseTriedUpdate';
   var pendingSubmits = 0;
@@ -14879,7 +14877,8 @@
   // lefts: the picture mirrored, and everything that reads it with it
   function labMirrorFrame(){
     if(!sg3.T || !sg3.cv) return;
-    var want = !!(state === 'surfgame' && sg && sg.spot && sg.spot.left && sg3.cv.style.display !== 'none');
+    var wLeft = sgSave.waveDir === 'left' ? true : sgSave.waveDir === 'right' ? false : !!(sg && sg.spot && sg.spot.left);
+    var want = !!(state === 'surfgame' && sg && sg.spot && wLeft && sg3.cv.style.display !== 'none');
     if(!sg3.mirrorHooked){
       sg3.mirrorHooked = true;
       var V3 = sg3.T.Vector3.prototype, proj = V3.project;
