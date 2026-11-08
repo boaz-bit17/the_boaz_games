@@ -7965,7 +7965,7 @@
       sg3.sandBoard.position.set(sgBG.board.x, sgGroundY(sgBG.board.z) + 0.06, sgBG.board.z); sg3.sandBoard.rotation.set(0, -sgBG.board.hd, 0); }
     // off the beach: the board back under your feet
     if(sg.phase !== 'walk' && R.board.position.y !== 0){ R.board.position.set(0, 0, 0); R.board.rotation.set(0, 0, 0); R.fin.visible = true; R.stripe.visible = sgMyLook().line === 1; }
-    if(sg.phase === 'air' && sg.air && sg.air.sup > 0.01){
+    if(false && sg.phase === 'air' && sg.air && sg.air.sup > 0.01){
       // superman: the body swings out flat above the board, legs kicked back,
       // hands on the rails
       var su = sg.air.sup, su2 = su * su * (3 - 2 * su);
@@ -14597,7 +14597,7 @@
   // never while the name field is being typed in. Everything worth keeping
   // (coins, skins, name, league) is in localStorage, so a reload loses nothing.
   // 'dev' = a local or preview copy: the updater stays off entirely.
-  var BUILD_VERSION = '20261108-144245';
+  var BUILD_VERSION = '20261108-152101';
   var UPDATE_CHECK_MS = 60000;
   var UPDATE_TRIED_KEY = 'canyonChaseTriedUpdate';
   var pendingSubmits = 0;
@@ -17242,7 +17242,7 @@
   }
   function mvFrame(T, R, dt){
     var ph = sg.phase, on = ph === 'ride' || ph === 'air' || ph === 'done' || ph === 'wipe' || ph === 'over';
-    if(!on || (ph === 'air' && sg.air && sg.air.sup > 0.01)){ MV.S = null; if(R.head.rotation.y) R.head.rotation.y = 0; return; }
+    if(!on){ MV.S = null; if(R.head.rotation.y) R.head.rotation.y = 0; return; }
     dt = Math.max(0.001, Math.min(0.05, dt || 0.016));
     var k = R.sfK === undefined ? 0.86 : R.sfK, P = mvStance(k), W = MV.w;
     // how the board is turning (smoothed): up the face or down it, and round toward the curl
@@ -17282,6 +17282,11 @@
       Pa.tw = Math.max(-0.75, Math.min(0.75, MV.rate * 0.11)); Pa.look = Pa.tw * 0.9;
       // coming down: legs out for the landing, arms wide, eyes on the water
       if(nearL){ var g = 1 - tuck; Pa.haB = Pa.haB.clone().lerp(mvV(Pa.sh.x - 0.55, Pa.sh.y - 0.02, Pa.sh.z + 0.42), g); Pa.haF = Pa.haF.clone().lerp(mvV(Pa.sh.x + 0.55, Pa.sh.y - 0.02, Pa.sh.z - 0.3), g); Pa.nod = -0.25 - 0.35 * g; }
+      var su = A.sup || 0;
+      if(su > 0.01){ var su2 = mvEase(su), lf = Math.max(Pa.lift, 0.12);
+        var Pm = { hip: mvV(-0.42, lf + 0.62, 0.02), sh: mvV(0.16, lf + 0.56, 0.04), kneeB: mvV(-0.86, lf + 0.74, 0.12), kneeF: mvV(-0.86, lf + 0.78, -0.08), footB: mvV(-1.28, lf + 0.86, 0.14), footF: mvV(-1.28, lf + 0.9, -0.1),
+          haB: mvV(0.05, lf + 0.06, 0.25), haF: mvV(0.12, lf + 0.06, -0.25), hd: mvV(0.42, lf + 0.66, 0.04), tw: 0, lift: lf, grabB: true, grabF: true, look: 0, nod: 0.35 };
+        Pa = mvLerp(Pa, Pm, su2); Pa.grabB = Pa.grabF = su2 > 0.5; }
       P = Pa;
     } else MV.rot = 0;
     var wiping = ph === 'wipe' || ph === 'over';
@@ -17292,7 +17297,8 @@
       R.g.position.y += Math.min(1, wt) * 0.8 - Math.min(1.7, e * 0.45 + on2 * 0.7);
       var Pw = mvStance(0.45), fl = Math.sin(wt * 15);
       Pw.haB = mvV(Pw.sh.x - 0.38, Pw.sh.y + 0.36 + 0.09 * fl, Pw.sh.z + 0.32); Pw.haF = mvV(Pw.sh.x + 0.42, Pw.sh.y + 0.3 - 0.09 * fl, Pw.sh.z - 0.22);
-      Pw.kneeF.y += 0.25 * e; Pw.footF.y += 0.32 * e; Pw.footF.x -= 0.12 * e; Pw.tw = 0.3 * Math.sin(wt * 4); Pw.nod = fwd ? -0.6 : 0.3;
+      var lg = fwd ? 1 : -1; Pw.kneeB = Pw.kneeB.clone().lerp(mvV(-0.2, 0.42, 0.22), e); Pw.kneeF = Pw.kneeF.clone().lerp(mvV(0.12, 0.46, 0.06), e);
+      Pw.footB = Pw.footB.clone().lerp(mvV(-0.42 - 0.08 * lg, 0.2 + 0.05 * Math.sin(wt * 9), 0.3), e); Pw.footF = Pw.footF.clone().lerp(mvV(-0.12, 0.16 + 0.05 * Math.sin(wt * 9 + 2), 0.12), e); Pw.hip = Pw.hip.clone().lerp(mvV(-0.05, 0.62, 0.06), e); Pw.tw = 0.3 * Math.sin(wt * 4); Pw.nod = fwd ? -0.6 : 0.3;
       P = mvLerp(P, Pw, Math.min(1, wt * 5));
       // the board kicked away from the feet
       R.board.position.set(fwd ? 0.45 * e : -0.25 * e, 0.12 * e + 0.35 * Math.sin(Math.PI * Math.min(1, wt / 0.7)), fwd ? 0.1 * e : 0.55 * e);
