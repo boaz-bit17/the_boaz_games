@@ -1078,7 +1078,7 @@
         <div class="rule"><span class="glyph">⬇️</span><span class="txt">התכפפות מתחת לקורות</span><span class="key key-desk">חץ למטה</span><span class="key key-touch">החלקה למטה</span></div>
       </div>
       <button class="go-btn" id="startBtn">התחל גלישה</button>
-      <button class="go-btn sg-enter" id="sgEnterBtn" type="button">🌊 מעבר למשחק גלישה</button>
+      <button class="go-btn sg-enter" id="sgEnterBtn" type="button">🌊 חזרה למשחק הגלישה</button>
       <button class="lang-btn" id="langBtn" type="button"></button>
       <a class="privacy-link" href="privacy.html" target="_blank" rel="noopener">מדיניות פרטיות</a>
     </div>
@@ -1297,12 +1297,14 @@
     <div class="tablet">
       <h1>🌊 משחק הגלישה</h1>
       <p class="tagline">🌊 בחרו חוף ותפסו גלים</p>
+      <div class="name-row"><input type="text" id="sgNameInput" maxlength="14" autocomplete="off"></div>
       <button class="tourney-banner surf-banner" id="surfBanner" type="button" hidden></button>
       <div class="sg-shells" id="sgShells"></div>
       <div class="sg-spots" id="sgSpots"></div>
+      <button class="shop-btn" id="sgLessonBtn" type="button"></button>
       <button class="shop-btn sg-mode-btn" id="sgModeBtn" type="button"></button>
       <button class="shop-btn" id="sgShopBtn" type="button">🛒 חנות הגלישה</button>
-      <button class="back-btn" id="sgBackBtn" type="button">⬅ חזרה למשחק הריצה</button>
+      <button class="back-btn" id="sgBackBtn" type="button">🏃 למשחק הריצה</button>
     </div>
   </div>
 
@@ -1502,11 +1504,11 @@
     : (/^(he|iw)\b/i.test(navigator.language || '') ? 'he' : 'en');
   function L(he, en){ return LANG === 'en' ? en : he; }
   var I18N_HTML = {
-   "🌊 מעבר למשחק גלישה": "🌊 Go to the surf game",
+   "🌊 חזרה למשחק הגלישה": "🌊 Back to the surf game",
    "🌊 משחק הגלישה": "🌊 The Surf Game",
    "🌊 בחרו חוף ותפסו גלים": "🌊 Pick a beach and catch waves",
    "🛒 חנות הגלישה": "🛒 Surf shop",
-   "⬅ חזרה למשחק הריצה": "⬅ Back to the running game",
+   "🏃 למשחק הריצה": "🏃 To the running game",
    "🏄 גלשנים": "🏄 Boards",
    "🧍 גולשים": "🧍 Surfers",
    "⬆️ שדרוגים": "⬆️ Upgrades",
@@ -6333,7 +6335,7 @@
       var P = sg.pad, go = P.stage === 'go', pg = sg.x - sg.curl, Hq = SG3_H[sg.spot.id] || 3;
       var bx0 = (sg.curl + 300 - sg.x) / 40, bd = Math.round(Math.sqrt(bx0 * bx0 + sg.dz * sg.dz));
       var inSpot = pg >= SG_SPOT_LO && pg <= SG_SPOT_HI && Math.abs(sg.dz) < Hq * 1.1, canCatch = pg >= 55 && pg <= 900 && sg.dz > -Hq * 4 && sg.dz < Hq * 1.6, faceBeach = Math.cos(sg.hd) > 0.3;
-      var pm = P.stage === 'pass' ? L('🌊 הסט הבא בדרך', '🌊 The next set is on its way')
+      var pm = sg.lesson ? '' : P.stage === 'pass' ? L('🌊 הסט הבא בדרך', '🌊 The next set is on its way')
              : P.stage === 'horizon' ? L('🌊 עקבו אחרי האופק — סט מגיע · המצוף הכתום = הפיק', '🌊 Watch the horizon — a set is coming · the orange buoy = the peak')
              : go ? (faceBeach ? L('🌊 חתרו עכשיו! לחצו שוב ושוב: רווח / ⬆️ / הקשה', '🌊 Paddle now! Tap again and again: Space / ⬆️ / tap')
                                : L('🌊 הסתובבו לחוף ⬅️➡️ וחתרו!', '🌊 Turn to the beach ⬅️➡️ and paddle!'))
@@ -6383,7 +6385,7 @@
       ctx.strokeText(hn, W / 2, H - 28); ctx.fillText(hn, W / 2, H - 28);
       ctx.globalAlpha = 1;
     }
-    if(sg.phase === 'air'){
+    if(sg.phase === 'air' && !sg.lesson){
       ctx.font = 'bold 15px Rubik, sans-serif'; ctx.fillStyle = '#ffd447';
       var at = L('⬅️➡️ סיבוב 360 · ⬇️ סלטה · עזוב ⬆️ ולחץ שוב = סופרמן · עזוב הכול כדי לנחות ישר', '⬅️➡️ spin 360 · ⬇️ backflip · let go of ⬆️ and push again = superman · let go to land straight');
       ctx.strokeText(at, W / 2, H - 28); ctx.fillText(at, W / 2, H - 28);
@@ -14607,7 +14609,7 @@
   // never while the name field is being typed in. Everything worth keeping
   // (coins, skins, name, league) is in localStorage, so a reload loses nothing.
   // 'dev' = a local or preview copy: the updater stays off entirely.
-  var BUILD_VERSION = '20261108-204025';
+  var BUILD_VERSION = '20261108-210632';
   var UPDATE_CHECK_MS = 60000;
   var UPDATE_TRIED_KEY = 'canyonChaseTriedUpdate';
   var pendingSubmits = 0;
@@ -14621,7 +14623,8 @@
     if(specialOpening) return false;
     if(!scratchBox.hidden && !scratchRevealed) return false;
     if(!chestOpenBox.hidden && !openChestBtn.disabled) return false;
-    if(document.activeElement === playerNameInput) return false;
+    if(document.activeElement === playerNameInput || document.activeElement === document.getElementById('sgNameInput')) return false;
+    if(sg.lesson) return false;
     return true;
   }
 
@@ -17089,8 +17092,164 @@
   }
   sgOpenMenu = (function(orig){ return function(){ try { sgGifts(); } catch(e){} return orig.apply(this, arguments); }; })(sgOpenMenu);
   // <<< shell gifts
+  // >>> surf first and the lesson (lab/lesson.js)
+  (function(){
+    var st = document.createElement('style');
+    st.textContent = '#sgLesson{position:absolute;left:50%;bottom:12px;transform:translateX(-50%);z-index:7;width:min(560px,calc(100% - 24px));box-sizing:border-box;padding:10px 16px 12px;border-radius:16px;background:rgba(0,30,50,.88);border:2px solid rgba(255,255,255,.55);color:#fff;text-align:center;pointer-events:none;font-family:Rubik,sans-serif}' +
+      '#sgLesson[hidden]{display:none}#sgLessonStep{font-size:13px;color:#ffe9a8;font-weight:700;margin-bottom:3px}#sgLessonMsg{font-size:19px;font-weight:700;line-height:1.3}' +
+      '#sgLessonDots{display:flex;justify-content:center;gap:5px;margin-top:7px}#sgLessonDots i{width:9px;height:9px;border-radius:50%;background:rgba(255,255,255,.28)}#sgLessonDots i.on{background:#7fffb0}' +
+      '#sgLessonGo{pointer-events:auto;margin-top:10px;width:auto;padding:0 22px;min-height:44px}#sgLessonGo[hidden]{display:none}';
+    document.head.appendChild(st);
+  })();
+  var lsBox = document.createElement('div'); lsBox.id = 'sgLesson'; lsBox.hidden = true;
+  lsBox.innerHTML = '<div id="sgLessonStep"></div><div id="sgLessonMsg"></div><div id="sgLessonDots"></div><button class="go-btn" id="sgLessonGo" type="button" hidden></button>';
+  var lsSkip = document.createElement('button'); lsSkip.type = 'button'; lsSkip.id = 'sgLessonSkip'; lsSkip.className = 'sg-peak-btn'; lsSkip.hidden = true;
+  (function(){ var par = document.getElementById('sgExitBtn').parentNode; par.appendChild(lsBox); par.appendChild(lsSkip); })();
+  function lsTouch(){ return document.body.classList.contains('is-touch'); }
+  function lsKeys(desk, deskEn, touch, touchEn){ return lsTouch() ? L(touch, touchEn) : L(desk, deskEn); }
+  var LS_HOLD_UP = function(){ return lsKeys('החזיקו ⬆️', 'hold ⬆️', 'גררו למעלה והחזיקו', 'drag up and hold'); };
+  var LS_STEPS = [
+    { id: 'paddle', msg: function(){ return L('קודם כל חותרים: ', 'First, paddle: ') + LS_HOLD_UP(); } },
+    { id: 'turn',   msg: function(){ return L('הגלים מגיעים מאחור. הסתובבו לחוף: ', 'The waves come from behind. Turn to the beach: ') + lsKeys('⬅️ או ➡️', '⬅️ or ➡️', 'גררו הצידה', 'drag sideways'); } },
+    { id: 'catch' },
+    { id: 'down',   ride: true, msg: function(){ return L('תפסתם! עכשיו רדו למטה: ', 'You caught it! Now drop down: ') + lsKeys('החזיקו ⬇️', 'hold ⬇️', 'גררו למטה', 'drag down'); } },
+    { id: 'up',     ride: true, msg: function(){ return L('עכשיו עלו עד שפת הגל: ', 'Now climb to the top of the wave: ') + LS_HOLD_UP(); } },
+    { id: 'pump',   ride: true, msg: function(l){ return L('למהירות: ', 'For speed: ') + lsKeys('⬆️ ⬇️ לסירוגין, מהר', '⬆️ ⬇️ in turns, fast', 'גררו למעלה ולמטה, מהר', 'drag up and down, fast') + ' (' + Math.min(3, l.n) + '/3)'; } },
+    { id: 'cut',    ride: true, msg: function(){ return L('קאטבק: ', 'Cutback: ') + lsKeys('החזיקו ⬅️ עד שהגלשן מסתובב, ואז עזבו', 'hold ⬅️ until the board comes round, then let go', 'גררו שמאלה והחזיקו עד שהגלשן מסתובב, ואז עזבו', 'drag left and hold until the board comes round, then let go'); } },
+    { id: 'tube',   ride: true, msg: function(){ return L('🌀 הצינור! הגל נסגר מעליכם. פשוט המשיכו ואל תפנו אחורה', '🌀 The barrel! The wave closes over you. Keep going, don\'t turn back'); } },
+    { id: 'air',    ride: true, msg: function(){ return L('קפיצה: רדו למטה, ואז ', 'A jump: drop down, then ') + LS_HOLD_UP() + L(' עד שעפים מעל השפה', ' until you fly over the lip'); } }
+  ];
+  function lsEnter(l){ l.t = 0; l.n = 0; l.held = 0; l.seen = false; l.pumps0 = sg.pumps || 0; }
+  function lsStart(){
+    if(sg3.state !== 'ready') return;
+    sgStart(0);
+    sgLot = { parkX: (sg.curl + 300) * SG3_M, car: null };
+    sg.curl = sg.x - 300; sg.hd = Math.PI;
+    sg.lesson = { i: 0, wait: 0, over: false, pad: null, shown: '' };
+    lsEnter(sg.lesson);
+    lsSkip.textContent = L('⏭️ דלגו על השיעור', '⏭️ Skip the lesson'); lsSkip.hidden = false;
+    document.getElementById('sgLessonGo').hidden = true;
+    lsBox.hidden = false;
+  }
+  function lsHide(){ lsBox.hidden = true; lsSkip.hidden = true; }
+  function lsDone(){ sgSave.lessonDone = 1; sgStore(); }
+  // a wipe-out or the end of the wave costs nothing here: another wave, same step
+  function lsAgain(wiped){
+    var l = sg.lesson; sgStart(0);
+    sg.lesson = l; sgLot = { parkX: (sg.curl + 300) * SG3_M, car: null };
+    sg.curl = sg.x - 300; sg.hd = 0; l.pad = null; l.seen = false; l.pumps0 = 0;
+    sgAddText(wiped ? L('🌊 נפלתם. לא נורא, עוד גל', '🌊 You fell. No problem, another wave') : L('🌊 עוד גל בדרך', '🌊 Another wave is coming'), '#bfe9ff');
+  }
+  function lsPre(dt){
+    var l = sg.lesson, s = LS_STEPS[l.i]; sg.hint = 0;
+    if(!s) return;
+    if(sg.phase === 'paddle'){
+      var P = sg.pad; sg.curl = sg.x - 300; P.dzGo = 0;
+      if(s.id === 'paddle' || s.id === 'turn') P.T = P.t + 30;          // (no wave until you've learned to paddle and turn)
+      else if(l.pad !== P){ l.pad = P; var k = P.T ? P.t / P.T : 0, nt = k * 8, d = nt - P.t; P.t = nt; P.T = 8; if(P.lastStroke !== undefined) P.lastStroke += d; }
+    } else if(sg.phase === 'ride' || sg.phase === 'air'){
+      var gap = sg.x - sg.curl;
+      if(s.id === 'tube'){ if(gap > 120) sg.curl += Math.min(gap - 120, 450 * dt); if(sg.x - sg.curl < 70) sg.curl = sg.x - 70; }
+      else { if(gap < 230) sg.curl -= Math.min(230 - gap, 600 * dt); if(sg.x - sg.curl < 90) sg.curl = sg.x - 90; if(gap > 800) sg.curl = sg.x - 800; }
+      if(s.id === 'air' && sg.phase === 'ride' && sg.h > 0.45 && sgJoyVec().y < -0.3) sg.v = Math.max(sg.v, 440);      // (enough speed to leave the lip)
+    }
+  }
+  function lsCatchMsg(){
+    var P = sg.pad;
+    if(P.stage === 'pass') return L('😕 פספסתם. עוד גל בדרך', '😕 Missed it. Another one is coming');
+    if(P.stage !== 'go') return L('🌊 גל מגיע. התכוננו לחתור', '🌊 A wave is coming. Get ready to paddle');
+    if(Math.cos(sg.hd) <= 0.05) return L('הסתובבו לחוף!', 'Turn to the beach!');
+    return L('🌊 עכשיו! ', '🌊 Now! ') + LS_HOLD_UP() + L(' וחתרו עד שהפס מתמלא', ' and paddle until the bar is full');
+  }
+  function lsPost(dt){
+    var l = sg.lesson, s = LS_STEPS[l.i], J = sgJoyVec();
+    ['sgPeakBtn', 'sgExitBtn', 'sgBeachBtn'].forEach(function(id){ document.getElementById(id).hidden = true; });
+    if(l.over) return;
+    var msg, ok = false;
+    l.t += dt;
+    if(l.wait > 0){
+      l.wait -= dt; msg = L('✅ יופי!', '✅ Nice!');
+      if(l.wait <= 0){
+        l.i++; s = LS_STEPS[l.i];
+        if(!s){
+          l.over = true; lsDone(); lsSkip.hidden = true;
+          document.getElementById('sgLessonStep').textContent = L('🎓 סיימתם את השיעור', '🎓 Lesson complete');
+          document.getElementById('sgLessonMsg').textContent = L('בסוף כל גל 5 שופטים נותנים ציון. תרגילים שונים = ציון גבוה וצדפים 🐚', 'After each wave 5 judges give a score. Different moves = a higher score and more shells 🐚');
+          document.getElementById('sgLessonDots').innerHTML = '';
+          var go = document.getElementById('sgLessonGo'); go.textContent = L('🏝️ לבחור חוף', '🏝️ Pick a beach'); go.hidden = false;
+          return;
+        }
+        lsEnter(l);
+      }
+    }
+    if(l.wait <= 0){
+      if(sg.phase === 'paddle' && (s.ride || s.id === 'catch')){ msg = lsCatchMsg(); if(s.ride) l.seen = false; }
+      else if(sg.phase === 'wipe') msg = L('🌊 נפלתם...', '🌊 You fell...');
+      else if(sg.phase === 'air') msg = L('אתם באוויר! עזבו הכול ונחתו', 'You\'re in the air! Let go of everything and land');
+      else if(s.id === 'catch') msg = L('🏄 תפסתם!', '🏄 You caught it!');
+      else msg = s.msg(l);
+      if(s.id === 'paddle'){ if(J.y < -0.5 || sg.pad.pw > 0.35) l.held += dt; ok = l.held >= 1.6; }
+      else if(s.id === 'turn') ok = Math.cos(sg.hd) > 0.6;
+      else if(s.id === 'catch') ok = sg.phase === 'ride';
+      else if(sg.phase === 'ride' || sg.phase === 'air'){
+        if(s.id === 'down') ok = sg.phase === 'ride' && J.y > 0.35 && sg.h < 0.35;
+        else if(s.id === 'up') ok = J.y < -0.35 && sg.h > 0.72;
+        else if(s.id === 'pump'){ l.n = (sg.pumps || 0) - l.pumps0; ok = l.n >= 3; }
+        else if(s.id === 'cut'){ if(sg.psi > 2) l.seen = true; ok = l.seen && sg.psi < 0.2; }
+        else if(s.id === 'tube') ok = sg.tube >= 1.5;
+        else if(s.id === 'air'){ if(sg.phase === 'air') l.seen = true; ok = l.seen && sg.phase === 'ride'; }
+      }
+      if(ok){ l.wait = 0.9; msg = L('✅ יופי!', '✅ Nice!'); }
+    }
+    if(l.shown !== msg + l.i){
+      l.shown = msg + l.i;
+      document.getElementById('sgLessonStep').textContent = L('שיעור גלישה · שלב ', 'Surf lesson · step ') + (l.i + 1) + L(' מתוך ', ' of ') + LS_STEPS.length;
+      document.getElementById('sgLessonMsg').textContent = msg;
+      document.getElementById('sgLessonDots').innerHTML = LS_STEPS.map(function(x, i){ return '<i' + (i < l.i ? ' class="on"' : '') + '></i>'; }).join('');
+    }
+  }
+  sgFrame = (function(orig){ return function(dt){
+    if(sg.lesson) lsPre(dt);
+    orig(dt);
+    if(sg.lesson) lsPost(dt); else if(!lsBox.hidden) lsHide();
+  }; })(sgFrame);
+  sgEnd = (function(orig){ return function(completed){
+    if(sg.lesson){ if(sg.lesson.over){ sgOpenMenu(); return; } lsAgain(!completed); return; }
+    return orig.apply(this, arguments);
+  }; })(sgEnd);
+  lsSkip.addEventListener('click', function(e){ e.stopPropagation(); lsDone(); lsHide(); sgOpenMenu(); });
+  document.getElementById('sgLessonGo').addEventListener('click', function(e){ e.stopPropagation(); lsHide(); sgOpenMenu(); });
+  // the menu's lesson button and the name field (the name used to be only on the runner's screen)
+  function lsWait(n){
+    if(sg.phase !== 'menu' || sgMenu.hidden || sg3.state === 'failed') return;
+    if(sg3.state !== 'ready'){ if(n < 120) setTimeout(function(){ lsWait(n + 1); }, 150); return; }
+    lsStart();
+  }
+  document.getElementById('sgLessonBtn').addEventListener('click', function(){ lsWait(0); });
+  var lsName = document.getElementById('sgNameInput');
+  lsName.addEventListener('input', function(){ playerNameInput.value = lsName.value; playerNameInput.dispatchEvent(new Event('input')); });
+  sgOpenMenu = (function(orig){ return function(){
+    var r = orig.apply(this, arguments);
+    lsName.value = playerName; lsName.placeholder = L('השם שלך', 'Your name');
+    document.getElementById('sgLessonBtn').textContent = L('🎓 שיעור גלישה', '🎓 Surf lesson');
+    return r;
+  }; })(sgOpenMenu);
+  // the app opens on the surf game; someone who has never surfed starts with the lesson
+  function lsNewPlayer(){
+    if(sgSave.lessonDone) return false;
+    var b = sgSave.best10 || {};
+    return !Object.keys(b).some(function(k){ return b[k] > 0; });
+  }
+  function sgBootSurf(){
+    if(!langOverlay.hidden || startOverlay.hidden || state !== 'start') return;
+    sgOpenMenu();
+    if(lsNewPlayer()) lsWait(0);
+  }
+  Array.prototype.forEach.call(document.querySelectorAll('.lang-pick'), function(b){ b.addEventListener('click', sgBootSurf); });
+  // <<< surf first and the lesson
   // idle player pose before first game
   resetGame();
+  sgBootSurf();
   requestAnimationFrame(frame);
 })();
 </script>
