@@ -7440,7 +7440,7 @@
       ' vec2 s5 = texture2D(uNrm, vec2(uvW.x * 2.1, uvW.y * 0.75) * mat2(0.94, -0.34, 0.34, 0.94) + flw * uT * 0.38).xy * 2.0 - 1.0;\n' +
       ' float lf = face * det * uHasN; float ln = s4.y * 0.6 + s5.y * 0.4;\n' +
       ' rp += (s4 * 0.35 + s5 * 0.25) * lf + s3 * 0.3 * sea * det;\n' +
-      ' N = normalize(Ng + (tX * rp.x + tY * rp.y) * mix(0.6, 0.95, face));\n' +
+      ' N = normalize(Ng + (tX * rp.x + tY * rp.y) * mix(0.6, 0.42, face));\n' +
       // Fresnel and the sky in the water
       ' vec3 R = reflect(-V, N); float NdV = max(dot(N, V), 0.0);\n' +
       ' float F = 0.02 + 0.98 * pow(1.0 - NdV, 5.0);\n' +
@@ -7467,11 +7467,16 @@
       ' body = mix(body, uGlow, thinness * 0.5);\n' +
       ' float sss = pow(clamp(dot(V, -normalize(uSunDir + N * 0.4)), 0.0, 1.0), 4.0) * 1.4 + 0.25;\n' +
       ' body += uGlow * sss * thinness * 0.6;\n' +
-      ' body *= 1.0 - 0.45 * vCave - 0.3 * inside;\n' +
+      ' body *= mix(vec3(1.0), vec3(0.8, 1.36, 1.02), (1.0 - sea) * 0.85);\n      body *= 1.0 - 0.3 * vCave - 0.3 * inside;\n' +
       ' body = mix(body, uDeep * vec3(0.5, 0.68, 1.1), 0.35 * inside);\n' +
-      ' vec3 col = mix(body, skyR, F * (1.0 - 0.6 * thinness) * (1.0 - 0.5 * vCurt) * (1.0 - 0.4 * sea));\n' +
+      ' vec3 col = mix(body, skyR, F * (1.0 - 0.6 * thinness) * (1.0 - 0.5 * vCurt) * (1.0 - 0.68 * sea));\n' +
       // the sun: small sharp glints
-      ' col += vec3(0.8, 0.92, 1.0) * smoothstep(0.04, 0.32, ln) * 0.3 * lf;\n' +
+      ' float wsY = vW.y * 1.2 - vW.z * 0.4; vec2 wsU = vec2(vW.x * 0.55 + sin(wsY * 0.9 + vW.x * 0.12) * 0.1, wsY * 0.055 - uT * 0.09);\n' +
+      ' float wsA = texture2D(uNrm, wsU).y; float wsB = texture2D(uNrm, wsU * vec2(2.3, 1.7) + vec2(0.37, uT * 0.03)).y;\n' +
+      ' float wsK = (1.0 - sea) * uHasN * (0.35 + 0.65 * det) * smoothstep(0.03, 0.28, h) * (1.0 - 0.75 * vCave) * (1.0 - smoothstep(0.03, 0.14, fwidth(wsU.x) + fwidth(wsU.y)));\n' +
+      ' float wsL = smoothstep(0.58, 0.74, wsA) * 0.55 + smoothstep(0.62, 0.72, wsB) * 0.45;\n' +
+      ' col = mix(col, vec3(0.86, 0.96, 1.0), wsL * wsK * (0.42 + 0.34 * h));\n' +
+      ' col *= 1.0 - 0.3 * smoothstep(0.34, 0.5, 1.0 - wsA) * wsK;\n' +
       ' col *= 1.0 - 0.2 * smoothstep(0.04, 0.32, -ln) * lf;\n' +
       ' float spc = max(dot(R, uSunDir), 0.0);\n' +
       ' col += uSunC * (pow(spc, 1200.0) * 10.0 + pow(spc, 300.0) * 0.6) * (0.4 + 0.6 * det);\n' +
@@ -7491,13 +7496,13 @@
       ' col = mix(col, foamC, f);\n' +
       ' col = mix(col, uFog, smoothstep(200.0, 1000.0, dd));\n' +
       ' gl_FragColor = vec4(col, 1.0);' + OUT;
-    var wm = new T.ShaderMaterial({ side: T.DoubleSide, uniforms: WU,
+    var wm = new T.ShaderMaterial({ extensions: { derivatives: true }, side: T.DoubleSide, uniforms: WU,
       vertexShader: 'attribute float foam; attribute float thin; attribute float curt; attribute float cave; varying vec3 vW; varying vec3 vN; varying float vFoam; varying float vThin; varying float vCurt; varying float vCave;\n' +
         'void main(){ vec4 w = modelMatrix * vec4(position, 1.0); vW = w.xyz; vN = normalize(mat3(modelMatrix) * normal); vFoam = foam; vThin = thin; vCurt = curt; vCave = cave; gl_Position = projectionMatrix * viewMatrix * w; }',
       fragmentShader: WATER_FS });
     // the sea around: a grid that moves with the camera, swells and chop
     // rolling in toward the beach (calm right next to the wave itself)
-    var oceanMat = new T.ShaderMaterial({ uniforms: WU,
+    var oceanMat = new T.ShaderMaterial({ extensions: { derivatives: true }, uniforms: WU,
       vertexShader: 'uniform float uT; uniform float uAmp; uniform float uH; varying vec3 vW; varying vec3 vN; varying float vFoam; varying float vThin; varying float vCurt; varying float vCave;\n' +
         'void wv(vec2 p, vec2 d, float L, float A, inout float y, inout float dx, inout float dz){ float k = 6.2831853 / L; float om = sqrt(9.8 * k); float ph = k * dot(d, p) - om * uT;\n' +
         ' y += A * sin(ph); float c = A * k * cos(ph); dx += c * d.x; dz += c * d.y; }\n' +
@@ -7769,11 +7774,11 @@
   }
   function sg3Pose(k, look, who){
     var T = sg3.T, R = who || sg3.rider, P = R.parts, X = R.extra, V = function(x, y, z){ return new T.Vector3(x, y, z); };
-    var hip = V(-0.02, 0.86 - 0.24 * k, 0), kneeB = V(-0.27, 0.46 - 0.1 * k, 0.16), kneeF = V(0.24, 0.48 - 0.1 * k, 0.14);
+    var hip = V(-0.02, 0.86 - 0.34 * k, 0), kneeB = V(-0.27, 0.46 - 0.13 * k, 0.06 + 0.2 * k), kneeF = V(0.24, 0.48 - 0.13 * k, 0.05 + 0.2 * k);
     var footB = V(-0.36, 0.08, 0.02), footF = V(0.33, 0.08, -0.01);
-    var sh = V(0.04 + 0.05 * k, 1.4 - 0.3 * k, 0.13 * k), nk = V(sh.x + 0.05, sh.y + 0.1, sh.z), hd = V(sh.x + 0.1, sh.y + 0.25, sh.z);
+    var sh = V(0.06 + 0.08 * k, 1.4 - 0.46 * k, 0.24 * k), nk = V(sh.x + 0.05, sh.y + 0.1, sh.z), hd = V(sh.x + 0.1, sh.y + 0.25, sh.z);
     var shB = V(sh.x - 0.15, sh.y - 0.02, sh.z + 0.085), shF = V(sh.x + 0.15, sh.y - 0.02, sh.z - 0.085);
-    var elB = V(sh.x - 0.36, sh.y - 0.16, sh.z + 0.14), haB = V(sh.x - 0.62, sh.y - 0.3, sh.z + 0.2), elF = V(sh.x + 0.36, sh.y - 0.1, sh.z + 0.02), haF = V(sh.x + 0.66, sh.y - 0.16, sh.z + 0.14);
+    var elB = V(sh.x - 0.26, sh.y - 0.26, sh.z + 0.14), haB = V(sh.x - 0.42, sh.y - 0.5, sh.z + 0.22), elF = V(sh.x + 0.32, sh.y - 0.2, sh.z + 0.05), haF = V(sh.x + 0.56, sh.y - 0.36, sh.z + 0.2);
     sg3Limb(T, P.thighB, hip, kneeB); sg3Limb(T, P.shinB, kneeB, footB);
     sg3Limb(T, P.thighF, hip, kneeF); sg3Limb(T, P.shinF, kneeF, footF);
     sg3Limb(T, P.torso, hip, sh); sg3Limb(T, P.stripe, V(hip.x + 0.03, hip.y + 0.05, -0.15), V(sh.x + 0.02, sh.y - 0.05, -0.16));
@@ -7846,6 +7851,7 @@
       }
     }
     sg3.geo.attributes.position.needsUpdate = true; sg3.geo.attributes.foam.needsUpdate = true; sg3.geo.attributes.thin.needsUpdate = true; sg3.geo.attributes.curt.needsUpdate = true; sg3.geo.attributes.cave.needsUpdate = true;
+    labWaveDetail(pos, Hm, now);
     var nrmA = sg3.geo.attributes.normal ? sg3.geo.attributes.normal.array : null;
     if(!nrmA){ nrmA = new Float32Array(pos.length); sg3.geo.setAttribute('normal', new T.BufferAttribute(nrmA, 3)); }
     for(var nc = 0; nc < SG3_COLS; nc++){
@@ -7940,7 +7946,7 @@
     var povNow = (sg3.camMode === 'pov' && riding3) || sg.phase === 'paddle';
     var chaseNow = sg3.camMode === 'chase' && (riding3 || sg.phase === 'wipe' || sg.phase === 'over') && sg.phase !== 'paddle';
     R.body.children.forEach(function(ch){ if(ch !== R.board && ch !== R.stripe && ch !== R.fin) ch.visible = !povNow; });
-    R.sfK = sfCrouch(sg.phase === 'paddle' ? 0.05 : sg.phase === 'air' && sg.air && sg.air.sup > 0.01 ? 0.3 : sg.tube > 0.1 ? 0.95 : sg.phase === 'ride' && (sg.joy && sg.joy.y < -0.3) ? 0.25 : 0.65);
+    R.sfK = sfCrouch(sg.phase === 'paddle' ? 0.05 : sg.phase === 'air' && sg.air && sg.air.sup > 0.01 ? 0.3 : sg.tube > 0.1 ? 1.1 : sg.phase === 'ride' && (sg.joy && sg.joy.y < -0.3) ? 0.45 : 0.86);
     sg3Pose(R.sfK); sfArms(T, R);
     if(sg.phase === 'paddle') sg3PoseProne(T, R, sg.pad.kL || 0, sg.pad.kR || 0);
     if(sg.phase === 'walk' && sg.walk){ sg3PoseWalk(T, R, sg.walk.ph, 0); R.stripe.visible = false; R.fin.visible = false;
@@ -8013,10 +8019,10 @@
     sg3.spray.pts.material.uniforms.uBack.value = backLit; sg3.billows.pts.material.uniforms.uBack.value = backLit * 0.5;
     // the foam ball: big soft puffs boiling up and rolling back
     for(var e = 0; e < 30; e++) emit(sg3.billows, cm - Math.random() * Hm * 1.4, Hm * (0.1 + Math.random() * 0.3), impactZ * (0.5 + Math.random() * 0.6),
-      -Math.random() * 3 - 0.5, (1.2 + Math.random() * 3) * sq, (Math.random() - 0.3) * 2, 1.4 + Math.random() * 1.6, Hm * (0.25 + Math.random() * 0.45), 0.3 + Math.random() * 0.3);
+      -Math.random() * 3 - 0.5, (1.2 + Math.random() * 3) * sq, (Math.random() - 0.3) * 2, 1.0 + Math.random() * 1.1, Hm * (0.14 + Math.random() * 0.24), 0.34 + Math.random() * 0.3);
     // the foam cloud towering up behind the curl
     for(var e9 = 0; e9 < 4; e9++) emit(sg3.billows, cm - Math.random() * Hm * 1.2, Hm * (0.4 + Math.random() * 0.5), impactZ * (0.3 + Math.random() * 0.7),
-      -Math.random() * 2, (2.5 + Math.random() * 3.5) * sq, (Math.random() - 0.5) * 1.5, 1.8 + Math.random() * 1.4, Hm * (0.45 + Math.random() * 0.5), 0.5);
+      -Math.random() * 2, (1.0 + Math.random() * 2.0) * sq, (Math.random() - 0.5) * 1.5, 0.9 + Math.random() * 0.7, Hm * (0.16 + Math.random() * 0.2), 0.3);
     // fine spray and mist thrown high where the lip lands
     for(var e2 = 0; e2 < 18; e2++) emit(sg3.spray, cm - Math.random() * 2.5, Hm * (0.25 + Math.random() * 0.2), impactZ * (0.5 + Math.random() * 0.6),
       -Math.random() * 4, (3 + Math.random() * 7) * sq, (Math.random() - 0.2) * 3, 0.7 + Math.random() * 0.8, 0.05 + Math.random() * 0.12, 0.8);
@@ -8039,10 +8045,10 @@
     // rail spray all through a carve (the board's heading changing fast)
     var dPsi = Math.abs((sg.psi || 0) - (sg3.lastPsi || 0)) / Math.max(0.001, dtR); sg3.lastPsi = sg.psi || 0;
     if(dPsi > 0.8 && sg.phase === 'ride') for(var e7 = 0; e7 < 10; e7++) emit(sg3.spray, p.x - fwd.x * 0.6, p.y + 0.08, p.z - fwd.z * 0.6,
-      -side3.x * (2 + Math.random() * 3) + (Math.random() - 0.5), (2.5 + Math.random() * 4) * sq, -side3.z * (2 + Math.random() * 3) + (Math.random() - 0.5), 0.6 + Math.random() * 0.5, 0.04 + Math.random() * 0.1, 0.9);
+      -side3.x * (2 + Math.random() * 3) + (Math.random() - 0.5), (2.5 + Math.random() * 4) * sq, -side3.z * (2 + Math.random() * 3) + (Math.random() - 0.5), 0.5 + Math.random() * 0.5, 0.02 + Math.random() * 0.05, 0.85);
     // the rail always churns a little water while you ride
     if(sg.phase === 'ride') for(var e8 = 0; e8 < 4; e8++) emit(sg3.spray, p.x - fwd.x * (0.3 + Math.random() * 0.6), p.y + 0.04, p.z - fwd.z * 0.5 + nrm.z * 0.15,
-      -fwd.x * (0.5 + Math.random() * 1.5), 0.8 + Math.random() * 1.8, nrm.z * (0.3 + Math.random() * 1.2), 0.35 + Math.random() * 0.4, 0.04 + Math.random() * 0.07, 0.85);
+      -fwd.x * (0.5 + Math.random() * 1.5), 0.8 + Math.random() * 1.8, nrm.z * (0.3 + Math.random() * 1.2), 0.3 + Math.random() * 0.35, 0.018 + Math.random() * 0.032, 0.8);
     // spray off the board when it carves: the 2D ride's spray list says when
     if(sg.spray.length > (sg3.lastSpray || 0)){
       var nNew = Math.min(70, sg.spray.length - (sg3.lastSpray || 0));
@@ -8063,7 +8069,7 @@
       var q0 = faceAt(pt.h), age = w / WK, half = 0.12 + 0.2 * age;
       wp[o] = pt.x * SG3_M; wp[o + 1] = q0[1] + half; wp[o + 2] = q0[0] - half * 0.6 + 0.04;
       wp[o + 3] = pt.x * SG3_M; wp[o + 4] = q0[1] - half; wp[o + 5] = q0[0] + half * 0.6 + 0.04;
-      wa[w * 2] = wa[w * 2 + 1] = 0.85 * Math.pow(age, 0.7);
+      wa[w * 2] = wa[w * 2 + 1] = 0.5 * Math.pow(age, 0.7);
     }
     sg3.wgeo.attributes.position.needsUpdate = true; sg3.wgeo.attributes.alpha.needsUpdate = true;
 
@@ -8121,8 +8127,11 @@
       // front of the face and a little ahead of the surfer, looking back
       // into the pocket -- the wave fills the screen, the barrel opens to us
       var trough = Hm * 2.2 * (brS[2] || 1);
-      var ce = new T.Vector3(p.x + 2.0 + Hm * 1.3, 0.45 + Hm * 0.1, trough + 1.0 + Hm * 0.95);
-      var ct = new T.Vector3(p.x - Hm * 0.45, Hm * 0.45 + p.y * 0.25 + airUp * 0.6, Math.min(p.z, trough) - Hm * 0.3);
+      var ce = new T.Vector3(p.x + 1.5 + Hm * 1.05, 0.34 + Hm * 0.1, trough + 0.1 + Hm * 0.5);
+      var ct = new T.Vector3(p.x - Hm * 0.4, Hm * 0.66 + p.y * 0.3 + airUp * 0.6, Math.min(p.z, trough) - Hm * 0.3);
+      if(portrait){ ce.z += Hm * 0.7; ce.x -= Hm * 0.25; ct.x = p.x - Hm * 0.08; }   /* (a narrow screen: further back, the rider in the middle) */
+      if(airUp > 0) ct.x += (p.x - ct.x) * Math.min(1, airUp / Hm * 2.5);
+      if(sg3.tubeK > 0.01 && sg.phase !== 'paddle'){ var mxT = (sg.curl + sg.throwLen) * SG3_M + Hm * 1.3, tkC = sg3.tubeK * sg3.tubeK * (3 - 2 * sg3.tubeK); ce.lerp(new T.Vector3(Math.max(mxT, p.x + Hm * 1.9), 0.22 + Hm * 0.24, Hm * 0.86), tkC); ct.lerp(new T.Vector3(p.x - Hm * 0.1, p.y + 0.55, p.z), tkC); }
       ce.y += airUp * 0.35; ce.z += airUp * 0.5;
       if(sg.phase === 'paddle'){
         var tw = sg.pad.turn;
@@ -14587,7 +14596,7 @@
   // never while the name field is being typed in. Everything worth keeping
   // (coins, skins, name, league) is in localStorage, so a reload loses nothing.
   // 'dev' = a local or preview copy: the updater stays off entirely.
-  var BUILD_VERSION = '20261107-205727';
+  var BUILD_VERSION = '20261108-074240';
   var UPDATE_CHECK_MS = 60000;
   var UPDATE_TRIED_KEY = 'canyonChaseTriedUpdate';
   var pendingSubmits = 0;
@@ -14947,7 +14956,7 @@
       var a5 = new Float32Array(n), a6 = new Float32Array(n);
       for(var i5 = 0; i5 < n; i5++){ var t5 = 0, s5 = 0; for(var c5 = 0; c5 < 4; c5++){ var w5 = sw[get[c5]](i5), b5 = si[get[c5]](i5); if(w5 > 0 && teeB[b5]) t5 += w5; if(w5 > 0 && shB[b5]) s5 += w5; } a5[i5] = t5; a6[i5] = s5; }
       o.geometry.setAttribute('aTee', new T.BufferAttribute(a5, 1)); o.geometry.setAttribute('aShorts', new T.BufferAttribute(a6, 1));
-      var m = o.material.clone(); m.name = 'lab-suit';
+      var m = o.material.clone(); m.name = 'lab-suit'; m.extensions = { derivatives: true };
       m.onBeforeCompile = function(sh){
         labBendInject(sh);
         sh.uniforms.uSuit = suitU; sh.uniforms.uAcc = accU; sh.uniforms.uShoe = shoeU; sh.uniforms.uSkate = skateU; sh.uniforms.uShorts = shortsU; o.geometry.computeBoundingBox(); var bbG = o.geometry.boundingBox; sh.uniforms.uRestMin = { value: new T.Vector3((bbG.min.x + bbG.max.x) / 2, bbG.min.y, (bbG.min.z + bbG.max.z) / 2) }; sh.uniforms.uRestH = { value: bbG.max.y - bbG.min.y }; sh.uniforms.uTeeOn = teeU; sh.uniforms.uSkinT = skinU; sh.uniforms.uPaint = paintU; sh.uniforms.uCov = covU; sh.uniforms.uCr = crU;
@@ -15249,7 +15258,7 @@
   // normals (so the light follows): sections (the wave a little higher here,
   // lower there, drifting down the line), swells running up the face, and a
   // lip whose edge wobbles instead of being one straight line.
-  var labWave = { on: false, bend: false, opt: !/[?&]noopt/.test(location.search) };     // (?noopt: without the beach/city merge, to compare)
+  var labWave = { on: true, bend: false, opt: !/[?&]noopt/.test(location.search) };     // (?noopt: without the beach/city merge, to compare)
   // (integer hash: thousands of these a frame, so no Math.sin)
   function labHash(i, j){ var h = Math.imul(i, 374761393) + Math.imul(j, 668265263) | 0; h = Math.imul(h ^ (h >>> 13), 1274126177); return ((h ^ (h >>> 16)) >>> 0) / 4294967296; }
   function labNoise(x, y){
@@ -15265,7 +15274,7 @@
       var b0 = c * R * 3, x = pos[b0];
       // sections: this part of the wave a little taller or lower
       var sec = 1 + A * 0.08 * (labNoise(x * 0.045 - t * 0.04, 3.7) * 2 - 1);
-      var y0 = pos[b0 + (R - 1) * 3 + 1], lipN = (labNoise(x * 0.22 - t * 0.25, 9.1) - 0.5) * 2;
+      var y0 = pos[b0 + (R - 1) * 3 + 1], lipN = (labNoise(x * Math.min(0.22, 0.2 / (pos[3 * R] - pos[0] || 1)) - t * 0.25, 9.1) - 0.5) * 2;
       var alen = 0, pz = pos[b0 + 2], py = pos[b0 + 1];
       for(var r = 0; r < R; r++){
         var i = b0 + r * 3, z = pos[i + 2], y = pos[i + 1];
@@ -15277,7 +15286,7 @@
         // swells running up the face (rows ~24..58), little on the back and the flat sea
         // (none on the back: raised, it would show its dark side over the crest)
         var fw = Math.max(0, Math.min(1, (r - 22) / 8)) * Math.max(0, Math.min(1, (59 - r) / 5));
-        var bump = (labNoise(x * 0.16 + t * 0.04, alen * 0.3 - t * 0.7) - 0.5) * 0.65 + (labNoise(x * 0.45 - t * 0.1, alen * 0.8 - t * 1.4) - 0.5) * 0.35;
+        var bump = (labNoise(x * 0.16 + t * 0.04, alen * 0.3 - t * 0.7) - 0.5) * 0.65 + (labNoise(x * Math.min(0.45, 0.25 / (pos[3 * R] - pos[0] || 1)) - t * 0.1, alen * 0.8 - t * 1.4) - 0.5) * 0.35;
         var d = A * Hm * 0.09 * fw * bump;
         // the lip's edge: in and out along the line
         if(r >= 14 && r <= 28){ var lw = Math.sin((r - 14) / 14 * Math.PI); d += A * Hm * 0.035 * lw * lipN; }
@@ -16735,7 +16744,7 @@
   function sfArms(T, R){
     var Ld = sg3.sfLand; if(!Ld) return;
     var s = sfDepth() * (0.55 + 0.45 * Ld.k); if(s < 0.02) return;
-    var k = R.sfK === undefined ? 0.9 : R.sfK, sh = new T.Vector3(0.04 + 0.05 * k, 1.4 - 0.3 * k, 0.13 * k);
+    var k = R.sfK === undefined ? 0.9 : R.sfK, sh = new T.Vector3(0.06 + 0.08 * k, 1.4 - 0.46 * k, 0.24 * k);
     [[R.parts.uArmF, R.parts.fArmF, R.extra.handF, -1], [R.parts.uArmB, R.parts.fArmB, R.extra.handB, 1]].forEach(function(A){
       var s0 = sh.clone().add(new T.Vector3(-A[3] * 0.15, -0.02, A[3] * 0.085));
       var rest = A[2].position.clone(), out = s0.clone().add(new T.Vector3(-A[3] * 0.56, 0.06, 0.12));
