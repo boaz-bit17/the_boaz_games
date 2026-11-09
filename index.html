@@ -14638,7 +14638,7 @@
   // never while the name field is being typed in. Everything worth keeping
   // (coins, skins, name, league) is in localStorage, so a reload loses nothing.
   // 'dev' = a local or preview copy: the updater stays off entirely.
-  var BUILD_VERSION = '20261109-142906';
+  var BUILD_VERSION = '20261109-145334';
   var UPDATE_CHECK_MS = 60000;
   var UPDATE_TRIED_KEY = 'canyonChaseTriedUpdate';
   var pendingSubmits = 0;
@@ -17444,6 +17444,54 @@
   }; })(sgHud);
   bpPeople = (function(orig){ return function(U){ var o = orig.apply(this, arguments); if(U.coach && o.indexOf(U.coach) < 0) o.push(U.coach); return o; }; })(bpPeople);
   // <<< surf career
+  // >>> shops layout (lab/shops.js)
+  // ---------- the shops and menu at the bottom of the beach list: roomy, even cards (2026-11-09) ----------
+  // Only how they look and sit: every button keeps its own click, the shop keeps its items, prices and buying.
+  (function(){ var st = document.createElement('style');
+    st.textContent = '.sg-hub-title{font-family:"Suez One",serif;font-size:18px;text-align:center;margin:12px 0 2px}' +
+      '.sg-hub{display:grid;grid-template-columns:repeat(auto-fill,minmax(148px,1fr));gap:12px;margin:8px 0 18px}' +
+      '.sg-hub .shop-btn{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;width:100%;min-width:0;min-height:108px;margin:0;padding:12px 10px;border-radius:14px;text-align:center;white-space:normal;line-height:1.25;box-sizing:border-box}' +
+      '.sg-hub .shop-btn[hidden]{display:none}.sg-hub .hb-i{font-size:30px;line-height:1.1}.sg-hub .hb-n{font-weight:800;font-size:14px;overflow-wrap:anywhere}.sg-hub .hb-s{font-size:12px;opacity:.82;overflow-wrap:anywhere}' +
+      '#sgMenu,#sgShop,#sgHut{overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}' +
+      '#sgShop .tablet,#sgHut .tablet{width:100%;max-width:min(760px,calc(100vw - 20px));box-sizing:border-box}' +
+      '#sgShop .sg-grid,#sgHut .sg-grid{grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:14px;margin:8px 0 20px}' +
+      '#sgShop .sg-card,#sgHut .sg-card{display:flex;flex-direction:column;align-items:center;gap:4px;min-width:0;padding:12px 10px;box-sizing:border-box}' +
+      '#sgShop .sg-card .skin-name,#sgHut .sg-card .skin-name{font-size:14px;font-weight:800;text-align:center;overflow-wrap:anywhere}' +
+      '#sgShop .sg-card-sub,#sgHut .sg-card-sub{font-size:12px;text-align:center}' +
+      '#sgShop .sg-card-cv,#sgHut .sg-card-cv{width:120px;height:88px}' +
+      '#sgShop .sg-card .skin-btn,#sgHut .sg-card .skin-btn{margin-top:auto;width:100%;min-height:36px;font-size:14px;font-weight:800}' +
+      '@media (max-width:420px){.sg-hub{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}#sgShop .sg-grid,#sgHut .sg-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}}';
+    document.head.appendChild(st); })();
+  var HB_ORDER = ['sgShopBtn', 'sgCareerBtn', 'sgSpBtn', 'sgLessonBtn', 'sgFcBtn', 'sgModeBtn', 'sgHomeMBtn'];
+  function hbHub(){
+    var h = document.getElementById('sgHub'); if(h) return h;
+    var t = document.createElement('div'); t.className = 'sg-hub-title'; t.id = 'sgHubT';
+    h = document.createElement('div'); h.id = 'sgHub'; h.className = 'sg-hub';
+    var back = document.getElementById('sgBackBtn'); back.parentNode.insertBefore(t, back); back.parentNode.insertBefore(h, back);
+    return h;
+  }
+  function hbPaint(id, icon, name, sub){
+    var b = document.getElementById(id); if(!b) return; b.textContent = '';
+    [['hb-i', icon], ['hb-n', name], ['hb-s', sub]].forEach(function(a){ if(!a[1]) return; var s = document.createElement('span'); s.className = a[0]; s.textContent = a[1]; b.appendChild(s); });
+  }
+  function hbFixed(){
+    var h = hbHub(); HB_ORDER.forEach(function(id){ var b = document.getElementById(id); if(b && b.parentNode !== h) h.appendChild(b); });
+    document.getElementById('sgHubT').textContent = L('🏪 חנויות ועוד', '🏪 Shops and more');
+    var C = cr(), T = CR_TIERS[C.t];
+    hbPaint('sgShopBtn', '🛒', L('חנות הגלישה', 'The surf shop'), L('יש לכם 🐚 ', 'You have 🐚 ') + fmtScore(sgSave.shells));
+    hbPaint('sgCareerBtn', '🧢', L('המאמן', 'The coach'), T.name + L(' · מקום ', ' · place ') + crRank() + '/10');
+    hbPaint('sgLessonBtn', '🎓', L('שיעור גלישה', 'Surf lesson'), L('חינם', 'Free'));
+    hbPaint('sgFcBtn', '📅', L('תחזית לשבוע', 'Week forecast'), L('גלים ורוח', 'Waves and wind'));
+    hbPaint('sgModeBtn', sgSave.peakMode ? '🏝️' : '🌊', sgSave.peakMode ? L('מצב פיק', 'Peak mode') : L('מצב גל אחד', 'One wave mode'), L('לחצו להחליף', 'Tap to switch'));
+  }
+  sgRenderMenu = (function(orig){ return function(){
+    var r = orig.apply(this, arguments), sb = document.getElementById('sgSpBtn'), tx = sb ? sb.textContent.trim() : '', sp = tx.indexOf(' ');
+    if(sb && sp > 0) hbPaint('sgSpBtn', tx.slice(0, sp), tx.slice(sp + 1), '');
+    hbFixed();
+    return r;
+  }; })(sgRenderMenu);
+  sgOpenMenu = (function(orig){ return function(){ var r = orig.apply(this, arguments); hbFixed(); return r; }; })(sgOpenMenu);
+  // <<< shops layout
   // idle player pose before first game
   resetGame();
   sgBootSurf();
