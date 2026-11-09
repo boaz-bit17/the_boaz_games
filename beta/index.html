@@ -14651,7 +14651,7 @@
   // never while the name field is being typed in. Everything worth keeping
   // (coins, skins, name, league) is in localStorage, so a reload loses nothing.
   // 'dev' = a local or preview copy: the updater stays off entirely.
-  var BUILD_VERSION = '20261109-141823';
+  var BUILD_VERSION = '20261109-142416';
   var UPDATE_CHECK_MS = 60000;
   var UPDATE_TRIED_KEY = 'canyonChaseTriedUpdate';
   var pendingSubmits = 0;
@@ -17816,6 +17816,21 @@
     var v = Math.abs(CR_X - (sg3.cam.position.x - sgLot.parkX)) < 70; r.g.visible = v; if(!v) return;
     sg3PoseWalk(T, r, 0, 0); r.board.visible = false; r.head.rotation.y = 0.35 * Math.sin(now * 0.5);
   }; })(sg3Beach);
+  // out of the water: a big arrow low on the screen that always points to the coach, until you've reached him on this trip
+  sgHud = (function(orig){ return function(sx, sy, sc){
+    orig.apply(this, arguments);
+    if(sg.phase === 'paddle'){ sg.coachSeen = false; return; }
+    var Wh = sg.walk; if(sg.phase !== 'walk' || !Wh || !sgLot || sg.lesson || sg.coachSeen || sgHutOpen !== null || sgBG.in || Wh.t <= 0.8) return;
+    var dx = sgLot.parkX + CR_X - Wh.x, dz = CR_Z - 1.8 - Wh.z, dd = Math.hypot(dx, dz);
+    if(Wh.door === 'coach'){ sg.coachSeen = true; return; }
+    var fx = Math.cos(Wh.hd), fz = Math.sin(Wh.hd), th = Math.atan2(dx * -fz + dz * fx, dx * fx + dz * fz);
+    var cx = W / 2, cy = H - 86, p = 1.12 + 0.14 * Math.sin(sg.t * 5);
+    ctx.save(); ctx.translate(cx, cy); ctx.rotate(th); ctx.scale(p, p); ctx.beginPath(); ctx.moveTo(0, -34); ctx.lineTo(26, -2); ctx.lineTo(11, -2); ctx.lineTo(11, 28); ctx.lineTo(-11, 28); ctx.lineTo(-11, -2); ctx.lineTo(-26, -2); ctx.closePath();
+    ctx.lineJoin = 'round'; ctx.lineWidth = 6; ctx.strokeStyle = '#20486e'; ctx.stroke(); ctx.fillStyle = '#ffd447'; ctx.fill(); ctx.restore();
+    var lb = L('🧢 למאמן · ', '🧢 Coach · ') + Math.round(dd) + L(' מ׳', ' m');
+    ctx.save(); ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.font = 'bold 15px Rubik, sans-serif'; ctx.lineWidth = 4; ctx.strokeStyle = 'rgba(0,30,50,0.75)'; ctx.fillStyle = '#ffffff';
+    var lx = Math.min(W - 62, cx + 104), ly = cy; ctx.strokeText(lb, lx, ly); ctx.fillText(lb, lx, ly); ctx.restore();
+  }; })(sgHud);
   bpPeople = (function(orig){ return function(U){ var o = orig.apply(this, arguments); if(U.coach && o.indexOf(U.coach) < 0) o.push(U.coach); return o; }; })(bpPeople);
   // <<< surf career
   // idle player pose before first game
