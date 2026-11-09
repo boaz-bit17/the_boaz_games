@@ -4106,6 +4106,7 @@
 
   // ---- server
   function fetchSurf(){
+    surfT = null; return Promise.resolve();
     if(!isOnlineBoard) return Promise.resolve();
     return sbGet('surf_seasons?select=id,start_day,starts_at&' + TEST_ROWS + '&order=start_day.desc,starts_at.desc&limit=1').then(function(rows){
       if(rows && rows[0]){
@@ -14651,7 +14652,7 @@
   // never while the name field is being typed in. Everything worth keeping
   // (coins, skins, name, league) is in localStorage, so a reload loses nothing.
   // 'dev' = a local or preview copy: the updater stays off entirely.
-  var BUILD_VERSION = '20261109-144240';
+  var BUILD_VERSION = '20261109-163814';
   var UPDATE_CHECK_MS = 60000;
   var UPDATE_TRIED_KEY = 'canyonChaseTriedUpdate';
   var pendingSubmits = 0;
@@ -17881,6 +17882,235 @@
   }; })(sgRenderMenu);
   sgOpenMenu = (function(orig){ return function(){ var r = orig.apply(this, arguments); hbFixed(); return r; }; })(sgOpenMenu);
   // <<< shops layout
+  // >>> daily competition (lab/pro.js)
+  // ---------- the daily surf competition (2026-11-09) ----------
+  // One event a day: sign up until 16:00 (Israel time), then three stages in the evening, 16 surfers, AI surfers
+  // (always marked 🤖) in any empty places. Nothing runs per frame except a hidden-check; the sums run when a screen opens.
+  var PRO_KEY = 'canyonProV1', PRO_SIZE = 16, PRO_PRIZES = [3000, 1200, 600];
+  var PRO_STAGES = [ { k: 'r1', name: L('סיבוב ראשון', 'Round one'), o: [16, 0], c: [19, 0], m: 1 }, { k: 'sf', name: L('חצי גמר', 'Semifinals'), o: [19, 0], c: [21, 30], m: 1.05 }, { k: 'f', name: L('גמר', 'Final'), o: [21, 30], c: [23, 30], m: 1.1 } ];
+  var proSave = { tok: '', reg: {}, pend: {}, done: {}, sent: {}, claimed: {} };
+  try { var ps0 = JSON.parse(localStorage.getItem(PRO_KEY) || 'null'); if(ps0) proSave = Object.assign(proSave, ps0); } catch(e){}
+  function proStore(){ try { localStorage.setItem(PRO_KEY, JSON.stringify(proSave)); } catch(e){} }
+  function proTok(){ if(!proSave.tok){ proSave.tok = 'xxxxxxxx-xxxx-4xxx-8xxx-xxxxxxxxxxxx'.replace(/x/g, function(){ return (Math.random() * 16 | 0).toString(16); }); proStore(); } return proSave.tok; }
+  var PRO_BETA = location.pathname.indexOf('/beta/') !== -1 ? 'beta-' : '';
+  function proSpots(){ return SG_SPOTS.filter(function(s){ return !s.tow && !s.wall && !s.windsurf; }); }
+  function proInfo(ms){
+    var key = surfClockDay(ms), p = key.split('-'), y = +p[0], mo = +p[1], d = +p[2], dayN = Math.floor(Date.UTC(y, mo - 1, d) / 86400000), S = proSpots(), spot = S[dayN % S.length];
+    function at(a){ return israelAt(y, mo - 1, d, a[0], a[1]); }
+    return { id: PRO_BETA + key, label: d + '.' + mo, spot: spot, close: at([16, 0]), stages: PRO_STAGES.map(function(s, i){ return { i: i, k: s.k, name: s.name, m: s.m, open: at(s.o), close: at(s.c) }; }), name: L('אליפות ', '') + spot.name + L('', ' Pro') };
+  }
+  function proPhase(I, now){ if(now < I.close) return 'reg'; for(var i = 0; i < 3; i++) if(now < I.stages[i].close) return i; return 'done'; }
+  var PRO = { I: null, entries: [], results: {}, online: false, fetched: 0, msg: '', msgBad: false };
+  function proMe(){ return proSave.reg[PRO.I.id] || null; }
+  function proLoad(force){
+    var now = Date.now(); PRO.I = proInfo(now);
+    if(!force && now - PRO.fetched < 20000) return Promise.resolve();
+    PRO.fetched = now;
+    return proFetch(PRO.I).then(function(F){ PRO.entries = F.entries; PRO.results = F.results; PRO.online = F.online; proSync(); });
+  }
+  function proFetch(I){
+    var d = encodeURIComponent(I.id);
+    return Promise.all([ sbGet('pro_entries?select=name,created_at&day=eq.' + d + '&order=created_at.asc&limit=64'), sbGet('pro_results?select=heat,name,score&day=eq.' + d + '&limit=200') ]).then(function(R){
+      var results = {}; (R[1] || []).forEach(function(r){ (results[r.heat] = results[r.heat] || {})[r.name] = r.score; });
+      return { entries: R[0] || [], results: results, online: !!R[0] };
+    });
+  }
+  // my sign-up and my scores are always counted here, even before the server answers (or with no server at all)
+  function proView(I, F){
+    var me = proSave.reg[I.id], entries = F.entries.slice(), results = {}; Object.keys(F.results).forEach(function(k){ results[k] = Object.assign({}, F.results[k]); });
+    if(me && !entries.some(function(e){ return e.name === me; })) entries.push({ name: me, created_at: new Date(Date.now()).toISOString() });
+    var done = proSave.done[I.id] || {}; if(me) Object.keys(done).forEach(function(h){ (results[h] = results[h] || {})[me] = done[h]; });
+    return { I: I, entries: entries, results: results };
+  }
+  function proSync(){
+    if(!PRO.online) return;
+    var I = PRO.I, me = proMe(); if(!me) return;
+    if(!PRO.entries.some(function(e){ return e.name === me; }) && Date.now() < I.close) proRpc('pro_join', { d: I.id, n: me, t: proTok() });
+    var done = proSave.done[I.id] || {}; Object.keys(done).forEach(function(h){ if(!(PRO.results[h] || {})[me] && !(proSave.sent[I.id] || {})[h]) proSend(I, h, me, done[h]); });
+  }
+  function proRpc(fn, body){
+    if(!isOnlineBoard) return Promise.resolve(null);
+    return fetch(SUPABASE_URL + '/rest/v1/rpc/' + fn, { method: 'POST', headers: supabaseHeaders(), body: JSON.stringify(body) }).then(function(r){ return r.ok ? r.json() : null; }).catch(function(){ return null; });
+  }
+  function proSend(I, h, me, s){ proRpc('pro_result', { d: I.id, h: h, n: me, t: proTok(), s: s }).then(function(a){ if(a === 'ok'){ (proSave.sent[I.id] = proSave.sent[I.id] || {})[h] = 1; proStore(); } }); }
+  // ---- the draw and the heats: the same on every phone ----
+  function proField(V){
+    var reals = V.entries.slice(0, PRO_SIZE).map(function(e){ return { id: 'p:' + e.name, name: e.name, ai: false }; }), rng = mulberry32(surfHash(V.I.id + '|field')), names = SURF_BOT_NAMES.slice(), f = reals.slice();
+    for(var i = names.length - 1; i > 0; i--){ var j = Math.floor(rng() * (i + 1)), t = names[i]; names[i] = names[j]; names[j] = t; }
+    for(var a = 0; f.length < PRO_SIZE; a++) f.push({ id: 'a:' + a, name: names[a % names.length], ai: true, skill: 3.4 + rng() * 4.6 });
+    for(var k = f.length - 1; k > 0; k--){ var m = Math.floor(rng() * (k + 1)), q = f[k]; f[k] = f[m]; f[m] = q; }
+    return f;
+  }
+  function proAiScore(V, S, heat, p){ var rng = mulberry32(surfHash(V.I.id + '|' + heat + '|' + p.id)), w = [0, 1, 2].map(function(){ return Math.min(9.9, p.skill * S.m * (0.75 + rng() * 0.45)); }).sort(function(a, b){ return b - a; }); return { s: Math.round((w[0] + w[1]) * 100), at: S.open + (0.1 + 0.8 * rng()) * (S.close - S.open) }; }
+  function proHeat(V, S, idx, members, now){
+    var key = S.k + '-' + idx, over = now >= S.close, rows = members.map(function(p){ var sc = null, ns = false;
+      if(p.ai){ var A = proAiScore(V, S, key, p); if(over || now >= A.at) sc = A.s; }
+      else { var v = (V.results[key] || {})[p.name]; if(v !== undefined) sc = v; else if(over){ sc = 0; ns = true; } }
+      return { p: p, s: sc, ns: ns }; });
+    rows.sort(function(a, b){ return (b.s === null ? -1 : b.s) - (a.s === null ? -1 : a.s) || surfHash(a.p.id) - surfHash(b.p.id); });
+    return { key: key, S: S, idx: idx, rows: rows, over: over };
+  }
+  function proBracket(V, now){
+    var f = proField(V), St = V.I.stages, r1 = [0, 1, 2, 3].map(function(i){ return proHeat(V, St[0], i, f.slice(i * 4, i * 4 + 4), now); }), out = [r1], sf = null, fin = null;
+    if(r1[0].over){ function pick(h, n){ return r1[h].rows[n].p; }
+      sf = [ proHeat(V, St[1], 0, [pick(0, 0), pick(1, 1), pick(2, 0), pick(3, 1)], now), proHeat(V, St[1], 1, [pick(1, 0), pick(0, 1), pick(3, 0), pick(2, 1)], now) ]; out.push(sf); }
+    if(sf && sf[0].over){ fin = [ proHeat(V, St[2], 0, [sf[0].rows[0].p, sf[0].rows[1].p, sf[1].rows[0].p, sf[1].rows[1].p], now) ]; out.push(fin); }
+    return { field: f, rounds: out };
+  }
+  function proFmt(s){ return s === null ? '—' : (s / 100).toFixed(2); }
+  function proMine(B, me){ var res = null; B.rounds.forEach(function(R){ R.forEach(function(h){ if(h.rows.some(function(r){ return !r.p.ai && r.p.name === me; })) res = h; }); }); return res; }
+
+  // ---- the screen ----
+  (function(){ var st = document.createElement('style');
+    st.textContent = '#proOverlay .tablet{width:100%;max-width:min(620px,calc(100vw - 20px));box-sizing:border-box}.pro-hero{position:relative;border-radius:16px;overflow:hidden;color:#fff;padding:18px 14px 44px;text-align:center;text-shadow:0 2px 6px rgba(0,0,0,.55);margin-bottom:12px}.pro-hero svg{position:absolute;left:0;right:0;bottom:0;width:100%;height:46px}.pro-hero h2{font-family:"Suez One",serif;font-size:26px;margin:2px 0}.pro-lg{font-size:12px;font-weight:800;letter-spacing:.5px;opacity:.95}.pro-where{font-size:14px;font-weight:700;position:relative}' +
+      '.pro-chips{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px;margin-bottom:12px}.pro-chip{background:rgba(255,255,255,.6);border-radius:12px;padding:9px 6px;text-align:center;font-size:12px}.pro-chip b{display:block;font-size:15px}.pro-chip.prize{background:linear-gradient(135deg,#fff3b0,#f5c542)}' +
+      '.pro-bar{height:12px;border-radius:6px;background:rgba(0,0,0,.14);overflow:hidden;margin:6px 0}.pro-bar i{display:block;height:100%;background:linear-gradient(90deg,#2fb68a,#7fd64f)}.pro-sec{font-family:"Suez One",serif;font-size:17px;text-align:center;margin:14px 0 6px}.pro-c{text-align:center;font-size:13px}' +
+      '.pro-go{display:block;width:100%;min-height:62px;font-size:21px;margin:10px 0 6px}.pro-cancel{display:block;margin:0 auto 8px;background:none;border:0;color:#a23a22;font-weight:700;font-size:13px;text-decoration:underline;cursor:pointer;font-family:inherit}.pro-msg{background:#2fb68a;color:#fff;font-weight:800;text-align:center;border-radius:10px;padding:9px;margin:6px 0}.pro-msg.bad{background:#c8452f}' +
+      '.pro-how{margin:0;padding:0 18px;font-size:13px;line-height:1.6}.pro-list{display:flex;flex-wrap:wrap;gap:6px;justify-content:center}.pro-p{background:rgba(255,255,255,.65);border-radius:999px;padding:4px 10px;font-size:13px;font-weight:600}.pro-p.me{background:#ffd447;font-weight:800}.pro-p.ai{opacity:.75}' +
+      '.pro-heats{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:10px}.pro-heat{background:rgba(255,255,255,.6);border-radius:12px;padding:8px 10px}.pro-heat.mine{outline:3px solid #ffd447}.pro-ht{font-weight:800;font-size:13px;margin-bottom:3px}.pro-r{display:flex;justify-content:space-between;gap:8px;font-size:13px;padding:2px 4px;border-radius:6px}.pro-r.adv{color:#157a4e;font-weight:800}.pro-r.me{background:#ffd447;color:#2a150f}' +
+      '.pro-cer{position:relative;overflow:hidden;background:linear-gradient(180deg,#143a63,#0d6a8a);border-radius:16px;color:#fff;padding:14px;text-align:center;margin:10px 0}.pro-tr{font-size:64px;line-height:1.1}.pro-pod{display:flex;align-items:flex-end;justify-content:center;gap:8px;margin-top:8px}.pro-st{flex:1;max-width:120px;border-radius:10px 10px 0 0;padding:6px 3px;font-size:12px;font-weight:800;overflow-wrap:anywhere}.pro-st b{display:block;font-size:20px}.pro-st.a{background:#d9a925;height:112px}.pro-st.b{background:#9aa6b1;height:88px}.pro-st.c{background:#b57a43;height:70px}' +
+      '.pro-cf{position:absolute;top:-12px;width:7px;height:11px;animation:proF 2.6s linear infinite}@keyframes proF{to{transform:translateY(340px) rotate(420deg)}}' +
+      '#proHud{position:absolute;top:62px;right:8px;z-index:6;width:158px;background:rgba(0,30,50,.78);color:#fff;border-radius:10px;padding:6px 8px;font:600 12px Rubik,sans-serif;pointer-events:none}#proHud[hidden]{display:none}#proHud b{display:block;font-size:11px;color:#ffe9a8;margin-bottom:2px}#proHud div{display:flex;justify-content:space-between;gap:6px}#proHud .me{color:#ffd447;font-weight:800}';
+    document.head.appendChild(st); })();
+  var proO = document.createElement('div'); proO.className = 'overlay'; proO.id = 'proOverlay'; proO.hidden = true; proO.innerHTML = '<div class="tablet"><div id="proBody"></div><button class="back-btn" id="proClose" type="button"></button></div>'; document.getElementById('surfOverlay').parentNode.appendChild(proO);
+  var proHud = document.createElement('div'); proHud.id = 'proHud'; proHud.hidden = true; document.getElementById('sgExitBtn').parentNode.appendChild(proHud);
+  function proEl(tag, cls, txt, par){ var e = document.createElement(tag); if(cls) e.className = cls; if(txt !== undefined) e.textContent = txt; if(par) par.appendChild(e); return e; }
+  function proShow(msg, bad){ PRO.msg = msg; PRO.msgBad = !!bad; proRender(); }
+  function proRender(){
+    var now = Date.now(), I = PRO.I = proInfo(now), V = proView(I, PRO), ph = proPhase(I, now), me = proMe(), reals = V.entries.slice(0, PRO_SIZE), el = document.getElementById('proBody'), sp = I.spot; el.innerHTML = '';
+    document.getElementById('proClose').textContent = L('חזרה', 'Back');
+    var hero = proEl('div', 'pro-hero', undefined, el); hero.style.background = 'linear-gradient(180deg,' + sp.sky[0] + ' 0%,' + sp.face[0] + ' 58%,' + sp.sea[1] + ' 100%)';
+    proEl('div', 'pro-lg', L('🏆 ליגת הגלישה · תחרות יומית', '🏆 The Surf League · daily event'), hero); proEl('h2', '', sp.emoji + ' ' + I.name, hero); proEl('div', 'pro-where', '📍 ' + sp.name, hero);
+    var wv = document.createElementNS('http://www.w3.org/2000/svg', 'svg'); wv.setAttribute('viewBox', '0 0 400 46'); wv.setAttribute('preserveAspectRatio', 'none'); wv.innerHTML = '<path fill="rgba(255,255,255,.28)" d="M0 30 C60 4 110 4 160 26 S270 46 400 16 V46 H0Z"/><path fill="rgba(255,255,255,.55)" d="M0 40 C70 22 120 26 190 38 S320 44 400 30 V46 H0Z"/>'; hero.appendChild(wv);
+    var ch = proEl('div', 'pro-chips', undefined, el);
+    [['📅 ' + L('תאריך', 'Date'), I.label], ['🕓 ' + L('הרשמה עד', 'Sign up until'), '16:00'], ['🌅 ' + L('מקצים', 'Heats'), '16:00–23:30']].forEach(function(c){ var d = proEl('div', 'pro-chip', c[0], ch); proEl('b', '', c[1], d); });
+    var pz = proEl('div', 'pro-chip prize', '🥇 ' + L('מקום ראשון', 'First place'), ch); proEl('b', '', '🐚 ' + fmtScore(PRO_PRIZES[0]) + ' + 🏆', pz);
+    proEl('div', 'pro-c', L('נרשמו: ', 'Signed up: ') + reals.length + L(' מתוך 16 · מקומות פנויים: ', ' of 16 · places left: ') + Math.max(0, PRO_SIZE - reals.length), el);
+    var bar = proEl('div', 'pro-bar', undefined, el), fl = proEl('i', '', undefined, bar); fl.style.width = Math.round(reals.length / PRO_SIZE * 100) + '%';
+    if(PRO.msg) proEl('div', 'pro-msg' + (PRO.msgBad ? ' bad' : ''), PRO.msg, el);
+    if(ph === 'reg'){
+      if(!me){
+        if(!playerNick()){ var ni = proEl('input', '', undefined, el); ni.type = 'text'; ni.maxLength = 14; ni.placeholder = L('השם שלך', 'Your name'); ni.style.cssText = 'display:block;width:100%;box-sizing:border-box;padding:10px;border-radius:10px;border:1px solid rgba(0,0,0,.25);font:600 15px Rubik,sans-serif;text-align:center'; ni.addEventListener('input', function(){ playerNameInput.value = ni.value; playerNameInput.dispatchEvent(new Event('input')); }); }
+        var go = proEl('button', 'go-btn pro-go', L('הירשם לתחרות', 'Sign up'), el); go.type = 'button'; go.addEventListener('click', proJoin);
+      } else { proEl('div', 'pro-c', L('✅ אתם רשומים בשם ', '✅ You are signed up as ') + me, el); var cx = proEl('button', 'pro-cancel', L('ביטול הרשמה', 'Cancel my sign-up'), el); cx.type = 'button'; cx.addEventListener('click', proCancel); }
+    }
+    if(!PRO.online && isOnlineBoard && ph === 'reg') proEl('div', 'pro-c', L('אין כרגע חיבור לרשימה המשותפת, אז רואים רק אתכם.', 'The shared list is not connected right now, so only you are shown.'), el);
+    proEl('div', 'pro-sec', L('איך זה עובד', 'How it works'), el);
+    var how = proEl('ol', 'pro-how', undefined, el);
+    [L('נרשמים עד 16:00. אפשר לבטל עד אז.', 'Sign up by 16:00. You can cancel until then.'), L('16 גולשים. מקומות ריקים מתמלאים בגולשי AI, שמסומנים ב-🤖.', '16 surfers. Empty places are filled by AI surfers, marked 🤖.'), L('בכל מקצה 4 גולשים. לכל אחד 3 גלים, ושני הטובים נספרים.', 'Each heat has 4 surfers. You get 3 waves and the best two count.'), L('5 שופטים נותנים ציון לפי קושי, ביצוע ונחיתה. שניים עולים.', '5 judges score difficulty, execution and landing. Two go through.'), L('סיבוב ראשון 16:00, חצי גמר 19:00, גמר 21:30. בכל שלב גולשים מתי שנוח עד שהוא נסגר.', 'Round one 16:00, semis 19:00, final 21:30. Surf any time before each stage closes.')].forEach(function(t){ proEl('li', '', t, how); });
+    proEl('div', 'pro-sec', L('המשתתפים', 'The surfers'), el);
+    var list = proEl('div', 'pro-list', undefined, el);
+    if(ph === 'reg'){ if(!reals.length) proEl('div', 'pro-c', L('עדיין אין נרשמים. היו הראשונים!', 'No sign-ups yet. Be the first!'), list); reals.forEach(function(e){ proEl('span', 'pro-p' + (e.name === me ? ' me' : ''), e.name, list); }); return; }
+    var B = proBracket(V, now); B.field.forEach(function(p){ proEl('span', 'pro-p' + (p.ai ? ' ai' : '') + (!p.ai && p.name === me ? ' me' : ''), (p.ai ? '🤖 ' : '') + p.name, list); });
+    var cur = typeof ph === 'number' ? I.stages[ph] : null, mine = me ? proMine(B, me) : null, stillIn = mine && cur && mine.S.k === cur.k;
+    if(cur){ proEl('div', 'pro-sec', '🔴 ' + cur.name + L(' · נסגר ב-', ' · closes ') + surfClock(cur.close), el);
+      if(stillIn){ var left = proLeft(I, mine.key); if(left > 0){ var sf = proEl('button', 'go-btn pro-go', L('🏄 גלשו במקצה (גל ', '🏄 Surf your heat (wave ') + (4 - left) + L(' מתוך 3)', ' of 3)'), el); sf.type = 'button'; sf.addEventListener('click', function(){ proEnter(mine); }); } else proEl('div', 'pro-c', L('✅ סיימתם את המקצה. ממתינים לתוצאות.', '✅ Your heat is done. Waiting for the results.'), el); }
+      else if(me && mine) proEl('div', 'pro-c', L('הגעתם עד ', 'You reached the ') + mine.S.name, el); else if(me) proEl('div', 'pro-c', L('נרשמתם אחרי שהתחרות התמלאה.', 'You signed up after it was full.'), el); else proEl('div', 'pro-c', L('ההרשמה להיום נסגרה. מחר יש תחרות חדשה!', 'Sign-ups are closed today. New event tomorrow!'), el); }
+    if(ph === 'done') proCeremony(el, V, B, I);
+    B.rounds.slice().reverse().forEach(function(R){ proEl('div', 'pro-sec', R[0].S.name, el); var g = proEl('div', 'pro-heats', undefined, el);
+      R.forEach(function(h){ var isM = me && h.rows.some(function(r){ return !r.p.ai && r.p.name === me; }), bx = proEl('div', 'pro-heat' + (isM ? ' mine' : ''), undefined, g); proEl('div', 'pro-ht', (h.S.k === 'f' ? L('הגמר', 'The final') : L('מקצה ', 'Heat ') + (h.idx + 1)) + (h.over ? L(' · הסתיים', ' · finished') : ''), bx);
+        h.rows.forEach(function(r, i){ var row = proEl('div', 'pro-r' + (h.over && i < 2 && h.S.k !== 'f' ? ' adv' : '') + (!r.p.ai && r.p.name === me ? ' me' : ''), undefined, bx); proEl('span', '', (i + 1) + '. ' + (r.p.ai ? '🤖 ' : '') + r.p.name, row); proEl('span', '', r.ns ? L('לא גלש', 'no show') : proFmt(r.s), row); }); }); });
+  }
+  function proCeremony(el, V, B, I){
+    var fin = B.rounds[2] && B.rounds[2][0]; if(!fin) return;
+    var cer = proEl('div', 'pro-cer', undefined, el), cols = ['#ffd447', '#7fffb0', '#ff7eb6', '#7fd0ff'];
+    for(var c = 0; c < 18; c++){ var cf = proEl('i', 'pro-cf', undefined, cer); cf.style.left = (3 + c * 5.4) + '%'; cf.style.background = cols[c % 4]; cf.style.animationDelay = (c * 0.14) + 's'; }
+    proEl('div', 'pro-tr', '🏆', cer); proEl('div', 'pro-c', L('🎙️ קבלו בתשואות את האלוף של ', '🎙️ Please welcome the champion of ') + I.name + '!', cer);
+    var nm = function(r){ return (r.p.ai ? '🤖 ' : '') + r.p.name; }, pod = proEl('div', 'pro-pod', undefined, cer);
+    [[1, 'b', '🥈'], [0, 'a', '🥇'], [2, 'c', '🥉']].forEach(function(a){ var r = fin.rows[a[0]], st = proEl('div', 'pro-st ' + a[1], undefined, pod); proEl('b', '', a[2], st); proEl('div', '', nm(r), st); proEl('div', '', proFmt(r.s), st); });
+    var me = proSave.reg[I.id], pl = me ? fin.rows.slice(0, 3).map(function(r){ return !r.p.ai && r.p.name === me; }).indexOf(true) : -1;
+    if(pl >= 0){ if(!proSave.claimed[I.id]){ proSave.claimed[I.id] = pl + 1; sgSave.shells += PRO_PRIZES[pl]; sgStore(); proStore(); } proEl('div', 'pro-c', L('🎉 זכיתם ב-🐚 ', '🎉 You won 🐚 ') + fmtScore(PRO_PRIZES[pl]) + '!', cer); }
+  }
+  function proLeft(I, heat){ if(((proSave.done[I.id] || {})[heat]) !== undefined) return 0; var p = proSave.pend[I.id + heat]; return 3 - (p ? p.length : 0); }
+  function proJoin(){
+    var nm = (playerNick() || '').trim(); if(!nm){ proShow(L('כתבו שם קודם', 'Enter a name first'), true); return; }
+    var I = PRO.I, V = proView(I, PRO); if(V.entries.length >= PRO_SIZE){ proShow(L('התחרות מלאה', 'The event is full'), true); return; }
+    function ok(){ proSave.reg[I.id] = nm; proStore(); PRO.fetched = 0; proShow(L('🎉 ההרשמה הצליחה! נתראה ב-16:00', '🎉 You are in! See you at 16:00')); proLoad(true).then(proRender); }
+    if(!PRO.online){ ok(); return; }
+    proRpc('pro_join', { d: I.id, n: nm, t: proTok() }).then(function(a){ if(a === 'ok') ok(); else proShow(a === 'taken' ? L('השם הזה כבר רשום. בחרו שם אחר', 'That name is taken. Pick another') : a === 'full' ? L('התחרות מלאה', 'The event is full') : a === 'closed' ? L('ההרשמה נסגרה', 'Sign-ups are closed') : L('לא הצלחנו לרשום. נסו שוב', 'Could not sign up. Try again'), true); });
+  }
+  function proCancel(){
+    var I = PRO.I, me = proMe(); function ok(){ delete proSave.reg[I.id]; proStore(); PRO.entries = PRO.entries.filter(function(e){ return e.name !== me; }); proShow(L('ההרשמה בוטלה', 'Your sign-up was cancelled')); }
+    if(Date.now() >= I.close){ proShow(L('אי אפשר לבטל אחרי 16:00', 'You cannot cancel after 16:00'), true); return; }
+    if(!PRO.online){ ok(); return; }
+    proRpc('pro_cancel', { d: I.id, n: me, t: proTok() }).then(function(a){ if(a === 'ok' || a === 'no') ok(); else proShow(L('לא הצלחנו לבטל. נסו שוב', 'Could not cancel. Try again'), true); });
+  }
+  var proTimer = null;
+  function proOpen(msg){ PRO.msg = msg || ''; proO.hidden = false; sgMenu.hidden = true; proLoad(true).then(proRender); proRender(); if(!proTimer) proTimer = setInterval(function(){ if(proO.hidden || document.hidden) return; proLoad().then(function(){ var a = document.activeElement; if(!(a && a.tagName === 'INPUT')) proRender(); }); }, 20000); }
+  document.getElementById('proClose').addEventListener('click', function(){ proO.hidden = true; PRO.msg = ''; if(sg.active) sgOpenMenu(); });
+  // ---- the heat: your three waves, on the game's own wave ----
+  var proCur = null, PRO_SAY = [L('🎙️ הכרוז: המקצה יוצא לדרך!', '🎙️ The announcer: the heat is under way!'), L('🎙️ הכרוז: הקהל על הרגליים!', '🎙️ The announcer: the crowd is on its feet!'), L('🎙️ הכרוז: גל אחרון במקצה!', '🎙️ The announcer: last wave of the heat!')];
+  function proBest(a){ var s = a.slice().sort(function(x, y){ return y - x; }); return Math.round(((s[0] || 0) + (s[1] || 0)) * 100); }
+  function proEnter(h){
+    var I = PRO.I, i = SG_SPOTS.indexOf(I.spot), key = I.id + h.key;
+    proO.hidden = true; sgOpenMenu(); sgMenu.hidden = true;
+    proCur = { I: I, h: h, key: key, spot: i, w: proSave.pend[key] = proSave.pend[key] || [] }; proStore();
+    sgStart(i); sgLot = { parkX: (sg.curl + 300) * SG3_M, car: null };
+  }
+  function proHudDraw(){
+    var P = proCur; if(!P){ proHud.hidden = true; return; } var me = proMe(); proHud.textContent = ''; proEl('b', '', P.h.S.name + L(' · גל ', ' · wave ') + Math.min(3, P.w.length + 1) + '/3', proHud);
+    var rows = P.h.rows.map(function(r){ var mine = !r.p.ai && r.p.name === me; return { n: (r.p.ai ? '🤖 ' : '') + r.p.name, s: mine ? proBest(P.w) : r.s, m: mine }; }).sort(function(a, b){ return (b.s === null ? -1 : b.s) - (a.s === null ? -1 : a.s); });
+    rows.forEach(function(r){ var d = proEl('div', r.m ? 'me' : '', undefined, proHud); proEl('span', '', r.n, d); proEl('span', '', proFmt(r.s), d); }); proHud.hidden = false;
+  }
+  sgStart = (function(orig){ return function(i){ var r = orig.apply(this, arguments); if(proCur && i === proCur.spot && proCur.w.length < 3){ sg.pro = proCur; sg.hint = 0; proHudDraw(); sgAddText(PRO_SAY[Math.min(2, proCur.w.length)], '#ffd447'); } return r; }; })(sgStart);
+  sgOpenMenu = (function(orig){ return function(){ proCur = null; proHud.hidden = true; return orig.apply(this, arguments); }; })(sgOpenMenu);
+  sgEnd = (function(orig){ return function(completed){
+    var P = sg.pro; if(!P) return orig.apply(this, arguments);
+    var r = orig.apply(this, arguments), fin = parseFloat(document.getElementById('sgOverScore').textContent) || 0; P.w.push(fin); proStore();
+    var mv = document.getElementById('sgOverMoves'), bx = document.getElementById('sgOverPro'); if(!bx){ bx = document.createElement('p'); bx.id = 'sgOverPro'; bx.className = 'sg-over-sp'; mv.parentNode.insertBefore(bx, mv); }
+    var again = document.getElementById('sgAgainBtn'), back = document.getElementById('sgProBack');
+    if(!back){ back = document.createElement('button'); back.type = 'button'; back.id = 'sgProBack'; back.className = 'go-btn'; again.parentNode.insertBefore(back, again); back.addEventListener('click', function(){ sgOver.hidden = true; sgOpenMenu(); proOpen(); }); }
+    var said = fin >= 8 ? L('🎙️ הכרוז: איזה גל! השופטים מתרשמים', '🎙️ The announcer: what a wave! The judges love it') : fin >= 5 ? L('🎙️ הכרוז: גל יפה, הקהל מריע', '🎙️ The announcer: a nice wave, the crowd cheers') : L('🎙️ הכרוז: צריך יותר מזה כדי לעלות', '🎙️ The announcer: that will need to be better');
+    bx.textContent = (fin >= 8 ? '👏👏👏 ' : fin >= 5 ? '👏 ' : '') + said + L(' · גל ', ' · wave ') + P.w.length + L(' מתוך 3 · שני הטובים: ', ' of 3 · best two: ') + proFmt(proBest(P.w)); bx.hidden = false; back.hidden = false; back.textContent = L('🏆 לתחרות', '🏆 To the event');
+    if(P.w.length >= 3){ var s = proBest(P.w), I = P.I, me = proSave.reg[I.id]; (proSave.done[I.id] = proSave.done[I.id] || {})[P.h.key] = s; proStore(); if(PRO.online) proSend(I, P.h.key, me, s); again.hidden = true; proCur = null; proHud.hidden = true; }
+    else { again.textContent = L('🌊 הגל הבא במקצה (', '🌊 Next heat wave (') + (P.w.length + 1) + '/3)'; proHudDraw(); }
+    return r;
+  }; })(sgEnd);
+  // the crowd along the bottom of the picture: one drawing made once, and it only moves when they cheer
+  var proCrowd = document.createElement('div'); proCrowd.id = 'proCrowd'; proCrowd.hidden = true; document.getElementById('sgExitBtn').parentNode.appendChild(proCrowd);
+  (function(){ var st = document.createElement('style');
+    st.textContent = '#proCrowd{position:absolute;left:0;right:0;bottom:0;height:54px;z-index:5;pointer-events:none;overflow:hidden}#proCrowd[hidden]{display:none}#proCrowd i{position:absolute;left:-30px;right:-30px;bottom:-5px;height:54px;background-repeat:repeat-x;background-size:auto 54px}#proCrowd i+i{bottom:-16px;background-position:137px 0}#proCrowd.cheer i{animation:proJ .3s ease-in-out 5}#proCrowd.cheer i+i{animation-delay:.11s}@keyframes proJ{50%{transform:translateY(-13px)}}';
+    document.head.appendChild(st);
+    var cv = document.createElement('canvas'), W0 = 364, H0 = 54; cv.width = W0; cv.height = H0; var c = cv.getContext('2d'), rng = mulberry32(5), shirts = ['#d9534f', '#f0c64a', '#2f7fc1', '#2fa56f', '#f2f2ec', '#e67e22', '#8e5bbf'], skins = ['#f0c9a4', '#c98d5f', '#8d5a3a', '#e6b48a'];
+    for(var x = 13; x < W0; x += 26){ var h = 6 + rng() * 8, col = shirts[Math.floor(rng() * shirts.length)]; c.fillStyle = col; c.beginPath(); c.moveTo(x - 11, H0); c.quadraticCurveTo(x - 11, 24 + h, x, 24 + h); c.quadraticCurveTo(x + 11, 24 + h, x + 11, H0); c.fill();
+      if(rng() < 0.45){ c.strokeStyle = col; c.lineWidth = 5; c.lineCap = 'round'; c.beginPath(); c.moveTo(x - 9, 33 + h); c.lineTo(x - 13, 11 + h); c.moveTo(x + 9, 33 + h); c.lineTo(x + 13, 11 + h); c.stroke(); }
+      c.fillStyle = skins[Math.floor(rng() * skins.length)]; c.beginPath(); c.arc(x, 18 + h, 7, 0, Math.PI * 2); c.fill(); }
+    var url = 'url(' + cv.toDataURL('image/png') + ')'; proCrowd.innerHTML = '<i></i><i></i>'; [].forEach.call(proCrowd.children, function(e){ e.style.backgroundImage = url; }); })();
+  var proCheerT = 0;
+  function proCheer(){ var now = Date.now(); if(now - proCheerT < 1600) return; proCheerT = now; proCrowd.classList.remove('cheer'); void proCrowd.offsetWidth; proCrowd.classList.add('cheer'); setTimeout(function(){ proCrowd.classList.remove('cheer'); }, 1550); }
+  sgFrame = (function(orig){ return function(dt){ orig(dt); var P = sg.pro, off = !P || sg.phase === 'over'; if(proCrowd.hidden !== off) proCrowd.hidden = off; if(!P){ if(!proHud.hidden && !proCur) proHud.hidden = true; return; }
+    sg.hint = 0;
+    if(sg.phase === 'ride' && !sg.proRode){ sg.proRode = true; proCheer(); sgAddText(L('🎙️ הכרוז: יש! על הגל!', '🎙️ The announcer: there! Up and riding!'), '#ffd447'); }
+    var nM = (sg.moves || []).length; if(nM > (sg.proMv || 0)){ sg.proMv = nM; proCheer(); }
+    if(sg.tube > 1.2 && !sg.proTb){ sg.proTb = true; proCheer(); sgAddText(L('🎙️ הכרוז: בתוך הצינור! הקהל משתגע', '🎙️ The announcer: in the barrel! The crowd goes wild'), '#7fe3ff'); }
+    if(sg.phase === 'wipe' && !sg.proWipe){ sg.proWipe = true; sgAddText(L('🎙️ הכרוז: נפילה! הקהל נאנח', '🎙️ The announcer: a wipe-out! The crowd groans'), '#ffd0a0'); } }; })(sgFrame);
+  // normal waves: the competition's extras off the wave-end screen
+  sgSponsorEvent = (function(orig){ return function(ev){ if(ev && ev.k === 'wave' && !sg.pro){ var a = document.getElementById('sgOverPro'), b = document.getElementById('sgProBack'); if(a) a.hidden = true; if(b) b.hidden = true; } return orig.apply(this, arguments); }; })(sgSponsorEvent);
+  // ---- on the sand during a heat: the judges' stand and the crowd, one draw call each ----
+  sg3Beach = (function(orig){ return function(T, now){
+    orig.apply(this, arguments); var B = sg3.beach; if(!B) return; var U = B.userData;
+    if(sg.pro && !U.proG){ var g = new T.Group(), n = sg3.vLow ? 30 : sg3.lowQ ? 55 : 110, geo = new T.CylinderGeometry(0.2, 0.26, 1.55, 6), crowd = new T.InstancedMesh(geo, new T.MeshStandardMaterial({ roughness: 0.9 }), n), M = new T.Matrix4(), C = new T.Color(), cols = [0xd9534f, 0xf0c64a, 0x2f7fc1, 0x2fa56f, 0xf2f2ec, 0xe67e22], rng = mulberry32(77);
+      for(var i = 0; i < n; i++){ M.setPosition(-26 + rng() * 52, SG_SAND_Y + 0.75, 180.6 + rng() * 1.7); crowd.setMatrixAt(i, M); crowd.setColorAt(i, C.setHex(cols[i % cols.length])); } g.add(crowd);
+      var wood = new T.MeshStandardMaterial({ color: 0xf2ece0, roughness: 0.8 }), dk = new T.MeshStandardMaterial({ color: 0x143a63, roughness: 0.7 });
+      var deck = new T.Mesh(new T.BoxGeometry(7, 0.25, 2.6), wood); deck.position.set(0, SG_SAND_Y + 2.6, 182.6); g.add(deck); var roof = new T.Mesh(new T.BoxGeometry(7.6, 0.2, 3), dk); roof.position.set(0, SG_SAND_Y + 5.2, 182.6); g.add(roof);
+      [[-3.3, 181.5], [3.3, 181.5], [-3.3, 183.7], [3.3, 183.7]].forEach(function(q){ var p = new T.Mesh(new T.CylinderGeometry(0.1, 0.1, 5.2, 6), dk); p.position.set(q[0], SG_SAND_Y + 2.6, q[1]); g.add(p); });
+      var cv = document.createElement('canvas'); cv.width = 512; cv.height = 96; var c = cv.getContext('2d'); c.fillStyle = '#143a63'; c.fillRect(0, 0, 512, 96); c.fillStyle = '#ffd447'; c.font = 'bold 50px sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(L('🏆 שופטים', '🏆 JUDGES'), 256, 50);
+      var tx = new T.CanvasTexture(cv); tx.encoding = T.sRGBEncoding; var sg_ = new T.Mesh(new T.PlaneGeometry(5.6, 1.05), new T.MeshBasicMaterial({ map: tx, side: T.DoubleSide })); sg_.position.set(0, SG_SAND_Y + 4.3, 181.25); sg_.rotation.y = Math.PI; g.add(sg_);
+      B.add(g); U.proG = g; }
+    if(U.proG) U.proG.visible = !!sg.pro;
+  }; })(sg3Beach);
+  // ---- the way in: a banner over the beaches and a card with the shops ----
+  (function(){ var b = document.createElement('button'); b.type = 'button'; b.id = 'proBanner'; b.className = 'tourney-banner surf-banner'; var sp = document.getElementById('sgSpots'); sp.parentNode.insertBefore(b, sp); b.addEventListener('click', function(){ proOpen(); });
+    var c = document.createElement('button'); c.type = 'button'; c.id = 'sgProBtn'; c.className = 'shop-btn'; c.addEventListener('click', function(){ proOpen(); }); hbHub().insertBefore(c, hbHub().firstChild); })();
+  function proBannerDraw(){
+    var now = Date.now(), I = PRO.I = proInfo(now), V = proView(I, PRO), ph = proPhase(I, now), me = proMe(), n = Math.min(PRO_SIZE, V.entries.length), b = document.getElementById('proBanner');
+    b.classList.toggle('is-now', ph !== 'reg' && ph !== 'done' && !!me);
+    b.textContent = ph === 'reg' ? (me ? L('🏆 ' + I.name + ' · אתם רשומים! מתחילים ב-16:00', '🏆 ' + I.name + ' · you are in! Starts 16:00') : L('🏆 ' + I.name + ' · נרשמו ' + n + '/16 · לחצו להרשמה', '🏆 ' + I.name + ' · ' + n + '/16 signed up · tap to sign up')) : ph === 'done' ? L('🏆 ' + I.name + ' · לטקס הזכייה', '🏆 ' + I.name + ' · to the ceremony') : L('🔴 ' + I.name + ' · ' + I.stages[ph].name + ' · לחצו לצפייה', '🔴 ' + I.name + ' · ' + I.stages[ph].name + ' · tap to watch');
+    hbPaint('sgProBtn', '🏆', L('התחרות היומית', 'Daily event'), n + L(' מתוך 16 נרשמו', ' of 16 signed up'));
+  }
+  hbFixed = (function(orig){ return function(){ var r = orig.apply(this, arguments), h = hbHub(), c = document.getElementById('sgProBtn'); if(c && h.firstChild !== c) h.insertBefore(c, h.firstChild); proBannerDraw(); return r; }; })(hbFixed);
+  sgOpenMenu = (function(orig){ return function(){ var r = orig.apply(this, arguments); proLoad().then(proBannerDraw); return r; }; })(sgOpenMenu);
+  // <<< daily competition
   // idle player pose before first game
   resetGame();
   sgBootSurf();
