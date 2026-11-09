@@ -4971,9 +4971,10 @@
   function sgEnd(completed){
     sg.phase = 'over';
     var base = sgTen(sg.score) * (completed ? 1 : 0.8) + (completed ? 0.15 : 0);
-    base = Math.max(0, Math.min(10, base));
+    var lnd = sg.lands || []; if(lnd.length) base += (lnd.reduce(function(a, b){ return a + b; }, 0) / lnd.length - 0.5) * 0.8;   // clean landings up, sketchy ones down
+    base = Math.max(1, Math.min(10, base));
     var judges = [];
-    for(var j = 0; j < 5; j++) judges.push(Math.max(0, Math.min(10, Math.round((base + (Math.random() - 0.5) * 0.8) * 10) / 10)));
+    for(var j = 0; j < 5; j++) judges.push(Math.max(1, Math.min(10, Math.round((base + (Math.random() - 0.5) * 0.8) * 10) / 10)));
     var sorted = judges.slice().sort(function(a, b){ return a - b; });
     var final = Math.round((sorted[1] + sorted[2] + sorted[3]) / 3 * 100) / 100;
     var hiI = judges.indexOf(sorted[4]), loI = judges.indexOf(sorted[0]);
@@ -5203,8 +5204,10 @@
     { id: 'surf',  x: -20, name: L('🏄 חנות גלישה', '🏄 Surf shop'),   color: 0x3a7bd5, roof: 0xf2f2ec },
     { id: 'kiosk', x: -5,  name: L('🍦 קיוסק', '🍦 Kiosk'),           color: 0xf5a623, roof: 0xe74c3c },
     { id: 'salon', x: 10,  name: L('💇 סלון יופי', '💇 Beauty salon'), color: 0xff7eb6, roof: 0xffffff },
-    { id: 'balls', x: 25,  name: L('⚽ חנות כדורים', '⚽ Ball shop'),  color: 0x27ae60, roof: 0xfff3c4 }
+    { id: 'balls', x: 25,  name: L('⚽ חנות כדורים', '⚽ Ball shop'),  color: 0x27ae60, roof: 0xfff3c4 },
+    { id: 'coach', x: -30, dz: 184.2, name: L('🧢 המאמן', '🧢 The coach'),      color: 0x20486e, roof: 0xffffff, npc: true }
   ];
+  var CR_X = -30, CR_Z = 186;
   var SG_HUT_Z = 201.5, SG_DOOR_Z = 198.6;
   // the kiosk's menu: a little boost for this visit
   var SG_KIOSK = [
@@ -5511,13 +5514,13 @@
         var nx = Wk.x + Math.cos(Wk.hd) * spdW * dt, nz = Wk.z + Math.sin(Wk.hd) * spdW * dt;
         // not through the huts
         SG_HUTS.forEach(function(hu){ var cx = sgLot.parkX + hu.x, dx = nx - cx, dzh = nz - SG_HUT_Z;
-          if(Math.abs(dx) < 3.3 && Math.abs(dzh) < 2.6){ if(Math.abs(dx) / 3.3 > Math.abs(dzh) / 2.6) nx = cx + Math.sign(dx) * 3.3; else nz = SG_HUT_Z + Math.sign(dzh) * 2.6; } });
+          if(!hu.npc && Math.abs(dx) < 3.3 && Math.abs(dzh) < 2.6){ if(Math.abs(dx) / 3.3 > Math.abs(dzh) / 2.6) nx = cx + Math.sign(dx) * 3.3; else nz = SG_HUT_Z + Math.sign(dzh) * 2.6; } });
         var hc = sgHouseCollide(nx, nz); nx = hc[0]; nz = hc[1];
         var zMax = sgHomeHere() && Math.abs(nx - sgHX()) < SG_HOUSE.hw ? SG_HOUSE.back - 0.3 : 206;
         Wk.x = Math.max(sgLot.parkX - 130, Math.min(sgLot.parkX + 130, nx)); Wk.z = Math.max(SG_WADE_Z - 0.5, Math.min(zMax, nz));
         if(spdW) Wk.ph += dt * Math.abs(spdW) * 3.2;
         // at a hut's door
-        Wk.door = null; SG_HUTS.forEach(function(hu){ if(Math.abs(Wk.x - (sgLot.parkX + hu.x)) < 1.8 && Math.abs(Wk.z - SG_DOOR_Z) < 1.6) Wk.door = hu.id; });
+        Wk.door = null; SG_HUTS.forEach(function(hu){ if(Math.abs(Wk.x - (sgLot.parkX + hu.x)) < 1.8 && Math.abs(Wk.z - (hu.dz || SG_DOOR_Z)) < 1.6) Wk.door = hu.id; });
         if(Wk.z <= SG_WADE_Z) sgWalkDone();
       }
       return;
@@ -5623,6 +5626,7 @@
         if(a.sup > 0.35){ sg.h = 1; sgWipe('superman'); return; }
         if(off > tol){ sg.h = 1; sgWipe('pearl'); return; }
         if(offF > tol){ sg.h = 1; sgWipe('flip'); return; }
+        (sg.lands = sg.lands || []).push(Math.max(0, 1 - Math.max(off, offF) / tol));
         var flips = Math.round(Math.abs(a.rot) / (Math.PI * 2)), salto = Math.round((a.fl || 0) / TAU), airT = sg.t - a.t0, sup = (a.supT || 0) > 0.12;
         sg.phase = 'ride'; sg.h = 0.93; sg.th = -0.75; sg.v = Math.max(300, a.vx * 0.95);
         // the name says every part: the superman, the spin (by its direction) and the flip;
@@ -6188,6 +6192,7 @@
       if(!bchB.hidden && !bchB.textContent) bchB.textContent = L('🏖️ חזרה לחוף', '🏖️ Back to the beach');
       document.getElementById('sgSkipBtn').hidden = sg.phase !== 'drive' && sg.phase !== 'walk';
       document.getElementById('sgDoorBtn').hidden = !(sg.phase === 'walk' && sg.walk && sg.walk.door && sgHutOpen === null && !sgBG.in);
+      var drB = document.getElementById('sgDoorBtn'), drT = sg.walk && sg.walk.door === 'coach' ? L('💬 דברו עם המאמן', '💬 Talk to the coach') : L('🚪 היכנס', '🚪 Go in'); if(drB.textContent !== drT) drB.textContent = drT;
       var bTx = '', onFoot = sg.phase === 'walk' && sg.walk && sg.walk.t > 0.8 && sgHutOpen === null;
       if(onFoot){ var bn = sgBallNear(), own = Object.keys(sgSave.balls || {}).length;
         if(sgBG.in) bTx = L('🚪 צאו מהמשחק', '🚪 Leave the game');
@@ -6258,7 +6263,7 @@
              : inHz === 1 ? L('🌅 המרפסת · 🔭 משקפת לגלים · המדרגות לחוף משמאל', '🌅 The porch · 🔭 binoculars for the waves · the stairs down on the left')
              : Gin ? SG_BK[Gin.k].icon + L(' רצף: ', ' Streak: ') + Gin.streak + L(' · השיא שלכם: ', ' · your best: ') + ((sgSave.ballBest || {})[Gin.k] || 0)
              : sg.walk && sg.walk.z < SG_EDGE_Z - 1 ? L('🌊 נכנסים למים...', '🌊 Wading in...')
-             : sg.walk && sg.walk.door ? L('🚪 ', '🚪 ') + sgItem(SG_HUTS, sg.walk.door).name + L(' — לחצו "היכנס"', ' — tap "Go in"')
+             : sg.walk && sg.walk.door ? L('🚪 ', '🚪 ') + sgItem(SG_HUTS, sg.walk.door).name + (sg.walk.door === 'coach' ? L(' — לחצו "דברו"', ' — tap "Talk"') : L(' — לחצו "היכנס"', ' — tap "Go in"'))
              : bnH ? SG_BK[bnH.k].icon + L(' מעגל הקפצות — לחצו "הצטרפו"', ' A keepy-up circle — tap "Join"')
              : L('🚶 טיילו בחוף · החצים מראים איפה החנויות · הים מקדימה', '🚶 Walk the beach · the arrows show the shops · the sea ahead');
       // the shops: one arrow each, turned the way to its door as you see it, and how far
@@ -7232,6 +7237,7 @@
     var wood = m(0x9a6b3f, 0.9), white = m(0xf3f1ea, 0.6), steel = m(0xa9b0b8, 0.35);
     // the huts, doors toward the sea, a sign over each door
     SG_HUTS.forEach(function(hu){
+      if(hu.npc) return;
       var wall = m(hu.color, 0.75);
       box(6, 3.0, 4.6, wall, hu.x, SG_SAND_Y + 1.5, SG_HUT_Z);
       var roof = new T.Mesh(new T.ConeGeometry(4.6, 1.6, 4), m(hu.roof, 0.6)); roof.rotation.y = Math.PI / 4; roof.scale.set(1, 1, 0.78); roof.position.set(hu.x, SG_SAND_Y + 3.8, SG_HUT_Z); g.add(roof);
@@ -7254,7 +7260,7 @@
       mc.fillStyle = '#' + ('000000' + hu.color.toString(16)).slice(-6); mc.beginPath(); mc.arc(64, 60, 54, 0, Math.PI * 2); mc.fill(); mc.lineWidth = 7; mc.strokeStyle = '#ffffff'; mc.stroke();
       mc.beginPath(); mc.moveTo(48, 108); mc.lineTo(80, 108); mc.lineTo(64, 127); mc.closePath(); mc.fillStyle = '#ffffff'; mc.fill();
       mc.font = '64px serif'; mc.textAlign = 'center'; mc.textBaseline = 'middle'; mc.fillText(hu.name.split(' ')[0], 64, 64);
-      var spr = new T.Sprite(new T.SpriteMaterial({ map: (function(){ var mt = new T.CanvasTexture(mcv); mt.encoding = T.sRGBEncoding; return mt; })(), fog: false, toneMapped: false })); spr.scale.set(2.3, 2.3, 1); spr.position.set(hu.x, SG_SAND_Y + 6.6, SG_HUT_Z); g.add(spr); U.marks.push({ s: spr, ph: i * 1.3 }); });
+      var spr = new T.Sprite(new T.SpriteMaterial({ map: (function(){ var mt = new T.CanvasTexture(mcv); mt.encoding = T.sRGBEncoding; return mt; })(), fog: false, toneMapped: false })); spr.scale.set(2.3, 2.3, 1); spr.position.set(hu.x, SG_SAND_Y + 6.6, hu.npc ? CR_Z : SG_HUT_Z); g.add(spr); U.marks.push({ s: spr, ph: i * 1.3 }); });
     var zebM = m(0xf2f2f2, 0.8); for(var zs = 188.9; zs < 195.3; zs += 1.0){ var zb = box(3.2, 0.02, 0.5, zebM, -5, SG_SAND_Y + 0.035, zs); zb.material.polygonOffset = true; zb.material.polygonOffsetFactor = -2; }
     var bwM = new T.MeshStandardMaterial({ color: 0xa47a4c, roughness: 0.9, map: (function(){ var cv = document.createElement('canvas'); cv.width = 64; cv.height = 64; var c = cv.getContext('2d'); c.fillStyle = '#b08455'; c.fillRect(0, 0, 64, 64);
       c.fillStyle = 'rgba(60,35,15,0.55)'; for(var pl = 0; pl < 4; pl++) c.fillRect(pl * 16, 0, 2, 64); var tx = new T.CanvasTexture(cv); tx.wrapS = tx.wrapT = T.RepeatWrapping; tx.repeat.set(30, 2); return tx; })() });
@@ -14632,7 +14638,7 @@
   // never while the name field is being typed in. Everything worth keeping
   // (coins, skins, name, league) is in localStorage, so a reload loses nothing.
   // 'dev' = a local or preview copy: the updater stays off entirely.
-  var BUILD_VERSION = '20261109-113544';
+  var BUILD_VERSION = '20261109-142906';
   var UPDATE_CHECK_MS = 60000;
   var UPDATE_TRIED_KEY = 'canyonChaseTriedUpdate';
   var pendingSubmits = 0;
@@ -17270,6 +17276,174 @@
   }
   Array.prototype.forEach.call(document.querySelectorAll('.lang-pick'), function(b){ b.addEventListener('click', sgBootSurf); });
   // <<< surf first and the lesson
+  // >>> surf career (lab/career.js)
+  // ---------- the surf career: the coach on the beach, four groups, a score out of 1-10 (2026-11-09) ----------
+  // Nothing here runs per frame apart from one figure on the sand: the sums happen once, when a wave ends.
+  var CR_TIERS = [
+    { id: 'begin', icon: '🌱', name: L('מתחילים', 'Beginners'),   par: 2.5, promo: 4.5, need: 200, prize: 300 },
+    { id: 'adv',   icon: '🌊', name: L('מתקדמים', 'Improvers'),   par: 4,   promo: 6,   need: 350, prize: 700 },
+    { id: 'pro',   icon: '🏄', name: L('מקצוענים', 'Pros'),       par: 5.5, promo: 7.5, need: 600, prize: 1500 },
+    { id: 'champ', icon: '👑', name: L('אלופים', 'Champions'),    par: 7,   promo: 0,   need: 900, prize: 0 }
+  ];
+  var CR_MS = [
+    [ { k: 'score', v: 3, rw: 80, pts: 8 }, { k: 'waves', n: 5, rw: 100, pts: 10 }, { k: 'move', m: ['קאטבק', 'Cutback'], n: 1, rw: 120, pts: 10 },
+      { k: 'complete', spot: 'olga', rw: 150, pts: 12 }, { k: 'barrel', v: 1.5, rw: 180, pts: 14 }, { k: 'score', v: 4.5, rw: 250, pts: 18 } ],
+    [ { k: 'move', m: ['360', '360'], n: 1, rw: 250, pts: 14 }, { k: 'land', n: 1, rw: 200, pts: 12 }, { k: 'score', v: 5, rw: 250, pts: 14 },
+      { k: 'variety', n: 3, rw: 300, pts: 16 }, { k: 'barrel', v: 2.5, rw: 350, pts: 18 }, { k: 'score', v: 6, rw: 500, pts: 24 } ],
+    [ { k: 'move', m: ['סופרמן', 'Superman'], n: 1, rw: 500, pts: 20 }, { k: 'score', v: 7, spot: 'pipe', rw: 600, pts: 22 }, { k: 'land', n: 2, rw: 500, pts: 20 },
+      { k: 'variety', n: 4, rw: 600, pts: 22 }, { k: 'barrel', v: 4, rw: 700, pts: 26 }, { k: 'score', v: 7.5, rw: 1000, pts: 34 } ],
+    [ { k: 'move', m: ['רודאו', 'Rodeo'], n: 1, rw: 1000, pts: 30 }, { k: 'score', v: 8.5, rw: 1200, pts: 34 }, { k: 'barrel', v: 6, rw: 1200, pts: 34 },
+      { k: 'complete', spot: 'naz', rw: 1400, pts: 36 }, { k: 'variety', n: 5, rw: 1400, pts: 38 }, { k: 'score', v: 9.2, rw: 2500, pts: 50 } ]
+  ];
+  var CR_NAMES = [['נועם', 'Noam'], ['מאיה', 'Maya'], ['איתי', 'Itay'], ['ליה', 'Lia'], ['עומר', 'Omer'], ['תמר', 'Tamar'], ['רון', 'Ron'], ['שירה', 'Shira'], ['יובל', 'Yuval']];
+  function cr(){ var C = sgSave.career = sgSave.career || { t: 0, p: 0, w: 0, tw: 0, grace: 0, hist: [], done: {}, c: {}, last: null }; C.hist = C.hist || []; C.done = C.done || {}; C.c = C.c || {}; return C; }
+  function crHash(a, b){ var h = (a * 73856093) ^ (b * 19349663); h = (h ^ (h >>> 13)) * 1274126177; return ((h ^ (h >>> 16)) >>> 0) / 4294967295; }
+  // the group: nine made-up surfers who get a little better every time you go surfing
+  function crTable(){
+    var C = cr(), T = CR_TIERS[C.t], rows = CR_NAMES.map(function(n, i){
+      var b = crHash(C.t + 1, i + 1), r = crHash(C.t + 11, i + 5);
+      return { n: L(n[0], n[1]), p: Math.min(Math.round(T.need * 0.97), Math.round(T.need * (0.06 + 0.72 * b) + (C.tw || 0) * (0.5 + 1.6 * r))), me: false };
+    });
+    rows.push({ n: playerNick() || L('אתם', 'You'), p: C.p, me: true });
+    rows.sort(function(a, b){ return b.p - a.p || (a.me ? -1 : 1); });
+    rows.forEach(function(r, i){ r.rank = i + 1; });
+    return rows;
+  }
+  function crRank(){ return crTable().filter(function(r){ return r.me; })[0].rank; }
+  function crPromoHits(){ var C = cr(), T = CR_TIERS[C.t]; return C.hist.filter(function(v){ return v >= T.promo; }).length; }
+  function crOpen(){ var C = cr(), o = []; CR_MS[C.t].forEach(function(ms, i){ if(!C.done[C.t + ':' + i] && o.length < 3) o.push(i); }); return o; }
+  function crMsText(ms){
+    if(ms.k === 'land') return ms.n > 1 ? L(ms.n + ' נחיתות מושלמות בגל אחד', ms.n + ' perfect landings on one wave') : L('נחיתה מושלמת מקפיצה', 'A perfect landing from a jump');
+    if(ms.k === 'variety') return L(ms.n + ' תרגילים שונים בגל אחד', ms.n + ' different moves on one wave');
+    return sgMsText(ms);
+  }
+  function crSpecial(ev, kinds, lq){
+    var out = [], lands = sg.lands || [];
+    if(ev.tube >= 3) out.push([L('צינור ארוך', 'Long barrel'), 8]);
+    if(lands.length && lq >= 0.85) out.push([L('נחיתה מושלמת', 'Perfect landing'), 6]);
+    if(kinds >= 4) out.push([L('מגוון תרגילים', 'Variety'), 6]);
+    if(ev.completed) out.push([L('סיימתם את הגל', 'Rode it out'), 4]);
+    if(ev.final >= 9) out.push([L('גל מדהים', 'An amazing wave'), 15]);
+    return out;
+  }
+  // a wave ended: its points, the coach's missions, up or down a group
+  function crWave(ev){
+    var C = cr(), T = CR_TIERS[C.t], lands = sg.lands || [], lq = lands.length ? lands.reduce(function(a, b){ return a + b; }, 0) / lands.length : -1;
+    var seen = {}; (ev.moves || []).forEach(function(m){ seen[m] = 1; }); var kinds = Object.keys(seen).length, perfect = lands.filter(function(q){ return q >= 0.85; }).length;
+    var base = ev.final >= T.par ? Math.round(8 + (ev.final - T.par) * 6) : -Math.min(12, Math.round((T.par - ev.final) * 5));
+    var special = crSpecial(ev, kinds, lq), bonus = special.reduce(function(a, s){ return a + s[1]; }, 0), said = [];
+    C.w++; C.tw = (C.tw || 0) + 1; C.grace = Math.max(0, (C.grace || 0) - 1);
+    C.hist.push(ev.final); if(C.hist.length > 5) C.hist.shift();
+    var gain = base + bonus;
+    crOpen().forEach(function(i){
+      var ms = CR_MS[C.t][i], ok = false, at = !ms.spot || ms.spot === ev.spot;
+      if(ms.k === 'score') ok = at && ev.final >= ms.v;
+      else if(ms.k === 'waves'){ C.c[C.t + ':' + i] = (C.c[C.t + ':' + i] || 0) + 1; ok = C.c[C.t + ':' + i] >= ms.n; }
+      else if(ms.k === 'move'){ var kw = L(ms.m[0], ms.m[1]); ok = (ev.moves || []).filter(function(m){ return m.indexOf(kw) >= 0; }).length >= ms.n; }
+      else if(ms.k === 'complete') ok = at && ev.completed;
+      else if(ms.k === 'barrel') ok = ev.tube >= ms.v;
+      else if(ms.k === 'land') ok = perfect >= ms.n;
+      else if(ms.k === 'variety') ok = kinds >= ms.n;
+      if(!ok) return;
+      C.done[C.t + ':' + i] = 1; sgSave.shells += ms.rw; gain += ms.pts;
+      said.push(L('🧢 המשימה הושלמה: ', '🧢 Mission done: ') + crMsText(ms) + ' · 🐚 +' + ms.rw + L(' · +' + ms.pts + ' נק׳', ' · +' + ms.pts + ' pts'));
+    });
+    C.p = Math.max(0, C.p + gain);
+    var moved = 0;
+    if(C.t < CR_TIERS.length - 1 && C.p >= T.need && crPromoHits() >= 2){
+      sgSave.shells += T.prize; C.t++; C.p = 0; C.tw = 0; C.hist = []; C.grace = 5; moved = 1;
+      said.push(L('🎉 עליתם לקבוצת ', '🎉 Promoted to ') + CR_TIERS[C.t].name + '! · 🐚 +' + T.prize);
+    } else if(C.t > 0 && !C.grace && C.p === 0 && C.hist.length >= 3 && C.hist.slice(-3).every(function(v){ return v < T.par; })){
+      C.t--; C.p = Math.round(CR_TIERS[C.t].need * 0.5); C.tw = 0; C.hist = []; C.grace = 5; moved = -1;
+      said.push(L('📉 ירדתם לקבוצת ', '📉 Dropped to ') + CR_TIERS[C.t].name + L('. אפשר לחזור!', '. You can come back!'));
+    }
+    C.last = { s: ev.final, g: gain, q: lq, sp: special.map(function(s){ return s[0] + ' +' + s[1]; }), m: moved };
+    sgStore();
+    var N = CR_TIERS[C.t], line = N.icon + ' ' + N.name + L(' · מקום ', ' · place ') + crRank() + '/10 · ' + (gain >= 0 ? '+' : '') + gain + L(' נק׳ (', ' pts (') + C.p + '/' + N.need + ')' + (lq >= 0 ? L(' · נחיתה ', ' · landing ') + Math.round(lq * 100) + '%' : '');
+    if(special.length) line += ' · ⭐ ' + C.last.sp.join(' · ');
+    if(said.length) line += ' · ' + said.join(' · ');
+    return { line: line, said: said };
+  }
+  sgSponsorEvent = (function(orig){ return function(ev){
+    var r = orig.apply(this, arguments);
+    if(ev && ev.k === 'wave'){ try {
+      var R = crWave(ev), mv = document.getElementById('sgOverMoves'), el = document.getElementById('sgOverCr');
+      if(!el && mv){ el = document.createElement('p'); el.id = 'sgOverCr'; el.className = 'sg-over-sp'; mv.parentNode.insertBefore(el, mv.nextSibling); }
+      if(el){ el.textContent = R.line; el.hidden = false; }
+      if(sg.peak && sg.texts) R.said.forEach(function(t){ sgAddText(t, '#ffd447'); });
+    } catch(e){ console.warn('career:', e); } }
+    return r;
+  }; })(sgSponsorEvent);
+
+  // ---- what the coach shows ----
+  (function(){ var st = document.createElement('style');
+    st.textContent = '.cr-card{background:rgba(255,255,255,.55);border-radius:12px;padding:10px 12px;margin:0 0 10px;text-align:center}.cr-tier{font-size:20px;font-weight:800}.cr-sub{font-size:13px;margin-top:3px}.cr-bar{height:12px;border-radius:6px;background:rgba(0,0,0,.14);overflow:hidden;margin:7px 0 3px}.cr-bar i{display:block;height:100%;background:linear-gradient(90deg,#2fb68a,#7fd64f)}.cr-warn{color:#b3361c;font-weight:700;font-size:13px;margin-top:4px}.cr-ms{display:flex;justify-content:space-between;gap:10px;align-items:center;background:rgba(255,255,255,.55);border-radius:10px;padding:8px 10px;margin:0 0 6px;font-size:13px;text-align:start}.cr-ms b{white-space:nowrap}.cr-row{display:flex;justify-content:space-between;padding:4px 10px;font-size:13px;border-radius:7px}.cr-row.me{background:#ffd447;font-weight:800}';
+    document.head.appendChild(st); })();
+  function crDiv(cls, txt, parent){ var d = document.createElement('div'); d.className = cls; if(txt !== undefined) d.textContent = txt; parent.appendChild(d); return d; }
+  function crRender(){
+    var C = cr(), T = CR_TIERS[C.t], el = document.getElementById('sgHutBody'), rows = crTable(), me = rows.filter(function(r){ return r.me; })[0]; el.innerHTML = '';
+    var top = C.t === CR_TIERS.length - 1, card = crDiv('cr-card', undefined, el);
+    crDiv('cr-tier', T.icon + ' ' + T.name, card);
+    crDiv('cr-sub', L('מקום ', 'Place ') + me.rank + L(' מתוך 10 בקבוצה', ' of 10 in the group'), card);
+    var bar = crDiv('cr-bar', undefined, card), fill = document.createElement('i'); fill.style.width = Math.min(100, Math.round(C.p / T.need * 100)) + '%'; bar.appendChild(fill);
+    crDiv('cr-sub', C.p + ' / ' + T.need + L(' נקודות', ' points'), card);
+    if(!top) crDiv('cr-sub', L('כדי לעלות: ', 'To move up: ') + T.need + L(' נקודות וציון ', ' points and a score of ') + T.promo + L('+ ב-2 מ-5 הגלים האחרונים (', '+ on 2 of your last 5 waves (') + Math.min(2, crPromoHits()) + '/2)', card);
+    else crDiv('cr-sub', L('הקבוצה הכי גבוהה. תישארו בה!', 'The top group. Stay in it!'), card);
+    if(C.t > 0 && !C.grace && C.p <= T.need * 0.15) crDiv('cr-warn', L('⚠️ סכנת ירידה: ציון נמוך מ-', '⚠️ Danger: scores under ') + T.par + L(' מוריד נקודות', ' lose points'), card);
+    crDiv('mission-title', L('🧢 המשימות מהמאמן', '🧢 Missions from the coach'), el);
+    var open = crOpen();
+    if(!open.length) crDiv('cr-sub', L('סיימתם את כל המשימות בקבוצה הזאת!', 'All this group\'s missions are done!'), el);
+    open.forEach(function(i){ var ms = CR_MS[C.t][i], cnt = ms.k === 'waves' ? ' (' + (C.c[C.t + ':' + i] || 0) + '/' + ms.n + ')' : '', row = crDiv('cr-ms', undefined, el);
+      crDiv('', crMsText(ms) + cnt, row); var pr = document.createElement('b'); pr.textContent = '🐚 ' + ms.rw + ' · +' + ms.pts; row.appendChild(pr); });
+    crDiv('mission-title', L('🏅 הקבוצה', '🏅 The group'), el).style.marginTop = '10px';
+    rows.forEach(function(r){ var row = crDiv('cr-row' + (r.me ? ' me' : ''), undefined, el); crDiv('', r.rank + '. ' + r.n, row); crDiv('', String(r.p), row); });
+    crDiv('cr-sub', L('הציון של כל גל הוא 1 עד 10: קושי התרגילים, כמה עשיתם ואיכות הנחיתה.', 'Every wave scores 1 to 10: how hard your moves were, how many, and how clean the landings.'), el).style.marginTop = '10px';
+  }
+  sgOpenHut = (function(orig){ return function(id, fromMenu){
+    if(id !== 'coach') return orig.apply(this, arguments);
+    sgHutOpen = fromMenu ? 'fc' : 'coach'; if(fromMenu) sgMenu.hidden = true;
+    document.getElementById('sgHutBack').textContent = fromMenu ? L('חזרה', 'Back') : L('חזרה לחוף', 'Back to the beach');
+    document.getElementById('sgHutTitle').textContent = L('🧢 המאמן', '🧢 The coach');
+    document.getElementById('sgHutShells').textContent = '🐚 ' + fmtScore(sgSave.shells);
+    crRender(); document.getElementById('sgHut').hidden = false;
+  }; })(sgOpenHut);
+  (function(){ var bk = document.getElementById('sgLessonBtn') || document.getElementById('sgModeBtn'), b = document.createElement('button'); b.type = 'button'; b.id = 'sgCareerBtn'; b.className = 'shop-btn'; bk.parentNode.insertBefore(b, bk);
+    b.addEventListener('click', function(){ sgOpenHut('coach', true); }); })();
+  sgOpenMenu = (function(orig){ return function(){ var r = orig.apply(this, arguments); var C = cr(), T = CR_TIERS[C.t]; document.getElementById('sgCareerBtn').textContent = '🧢 ' + L('המאמן', 'Coach') + ' · ' + T.icon + ' ' + T.name + L(' · מקום ', ' · place ') + crRank() + '/10'; return r; }; })(sgOpenMenu);
+
+  // ---- the coach himself, on the sand beside his marker ----
+  sg3BuildBeach = (function(orig){ return function(T){
+    var g = orig.apply(this, arguments), U = g.userData, r = sg3MakeRider(T);
+    r.skinM.color.set('#b98055'); r.hairM.color.set('#30241a'); r.suitM.color.set('#c9352b'); r.accM.color.set('#f4f1e8');
+    r.g.position.set(CR_X, SG_SAND_Y, CR_Z); r.g.rotation.set(0, Math.PI / 2, 0); r.board.visible = false; g.add(r.g); U.coach = r;
+    var cv = document.createElement('canvas'); cv.width = 256; cv.height = 96; var c = cv.getContext('2d'); c.fillStyle = '#20486e'; c.fillRect(0, 0, 256, 96); c.fillStyle = '#fff'; c.font = 'bold 42px sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(L('המאמן', 'COACH'), 128, 50);
+    var tx = new T.CanvasTexture(cv); tx.encoding = T.sRGBEncoding; var sign = new T.Mesh(new T.PlaneGeometry(1.7, 0.64), new T.MeshBasicMaterial({ map: tx, side: T.DoubleSide })); sign.position.set(CR_X + 1.6, SG_SAND_Y + 1.7, CR_Z); sign.rotation.y = Math.PI; g.add(sign);
+    var post = new T.Mesh(new T.CylinderGeometry(0.05, 0.05, 1.7, 8), new T.MeshStandardMaterial({ color: 0x6b4a2a, roughness: 0.9 })); post.position.set(CR_X + 1.6, SG_SAND_Y + 0.85, CR_Z + 0.04); g.add(post);
+    return g;
+  }; })(sg3BuildBeach);
+  sg3Beach = (function(orig){ return function(T, now){
+    orig.apply(this, arguments);
+    var U = sg3.beach && sg3.beach.visible && sg3.beach.userData, r = U && U.coach; if(!r) return;
+    var v = Math.abs(CR_X - (sg3.cam.position.x - sgLot.parkX)) < 70; r.g.visible = v; if(!v) return;
+    sg3PoseWalk(T, r, 0, 0); r.board.visible = false; r.head.rotation.y = 0.35 * Math.sin(now * 0.5);
+  }; })(sg3Beach);
+  // out of the water: a big arrow low on the screen that always points to the coach, until you've reached him on this trip
+  sgHud = (function(orig){ return function(sx, sy, sc){
+    orig.apply(this, arguments);
+    if(sg.phase === 'paddle'){ sg.coachSeen = false; return; }
+    var Wh = sg.walk; if(sg.phase !== 'walk' || !Wh || !sgLot || sg.lesson || sg.coachSeen || sgHutOpen !== null || sgBG.in || Wh.t <= 0.8) return;
+    var dx = sgLot.parkX + CR_X - Wh.x, dz = CR_Z - 1.8 - Wh.z, dd = Math.hypot(dx, dz);
+    if(Wh.door === 'coach'){ sg.coachSeen = true; return; }
+    var fx = Math.cos(Wh.hd), fz = Math.sin(Wh.hd), th = Math.atan2(dx * -fz + dz * fx, dx * fx + dz * fz);
+    var cx = W / 2, cy = H - 86, p = 1.12 + 0.14 * Math.sin(sg.t * 5);
+    ctx.save(); ctx.translate(cx, cy); ctx.rotate(th); ctx.scale(p, p); ctx.beginPath(); ctx.moveTo(0, -34); ctx.lineTo(26, -2); ctx.lineTo(11, -2); ctx.lineTo(11, 28); ctx.lineTo(-11, 28); ctx.lineTo(-11, -2); ctx.lineTo(-26, -2); ctx.closePath();
+    ctx.lineJoin = 'round'; ctx.lineWidth = 6; ctx.strokeStyle = '#20486e'; ctx.stroke(); ctx.fillStyle = '#ffd447'; ctx.fill(); ctx.restore();
+    var lb = L('🧢 למאמן · ', '🧢 Coach · ') + Math.round(dd) + L(' מ׳', ' m');
+    ctx.save(); ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.font = 'bold 15px Rubik, sans-serif'; ctx.lineWidth = 4; ctx.strokeStyle = 'rgba(0,30,50,0.75)'; ctx.fillStyle = '#ffffff';
+    var lx = Math.min(W - 62, cx + 104), ly = cy; ctx.strokeText(lb, lx, ly); ctx.fillText(lb, lx, ly); ctx.restore();
+  }; })(sgHud);
+  bpPeople = (function(orig){ return function(U){ var o = orig.apply(this, arguments); if(U.coach && o.indexOf(U.coach) < 0) o.push(U.coach); return o; }; })(bpPeople);
+  // <<< surf career
   // idle player pose before first game
   resetGame();
   sgBootSurf();
