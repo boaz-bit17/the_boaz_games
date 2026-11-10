@@ -6550,11 +6550,11 @@
   // heights: an unbroken swell (CP0), a pitching barrel (CP1), and broken
   // foam (CPC). 0 back trough, 2 crest, 4 lip tip, 7 face top, 10 trough
   var SG3_CP0 = [[-3.2,-0.05],[-1.6,0.35],[0,1],[0.08,0.99],[0.12,0.96],[0.13,0.93],[0.14,0.9],[0.17,0.85],[0.42,0.44],[0.92,0.1],[2.2,-0.05]];
-  var SG3_CP1 = [[-3.2,-0.05],[-1.6,0.4],[-0.1,1.05],[0.8,1.14],[1.38,0.24],[1.12,0.62],[0.62,0.96],[0.22,0.74],[0.34,0.36],[0.9,0.08],[2.2,-0.05]];
+  var SG3_CP1 = [[-3.2,-0.05],[-1.6,0.4],[-0.12,1.08],[0.78,1.22],[1.5,0.22],[1.2,0.64],[0.66,1.0],[0.16,0.8],[0.24,0.37],[0.88,0.07],[2.2,-0.05]];
   // the pocket: the face stands near vertical, the lip thrown out high over it
   var SG3_CPM = [[-3.2,-0.05],[-1.6,0.38],[-0.05,1.05],[0.55,1.13],[0.98,0.8],[0.8,0.86],[0.42,0.96],[0.18,0.84],[0.26,0.4],[0.8,0.08],[2.2,-0.05]];
   var SG3_CPC = [[-3.2,-0.05],[-1.6,0.22],[-0.3,0.5],[0.1,0.56],[0.45,0.48],[0.5,0.42],[0.45,0.4],[0.5,0.35],[0.75,0.22],[1.15,0.06],[2.2,-0.05]];
-  var SG3_SEG = 6, SG3_ROWS = (SG3_CP0.length - 1) * SG3_SEG + 1, SG3_COLS = 120;
+  var SG3_SEG = 6, SG3_ROWS = (SG3_CP0.length - 1) * SG3_SEG + 1, SG3_COLS = (('ontouchstart' in window && Math.min(screen.width, screen.height) < 520) || (navigator.hardwareConcurrency || 4) <= 4) ? 120 : 200;
   function sg3Cr(a, b, c, d, t){ var t2 = t * t, t3 = t2 * t; return 0.5 * ((2 * b) + (-a + c) * t + (2 * a - 5 * b + 4 * c - d) * t2 + (-a + 3 * b - 3 * c + d) * t3); }
   // the profile at a spot along the wave -> rows of [z, y] in metres
   function sg3Profile(b, c, Hm, out, s){
@@ -7494,7 +7494,7 @@
       ' vec3 gC = mix(uGlow, vec3(0.16, 0.86, 0.8), 0.45) * (0.5 + 0.5 * gBk);\n' +
       ' body = mix(body, gC, pow(gTh, 1.4) * (0.82 - 0.25 * inside));\n' +
       ' body *= 1.0 + 0.16 * smoothstep(0.1, 0.8, h) * (1.0 - sea) * (1.0 - vCave);\n' +
-      ' body *= mix(vec3(1.0), vec3(0.8, 1.36, 1.02), (1.0 - sea) * 0.85);\n      body *= 1.0 - 0.42 * vCave - 0.3 * inside;\n      body *= 1.0 - 0.22 * (1.0 - smoothstep(0.02, 0.34, h)) * (1.0 - sea);\n' +
+      ' body *= mix(vec3(1.0), vec3(0.8, 1.36, 1.02), (1.0 - sea) * 0.85);\n      body *= 1.0 - 0.56 * vCave - 0.3 * inside;\n      body *= 1.0 - 0.22 * (1.0 - smoothstep(0.02, 0.34, h)) * (1.0 - sea);\n' +
       ' body = mix(body, uDeep * vec3(0.5, 0.68, 1.1), 0.35 * inside);\n' +
       ' vec3 col = mix(body, skyR, F * (1.0 - 0.6 * thinness) * (1.0 - 0.5 * vCurt) * (1.0 - 0.68 * sea) * (1.0 - 0.35 * smoothstep(0.4, 0.95, h) * (1.0 - sea)));\n' +
       // the sun: small sharp glints
@@ -14649,7 +14649,7 @@
   // never while the name field is being typed in. Everything worth keeping
   // (coins, skins, name, league) is in localStorage, so a reload loses nothing.
   // 'dev' = a local or preview copy: the updater stays off entirely.
-  var BUILD_VERSION = '20261110-093205';
+  var BUILD_VERSION = '20261110-094735';
   var UPDATE_CHECK_MS = 60000;
   var UPDATE_TRIED_KEY = 'canyonChaseTriedUpdate';
   var pendingSubmits = 0;
@@ -15347,6 +15347,7 @@
         if(r >= 14 && r <= 28){ var lw = Math.sin((r - 14) / 14 * Math.PI); d += A * Hm * 0.035 * lw * lipN; }
         // none where the wave curls over itself (a barrel's curtain and the cave under it): it would fold
         var vi = c * R + r; d *= Math.max(0, 1 - 3 * sg3.curt[vi]) * Math.max(0, 1 - 3 * sg3.cave[vi]);
+        if(r >= 20 && r <= 28){ var edW = Math.sin((r - 19) / 10 * Math.PI); d += A * Hm * edW * ((labNoise(x * 1.05 - t * 0.8, 4.4) - 0.5) * 0.075 + (labNoise(x * 0.4 + t * 0.35, 6.6) - 0.5) * 0.065); }
         pos[i + 1] = y0 + (y - y0) * sec + ny * d; pos[i + 2] = z + nz * d;
       }
     }
