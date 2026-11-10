@@ -14652,7 +14652,7 @@
   // never while the name field is being typed in. Everything worth keeping
   // (coins, skins, name, league) is in localStorage, so a reload loses nothing.
   // 'dev' = a local or preview copy: the updater stays off entirely.
-  var BUILD_VERSION = '20261109-163814';
+  var BUILD_VERSION = '20261109-183103';
   var UPDATE_CHECK_MS = 60000;
   var UPDATE_TRIED_KEY = 'canyonChaseTriedUpdate';
   var pendingSubmits = 0;
@@ -18089,16 +18089,22 @@
   // ---- on the sand during a heat: the judges' stand and the crowd, one draw call each ----
   sg3Beach = (function(orig){ return function(T, now){
     orig.apply(this, arguments); var B = sg3.beach; if(!B) return; var U = B.userData;
-    if(sg.pro && !U.proG){ var g = new T.Group(), n = sg3.vLow ? 30 : sg3.lowQ ? 55 : 110, geo = new T.CylinderGeometry(0.2, 0.26, 1.55, 6), crowd = new T.InstancedMesh(geo, new T.MeshStandardMaterial({ roughness: 0.9 }), n), M = new T.Matrix4(), C = new T.Color(), cols = [0xd9534f, 0xf0c64a, 0x2f7fc1, 0x2fa56f, 0xf2f2ec, 0xe67e22], rng = mulberry32(77);
-      for(var i = 0; i < n; i++){ M.setPosition(-26 + rng() * 52, SG_SAND_Y + 0.75, 180.6 + rng() * 1.7); crowd.setMatrixAt(i, M); crowd.setColorAt(i, C.setHex(cols[i % cols.length])); } g.add(crowd);
+    var liveNow = !!sg.pro || proLive();
+    if(liveNow && !U.proG){ var g = new T.Group(), n = sg3.vLow ? 30 : sg3.lowQ ? 55 : 110, geo = new T.CylinderGeometry(0.17, 0.25, 1.3, 6), crowd = new T.InstancedMesh(geo, new T.MeshStandardMaterial({ roughness: 0.9 }), n), heads = new T.InstancedMesh(new T.SphereGeometry(0.17, 8, 6), new T.MeshStandardMaterial({ roughness: 0.75 }), n), M = new T.Matrix4(), C = new T.Color(), cols = [0xd9534f, 0xf0c64a, 0x2f7fc1, 0x2fa56f, 0xf2f2ec, 0xe67e22], skin = [0xf0c9a4, 0xc98d5f, 0x8d5a3a, 0xe6b48a], rng = mulberry32(77), P0 = [];
+      for(var i = 0; i < n; i++){ var px = -26 + rng() * 52, pz = 180.6 + rng() * 1.7, pH = 0.92 + rng() * 0.16; P0.push([px, pz, rng() * 6.28, pH]); M.makeScale(1, pH, 1); M.setPosition(px, SG_SAND_Y + 0.65 * pH, pz); crowd.setMatrixAt(i, M); crowd.setColorAt(i, C.setHex(cols[i % cols.length])); M.identity(); M.setPosition(px, SG_SAND_Y + 1.46 * pH, pz); heads.setMatrixAt(i, M); heads.setColorAt(i, C.setHex(skin[i % skin.length])); } g.add(crowd); g.add(heads); U.proC = { b: crowd, h: heads, p: P0, on: false };
       var wood = new T.MeshStandardMaterial({ color: 0xf2ece0, roughness: 0.8 }), dk = new T.MeshStandardMaterial({ color: 0x143a63, roughness: 0.7 });
       var deck = new T.Mesh(new T.BoxGeometry(7, 0.25, 2.6), wood); deck.position.set(0, SG_SAND_Y + 2.6, 182.6); g.add(deck); var roof = new T.Mesh(new T.BoxGeometry(7.6, 0.2, 3), dk); roof.position.set(0, SG_SAND_Y + 5.2, 182.6); g.add(roof);
       [[-3.3, 181.5], [3.3, 181.5], [-3.3, 183.7], [3.3, 183.7]].forEach(function(q){ var p = new T.Mesh(new T.CylinderGeometry(0.1, 0.1, 5.2, 6), dk); p.position.set(q[0], SG_SAND_Y + 2.6, q[1]); g.add(p); });
       var cv = document.createElement('canvas'); cv.width = 512; cv.height = 96; var c = cv.getContext('2d'); c.fillStyle = '#143a63'; c.fillRect(0, 0, 512, 96); c.fillStyle = '#ffd447'; c.font = 'bold 50px sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(L('🏆 שופטים', '🏆 JUDGES'), 256, 50);
       var tx = new T.CanvasTexture(cv); tx.encoding = T.sRGBEncoding; var sg_ = new T.Mesh(new T.PlaneGeometry(5.6, 1.05), new T.MeshBasicMaterial({ map: tx, side: T.DoubleSide })); sg_.position.set(0, SG_SAND_Y + 4.3, 181.25); sg_.rotation.y = Math.PI; g.add(sg_);
       B.add(g); U.proG = g; }
-    if(U.proG) U.proG.visible = !!sg.pro;
+    if(U.proG) U.proG.visible = liveNow;
+    // the crowd on the sand jumps only while it is cheering: nothing moves the rest of the time
+    var CC = U.proC; if(CC && B.visible && U.proG.visible){ var ch = Date.now() - proCheerT < 1500; if(ch || CC.on){ CC.on = ch; var m4 = new T.Matrix4(); CC.p.forEach(function(q, k){ var j = ch ? Math.abs(Math.sin(now * 8 + q[2])) * 0.42 : 0; m4.makeScale(1, q[3], 1); m4.setPosition(q[0], SG_SAND_Y + 0.65 * q[3] + j, q[1]); CC.b.setMatrixAt(k, m4); m4.identity(); m4.setPosition(q[0], SG_SAND_Y + 1.46 * q[3] + j, q[1]); CC.h.setMatrixAt(k, m4); }); CC.b.instanceMatrix.needsUpdate = true; CC.h.instanceMatrix.needsUpdate = true; } }
   }; })(sg3Beach);
+  // the competition is on (from the first heat to the ceremony): checked twice a minute at most
+  var proLiveC = { t: 0, v: false };
+  function proLive(){ var now = Date.now(); if(now - proLiveC.t > 30000){ proLiveC.t = now; var I = proInfo(now); proLiveC.v = now >= I.close; } return proLiveC.v; }
   // ---- the way in: a banner over the beaches and a card with the shops ----
   (function(){ var b = document.createElement('button'); b.type = 'button'; b.id = 'proBanner'; b.className = 'tourney-banner surf-banner'; var sp = document.getElementById('sgSpots'); sp.parentNode.insertBefore(b, sp); b.addEventListener('click', function(){ proOpen(); });
     var c = document.createElement('button'); c.type = 'button'; c.id = 'sgProBtn'; c.className = 'shop-btn'; c.addEventListener('click', function(){ proOpen(); }); hbHub().insertBefore(c, hbHub().firstChild); })();
