@@ -14639,7 +14639,7 @@
   // never while the name field is being typed in. Everything worth keeping
   // (coins, skins, name, league) is in localStorage, so a reload loses nothing.
   // 'dev' = a local or preview copy: the updater stays off entirely.
-  var BUILD_VERSION = '20261110-090626';
+  var BUILD_VERSION = '20261110-091316';
   var UPDATE_CHECK_MS = 60000;
   var UPDATE_TRIED_KEY = 'canyonChaseTriedUpdate';
   var pendingSubmits = 0;
@@ -17677,20 +17677,10 @@
     else { again.textContent = L('🌊 הגל הבא במקצה (', '🌊 Next heat wave (') + (P.w.length + 1) + '/3)'; proHudDraw(); }
     return r;
   }; })(sgEnd);
-  // the crowd along the bottom of the picture: one drawing made once, and it only moves when they cheer
-  var proCrowd = document.createElement('div'); proCrowd.id = 'proCrowd'; proCrowd.hidden = true; document.getElementById('sgExitBtn').parentNode.appendChild(proCrowd);
-  (function(){ var st = document.createElement('style');
-    st.textContent = '#proCrowd{position:absolute;left:0;right:0;bottom:0;height:54px;z-index:5;pointer-events:none;overflow:hidden}#proCrowd[hidden]{display:none}#proCrowd i{position:absolute;left:-30px;right:-30px;bottom:-5px;height:54px;background-repeat:repeat-x;background-size:auto 54px}#proCrowd i+i{bottom:-16px;background-position:137px 0}#proCrowd.cheer i{animation:proJ .3s ease-in-out 5}#proCrowd.cheer i+i{animation-delay:.11s}@keyframes proJ{50%{transform:translateY(-13px)}}';
-    document.head.appendChild(st);
-    var cv = document.createElement('canvas'), W0 = 364, H0 = 54; cv.width = W0; cv.height = H0; var c = cv.getContext('2d'), rng = mulberry32(5), shirts = ['#d9534f', '#f0c64a', '#2f7fc1', '#2fa56f', '#f2f2ec', '#e67e22', '#8e5bbf'], skins = ['#f0c9a4', '#c98d5f', '#8d5a3a', '#e6b48a'];
-    for(var x = 13; x < W0; x += 26){ var h = 6 + rng() * 8, col = shirts[Math.floor(rng() * shirts.length)]; c.fillStyle = col; c.beginPath(); c.moveTo(x - 11, H0); c.quadraticCurveTo(x - 11, 24 + h, x, 24 + h); c.quadraticCurveTo(x + 11, 24 + h, x + 11, H0); c.fill();
-      if(rng() < 0.45){ c.strokeStyle = col; c.lineWidth = 5; c.lineCap = 'round'; c.beginPath(); c.moveTo(x - 9, 33 + h); c.lineTo(x - 13, 11 + h); c.moveTo(x + 9, 33 + h); c.lineTo(x + 13, 11 + h); c.stroke(); }
-      c.fillStyle = skins[Math.floor(rng() * skins.length)]; c.beginPath(); c.arc(x, 18 + h, 7, 0, Math.PI * 2); c.fill(); }
-    var url = 'url(' + cv.toDataURL('image/png') + ')'; proCrowd.innerHTML = '<i></i><i></i>'; [].forEach.call(proCrowd.children, function(e){ e.style.backgroundImage = url; }); })();
+  // the crowd is on the beach (see below): this is when it jumps
   var proCheerT = 0;
-  function proCheer(){ var now = Date.now(); if(now - proCheerT < 1600) return; proCheerT = now; proCrowd.classList.remove('cheer'); void proCrowd.offsetWidth; proCrowd.classList.add('cheer'); setTimeout(function(){ proCrowd.classList.remove('cheer'); }, 1550); }
-  sgFrame = (function(orig){ return function(dt){ orig(dt); var P = sg.pro, off = !P || sg.phase === 'over'; if(proCrowd.hidden !== off) proCrowd.hidden = off; if(!P){ if(!proHud.hidden && !proCur) proHud.hidden = true; return; }
-    sg.hint = 0;
+  function proCheer(){ var now = Date.now(); if(now - proCheerT < 1600) return; proCheerT = now; }
+  sgFrame = (function(orig){ return function(dt){ orig(dt); var P = sg.pro; if(!P){ if(!proHud.hidden && !proCur) proHud.hidden = true; return; }
     if(sg.phase === 'ride' && !sg.proRode){ sg.proRode = true; proCheer(); sgAddText(L('🎙️ הכרוז: יש! על הגל!', '🎙️ The announcer: there! Up and riding!'), '#ffd447'); }
     var nM = (sg.moves || []).length; if(nM > (sg.proMv || 0)){ sg.proMv = nM; proCheer(); }
     if(sg.tube > 1.2 && !sg.proTb){ sg.proTb = true; proCheer(); sgAddText(L('🎙️ הכרוז: בתוך הצינור! הקהל משתגע', '🎙️ The announcer: in the barrel! The crowd goes wild'), '#7fe3ff'); }
