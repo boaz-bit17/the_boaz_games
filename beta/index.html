@@ -5633,6 +5633,8 @@
         (sg.lands = sg.lands || []).push(Math.max(0, 1 - Math.max(off, offF) / tol));
         var flips = Math.round(Math.abs(a.rot) / (Math.PI * 2)), salto = Math.round((a.fl || 0) / TAU), airT = sg.t - a.t0, sup = (a.supT || 0) > 0.12;
         sg.phase = 'ride'; sg.h = 0.96; sg.th = -0.7; sg.thR = 0; sg.v = Math.max(300, a.vx * 0.95);
+        sg.landQ = Math.max(0, 1 - Math.max(off, offF) / tol); BD.wob = Math.pow(1 - sg.landQ, 1.4); sg.v *= 0.72 + 0.28 * sg.landQ;
+        if(sg.landQ < 0.22 && sg.v < 330){ sg.h = 1; sgWipe('pearl'); return; }
         // the name says every part: the superman, the spin (by its direction) and the flip;
         // a spin with a flip is a rodeo, with both parts written out
         var nm = [], spinN = flips ? (a.rot < 0 ? L('אלי-אופ ', 'Alley-oop ') : '') + String(flips * 360) : '', flipN = salto ? (salto > 1 ? L('סלטה כפולה', 'Double backflip') : L('סלטה', 'Backflip')) : '';
@@ -5653,10 +5655,12 @@
     var J = sgJoyVec();
     var target = J.on ? Math.max(-0.95, Math.min(1.05, -J.y * 1.1)) : sg.tube > 0 ? 0 : -0.3;
     var bSz = sgSz();
-    sg.thR = (sg.thR || 0) + ((target - sg.th) * 4.6 * (1 - 0.32 * bSz) - (sg.thR || 0)) * Math.min(1, dt * 11); sg.th += sg.thR * dt;          // a long board turns slowly
+    var thGain = 4.6 * (1 - 0.32 * bSz) * (1 + 0.16 * Math.max(0, Math.sin(sg.th))) * (1 - 0.12 * Math.max(0, Math.min(1, (sg.v - 300) / 400)));
+    sg.thR = (sg.thR || 0) + ((target - sg.th) * thGain - (sg.thR || 0)) * Math.min(1, dt * 11); sg.th += sg.thR * dt;          // a long board turns slowly
     // far out on the shoulder the wave has no push left
     var push = Math.max(0.25, Math.min(1, 1 - (gap - 900) / 700));
     sg.v += -Math.sin(sg.th) * SG_G * push * (0.72 + 0.56 * Math.max(0, Math.min(1, sg.h))) * dt;
+    sg.v -= Math.min(70, Math.abs(sg.thR || 0) * 22) * dt; if(sg.h < 0.38 && (sg.thR || 0) > 0.5 && J.on) sg.v += 95 * Math.min(1, sg.thR / 2) * dt;
     sg.v -= sg.v * 0.1 * (1 - 0.3 * bSz) * dt;                         // ...and glides
     if(sg.h <= 0.001 && sg.th < 0){ sg.v -= 120 * dt; }            // flat water at the bottom
     var vmax = 720 * (1 + 0.06 * up.speed) * (1 + 0.04 * bSz);
@@ -8022,7 +8026,7 @@
         sg3Limb(T, A[0], s0, e0); sg3Limb(T, A[1], e0, hn); A[2].position.copy(hn);
       });
     }
-    try { mvFrame(T, R, dtR); } catch(e){ if(!MV.warned){ MV.warned = true; console.warn('moves:', e); } }
+    try { bdFrame(T, R, dtR, Math.atan2(nrm.dot(side), nrm.dot(up))); } catch(e){ if(!MV.warned){ MV.warned = true; console.warn('moves:', e); } }
     R.vest.visible = (sg.phase === 'wipe' || sg.phase === 'over') && spot.id === 'naz';
     if(R.vest.visible){ var vs = Math.min(1, (sg.wipe ? sg.wipe.t : 1) * 1.5); R.vest.scale.set(vs, vs * 1.2, vs); }
     // the jet ski at Nazaré
@@ -14652,7 +14656,7 @@
   // never while the name field is being typed in. Everything worth keeping
   // (coins, skins, name, league) is in localStorage, so a reload loses nothing.
   // 'dev' = a local or preview copy: the updater stays off entirely.
-  var BUILD_VERSION = '20261109-183103';
+  var BUILD_VERSION = '20261110-083719';
   var UPDATE_CHECK_MS = 60000;
   var UPDATE_TRIED_KEY = 'canyonChaseTriedUpdate';
   var pendingSubmits = 0;
@@ -18117,6 +18121,105 @@
   hbFixed = (function(orig){ return function(){ var r = orig.apply(this, arguments), h = hbHub(), c = document.getElementById('sgProBtn'); if(c && h.firstChild !== c) h.insertBefore(c, h.firstChild); proBannerDraw(); return r; }; })(hbFixed);
   sgOpenMenu = (function(orig){ return function(){ var r = orig.apply(this, arguments); proLoad().then(proBannerDraw); return r; }; })(sgOpenMenu);
   // <<< daily competition
+  // >>> the surfer's body (lab/body.js)
+  // ---------- how a surfer's body really moves (2026-11-10) ----------
+  // One continuous pose worked out in layers: stance, weight fore and aft, balance, then each turn on top of it.
+  // Head, shoulders, hips and legs each follow at their own speed, so a turn starts with the eyes and runs down the body.
+  // About 60 sums a frame for one surfer: nothing here is simulated.
+  var BD = { S: null, t: 0, th: 0, dTh: 0, rot: 0, rate: 0, w: 0, wob: 0, roll: 0, pitch: 0, boardOn: false, W: { bt: 0, bc: 0, tt: 0, sn: 0, cb: 0, tb: 0, pu: 0, pre: 0 } };
+  var BD_RATE = { hd: 13, look: 13, nod: 13, sh: 10, tw: 10, haB: 9, haF: 9, hip: 8, kneeB: 7.5, kneeF: 7.5, footB: 22, footF: 22, lift: 12 };
+  function bdN(t, s){ return Math.sin(t * 1.7 + s) * 0.5 + Math.sin(t * 3.1 + s * 2.3) * 0.3 + Math.sin(t * 5.3 + s * 0.7) * 0.2; }
+  function bdClamp(v, a, b){ return Math.max(a, Math.min(b, v)); }
+  function bdAdd(v, x, y, z){ v.x += x; v.y += y; v.z += z; }
+  function bdFollow(S, P, dt){
+    Object.keys(P).forEach(function(k){
+      var a = S[k], b = P[k], f = Math.min(1, dt * (BD_RATE[k] || 9));
+      if(b && b.isVector3){ if(a && a.isVector3) a.lerp(b, f); else S[k] = b.clone(); }
+      else if(typeof b === 'number'){ S[k] = (typeof a === 'number' ? a : k === 'nod' ? -0.25 : 0) + (b - (typeof a === 'number' ? a : k === 'nod' ? -0.25 : 0)) * f; }
+    });
+  }
+  function bdBoard(T, R, dt, ang, chop, lift){
+    var b = BD, bank = R.body.rotation.x || 0, wob = b.wob > 0.01 ? Math.sin(b.t * 15) * b.wob * 0.2 : 0;
+    var rollT = bdClamp(ang - bank + bdClamp(bank * 0.8, -0.3, 0.3) + wob, -0.8, 0.8), pitchT = bdClamp(-b.w * 0.06, -0.09, 0.09) + (b.wob > 0.01 ? Math.sin(b.t * 11) * b.wob * 0.07 : 0);
+    b.roll += (rollT - b.roll) * Math.min(1, dt * 10); b.pitch += (pitchT - b.pitch) * Math.min(1, dt * 8);
+    R.board.rotation.set(b.roll, 0, b.pitch); R.stripe.rotation.set(b.roll, 0, b.pitch); R.fin.rotation.x = b.roll;
+    R.board.position.y = lift + chop; b.boardOn = true;
+  }
+  function bdFrame(T, R, dt, ang){
+    var ph = sg.phase, on = ph === 'ride' || ph === 'air' || ph === 'done' || ph === 'wipe' || ph === 'over', b = BD, W = b.W;
+    if(!on){ b.S = null; if(R.head.rotation.y) R.head.rotation.y = 0; if(b.boardOn){ b.boardOn = false; b.roll = b.pitch = 0; R.board.rotation.set(0, 0, 0); R.stripe.rotation.set(0, 0, 0); R.fin.rotation.x = 0; } return; }
+    dt = Math.max(0.001, Math.min(0.05, dt || 0.016)); b.t += dt;
+    var th = sg.th || 0, dTh = (th - b.th) / dt; b.th = th; b.dTh += (bdClamp(dTh, -6, 6) - b.dTh) * Math.min(1, dt * 5);
+    var J = sgJoyVec(), v = sg.v || 0, vN = bdClamp((v - 240) / 480, 0, 1), h = sg.h || 0, psi = sg.psi || 0, inT = sg.tube > 0.1, t = b.t, wiping = ph === 'wipe' || ph === 'over';
+    function ease(key, want, up, down){ W[key] += ((want ? 1 : 0) - W[key]) * Math.min(1, dt * (want ? up : down || 2.2)); return mvEase(W[key]); }
+    b.wob = Math.max(0, b.wob - dt * 1.5);
+    var k = R.sfK === undefined ? 0.86 : R.sfK, P, chop = 0, lift = 0;
+    if(ph === 'ride' || ph === 'done'){
+      // how the board is going decides everything else: weight forward going down, back going up, leaning off a hard turn
+      var wT = bdClamp(-Math.sin(th) * 0.75 - b.dTh * 0.12 - Math.min(1, psi / 2.2) * 0.5, -1, 1); b.w += (wT - b.w) * Math.min(1, dt * 6);
+      var bt = ease('bt', !inT && h < 0.42 && b.dTh > 0.35, 3.5), bc = ease('bc', !inT && h < 0.5 && th < -0.25, 3), tt = ease('tt', !inT && h > 0.55 && th > 0.3, 3.5), sn = ease('sn', !inT && h > 0.68 && b.dTh < -0.6, 4.5);
+      var cb = ease('cb', !inT && psi > 0.2, 3.6), tb = ease('tb', inT, 2.8), pu = ease('pu', sg.t - (sg.pumpT || -9) < 0.55 && (sg.pumps || 0) > 0, 5, 2.5), pre = ease('pre', h > 0.72 && th > 0.4 && v > 340 && J.y < -0.4, 7, 5);
+      // knees: lower the faster you go, down into the bottom turn, up reaching for the lip, in and out through a pump, down before a jump
+      var kk = k + 0.08 * vN + bc * 0.08 + bt * 0.14 - tt * 0.2 - pu * 0.24 * Math.sin(th * 1.4) + pre * 0.24;
+      P = mvStance(bdClamp(kk, 0.3, 1.2));
+      var w = b.w, w2 = Math.max(0, w), w3 = Math.max(0, -w);
+      bdAdd(P.hip, w * 0.07, 0, 0); bdAdd(P.sh, w * 0.15, 0, 0); bdAdd(P.hd, w * 0.17, 0, 0); bdAdd(P.kneeF, w * 0.05, -w2 * 0.05, 0); bdAdd(P.kneeB, w * 0.04, -w3 * 0.05, 0);
+      // never quite still: small corrections for balance, the hands doing most of it, more at speed; the knees soak up the chop
+      var amp = 0.6 + 0.8 * vN; chop = 0.012 * (0.4 + 0.6 * vN) * (0.5 + 0.5 * bdN(t * 3.4, 0.6));
+      bdAdd(P.hip, 0, -chop * 0.5, 0.012 * bdN(t, 1.1)); bdAdd(P.sh, 0.012 * bdN(t, 2.2), 0.008 * Math.sin(t * 1.6) - chop * 0.2, 0.026 * bdN(t, 1.1));
+      bdAdd(P.haF, 0.03 * amp * bdN(t, 3.3), 0.05 * amp * bdN(t, 4.1), 0.04 * amp * bdN(t, 5.7)); bdAdd(P.haB, 0.03 * amp * bdN(t, 6.2), 0.05 * amp * bdN(t, 7.4), 0.04 * amp * bdN(t, 0.9));
+      P.look = 0.05 * bdN(t * 0.6, 8.1); P.nod = -0.25 - th * 0.22;
+      // bottom turn: deep in the knees, leaning in, the shoulders opening up the face and the back hand down low
+      if(bt > 0.01){ var Pb = mvStance(Math.min(1.14, kk + 0.1)); Pb.hip.x = P.hip.x; Pb.sh.x = P.sh.x; Pb.haB = mvV(-0.48, 0.42, 0.02); Pb.haF = mvV(0.52, Pb.sh.y - 0.25, Pb.sh.z + 0.3); Pb.tw = 0.16; Pb.look = 0.26; Pb.nod = -0.1; bdAdd(Pb.hip, 0, 0, -0.04); bdAdd(Pb.sh, 0, 0, -0.08); P = mvLerp(P, Pb, bt); }
+      // top turn: tall on the way up, then the top half whips round first and the arms follow through
+      if(tt > 0.01 && sn < 0.5){ P.haF = P.haF.clone().lerp(mvV(P.sh.x + 0.5, P.sh.y - 0.2, P.sh.z + 0.14), tt * 0.7); P.nod += tt * 0.14; }
+      if(sn > 0.01){ var Ps = mvStance(Math.max(0.5, kk - 0.08)); Ps.tw = -0.36; Ps.haB = mvV(Ps.sh.x - 0.12, Ps.sh.y - 0.32, Ps.sh.z + 0.34); Ps.haF = mvV(Ps.sh.x + 0.48, Ps.sh.y - 0.42, Ps.sh.z - 0.12); Ps.look = -0.32; Ps.nod = -0.4; P = mvLerp(P, Ps, sn); }
+      // cutback: eyes first, then the shoulders, then the hips and the long arc
+      if(cb > 0.01){ var fH = Math.min(1, psi / 0.7), fS = Math.min(1, psi / 1.3), fL = Math.min(1, psi / 2.2), Pc = mvStance(Math.min(1.05, kk + 0.08 * fL)); Pc.hip.x = P.hip.x; Pc.sh.x = P.sh.x; Pc.hd.x = P.hd.x; Pc.tw = 0.34 * fS; Pc.haF = mvV(Pc.sh.x + 0.1, Pc.sh.y - 0.14, Pc.sh.z + 0.42); Pc.haB = mvV(Pc.sh.x - 0.48, Pc.sh.y - 0.42, Pc.sh.z + 0.1); Pc.look = 0.62 * fH; bdAdd(Pc.hip, 0, 0, 0.05 * fL); bdAdd(Pc.sh, 0, 0, 0.1 * fL); P = mvLerp(P, Pc, cb); }
+      if(tb > 0.01){ var Pt = mvStance(1.05); Pt.kneeB = mvV(-0.24, 0.22, 0.2); Pt.haB = mvV(-0.04, 0.09, 0.27); Pt.grabB = true; Pt.haF = mvV(Pt.sh.x + 0.5, Pt.sh.y - 0.12, Pt.sh.z + 0.12); Pt.look = -0.3; Pt.nod = 0.05; P = mvLerp(P, Pt, tb); }
+      // a pump runs through the arms too, along the wave and never straight up
+      if(pu > 0.01){ var sP = Math.sin(th * 1.4) * pu; bdAdd(P.haF, 0.05 * sP, 0.06 * sP, 0); bdAdd(P.haB, -0.05 * sP, 0.06 * sP, 0); bdAdd(P.sh, 0.06 * sP, 0, 0); }
+      // a sketchy landing: arms out, fighting for balance
+      if(b.wob > 0.02){ var fl = b.wob; P.haF = P.haF.clone().lerp(mvV(P.sh.x + 0.55, P.sh.y + 0.05 + 0.14 * Math.sin(t * 13), P.sh.z - 0.25), fl); P.haB = P.haB.clone().lerp(mvV(P.sh.x - 0.55, P.sh.y + 0.05 - 0.14 * Math.sin(t * 13), P.sh.z + 0.25), fl); P.tw = (P.tw || 0) + 0.18 * fl * Math.sin(t * 9); }
+      // the pop-up
+      var s = sg.catchT !== undefined && ph === 'ride' ? (sg.t - sg.catchT) / 0.85 : 9;
+      if(s >= 0 && s < 1){ var low = mvStance(1.3); low.haB = mvV(-0.1, 0.08, 0.2); low.haF = mvV(0.25, 0.08, 0.18); low.hd = mvV(0.45, low.sh.y + 0.2, low.sh.z); P = s < 0.28 ? mvLerp(mvProne(0), mvProne(1), mvEase(s / 0.28)) : s < 0.6 ? mvLerp(mvProne(1), low, mvEase((s - 0.28) / 0.32)) : mvLerp(low, P, mvEase((s - 0.6) / 0.4)); }
+    } else { Object.keys(W).forEach(function(n){ W[n] = 0; }); }
+    if(ph === 'air' && sg.air){
+      var A = sg.air, ta = sg.t - A.t0, rate = (A.rot - b.rot) / dt; b.rot = A.rot; b.rate += (rate - b.rate) * Math.min(1, dt * 10); b.w += (0 - b.w) * Math.min(1, dt * 4);
+      var falling = A.vy < 0, nearL = falling && A.y < 0.32, flip = Math.abs(A.fl || 0) > 0.05 && Math.abs(A.fl) % (Math.PI * 2) > 0.2;
+      var tuck = ta < 0.08 ? 0 : nearL ? Math.max(0, (A.y - 0.12) / 0.2) : Math.min(1, (ta - 0.08) / 0.22);
+      var Pa = mvStance(0.35 + 0.75 * tuck), lf0 = 0.14 * tuck * (flip ? 1.3 : 1);
+      ['footB', 'footF'].forEach(function(n){ Pa[n].y += lf0; }); Pa.kneeB.y += lf0 * 0.9; Pa.kneeF.y += lf0 * 0.9; Pa.hip.y += lf0 * 0.35; Pa.lift = lf0;
+      if(tuck > 0.3){ Pa.haB = mvV(-0.03, lf0 + 0.07, 0.25); Pa.grabB = true; } else Pa.haB = mvV(Pa.sh.x - 0.5, Pa.sh.y - 0.1 + 0.06 * bdN(t * 2, 3), Pa.sh.z + 0.26);
+      Pa.haF = flip && tuck > 0.3 ? mvV(0.16, lf0 + 0.07, 0.25) : mvV(Pa.sh.x + 0.5, Pa.sh.y - 0.06 + 0.06 * bdN(t * 2, 5), Pa.sh.z - 0.22); Pa.grabF = flip && tuck > 0.3;
+      Pa.tw = bdClamp(b.rate * 0.06, -0.42, 0.42); Pa.look = Pa.tw * 0.9;
+      if(nearL){ var g = 1 - tuck; Pa.haB = Pa.haB.clone().lerp(mvV(Pa.sh.x - 0.55, Pa.sh.y - 0.02, Pa.sh.z + 0.42), g); Pa.haF = Pa.haF.clone().lerp(mvV(Pa.sh.x + 0.55, Pa.sh.y - 0.02, Pa.sh.z - 0.3), g); Pa.nod = -0.25 - 0.35 * g; }
+      var su = A.sup || 0;
+      if(su > 0.01){ var su2 = mvEase(su), lf = Math.max(Pa.lift, 0.12), Pm = { hip: mvV(-0.42, lf + 0.62, 0.02), sh: mvV(0.16, lf + 0.56, 0.04), kneeB: mvV(-0.86, lf + 0.74, 0.12), kneeF: mvV(-0.86, lf + 0.78, -0.08), footB: mvV(-1.28, lf + 0.86, 0.14), footF: mvV(-1.28, lf + 0.9, -0.1), haB: mvV(0.05, lf + 0.06, 0.25), haF: mvV(0.12, lf + 0.06, -0.25), hd: mvV(0.42, lf + 0.66, 0.04), tw: 0, lift: lf, grabB: true, grabF: true, look: 0, nod: 0.35 }; Pa = mvLerp(Pa, Pm, su2); Pa.grabB = Pa.grabF = su2 > 0.5; }
+      P = Pa; lift = Pa.lift;
+    } else b.rot = 0;
+    if(wiping){
+      var wt = sg.wipe ? sg.wipe.t : 1, r = sg.wipe ? sg.wipe.reason : 'falls', fwd = r === 'pearl' || r === 'superman' || r === 'flip', e = mvEase(wt / 0.45), on2 = Math.max(0, wt - 0.45);
+      R.body.rotation.set(fwd ? 0.15 * e : -1.35 * e - on2 * 1.6, 0.25 * Math.sin(wt * 3), fwd ? -1.5 * e - on2 * 1.4 : 0.2 * e);
+      R.g.position.y += Math.min(1, wt) * 0.8 - Math.min(1.7, e * 0.45 + on2 * 0.7);
+      var Pw = mvStance(0.45), fw = Math.sin(wt * 7), lg = fwd ? 1 : -1;
+      Pw.haB = mvV(Pw.sh.x - 0.38, Pw.sh.y + 0.36 + 0.09 * fw, Pw.sh.z + 0.32); Pw.haF = mvV(Pw.sh.x + 0.42, Pw.sh.y + 0.3 - 0.09 * fw, Pw.sh.z - 0.22);
+      Pw.kneeB = Pw.kneeB.clone().lerp(mvV(-0.2, 0.42, 0.22), e); Pw.kneeF = Pw.kneeF.clone().lerp(mvV(0.12, 0.46, 0.06), e);
+      Pw.footB = Pw.footB.clone().lerp(mvV(-0.42 - 0.08 * lg, 0.2 + 0.05 * Math.sin(wt * 5), 0.3), e); Pw.footF = Pw.footF.clone().lerp(mvV(-0.12, 0.16 + 0.05 * Math.sin(wt * 5 + 2), 0.12), e); Pw.hip = Pw.hip.clone().lerp(mvV(-0.05, 0.62, 0.06), e); Pw.tw = 0.3 * Math.sin(wt * 4); Pw.nod = fwd ? -0.6 : 0.3;
+      P = P ? mvLerp(P, Pw, Math.min(1, wt * 5)) : Pw;
+      R.board.position.set(fwd ? 0.45 * e : -0.25 * e, 0.12 * e + 0.35 * Math.sin(Math.PI * Math.min(1, wt / 0.7)), fwd ? 0.1 * e : 0.55 * e);
+      R.board.rotation.set(0.9 * e + on2 * 0.6, 0, fwd ? 1.3 * e : 0.35 * e); R.stripe.visible = false; R.fin.visible = false; b.boardOn = true; b.roll = b.pitch = 0;
+    }
+    if(!P) P = mvStance(k);
+    if(!b.S) b.S = mvLerp(P, P, 0); else bdFollow(b.S, P, dt);
+    if(P.grabB) b.S.grabB = true; else delete b.S.grabB; if(P.grabF) b.S.grabF = true; else delete b.S.grabF;
+    if(P.lift === undefined) b.S.lift = (b.S.lift || 0) * (1 - Math.min(1, dt * 12));
+    mvApply(T, R, b.S);
+    if(!wiping) bdBoard(T, R, dt, ph === 'air' ? 0 : ang || 0, chop, b.S.lift > 0.005 ? b.S.lift : 0);
+    if(ph === 'ride' && typeof sfArms === 'function' && sg3.sfLand) sfArms(T, R);
+  }
+  // <<< the surfer's body
   // idle player pose before first game
   resetGame();
   sgBootSurf();
