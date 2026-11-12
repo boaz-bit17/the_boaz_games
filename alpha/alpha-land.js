@@ -2,7 +2,10 @@
 // and the first touch on the game goes full screen and locks it sideways where the phone allows (Android).
 // On iPhone the browser cannot lock it, so the card stays until the phone is turned.
 (function () {
-  var phone = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || (navigator.maxTouchPoints > 1 && /Mac/.test(navigator.platform));
+  // a phone or tablet: by name, or (when the browser is set to "desktop site") by a touch screen that is not big
+  var coarse = window.matchMedia && matchMedia('(pointer: coarse)').matches;
+  var phone = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) || (navigator.maxTouchPoints > 1 && /Mac/.test(navigator.platform)) ||
+    (coarse && navigator.maxTouchPoints > 0 && Math.min(screen.width, screen.height) < 1000);
   if (!phone) return;
   var css = document.createElement('style');
   css.textContent =
