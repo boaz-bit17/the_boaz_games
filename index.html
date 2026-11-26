@@ -4860,9 +4860,9 @@
       var last = Object.keys(S.done).length >= P.ms.length;
       said.push(P.icon + L(' משימה הושלמה: ', ' Mission done: ') + sgMsText(ms) + ' · 🐚 +' + ms.rw);
       if(last){
-        if(sgSave.boards.indexOf(P.board) < 0) sgSave.boards.push(P.board);
+        if(P.board && sgSave.boards.indexOf(P.board) < 0) sgSave.boards.push(P.board);
         S.fin.push(P.id); S.cur = null; S.done = {}; S.c = {};
-        said.push(P.icon + L(' החוזה עם ' + P.name + ' הושלם! קיבלתם את הגלשן שלהם 🏄', ' Contract with ' + P.name + ' complete! Their board is yours 🏄'));
+        said.push(P.icon + (P.board ? L(' החוזה עם ' + P.name + ' הושלם! קיבלתם את הגלשן שלהם 🏄', ' Contract with ' + P.name + ' complete! Their board is yours 🏄') : L(' החוזה עם ' + P.name + ' הושלם! 🏆', ' Contract with ' + P.name + ' complete! 🏆')));
       }
     });
     var off = sgSpOffer(); if(off && S.offerSeen !== off.id){ S.offerSeen = off.id; said.push('📩 ' + off.name + L(' רוצים לממן אתכם! ראו בתפריט 🤝 ספונסרים', ' want to sponsor you! See 🤝 Sponsors in the menu')); }
@@ -8510,26 +8510,26 @@
     if(P){
       var nDone = Object.keys(S.done).length, card = document.createElement('div'); card.className = 'sg-sp-card'; card.style.borderColor = P.col;
       card.innerHTML = logo(P, true) + '<div><b>' + P.name + '</b><br>' + L('הספונסר שלכם · משימה ', 'Your sponsor · mission ') + Math.min(P.ms.length, nDone + 1) + L(' מתוך ', ' of ') + P.ms.length +
-        '<i class="sg-sp-bar"><em style="width:' + Math.round(nDone / P.ms.length * 100) + '%;background:' + P.col + '"></em></i><small>' + L('בסוף החוזה: הגלשן של ', 'At the end: the board of ') + P.name + ' 🏄</small></div>';
+        '<i class="sg-sp-bar"><em style="width:' + Math.round(nDone / P.ms.length * 100) + '%;background:' + P.col + '"></em></i><small>' + (P.board ? L('בסוף החוזה: הגלשן של ', 'At the end: the board of ') + P.name + ' 🏄' : L('המשימה האחרונה שווה בונוס גדול של צדפים 🐚', 'The last mission pays a big shell bonus 🐚')) + '</small></div>';
       el.appendChild(card);
       P.ms.forEach(function(ms, i){ var open = sgSpOpen().indexOf(i) >= 0, done = !!S.done[i];
         if(!open && !done) return;
         var r = document.createElement('div'); r.className = 'sg-sp-ms' + (done ? ' is-done' : '');
         var prog = ms.k === 'waves' && !done ? ' (' + (S.c[i] || 0) + '/' + ms.n + ')' : '';
-        r.innerHTML = '<span>' + (done ? '✅' : '🎯') + '</span><span class="sg-sp-t">' + sgMsText(ms) + prog + '</span><span class="sg-sp-rw">🐚 ' + ms.rw + (i === P.ms.length - 1 ? ' + 🏄' : '') + '</span>';
+        r.innerHTML = '<span>' + (done ? '✅' : '🎯') + '</span><span class="sg-sp-t">' + sgMsText(ms) + prog + '</span><span class="sg-sp-rw">🐚 ' + ms.rw + (i === P.ms.length - 1 && P.board ? ' + 🏄' : '') + '</span>';
         el.appendChild(r); });
       var left = P.ms.length - Object.keys(S.done).length - sgSpOpen().length; if(left > 0){ var lk = document.createElement('div'); lk.className = 'sg-sp-ms is-lock'; lk.textContent = L('🔒 עוד ' + left + ' משימות נפתחות כשמסיימים', '🔒 ' + left + ' more missions open as you finish'); el.appendChild(lk); }
     }
     if(off){
       var oc = document.createElement('div'); oc.className = 'sg-sp-card is-offer'; oc.style.borderColor = off.col;
-      oc.innerHTML = logo(off, true) + '<div><b>📩 ' + off.name + L(' רוצים לממן אתכם!', ' want to sponsor you!') + '</b><br><small>' + L('6 משימות · צדפים על כל אחת · ובסוף הגלשן שלהם', '6 missions · shells for each · and their board at the end') + '</small></div>';
+      oc.innerHTML = logo(off, true) + '<div><b>📩 ' + off.name + L(' רוצים לממן אתכם!', ' want to sponsor you!') + '</b><br><small>' + (off.board ? L('6 משימות · צדפים על כל אחת · ובסוף הגלשן שלהם', '6 missions · shells for each · and their board at the end') : L('6 משימות · צדפים על כל אחת · ובסוף בונוס גדול', '6 missions · shells for each · and a big bonus at the end')) + '</small></div>';
       var ac = document.createElement('button'); ac.type = 'button'; ac.className = 'go-btn sg-sp-accept'; ac.textContent = L('✍️ לחתום על החוזה', '✍️ Sign the contract');
       ac.addEventListener('click', function(){ var S2 = sgSp(); S2.cur = off.id; S2.done = {}; S2.c = {}; sgStore(); sgOpenSponsors(); });
       oc.appendChild(ac); el.appendChild(oc);
     }
     // all the brands: done, yours, offering, or not yet
     var t = document.createElement('div'); t.className = 'mission-title'; t.textContent = L('המותגים', 'The brands'); el.appendChild(t);
-    SG_SPONSORS.forEach(function(p){ var r = document.createElement('div'); r.className = 'sg-sp-row';
+    sgSpShown().forEach(function(p){ var r = document.createElement('div'); r.className = 'sg-sp-row';
       var st = S.fin.indexOf(p.id) >= 0 ? L('✔ החוזה הושלם', '✔ Contract done') : S.cur === p.id ? L('⭐ הספונסר שלכם', '⭐ Your sponsor') : off && off.id === p.id ? L('📩 הצעה!', '📩 Offer!')
         : L('🔒 צריך גל של ' + p.need + '+', '🔒 Needs a ' + p.need + '+ wave') + (sgBestAll() >= p.need ? L(' · קודם מסיימים את החוזה הקודם', ' · finish the current contract first') : '');
       r.innerHTML = logo(p) + '<b>' + p.name + '</b><span>' + st + '</span>'; el.appendChild(r); });
@@ -14639,7 +14639,7 @@
   // never while the name field is being typed in. Everything worth keeping
   // (coins, skins, name, league) is in localStorage, so a reload loses nothing.
   // 'dev' = a local or preview copy: the updater stays off entirely.
-  var BUILD_VERSION = '20261110-091316';
+  var BUILD_VERSION = '20261126-204407';
   var UPDATE_CHECK_MS = 60000;
   var UPDATE_TRIED_KEY = 'canyonChaseTriedUpdate';
   var pendingSubmits = 0;
@@ -17718,6 +17718,44 @@
   hbFixed = (function(orig){ return function(){ var r = orig.apply(this, arguments), h = hbHub(), c = document.getElementById('sgProBtn'); if(c && h.firstChild !== c) h.insertBefore(c, h.firstChild); proBannerDraw(); return r; }; })(hbFixed);
   sgOpenMenu = (function(orig){ return function(){ var r = orig.apply(this, arguments); proLoad().then(proBannerDraw); return r; }; })(sgOpenMenu);
   // <<< daily competition
+  // >>> endless sponsors (lab/sponsors.js)
+  var SG_SP_FIXED = SG_SPONSORS.length;
+  var SG_SP_BRANDS = [
+    ['דולפינו', 'Dolphino', '🐬', '#2a8bd6'], ['שמש חמה', 'Hotsun', '🌞', '#f2a516'], ['אצה ירוקה', 'Greenkelp', '🌿', '#2e9e5b'],
+    ['ברק כחול', 'Bluebolt', '⚡', '#3d5afe'], ['צדף זהב', 'Goldshell', '🐚', '#c9932a'], ['כריש לילה', 'Nightshark', '🦈', '#37474f'],
+    ['תמנון', 'Octoline', '🐙', '#b0418f'], ['גל אדום', 'Redswell', '🌋', '#d84315'], ['ענן קצף', 'Foamcloud', '☁️', '#7fa7c9'],
+    ['צב ים מהיר', 'Speedturtle', '🐢', '#4f8a3b'], ['קשת בענן', 'Rainbow Ride', '🌈', '#8e5bd6'], ['דג מעופף', 'Flyfish', '🐟', '#00a3a3']
+  ];
+  // a fixed random stream per contract number, so a contract is the same on every device and after a reload
+  function sgSpRng(n){ var s = (n * 7919 + 104729) % 233280; return function(){ s = (s * 9301 + 49297) % 233280; return s / 233280; }; }
+  function sgSpGen(n){
+    var b = SG_SP_BRANDS[(n - 1) % SG_SP_BRANDS.length], round = Math.floor((n - 1) / SG_SP_BRANDS.length), r = sgSpRng(n);
+    var lv = Math.min(1, (n - 1) / 12), pick = function(a){ return a[Math.floor(r() * a.length) % a.length]; };
+    var q = function(v){ return Math.round(v * 4) / 4; };
+    var spots = SG_SPOTS.filter(function(s){ return !sgIsPool(s) && !s.windsurf && !s.wall; }).map(function(s){ return s.id; });
+    var easy = [['קאטבק', 'Cutback'], ['אוף דה ליפ', 'Off the lip']], hard = [['360', '360'], ['סופרמן', 'Superman'], ['סלטה', 'Backflip'], ['רודאו', 'Rodeo']];
+    var base = Math.min(1500, 350 + 60 * (n - 1)), rw = function(k){ return Math.round(base * k * (0.85 + 0.3 * r()) / 10) * 10; };
+    var ms = [
+      { k: 'score', v: q(6.75 + 2.5 * lv), rw: rw(0.8) },
+      r() < 0.5 ? { k: 'move', m: pick(easy), n: 2 + Math.round(r() * 2 * lv), rw: rw(0.9) } : { k: 'move', m: pick(hard), n: 1, rw: rw(1.1) },
+      r() < 0.5 ? { k: 'barrel', v: Math.round(3 + 4 * lv), rw: rw(1) } : { k: 'waves', n: 10 + Math.round(20 * lv), peak: r() < 0.4, rw: rw(1) },
+      r() < 0.6 && spots.length ? { k: 'complete', spot: pick(spots), rw: rw(1) } : { k: 'ball', n: 15 + Math.round(25 * lv), rw: rw(0.9) },
+      pick([{ k: 'move', m: pick(hard), n: 1, rw: rw(1.2) }, { k: 'onshore', v: q(6 + 2 * lv), rw: rw(1.1) }, { k: 'long', v: q(6 + 2 * lv), rw: rw(1.1) },
+            { k: 'score', v: q(7 + 2 * lv), spot: spots.length ? pick(spots) : undefined, rw: rw(1.1) }]),
+      { k: 'score', v: Math.min(9.8, q(7.5 + 2.25 * lv)), rw: rw(2.5) }
+    ];
+    return { id: 'gen' + n, gen: n, name: L(b[0], b[1]) + (round ? ' ' + (round + 1) : ''), icon: b[2], col: b[3], need: 0, board: null, ms: ms };
+  }
+  // once the four fixed brands are done, the next generated brand is always waiting in the list
+  function sgSpEnsure(S){
+    var fixed = SG_SPONSORS.slice(0, SG_SP_FIXED).every(function(p){ return S.fin.indexOf(p.id) >= 0; });
+    var nGen = S.fin.filter(function(id){ return /^gen\d+$/.test(id); }).length, want = fixed ? nGen + 1 : 0;
+    if(S.cur && /^gen\d+$/.test(S.cur)) want = Math.max(want, +S.cur.slice(3));
+    while(SG_SPONSORS.length < SG_SP_FIXED + want) SG_SPONSORS.push(sgSpGen(SG_SPONSORS.length - SG_SP_FIXED + 1));
+  }
+  sgSp = (function(orig){ return function(){ var s = orig(); try { sgSpEnsure(s); } catch(e){} return s; }; })(sgSp);
+  function sgSpShown(){ return SG_SPONSORS.slice(0, SG_SP_FIXED).concat(SG_SPONSORS.slice(Math.max(SG_SP_FIXED, SG_SPONSORS.length - 4))); }
+  // <<< endless sponsors
   // idle player pose before first game
   resetGame();
   sgBootSurf();
