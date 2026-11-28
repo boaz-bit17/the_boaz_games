@@ -7732,6 +7732,26 @@
     bgeo.computeVertexNormals();
     return (sg3.boardGeo = bgeo);
   }
+  // the board's surface: the deck colour stays the shop's; the tail gets a black grooved traction pad and a leash plug,
+  // the deck a little patchy wax, the rails a slightly deeper tone, and the whole board a glassy shine
+  function rsBoardSkin(m){
+    m.onBeforeCompile = function(sh){
+      sh.vertexShader = 'varying vec3 rsP;\nvarying vec3 rsN;\n' + sh.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\n  rsP = position; rsN = normal;');
+      sh.fragmentShader = 'varying vec3 rsP;\nvarying vec3 rsN;\nfloat rsH(vec2 p){ return fract(sin(dot(floor(p), vec2(127.1, 311.7))) * 43758.5453); }\nfloat rsV(vec2 p){ vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f); return mix(mix(rsH(i), rsH(i + vec2(1.0, 0.0)), f.x), mix(rsH(i + vec2(0.0, 1.0)), rsH(i + vec2(1.0, 1.0)), f.x), f.y); }\n' + sh.fragmentShader
+        .replace('#include <map_fragment>', '#include <map_fragment>\n' +
+          '  float rsDeck = smoothstep(0.3, 0.7, rsN.y), rsRail = 1.0 - rsDeck - smoothstep(-0.3, -0.7, rsN.y);\n' +
+          '  diffuseColor.rgb *= 1.0 - 0.18 * clamp(rsRail, 0.0, 1.0);\n' +
+          '  float rsPad = rsDeck * (1.0 - smoothstep(-0.56, -0.53, rsP.x)) * (1.0 - smoothstep(0.17, 0.19, abs(rsP.z)));\n' +
+          '  float rsKick = smoothstep(-0.8, -0.86, rsP.x), rsGr = 0.5 + 0.5 * sin(rsP.x * 150.0 + (abs(rsP.z) > 0.06 ? 1.6 : 0.0));\n' +
+          '  float rsWax = smoothstep(0.55, 0.85, rsV(rsP.xz * vec2(14.0, 22.0))) * rsDeck * (1.0 - rsPad) * smoothstep(0.7, 0.5, rsP.x);\n' +
+          '  diffuseColor.rgb = mix(diffuseColor.rgb, mix(diffuseColor.rgb, vec3(1.0), 0.35), rsWax * 0.35);\n' +
+          '  diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.05, 0.055, 0.06) * (0.75 + 0.5 * rsGr) + vec3(0.04) * rsKick, rsPad);\n' +
+          '  float rsPlug = rsDeck * (1.0 - smoothstep(0.012, 0.018, length(rsP.xz - vec2(-0.83, 0.0))));\n' +
+          '  diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.12), rsPlug);')
+        .replace('#include <roughnessmap_fragment>', '#include <roughnessmap_fragment>\n  roughnessFactor = mix(mix(0.16, 0.5, rsWax), 0.9, rsPad);');
+    };
+    m.needsUpdate = true;
+  }
   // the deck's decoration: two side stripes and a picture, riding on the board
   function sg3BoardDeco(T, board){
     var m = new T.MeshStandardMaterial({ color: 0xffffff, roughness: 0.4 });
@@ -7756,7 +7776,7 @@
   }
   // a loose board, for a rack
   function sg3LooseBoard(T){
-    var b = new T.Mesh(sg3BoardGeo(T), new T.MeshStandardMaterial({ color: 0xffffff, roughness: 0.35 })); sg3BoardDeco(T, b);
+    var b = new T.Mesh(sg3BoardGeo(T), new T.MeshStandardMaterial({ color: 0xffffff, roughness: 0.35 })); sg3BoardDeco(T, b); rsBoardSkin(b.material);
     var st = new T.Mesh(new T.BoxGeometry(1.75, 0.006, 0.012), new T.MeshStandardMaterial({ color: 0xffffff, roughness: 0.4 })); st.position.y = 0.045; b.add(st);
     var fm = new T.MeshStandardMaterial({ color: 0x1a1a1a, roughness: 0.3 });
     [[-0.78, 0], [-0.68, -0.12], [-0.68, 0.12]].forEach(function(f){ var fn = new T.Mesh(new T.BoxGeometry(0.11, 0.1, 0.012), fm); fn.position.set(f[0], -0.075, f[1]); b.add(fn); });
@@ -7771,7 +7791,7 @@
     // the board: a real outline (pointed nose, rounded tail), rails, a little
     // rocker, a stringer down the middle and three fins
     var bgeo = sg3BoardGeo(T);
-    var board = new T.Mesh(bgeo, mat(0xff7a3d, 0.35)); body.add(board); sg3BoardDeco(T, board);
+    var board = new T.Mesh(bgeo, mat(0xff7a3d, 0.35)); body.add(board); sg3BoardDeco(T, board); rsBoardSkin(board.material);
     var stripe = new T.Mesh(new T.BoxGeometry(1.75, 0.006, 0.012), mat(0xffffff, 0.4)); stripe.position.y = 0.045; body.add(stripe);
     var finM = mat(0x1a1a1a, 0.3), fin = new T.Mesh(new T.BoxGeometry(0.12, 0.11, 0.012), finM); fin.position.set(-0.78, -0.08, 0); body.add(fin);
     [-0.12, 0.12].forEach(function(z){ var sf = new T.Mesh(new T.BoxGeometry(0.1, 0.09, 0.01), finM); sf.position.set(-0.68, -0.07, z); sf.rotation.x = z > 0 ? 0.12 : -0.12; board.add(sf); });
@@ -14639,7 +14659,7 @@
   // never while the name field is being typed in. Everything worth keeping
   // (coins, skins, name, league) is in localStorage, so a reload loses nothing.
   // 'dev' = a local or preview copy: the updater stays off entirely.
-  var BUILD_VERSION = '20261126-204407';
+  var BUILD_VERSION = '20261128-084412';
   var UPDATE_CHECK_MS = 60000;
   var UPDATE_TRIED_KEY = 'canyonChaseTriedUpdate';
   var pendingSubmits = 0;
@@ -14972,7 +14992,7 @@
     mesh.bind(new T.Skeleton(sk.bones.map(function(b){ return bones[b.name]; }), sk.boneInverses.map(function(m){ return m.clone(); })), mesh.bindMatrix.clone());
   }
   function labDress(T, root, R, boneNames){
-    var suitU = { value: R.suitM.color.clone() }, accU = { value: new T.Color(0x16181d) }, shoeU = { value: 0 }, skateU = { value: 0 }, shortsU = { value: new T.Color(0x2a2e36) }, teeU = { value: 1 }, skinU = { value: new T.Color(1, 1, 1) }, paintU = { value: 1 }, covU = { value: new T.Vector4(-1, -1, -1, -1) }, crU = { value: new T.Vector4(0, 0, 0, 0) };
+    var suitU = { value: R.suitM.color.clone() }, accU = { value: new T.Color(0x16181d) }, shoeU = { value: 0 }, skateU = { value: 0 }, shortsU = { value: new T.Color(0x2a2e36) }, teeU = { value: 1 }, skinU = { value: new T.Color(1, 1, 1) }, paintU = { value: 1 }, covU = { value: new T.Vector4(-1, -1, -1, -1) }, crU = { value: new T.Vector4(0, 0, 0, 0) }, bsU = { value: 0 };
     root.traverse(function(o){
       if(!o.isMesh) return;
       o.frustumCulled = false; o.castShadow = true;
@@ -15004,11 +15024,11 @@
       var m = o.material.clone(); m.name = 'lab-suit'; m.extensions = { derivatives: true };
       m.onBeforeCompile = function(sh){
         labBendInject(sh);
-        sh.uniforms.uSuit = suitU; sh.uniforms.uAcc = accU; sh.uniforms.uShoe = shoeU; sh.uniforms.uSkate = skateU; sh.uniforms.uShorts = shortsU; o.geometry.computeBoundingBox(); var bbG = o.geometry.boundingBox; sh.uniforms.uRestMin = { value: new T.Vector3((bbG.min.x + bbG.max.x) / 2, bbG.min.y, (bbG.min.z + bbG.max.z) / 2) }; sh.uniforms.uRestH = { value: bbG.max.y - bbG.min.y }; sh.uniforms.uTeeOn = teeU; sh.uniforms.uSkinT = skinU; sh.uniforms.uPaint = paintU; sh.uniforms.uCov = covU; sh.uniforms.uCr = crU;
+        sh.uniforms.uSuit = suitU; sh.uniforms.uAcc = accU; sh.uniforms.uShoe = shoeU; sh.uniforms.uSkate = skateU; sh.uniforms.uShorts = shortsU; o.geometry.computeBoundingBox(); var bbG = o.geometry.boundingBox; sh.uniforms.uRestMin = { value: new T.Vector3((bbG.min.x + bbG.max.x) / 2, bbG.min.y, (bbG.min.z + bbG.max.z) / 2) }; sh.uniforms.uRestH = { value: bbG.max.y - bbG.min.y }; sh.uniforms.uTeeOn = teeU; sh.uniforms.uSkinT = skinU; sh.uniforms.uPaint = paintU; sh.uniforms.uCov = covU; sh.uniforms.uCr = crU; sh.uniforms.uBoardS = bsU;
         sh.vertexShader = 'varying vec3 vRest;\nuniform vec3 uRestMin;\nuniform float uRestH;\nattribute float aSuit;\nattribute float aAcc;\nattribute float aShoe;\nattribute float aSole;\nvarying float vSuit;\nvarying float vAcc;\nvarying float vShoe;\nvarying float vSole;\nattribute float aTee;\nattribute float aShorts;\nvarying float vTee;\nvarying float vShorts;\n' +
           sh.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\n  vRest = (position - uRestMin) / uRestH;\n  vSuit = aSuit; vAcc = aAcc; vShoe = aShoe; vSole = aSole; vTee = aTee; vShorts = aShorts;');
-        sh.fragmentShader = 'varying vec3 vRest;\nuniform vec3 uSuit;\nuniform vec3 uAcc;\nuniform float uShoe;\nvarying float vSuit;\nvarying float vAcc;\nvarying float vShoe;\nvarying float vSole;\nuniform float uSkate;\nuniform vec3 uShorts;\nuniform float uTeeOn;\nuniform vec3 uSkinT;\nuniform float uPaint;\nuniform vec4 uCov;\nuniform vec4 uCr;\nvarying float vTee;\nvarying float vShorts;\n' + sh.fragmentShader
-          .replace('#include <map_fragment>', '#include <map_fragment>\n  diffuseColor.rgb *= uSkinT;\n  float suitK = smoothstep(0.485, 0.515, vSuit) * (1.0 - uSkate);\n  float teeK = step(0.2, vTee) * smoothstep(0.525, 0.53, vRest.y) * (1.0 - smoothstep(0.255, 0.26, abs(vRest.x))) * uSkate * uTeeOn * uPaint, shortK = step(0.1, vShorts) * smoothstep(0.34, 0.345, vRest.y) * (1.0 - smoothstep(0.56, 0.565, vRest.y)) * uSkate * uPaint, clothK = max(teeK, shortK);\n  if(uCov.x >= 0.0 && vTee > 0.3 && vRest.y > uCov.x + 0.02 && vRest.y < 0.82 && abs(vRest.x) < uCov.y - 0.012) discard;\n  if(uCov.z >= 0.0 && vShorts > 0.15 && vRest.y > uCov.z + 0.02 && vRest.y < uCov.w - 0.012) discard;\n' +
+        sh.fragmentShader = 'varying vec3 vRest;\nuniform vec3 uSuit;\nuniform vec3 uAcc;\nuniform float uShoe;\nvarying float vSuit;\nvarying float vAcc;\nvarying float vShoe;\nvarying float vSole;\nuniform float uSkate;\nuniform vec3 uShorts;\nuniform float uTeeOn;\nuniform vec3 uSkinT;\nuniform float uPaint;\nuniform vec4 uCov;\nuniform vec4 uCr;\nuniform float uBoardS;\nvarying float vTee;\nvarying float vShorts;\n' + sh.fragmentShader
+          .replace('#include <map_fragment>', '#include <map_fragment>\n  diffuseColor.rgb *= uSkinT;\n  float suitK = smoothstep(0.485, 0.515, vSuit) * (1.0 - uSkate) * (1.0 - uBoardS);\n  float teeK = step(0.2, vTee) * smoothstep(0.525, 0.53, vRest.y) * (1.0 - smoothstep(0.255, 0.26, abs(vRest.x))) * uSkate * uTeeOn * uPaint, shortK = step(0.1, vShorts) * smoothstep(0.34, 0.345, vRest.y) * (1.0 - smoothstep(0.56, 0.565, vRest.y)) * uSkate * uPaint, clothK = max(teeK, shortK);\n  if(uCov.x >= 0.0 && vTee > 0.3 && vRest.y > uCov.x + 0.02 && vRest.y < 0.82 && abs(vRest.x) < uCov.y - 0.012) discard;\n  if(uCov.z >= 0.0 && vShorts > 0.15 && vRest.y > uCov.z + 0.02 && vRest.y < uCov.w - 0.012) discard;\n' +
             '  float wY = vRest.y, wX = abs(vRest.x), wZ = vRest.z, wPx = max(fwidth(wY) + fwidth(wX), 0.0006);\n' +
             '  float wArm = step(0.7, wY) * step(0.13, wX), wTor = step(0.52, wY) * (1.0 - step(0.13, wX)), wLeg = 1.0 - step(0.52, wY);\n' +
             '  vec3 wMain = uSuit * 0.86, wDark = uSuit * 0.2 + vec3(0.02), wC = wDark;\n' +
@@ -15040,6 +15060,15 @@
             '  float wFold = max(max(wCK, wCE), wCH) * (0.5 + 0.5 * sin((wY + wX) * 380.0 + sin(wX * 240.0 + wZ * 200.0) * 2.2)) * clamp(0.003 / wPx, 0.0, 1.0);\n' +
             '  wC *= 1.0 - 0.45 * wFold;\n' +
             '  diffuseColor.rgb = mix(diffuseColor.rgb, wC, suitK);\n' +
+            '  float bsK = uBoardS * (1.0 - uSkate) * step(0.1, vShorts) * smoothstep(0.322, 0.322 + wPx, wY) * (1.0 - smoothstep(0.566, 0.566 + wPx, wY));\n' +
+            '  vec3 bsC = uSuit * 0.88;\n' +
+            '  float bsSide = step(0.072, wX) * (1.0 - smoothstep(0.013, 0.013 + wPx, abs(wZ))) * (1.0 - step(0.52, wY));\n' +
+            '  bsC = mix(bsC, uAcc * 0.92, max(bsSide, 1.0 - smoothstep(0.346, 0.346 + wPx, wY)));\n' +
+            '  bsC = mix(bsC, uSuit * 0.3 + vec3(0.015), smoothstep(0.543, 0.543 + wPx, wY));\n' +
+            '  bsC *= 1.0 - (1.0 - smoothstep(0.0016, 0.0016 + wPx, abs(wY - 0.543))) * 0.5 * clamp(0.004 / wPx, 0.0, 1.0);\n' +
+            '  bsC *= 0.94 + 0.06 * step(0.5, fract((wX + wY) * 400.0)) * clamp(0.001 / wPx, 0.0, 1.0);\n' +
+            '  diffuseColor.rgb = mix(diffuseColor.rgb, bsC, bsK);\n' +
+            '  clothK = max(clothK, bsK);\n' +
             // skate shoes: navy canvas uppers, white rubber soles
             '  float shoeK = smoothstep(0.35, 0.6, vShoe) * uShoe;\n  diffuseColor.rgb = mix(diffuseColor.rgb, mix(vec3(0.07, 0.1, 0.18), vec3(0.93), smoothstep(0.3, 0.7, vSole)), shoeK);\n' +
             // skating: a cotton tee in the rider's colour and dark board shorts, bare arms and legs
@@ -15050,7 +15079,7 @@
       };
       o.material = m;
     });
-    return { suit: suitU, shoe: shoeU, skate: skateU, shorts: shortsU, tee: teeU, skin: skinU, paint: paintU, cov: covU, acc: accU, cr: crU };
+    return { suit: suitU, shoe: shoeU, skate: skateU, shorts: shortsU, tee: teeU, skin: skinU, paint: paintU, cov: covU, acc: accU, cr: crU, bs: bsU };
   }
   // a rotation that takes the frame (along = y, side = z) to (a, s)
   function labBasis(T, a, s){
@@ -15108,7 +15137,7 @@
     Object.keys(P).forEach(function(k){ P[k].layers.set(5); });
     Object.keys(X).forEach(function(k){ X[k].traverse(function(o){ o.layers.set(5); }); });
     R.head.traverse(function(o){ o.layers.set(5); }); R.hair.layers.set(5);
-    var body = { R: R, root: root, B: B, K: K, L: L, suitU: suitU, shoeU: dressU.shoe, skateU: dressU.skate, shortsU: dressU.shorts, teeU: dressU.tee, skinU: dressU.skin, paintU: dressU.paint, covU: dressU.cov, accU: dressU.acc, crU: dressU.cr, brows: browsM, hair: hairMeshes };
+    var body = { R: R, root: root, B: B, K: K, L: L, suitU: suitU, shoeU: dressU.shoe, skateU: dressU.skate, shortsU: dressU.shorts, teeU: dressU.tee, skinU: dressU.skin, paintU: dressU.paint, covU: dressU.cov, accU: dressU.acc, crU: dressU.cr, bsU: dressU.bs, brows: browsM, hair: hairMeshes };
     lab.bodies.push(body); R.lab = body;
     return body;
   }
@@ -15191,6 +15220,7 @@
   function labPose(T, body){
     var R = body.R, B = body.B, K = body.K, L = body.L, P = R.parts, X = R.extra;
     body.suitU.value.copy(R.suitM.color);
+    if(body.bsU) body.bsU.value = body.npc ? 0 : 1;
     if(!body.npc && body.skinU){ body.accU.value.copy(R.accM.color); body.skinU.value.copy(R.skinM.color); body.skinU.value.r = Math.min(1.1, body.skinU.value.r / 0.871 * 0.92); body.skinU.value.g = Math.min(1.1, body.skinU.value.g / 0.572 * 0.92); body.skinU.value.b = Math.min(1.1, body.skinU.value.b / 0.352 * 0.92); }
     body.hair.forEach(function(h){ h.material.color.copy(R.hairM.color).multiplyScalar(1.6); }); (body.brows || []).forEach(function(h){ h.material.color.copy(R.hairM.color).multiplyScalar(0.72); });
     R.g.updateMatrixWorld(true);
@@ -15218,6 +15248,14 @@
       t1 = J.shF; J.shF = J.shB; J.shB = t1; t1 = J.elF; J.elF = J.elB; J.elB = t1; t1 = J.handF; J.handF = J.handB; J.handB = t1; }
     var wUp = new T.Vector3(0, 1, 0).applyQuaternion(bq);
     labLife(T, body, J, face, right, wUp);
+    if(R === sg3.rider && /^(ride|air|done|tow)$/.test(sg.phase) && !(sg.air && sg.air.sup > 0.01)){
+      var rsK = sg.phase === 'ride' ? 1 : 0.6, rsT = performance.now() / 1000;
+      var rsD = wUp.clone().multiplyScalar(-0.09 * rsK), rsC = face.clone().multiplyScalar(0.07 * rsK).add(rsD);
+      J.hip.add(rsD); J.sh.add(rsC); J.head.add(rsC); J.elF.add(rsC); J.elB.add(rsC); J.handF.add(rsC); J.handB.add(rsC);
+      J.handF.addScaledVector(right, 0.2 * rsK).addScaledVector(wUp, (0.12 + 0.03 * Math.sin(rsT * 1.7)) * rsK).addScaledVector(face, 0.06 * rsK);
+      J.handB.addScaledVector(right, -0.22 * rsK).addScaledVector(wUp, (0.16 + 0.03 * Math.sin(rsT * 1.3 + 1)) * rsK).addScaledVector(face, 0.1 * rsK);
+      J.elF.addScaledVector(right, 0.12 * rsK).addScaledVector(wUp, 0.06 * rsK); J.elB.addScaledVector(right, -0.13 * rsK).addScaledVector(wUp, 0.08 * rsK);
+    }
     // turn a bone so its (along, side) axes point along these world directions
     function setW(name, along, side){
       var b = B[name];
