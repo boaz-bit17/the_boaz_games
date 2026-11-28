@@ -7415,7 +7415,8 @@
                uCam: { value: new T.Vector3() }, uT: { value: 0 }, uH: { value: 3 }, uAmp: { value: 0.7 },
                uTexFace: { value: null }, uTexSea: { value: null }, uTexFoam: { value: null }, uTex: { value: 0 },
                uNrm: { value: null }, uHasN: { value: 0 }, uCurlX: { value: 0 }, uEnv: { value: envRT.texture }, uHasEnv: { value: 0 },
-               uBed: { value: 0 }, uBedD: { value: 2.5 }, uBedSand: { value: new T.Color() }, uBedReef: { value: new T.Color() }, uExt: { value: new T.Vector3() }, uScat: { value: new T.Color() } };
+               uBed: { value: 0 }, uBedD: { value: 2.5 }, uBedSand: { value: new T.Color() }, uBedReef: { value: new T.Color() }, uExt: { value: new T.Vector3() }, uScat: { value: new T.Color() },
+               uClean: { value: 0 }, uCNavy: { value: new T.Color(0.0002, 0.003, 0.075) }, uCRoyal: { value: new T.Color(0.004, 0.095, 0.44) }, uCCyan: { value: new T.Color(0.002, 0.23, 0.62) }, uCGlass: { value: new T.Color(0.223, 0.753, 0.83) }, uCSea: { value: new T.Color(0.004, 0.05, 0.2) } };
     new T.TextureLoader().load('https://cdn.jsdelivr.net/gh/mrdoob/three.js@r147/examples/textures/waternormals.jpg', function(t){
       t.wrapS = t.wrapT = T.RepeatWrapping; t.anisotropy = Math.min(8, r.capabilities.getMaxAnisotropy());
       WU.uNrm.value = t; WU.uHasN.value = 1;
@@ -7431,6 +7432,7 @@
     });
     var WATER_FS = 'uniform sampler2D uNrm; uniform float uHasN; uniform float uCurlX; uniform samplerCube uEnv; uniform float uHasEnv; uniform float uBed; uniform float uBedD; uniform vec3 uBedSand; uniform vec3 uBedReef; uniform vec3 uExt; uniform vec3 uScat; uniform sampler2D uTexFace; uniform sampler2D uTexSea; uniform sampler2D uTexFoam; uniform float uTex;\n' +
       'uniform vec3 uSea; uniform vec3 uDeep; uniform vec3 uFace; uniform vec3 uGlow; uniform vec3 uSkyC; uniform vec3 uSkyTop; uniform vec3 uFog; uniform vec3 uSunC; uniform vec3 uSunDir; uniform vec3 uCam; uniform float uT; uniform float uH;\n' +
+      'uniform float uClean; uniform vec3 uCNavy; uniform vec3 uCRoyal; uniform vec3 uCCyan; uniform vec3 uCGlass; uniform vec3 uCSea;\n' +
       'varying vec3 vW; varying vec3 vN; varying float vFoam; varying float vThin; varying float vCurt; varying float vCave;\n' + NOISE +
       'float caus(vec2 p, float t){ vec3 q = vec3(p * 0.8, t * 0.5);\n' +
       ' float a = abs(ns(q) - ns(q + vec3(5.2, 1.3, 0.0))); float b = abs(ns(q * 2.1 + 3.0) - ns(q * 2.1 + vec3(1.7, 9.2, 0.0)));\n' +
@@ -7489,17 +7491,32 @@
       ' body *= 1.0 + 0.16 * smoothstep(0.1, 0.8, h) * (1.0 - sea) * (1.0 - vCave);\n' +
       ' body *= mix(vec3(1.0), vec3(0.8, 1.36, 1.02), (1.0 - sea) * 0.85);\n      body *= 1.0 - 0.42 * vCave - 0.3 * inside;\n      body *= 1.0 - 0.22 * (1.0 - smoothstep(0.02, 0.34, h)) * (1.0 - sea);\n' +
       ' body = mix(body, uDeep * vec3(0.5, 0.68, 1.1), 0.35 * inside);\n' +
-      ' vec3 col = mix(body, skyR, F * (1.0 - 0.6 * thinness) * (1.0 - 0.5 * vCurt) * (1.0 - 0.68 * sea) * (1.0 - 0.35 * smoothstep(0.4, 0.95, h) * (1.0 - sea)));\n' +
+      ' float cBk = 0.0;\n' +
+      ' if(uClean > 0.0){\n' +
+      '  vec3 cc = mix(uCNavy, uCRoyal, smoothstep(0.0, 0.42, h));\n' +
+      '  float cGl = 0.85 + 0.3 * ns(vec3(vW.x * 0.03 + uT * 0.01, 3.7, 0.0));\n' +
+      '  cc = mix(cc, uCCyan, clamp(smoothstep(0.4, 1.0, h) * cGl, 0.0, 1.0));\n' +
+      '  cc = mix(cc, uCGlass, clamp(thinV * 1.1 + vCurt * 0.25, 0.0, 1.0) * (0.55 + 0.45 * gBk));\n' +
+      '  cc *= 0.92 + 0.16 * smoothstep(0.35, 0.75, ns(vec3(vW.x * 0.05, vW.y * 0.9 - uT * 0.05, 1.3))) * face;\n' +
+      '  cc *= 1.0 - 0.5 * vCave - 0.25 * inside;\n' +
+      '  vec3 cSea = uCSea * (0.9 + 0.2 * ns(vec3(vW.xz * 0.04, uT * 0.05)));\n' +
+      '  cc = mix(cc, cSea, max(sea, (1.0 - smoothstep(0.0, 0.1, h)) * (1.0 - vCave) * (1.0 - inside)));\n' +
+      '  cBk = smoothstep(0.45, 0.85, Ng.y) * smoothstep(0.45, 0.8, h) * (1.0 - clamp(thinV * 2.0, 0.0, 1.0)) * (1.0 - sea);\n' +
+      '  cc = mix(cc, mix(uCSea, uCRoyal, 0.45), cBk);\n' +
+      '  body = mix(body, cc, uClean);\n' +
+      ' }\n' +
+      ' skyR = mix(skyR, skyR * vec3(0.55, 0.75, 1.0), uClean * 0.6);\n' +
+      ' vec3 col = mix(body, skyR, F * (1.0 - 0.55 * uClean * (1.0 - sea)) * (1.0 - 0.6 * cBk * uClean) * (1.0 - 0.6 * thinness) * (1.0 - 0.5 * vCurt) * (1.0 - 0.68 * sea) * (1.0 - 0.35 * smoothstep(0.4, 0.95, h) * (1.0 - sea)));\n' +
       // the sun: small sharp glints
       ' float wsY = vW.y * 1.2 - vW.z * 0.4; vec2 wsU = vec2(vW.x * 0.55 + sin(wsY * 0.9 + vW.x * 0.12) * 0.1, wsY * 0.055 - uT * 0.09);\n' +
       ' float wsA = texture2D(uNrm, wsU).y; float wsB = texture2D(uNrm, wsU * vec2(2.3, 1.7) + vec2(0.37, uT * 0.03)).y;\n' +
-      ' float wsK = (1.0 - sea) * uHasN * (0.35 + 0.65 * det) * smoothstep(0.03, 0.28, h) * (1.0 - 0.75 * vCave) * (1.0 - smoothstep(0.03, 0.14, fwidth(wsU.x) + fwidth(wsU.y)));\n' +
+      ' float wsK = (1.0 - 0.85 * uClean) * (1.0 - sea) * uHasN * (0.35 + 0.65 * det) * smoothstep(0.03, 0.28, h) * (1.0 - 0.75 * vCave) * (1.0 - smoothstep(0.03, 0.14, fwidth(wsU.x) + fwidth(wsU.y)));\n' +
       ' float wsL = smoothstep(0.58, 0.74, wsA) * 0.55 + smoothstep(0.62, 0.72, wsB) * 0.45;\n' +
       ' col = mix(col, vec3(0.86, 0.96, 1.0), wsL * wsK * (0.42 + 0.34 * h));\n' +
       ' col *= 1.0 - 0.3 * smoothstep(0.34, 0.5, 1.0 - wsA) * wsK;\n' +
       ' col *= 1.0 - 0.2 * smoothstep(0.04, 0.32, -ln) * lf;\n' +
       ' float spc = max(dot(R, uSunDir), 0.0);\n' +
-      ' col += uSunC * (pow(spc, 1200.0) * 10.0 + pow(spc, 300.0) * 0.6) * (0.4 + 0.6 * det);\n' +
+      ' col += uSunC * (pow(spc, 1200.0) * 10.0 + pow(spc, 300.0) * 0.6) * (0.4 + 0.6 * det) * (1.0 - 0.75 * uClean);\n' +
       // foam: the real foam photo shows through as much as the mask asks --
       // thin foam is broken lace, thick foam is solid white
       ' float behind = uCurlX - vW.x;\n' +
@@ -7866,7 +7883,7 @@
       U.uBed.value = BED ? BED[0] : 0;
       if(BED){ U.uBedD.value = BED[1] * Hm; U.uBedSand.value.setHex(BED[2]); U.uBedReef.value.setHex(BED[3]); U.uExt.value.fromArray(BED[4]); U.uScat.value.setHex(BED[5]); }
       U.uGlow.value.set(labLook(spot, 'glow') || { pool: 0x5ab6e0, olga: 0x56bcd8, pipe: 0x48c6d8, naz: 0x3ab8c4 }[spot.look || spot.id] || 0x2fe0b8); U.uSkyC.value.set(spot.sky[1]); U.uFog.value.set(spot.sky[1]);
-      U.uH.value = Hm; U.uSkyTop.value.set(spot.sky[0]);
+      U.uH.value = Hm; U.uSkyTop.value.set(spot.sky[0]); U.uClean.value = sgIsPool(spot) ? 0 : 1;
       U.uAmp.value = (labLook(spot, 'amp') || { pool: 0.25, olga: 0.7, pipe: 0.85, naz: 1.5 }[spot.look || spot.id] || 0.7) * sgForecast(spot).wind.chop;
       sg3.skyMat.uniforms.uCloud.value = labLook(spot, 'cloud') || { pool: 0.0, olga: 0.15, pipe: 0.3, naz: 1 }[spot.look || spot.id] || 0.3;
       sg3.r.setClearColor(spot.sky[1]);
